@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image fixture: every alt text case of seo.images</title>
+<meta name="description" content="A page of the SEO check fixture site that holds one image for every case of the alt text rules, good and bad.">
+<link rel="canonical" href="https://fixture.test/images/">
+<meta property="og:title" content="Image fixture">
+<meta property="og:description" content="Every alt text case.">
+<meta property="og:image" content="https://fixture.test/img/share.jpg">
+<meta property="og:url" content="https://fixture.test/images/">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<main>
+<h1>Alt texts</h1>
+<h2>Good</h2>
+<img id="good" src="/img/bicycle.jpg" alt="A red bicycle leaning against a brick wall">
+<picture><source srcset="/img/harbour.avif" type="image/avif"><img src="/img/harbour.jpg" alt="Fishing boats in the harbour at dawn"></picture>
+<img data-src="/img/lazy-meadow.jpg" loading="lazy" alt="Sheep grazing on a green meadow">
+<svg viewBox="0 0 10 10" role="img"><title>Company emblem</title><circle cx="5" cy="5" r="4"/></svg>
+<a href="/contact">Write to us <img src="/img/arrow.png" alt=""></a>
+<h2>Missing</h2>
+<img id="missing" src="/img/missing.jpg">
+<h2>Empty</h2>
+<img src="/img/divider.png" alt="" width="16" height="16">
+<img src="/img/team.jpg" alt="">
+<a href="/"><img src="/img/logo.png" alt=""></a>
+<h2>Poor</h2>
+<img src="/img/IMG_1234.jpg" alt="IMG_1234.jpg">
+<img src="/img/hero.jpg" alt="hero-final-v2">
+<img src="/img/x.jpg" alt="Image">
+<img src="/img/lighthouse.jpg" alt="Image of a lighthouse on a rocky coast">
+<img src="/img/long.jpg" alt="A very long description of a mountain landscape at sunset with snow on the peaks, a lake in the valley, a small wooden cabin and two hikers resting">
+<img src="/img/office-1.jpg" alt="Our office in Berlin">
+<img src="/img/office-2.jpg" alt="Our office in Berlin">
+<figure><img src="/img/market.jpg" alt="The weekly market on the square"><figcaption>The weekly market on the square</figcaption></figure>
+<img src="/img/dog.jpg" alt="Der kleine Hund spielt mit dem roten Ball auf der Wiese hinter dem Haus">
+<h2>Other elements</h2>
+<svg viewBox="0 0 10 10"><path d="M0 0L10 10"/></svg>
+<form action="/search"><input type="image" src="/img/search.png"></form>
+<img src="/img/map.png" usemap="#m" alt="Map of the campus"><map name="m"><area shape="rect" coords="0,0,10,10" href="/library"></map>
+<div class="hero" id="hero-bg"></div>
+</main>
+</body>
+</html>

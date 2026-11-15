@@ -1,0 +1,254 @@
+use rb_commands::Binding;
+use rb_config::{ConfigFile, EngineKind, Layout, LayoutMode};
+use rb_engine::ViewId;
+use serde_json::{Value, json};
+
+use super::*;
+use crate::host::ui::recording::UiCall;
+use crate::layout::test_support::{Setup, config, setup, setup_in, view_ids};
+
+/// The test config on disk as `config.json` and a core over it.
+fn project() -> (tempfile::TempDir, Setup) {
+    let dir = tempfile::tempdir().expect("a temporary folder");
+    let root = dir.path().to_path_buf();
+    std::fs::create_dir_all(root.join(".rbrowser")).expect("the config folder");
+    let value = serde_json::to_value(config()).expect("serializes");
+    rb_config::write_config_file(&root, ConfigFile::Project, &value).expect("the project file");
+    let setup = setup_in(config(), Some(root));
+    (dir, setup)
+}
+
+/// The file's JSON; `null` when there is none.
+fn file(dir: &tempfile::TempDir, file: ConfigFile) -> Value {
+    let path = file.path(dir.path());
+    if path.is_file() {
+        rb_config::read_json(&path).expect("reads")
+    } else {
+        Value::Null
+    }
+}
+
+fn engine_in(document: &Value, breakpoint: &str) -> Value {
+    document["breakpoints"]
+        .as_array()
+        .and_then(|list| list.iter().find(|item| item["id"] == breakpoint))
+        .map(|item| item["engine"].clone())
+        .unwrap_or(Value::Null)
+}
+
+fn view_of(core: &Core, breakpoint: &str) -> ViewId {
+    core.host()
+        .views()
+        .into_iter()
+        .find(|view| view.cell_breakpoint.as_deref() == Some(breakpoint))
+        .map(|view| view.id)
+        .expect("the view exists")
+}
+
+#[test]
+fn set_engine_patches_the_breakpoint_entry_and_adds_a_missing_one() {
+    let mut document = json!({
+        "breakpoints": [
+            { "id": "mobile", "width": 400, "height": 800 },
+            { "id": "desktop", "width": 1440, "height": 900, "engine": "chromium" }
+        ]
+    });
+    patch_document(&mut document, "desktop", EngineKind::Firefox, None);
+    assert_eq!(engine_in(&document, "desktop"), json!("firefox"));
+    assert_eq!(engine_in(&document, "mobile"), Value::Null, "untouched");
+    patch_document(&mut document, "tablet", EngineKind::Webkit, None);
+    assert_eq!(
+        document["breakpoints"][2],
+        json!({ "id": "tablet", "engine": "webkit" }),
+        "a local entry with only the engine; the merge joins it by id"
+    );
+    assert!(document.get("layout").is_none(), "no cells asked for");
+    let mut empty = Value::Null;
+    patch_document(&mut empty, "mobile", EngineKind::Chromium, None);
+    assert_eq!(
+        empty,
+        json!({ "breakpoints": [{ "id": "mobile", "engine": "chromium" }] })
+    );
+}
+
+#[test]
+fn set_engine_writes_the_computed_cells_only_into_a_file_without_cells() {
+    let layout: Layout = serde_json::from_value(json!({
+        "columns": 2,
+        "rows": 1,
+        "gap": 12,
+        "cells": [
+            { "breakpoint": "mobile", "col": 1, "row": 1 },
+            { "breakpoint": "desktop", "col": 2, "row": 1 }
+        ]
+    }))
+    .expect("a layout");
+    let mut document = json!({ "layout": { "gap": 20 } });
+    patch_document(&mut document, "mobile", EngineKind::Firefox, Some(&layout));
+    assert_eq!(document["layout"]["columns"], json!(2));
+    assert_eq!(document["layout"]["rows"], json!(1));
+    assert_eq!(
+        document["layout"]["cells"].as_array().map(Vec::len),
+        Some(2)
+    );
+    assert_eq!(
+        document["layout"]["gap"],
+        json!(20),
+        "the file's own gap stays"
+    );
+    let mut own = json!({ "layout": { "columns": 1, "cells": [{ "breakpoint": "mobile", "col": 1, "row": 1 }] } });
+    patch_document(&mut own, "mobile", EngineKind::Firefox, Some(&layout));
+    assert_eq!(own["layout"]["columns"], json!(1), "own cells are kept");
+    assert_eq!(own["layout"]["cells"].as_array().map(Vec::len), Some(1));
+}
+
+#[tokio::test]
+async fn set_engine_prefers_the_shown_breakpoint_of_the_config_then_the_cells() {
+    let setup = setup(config());
+    let core = &setup.core;
+    let mut info = core.host().view(view_of(core, "mobile")).expect("exists");
+    assert_eq!(
+        breakpoint_for(&core.host().config(), &info).as_deref(),
+        Some("mobile")
+    );
+    info.breakpoint = Some("tablet".to_owned());
+    assert_eq!(
+        breakpoint_for(&core.host().config(), &info).as_deref(),
+        Some("tablet")
+    );
+    info.breakpoint = Some("phone".to_owned());
+    assert_eq!(
+        breakpoint_for(&core.host().config(), &info).as_deref(),
+        Some("mobile"),
+        "a device preset is no breakpoint of the config: the cell's"
+    );
+    info.cell_breakpoint = None;
+    assert_eq!(breakpoint_for(&core.host().config(), &info), None);
+}
+
+#[tokio::test]
+async fn set_engine_writes_the_local_file_and_the_view_follows() {
+    let (dir, setup) = project();
+    let core = &setup.core;
+    let mobile = view_of(core, "mobile");
+    let answer = run(core, &json!({ "view": mobile, "engine": "firefox" })).expect("runs");
+    assert_eq!(
+        answer,
+        json!({
+            "view": mobile,
+            "breakpoint": "mobile",
+            "engine": "firefox",
+            "file": "local",
+            "changed": true,
+        })
+    );
+    let local = file(&dir, ConfigFile::Local);
+    assert_eq!(engine_in(&local, "mobile"), json!("firefox"));
+    assert_eq!(
+        local["layout"]["cells"].as_array().map(Vec::len),
+        Some(3),
+        "the project has no cells: the computed grid is written, so the view keeps its cell"
+    );
+    assert_eq!(
+        engine_in(&file(&dir, ConfigFile::Project), "mobile"),
+        json!("chromium"),
+        "the project file is not touched (it was written with the explicit default)"
+    );
+    let shown = core.host().view(mobile).expect("the view stays");
+    assert_eq!(shown.engine, EngineKind::Firefox);
+    assert_eq!(core.host().views().len(), 3);
+    let again = run(core, &json!({ "view": mobile, "engine": "firefox" })).expect("runs");
+    assert_eq!(again["changed"], json!(false));
+}
+
+/// The owner switched an engine on the canvas board and landed in grid mode: the config is
+/// read again after the write, and the mode in effect must come back with it.
+#[tokio::test]
+async fn set_engine_keeps_the_layout_mode_in_effect() {
+    let (_dir, setup) = project();
+    let core = &setup.core;
+    crate::layout::actions::run(core, crate::layout::defs::MODE_CANVAS, &Value::Null)
+        .expect("canvas mode");
+    assert_eq!(core.host().shell_state().mode, LayoutMode::Canvas);
+    let mobile = core
+        .host()
+        .views()
+        .into_iter()
+        .find(|view| view.breakpoint.as_deref() == Some("mobile"))
+        .map(|view| view.id)
+        .expect("the mobile view");
+    run(core, &json!({ "view": mobile, "engine": "firefox" })).expect("runs");
+    assert_eq!(
+        core.host().shell_state().mode,
+        LayoutMode::Canvas,
+        "the engine switch keeps the mode in effect"
+    );
+    assert!(core.host().mode_spec().is_some(), "the canvas spec is back");
+}
+
+#[tokio::test]
+async fn set_engine_writes_the_project_file_when_asked() {
+    let (dir, setup) = project();
+    let core = &setup.core;
+    let desktop = view_of(core, "desktop");
+    core.host().set_active_view(desktop).expect("activates");
+    let answer = run(core, &json!({ "engine": "webkit", "file": "project" })).expect("runs");
+    assert_eq!(answer["view"], json!(desktop), "the active view");
+    assert_eq!(answer["file"], json!("project"));
+    assert_eq!(
+        engine_in(&file(&dir, ConfigFile::Project), "desktop"),
+        json!("webkit")
+    );
+    assert!(file(&dir, ConfigFile::Local).is_null());
+    assert_eq!(
+        core.host().view(desktop).expect("exists").engine,
+        EngineKind::Webkit
+    );
+}
+
+#[tokio::test]
+async fn set_engine_without_an_engine_opens_the_menu_and_refuses_bad_arguments() {
+    let setup = setup(config());
+    let core = &setup.core;
+    let ids = view_ids(&setup);
+    core.host().set_active_view(ids[1]).expect("activates");
+    assert_eq!(run(core, &Value::Null).expect("runs"), Value::Null);
+    assert_eq!(
+        setup.ui.calls().last(),
+        Some(&UiCall::EnginePick(ids[1], None))
+    );
+    assert!(matches!(
+        run(core, &json!({ "view": 999, "engine": "firefox" })),
+        Err(CommandError::InvalidArgs(_))
+    ));
+    assert!(matches!(
+        run(core, &json!({ "engine": "safari" })),
+        Err(CommandError::InvalidArgs(_))
+    ));
+    assert!(matches!(
+        run(core, &json!({ "engine": "firefox", "target": "all" })),
+        Err(CommandError::InvalidArgs(_))
+    ));
+}
+
+#[tokio::test]
+async fn the_badge_switch_reaches_the_window() {
+    let setup = setup(config());
+    on_start(&setup.core);
+    assert!(setup.ui.calls().contains(&UiCall::EngineBadges(true)));
+    let mut user = setup.core.user_settings();
+    user.ui.engine_badge = false;
+    setup.core.replace_user_settings(user);
+    // Other followers of the user settings (the app theme, RB-080-95) may call after it.
+    assert!(setup.ui.calls().contains(&UiCall::EngineBadges(false)));
+}
+
+#[test]
+fn set_engine_has_its_chord_and_its_tool() {
+    let def = definition().expect("a definition");
+    assert_eq!(def.id.as_str(), SET_ENGINE);
+    assert_eq!(def.group, Group::Breakpoints);
+    assert_eq!(def.default_bindings.len(), 1);
+    assert!(matches!(&def.default_bindings[0], Binding::Leader(chord) if chord.keys.len() == 2));
+    assert_eq!(def.mcp, McpCoverage::Covered(MCP_TOOL.to_owned()));
+}

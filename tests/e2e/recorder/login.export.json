@@ -1,0 +1,434 @@
+{
+  "recording": {
+    "$schema": "../../../schema/recording.v1.json",
+    "version": 1,
+    "name": "login",
+    "startUrl": "http://127.0.0.1:8000/recorder.html",
+    "environment": "local",
+    "breakpoints": [
+      {
+        "id": "mobile",
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 3
+      },
+      {
+        "id": "tablet",
+        "width": 820,
+        "height": 1180,
+        "deviceScaleFactor": 2
+      },
+      {
+        "id": "desktop",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      }
+    ],
+    "startedAtMs": 1794330000000,
+    "appVersion": "0.5.0",
+    "steps": [
+      {
+        "id": 1,
+        "action": {
+          "type": "navigate",
+          "url": "http://127.0.0.1:8000/recorder.html"
+        },
+        "view": "desktop",
+        "atMs": 0
+      },
+      {
+        "id": 2,
+        "name": "Open the mobile menu",
+        "action": {
+          "type": "click",
+          "target": {
+            "selectors": [
+              {
+                "kind": "role",
+                "role": "button",
+                "name": "Menu"
+              },
+              {
+                "kind": "css",
+                "path": "#burger"
+              }
+            ]
+          }
+        },
+        "view": "mobile",
+        "atMs": 400,
+        "onlyIn": [
+          "mobile"
+        ]
+      },
+      {
+        "id": 3,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "visible",
+            "target": {
+              "selectors": [
+                {
+                  "kind": "role",
+                  "role": "link",
+                  "name": "About"
+                },
+                {
+                  "kind": "css",
+                  "path": "#mobile-menu > a"
+                }
+              ]
+            }
+          }
+        },
+        "view": "mobile",
+        "atMs": 800,
+        "onlyIn": [
+          "mobile"
+        ]
+      },
+      {
+        "id": 4,
+        "action": {
+          "type": "press",
+          "key": "Escape"
+        },
+        "view": "desktop",
+        "atMs": 1200
+      },
+      {
+        "id": 5,
+        "action": {
+          "type": "fill",
+          "target": {
+            "selectors": [
+              {
+                "kind": "testid",
+                "testid": "email"
+              },
+              {
+                "kind": "css",
+                "path": "#email"
+              }
+            ]
+          },
+          "value": "alice@example.org"
+        },
+        "view": "desktop",
+        "atMs": 1600
+      },
+      {
+        "id": 6,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "value",
+            "target": {
+              "selectors": [
+                {
+                  "kind": "testid",
+                  "testid": "email"
+                },
+                {
+                  "kind": "css",
+                  "path": "#email"
+                }
+              ]
+            },
+            "value": "alice@example.org"
+          }
+        },
+        "view": "desktop",
+        "atMs": 2000
+      },
+      {
+        "id": 7,
+        "action": {
+          "type": "fill",
+          "target": {
+            "selectors": [
+              {
+                "kind": "css",
+                "path": "#password"
+              }
+            ]
+          },
+          "value": "{{secret:password}}",
+          "secret": true
+        },
+        "view": "desktop",
+        "atMs": 2400
+      },
+      {
+        "id": 8,
+        "action": {
+          "type": "select",
+          "target": {
+            "selectors": [
+              {
+                "kind": "css",
+                "path": "#plan"
+              }
+            ]
+          },
+          "value": "pro",
+          "indexes": [
+            1
+          ]
+        },
+        "view": "desktop",
+        "atMs": 2800
+      },
+      {
+        "id": 9,
+        "action": {
+          "type": "check",
+          "target": {
+            "selectors": [
+              {
+                "kind": "role",
+                "role": "checkbox",
+                "name": "Remember me"
+              },
+              {
+                "kind": "css",
+                "path": "#remember"
+              }
+            ]
+          }
+        },
+        "view": "desktop",
+        "atMs": 3200
+      },
+      {
+        "id": 10,
+        "action": {
+          "type": "uncheck",
+          "target": {
+            "selectors": [
+              {
+                "kind": "role",
+                "role": "checkbox",
+                "name": "Remember me"
+              },
+              {
+                "kind": "css",
+                "path": "#remember"
+              }
+            ]
+          }
+        },
+        "view": "desktop",
+        "atMs": 3600
+      },
+      {
+        "id": 11,
+        "action": {
+          "type": "hover",
+          "target": {
+            "selectors": [
+              {
+                "kind": "testid",
+                "testid": "help"
+              },
+              {
+                "kind": "css",
+                "path": "#login > span.help"
+              }
+            ]
+          }
+        },
+        "view": "desktop",
+        "atMs": 4000
+      },
+      {
+        "id": 12,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "visible",
+            "target": {
+              "selectors": [
+                {
+                  "kind": "text",
+                  "tag": "span",
+                  "text": "We never share your email."
+                },
+                {
+                  "kind": "css",
+                  "path": "#login > span.help > span.tip"
+                }
+              ]
+            }
+          }
+        },
+        "view": "desktop",
+        "atMs": 4400
+      },
+      {
+        "id": 13,
+        "action": {
+          "type": "dblclick",
+          "target": {
+            "selectors": [
+              {
+                "kind": "testid",
+                "testid": "counter"
+              },
+              {
+                "kind": "css",
+                "path": "#counter"
+              }
+            ]
+          }
+        },
+        "view": "desktop",
+        "atMs": 4800
+      },
+      {
+        "id": 14,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "text",
+            "target": {
+              "selectors": [
+                {
+                  "kind": "testid",
+                  "testid": "counter"
+                },
+                {
+                  "kind": "css",
+                  "path": "#counter"
+                }
+              ]
+            },
+            "text": "Double-clicked"
+          }
+        },
+        "view": "desktop",
+        "atMs": 5200
+      },
+      {
+        "id": 15,
+        "action": {
+          "type": "scroll",
+          "target": {
+            "selectors": [
+              {
+                "kind": "css",
+                "path": "#terms"
+              }
+            ]
+          },
+          "x": 0,
+          "y": 120
+        },
+        "view": "desktop",
+        "atMs": 5600
+      },
+      {
+        "id": 16,
+        "name": "Sign in",
+        "action": {
+          "type": "click",
+          "target": {
+            "selectors": [
+              {
+                "kind": "testid",
+                "testid": "sign-in"
+              },
+              {
+                "kind": "css",
+                "path": "#login > button:nth-of-type(2)"
+              }
+            ]
+          }
+        },
+        "view": "desktop",
+        "atMs": 6000
+      },
+      {
+        "id": 17,
+        "action": {
+          "type": "waitForUrl",
+          "url": "http://127.0.0.1:8000/recorder-welcome.html?plan=pro"
+        },
+        "view": "desktop",
+        "atMs": 6400
+      },
+      {
+        "id": 18,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "text",
+            "target": {
+              "selectors": [
+                {
+                  "kind": "css",
+                  "path": "#who"
+                }
+              ]
+            },
+            "text": "Signed in as alice@example.org"
+          }
+        },
+        "view": "desktop",
+        "atMs": 6800
+      },
+      {
+        "id": 19,
+        "action": {
+          "type": "assert",
+          "assertion": {
+            "kind": "url",
+            "url": "http://127.0.0.1:8000/recorder-welcome.html?plan=pro"
+          }
+        },
+        "view": "desktop",
+        "atMs": 7200
+      }
+    ]
+  },
+  "options": {
+    "locatorPreference": "auto",
+    "baseUrl": "http://127.0.0.1:8000",
+    "projects": [
+      {
+        "name": "mobile",
+        "engine": "chromium",
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 3,
+        "isMobile": true,
+        "hasTouch": true,
+        "locale": "en-US"
+      },
+      {
+        "name": "tablet",
+        "engine": "chromium",
+        "width": 820,
+        "height": 1180,
+        "deviceScaleFactor": 2,
+        "isMobile": true,
+        "hasTouch": true,
+        "colorScheme": "light"
+      },
+      {
+        "name": "desktop",
+        "engine": "chromium",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1,
+        "isMobile": false,
+        "hasTouch": false,
+        "locale": "de-DE",
+        "colorScheme": "dark",
+        "reducedMotion": true
+      }
+    ]
+  }
+}

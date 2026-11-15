@@ -1,0 +1,29 @@
+[package]
+name = "rb-process"
+description = "Spawning helpers shared by every crate that starts a program, and the user-only folder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tokio.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# The job object that ends a child's whole process tree with its owner (`job`, RB-080-67).
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    # The user-only DACL of a private folder (`private_dir`, RB-090-21).
+    "Win32_Security_Authorization",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

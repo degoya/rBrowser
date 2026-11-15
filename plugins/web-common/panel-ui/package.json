@@ -1,0 +1,32 @@
+{
+  "name": "rbrowser-panel-ui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nuxt UI in the first-party plugin panels (RB-080-83): the panel runtime (storage stand-in, app theme, bridge, texts), the panel frame components and the Vite build every Nuxt UI panel uses. MIT, like the plugin SDK, which carries a copy (RB-080-87).",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "@iconify/vue": "5.0.5",
+    "@nuxt/ui": "4.12.0",
+    "tailwindcss": "4.3.5",
+    "vue": "3.5.45"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "1.2.154",
+    "@types/node": "26.6.6",
+    "@vitejs/plugin-vue": "6.0.11",
+    "@vue/test-utils": "2.5.1",
+    "happy-dom": "21.0.4",
+    "playwright-core": "1.65.0",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

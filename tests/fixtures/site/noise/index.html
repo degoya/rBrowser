@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Noise fixture (RB-080-12)</title>
+<style>
+  /* The banner locks the scroll as consent managers do. */
+  html.consent-open { overflow: hidden; }
+  body { margin: 0; font: 16px/1.4 sans-serif; }
+  header { height: 120px; background: #1d3557; color: #fff; padding: 16px; }
+  .carousel { position: relative; overflow: hidden; height: 200px; background: #eee; }
+  .track { display: flex; width: 300%; height: 100%; animation: slide 3s linear infinite; }
+  .slide { flex: 1; display: grid; place-items: center; font-size: 48px; color: #fff; }
+  .slide:nth-child(1) { background: #e63946; }
+  .slide:nth-child(2) { background: #2a9d8f; }
+  .slide:nth-child(3) { background: #f4a261; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(-66.666%); } }
+  .spinner { width: 40px; height: 40px; margin: 16px; border: 6px solid #ccc;
+    border-top-color: #e63946; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade { animation: fade 400ms ease-out both; padding: 16px; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  video, canvas { display: block; width: 320px; height: 180px; margin: 16px; background: #000; }
+  .content { height: 1600px; padding: 16px; background: linear-gradient(#fff, #a8dadc); }
+  #own-promo { padding: 16px; background: #ffb703; }
+  /* A OneTrust-like banner and an Intercom-like chat launcher. */
+  #onetrust-banner-sdk { position: fixed; left: 0; right: 0; bottom: 0; padding: 24px;
+    background: #222; color: #fff; z-index: 10; }
+  #intercom-container { position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px;
+    border-radius: 50%; background: #0057ff; z-index: 11;
+    animation: pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform: scale(1.2); } }
+</style>
+</head>
+<body>
+<header>Noise fixture</header>
+<div class="carousel"><div class="track">
+  <div class="slide">1</div><div class="slide">2</div><div class="slide">3</div>
+</div></div>
+<div class="spinner" aria-label="loading"></div>
+<p class="fade">Fades in once.</p>
+<input id="field" value="caret here" autofocus>
+<video id="clip" muted loop playsinline></video>
+<div id="own-promo">A project-specific promo bar (capture.hideSelectors).</div>
+<div class="content">Content</div>
+<div id="onetrust-banner-sdk" role="dialog" aria-label="Cookie consent">We use cookies. <button>Accept</button></div>
+<div id="intercom-container" aria-label="Chat"></div>
+<script>
+  document.documentElement.classList.add('consent-open');
+  // A video made in the page: a canvas whose colour changes every frame, recorded once.
+  (async () => {
+    const video = document.getElementById('clip');
+    const canvas = document.createElement('canvas');
+    canvas.width = 160; canvas.height = 90;
+    const context = canvas.getContext('2d');
+    let frame = 0;
+    const paint = () => {
+      context.fillStyle = `hsl(${(frame * 37) % 360} 80% 50%)`;
+      context.fillRect(0, 0, 160, 90);
+      context.fillStyle = '#fff';
+      context.fillText(String(frame), 70, 50);
+      frame += 1;
+    };
+    paint();
+    if (typeof MediaRecorder === 'undefined' || !canvas.captureStream) return;
+    const stream = canvas.captureStream(30);
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const chunks = [];
+    recorder.ondataavailable = (event) => chunks.push(event.data);
+    const timer = setInterval(paint, 33);
+    recorder.start();
+    await new Promise((done) => setTimeout(done, 1500));
+    recorder.stop();
+    await new Promise((done) => { recorder.onstop = done; });
+    clearInterval(timer);
+    video.src = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    await video.play().catch(() => {});
+    document.body.dataset.videoReady = 'true';
+  })();
+</script>
+</body>
+</html>

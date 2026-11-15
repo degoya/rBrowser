@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser grid fixture</title>
+<style>
+  /* RB-010-04: the breakpoint each view emulates (innerWidth, media queries) and a 20 x 20 px
+     button in every corner of the viewport, to check that clicks in a scaled view hit what is
+     under the pointer. Served with `python3 -m http.server 18765` from this folder. */
+  html, body { margin: 0; height: 100%; font: 16px system-ui, sans-serif; }
+  #size { position: fixed; inset: 40% 0 auto 0; text-align: center; font-size: 48px; }
+  #mq::after { content: "mobile"; }
+  @media (min-width: 700px) { #mq::after { content: "tablet"; } }
+  @media (min-width: 1200px) { #mq::after { content: "desktop"; } }
+  .corner { position: fixed; width: 20px; height: 20px; padding: 0; border: 0; background: #d33; }
+  .corner.hit { background: #3a3; }
+  #top-left { top: 0; left: 0; }
+  #top-right { top: 0; right: 0; }
+  #bottom-left { bottom: 0; left: 0; }
+  #bottom-right { bottom: 0; right: 0; }
+</style>
+</head>
+<body>
+<div id="size"><span id="width"></span> &times; <span id="height"></span> <span id="mq"></span></div>
+<button class="corner" id="top-left" aria-label="top left"></button>
+<button class="corner" id="top-right" aria-label="top right"></button>
+<button class="corner" id="bottom-left" aria-label="bottom left"></button>
+<button class="corner" id="bottom-right" aria-label="bottom right"></button>
+<script>
+  const show = () => {
+    document.getElementById("width").textContent = innerWidth;
+    document.getElementById("height").textContent = innerHeight;
+  };
+  addEventListener("resize", show);
+  show();
+  window.__last = null;
+  for (const button of document.querySelectorAll(".corner")) {
+    button.addEventListener("click", (event) => {
+      button.classList.add("hit");
+      window.__last = { id: button.id, trusted: event.isTrusted };
+    });
+  }
+</script>
+</body>
+</html>

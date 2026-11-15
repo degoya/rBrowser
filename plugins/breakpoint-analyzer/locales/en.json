@@ -1,0 +1,28 @@
+{
+  "plugin": {
+    "breakpoint-analyzer": {
+      "errors": {
+        "bad_args": "The analyser got arguments it cannot read: {reason}",
+        "no_breakpoint": "Nothing to write: no breakpoint was selected."
+      },
+      "hints": {
+        "dynamic": "{path}: {name} is not statically readable; the breakpoints the pages use still count.",
+        "presets": "{path}: the screens of Tailwind presets are not read; the pages still show those in use.",
+        "range": "{path}: the screen {name} is a range or a raw query, not a breakpoint, and was left out."
+      },
+      "name": "Breakpoint analyser",
+      "reasons": {
+        "boundary": "A media query changes the layout at {width} px ({count} times).",
+        "declared": "Declared in {source}; no media query of the analysed pages uses it yet.",
+        "desktop": "A large desktop view above the widest breakpoint.",
+        "edge": "One pixel beside the boundary at {boundary} px.",
+        "group": "The average of the breakpoints between {from} and {to} px.",
+        "mobile": "The smallest mobile view, below every breakpoint."
+      },
+      "tools": {
+        "apply": "Writes the chosen breakpoints of the last proposal into .rbrowser/config.json.",
+        "detect": "Reads the media queries of the site and proposes breakpoints, without writing."
+      }
+    }
+  }
+}

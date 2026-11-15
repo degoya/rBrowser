@@ -1,0 +1,14 @@
+error hreflang.source_conflict hreflang.source_conflict /hreflang-broken/en/ code=de | values=html: https://fixture.test/hreflang-broken/de/; header: https://fixture.test/hreflang-broken/fr/; sitemap: https://fixture.test/hreflang-broken/de/
+warning hreflang.source_missing hreflang.source_missing /hreflang-broken/en/ code=es | in=sitemap | missing=html, header
+error hreflang.source_conflict hreflang.source_conflict /hreflang-broken/en/ code=fr | values=html: https://fixture.test/hreflang-broken/fr/; header: https://fixture.test/hreflang-broken/de/; sitemap: https://fixture.test/hreflang-broken/fr/
+error hreflang.code_invalid hreflang.code_suggestion /hreflang-broken/en/ code=en-UK | suggestion=en-GB
+warning hreflang.x_default_missing hreflang.x_default_missing /hreflang-broken/en/
+error hreflang.code_invalid hreflang.code_suggestion /hreflang-broken/uk/ code=en-UK | suggestion=en-GB
+warning hreflang.x_default_missing hreflang.x_default_missing /hreflang-broken/uk/
+error hreflang.target_canonical hreflang.target_canonical_language /hreflang-broken/de/ canonical=https://fixture.test/hreflang-broken/en/ | code=en
+error hreflang.code_invalid hreflang.code_suggestion /hreflang-broken/de/ code=en-UK | suggestion=en-GB
+warning hreflang.x_default_missing hreflang.x_default_missing /hreflang-broken/de/
+warning hreflang.x_default_missing hreflang.x_default_missing /hreflang-broken/fr/
+error hreflang.target_status hreflang.target_status /hreflang-broken/es/ detail=404
+error hreflang.return_missing hreflang.return_missing /hreflang-broken/fr/ code=en-UK | target=https://fixture.test/hreflang-broken/uk/
+info images.alt_untranslated images.alt_untranslated /hreflang-broken/fr/ alt=ein rotes fahrrad steht am strand | other=https://fixture.test/hreflang-broken/de/

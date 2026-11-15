@@ -1,0 +1,454 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the SEO check (RB-060-08, RB-060-09, RB-080-11): Settings > Checks > SEO",
+  "type": "object",
+  "properties": {
+    "maxPages": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10,
+      "description": "How many pages of the same site a crawl checks.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "title": {
+      "type": "object",
+      "properties": {
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 30,
+          "description": "Titles with fewer characters are reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 60,
+          "description": "Titles with more characters are reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "description": {
+      "type": "object",
+      "properties": {
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 70,
+          "description": "Meta descriptions with fewer characters are reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 160,
+          "description": "Meta descriptions with more characters are reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "images": {
+      "type": "object",
+      "properties": {
+        "maxAltLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 125,
+          "description": "Alt texts with more characters are reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "placeholders": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "default": [
+            "image",
+            "img",
+            "picture",
+            "pic",
+            "photo",
+            "foto",
+            "bild",
+            "graphic",
+            "grafik",
+            "logo",
+            "icon",
+            "banner",
+            "placeholder",
+            "untitled"
+          ],
+          "description": "Words that alone are no alt text (compared in lower case).",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "decorativeMaxSize": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 32,
+          "description": "An image at most this many CSS pixels wide and high may have an empty alt.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 8,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "maxProperties": 256,
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "off",
+          "info",
+          "warning",
+          "error"
+        ]
+      },
+      "default": {},
+      "description": "Per rule id of this plugin (`images.alt_missing`) or group (`images`): off, or the severity its findings get.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 9,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "ignore": {
+      "type": "array",
+      "maxItems": 256,
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          }
+        },
+        "description": "Globs (`*` any text, `?` one character); a field left out matches anything, an entry without a field nothing."
+      },
+      "description": "Findings left out: every field an entry gives has to match.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 10,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "locales": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 35
+      },
+      "default": [],
+      "description": "hreflang codes the language set has to have (de, en-GB); a bare language accepts any region of it.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 11,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "requireXDefault": {
+      "type": "boolean",
+      "default": true,
+      "description": "Report a hreflang set without x-default.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 12,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "hreflang": {
+      "type": "object",
+      "properties": {
+        "checkContentLanguage": {
+          "type": "boolean",
+          "default": false,
+          "description": "Guess the language of each page's text and report one that differs from its hreflang code (a warning).",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 13,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "parity": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "string",
+          "maxLength": 64,
+          "default": "smallest",
+          "description": "The view the others are compared with: smallest (the narrowest view), or a breakpoint or view label.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 14,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "textSimilarity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.9,
+          "description": "How alike (0 to 1) a view's main text has to be to the reference view's.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 15,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "social": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the social group: Open Graph, the share image, the Twitter card and og:url.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 16,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "platforms": {
+          "type": "array",
+          "maxItems": 13,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "facebook",
+              "x",
+              "linkedin",
+              "slack",
+              "whatsapp",
+              "discord",
+              "imessage",
+              "telegram",
+              "teams",
+              "mastodon",
+              "bluesky",
+              "threads",
+              "signal"
+            ]
+          },
+          "default": [
+            "facebook",
+            "x",
+            "linkedin",
+            "slack",
+            "whatsapp",
+            "discord",
+            "imessage"
+          ],
+          "description": "The platforms the social preview shows: facebook, x, linkedin, slack, whatsapp, discord, imessage, telegram, teams, mastodon, bluesky, threads, signal. Empty shows all.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 17,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "imageMinWidth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 1200,
+          "description": "A share image narrower than this many pixels is reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 18,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "imageMinHeight": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 630,
+          "description": "A share image lower than this many pixels is reported.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 19,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "wellknown": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fetch the site's /llms.txt and /.well-known/security.txt once per run and check them.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 20,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "maxLinks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "default": 20,
+          "description": "How many links of llms.txt are fetched to see that they answer.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 21,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "microdata": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the microdata group: types, required properties and contradictions to the JSON-LD.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 22,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    },
+    "head": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body.",
+          "x-category": "checks",
+          "x-section": "seo",
+          "x-order": 23,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      }
+    }
+  }
+}

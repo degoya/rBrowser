@@ -1,0 +1,151 @@
+{
+  "plugin": {
+    "color-picker": {
+      "name": "Colour picker",
+      "commands": {
+        "pick": "Pick a colour from the page",
+        "measure_text": "Measure characters per line",
+        "panel": "Show the colour picker panel"
+      },
+      "tools": {
+        "sample": "The rendered colour at a viewport point (x, y in CSS pixels) of the targeted view (default: the active view) as HEX, rgb(), hsl() and oklch(), read from the view's image as it is shown, with the image pixel it was read from and the image pixels per CSS pixel (dpr; the view's device pixel ratio when it is shown at it). Chromium views only.",
+        "contrast": "The WCAG 2.x contrast ratio of a foreground and a background colour (any CSS colour text: hex, rgb(), hsl(), oklch()) and whether it passes AA and AAA for normal and large text. A translucent foreground is blended over the background.",
+        "palette": "The colours the targeted view's page uses (computed text, background and border colours of every rendered element), near colours grouped, sorted by use, each with its uses and its computed values. mark: a list of computed values outlines the elements using them in every view; an empty list clears the outlines.",
+        "measure_text": "Characters per line of the elements a selector matches (default: Settings > Colour picker & measuring > Elements to measure) in every view or the targeted one: lines, average (last lines left out), maximum, lines above the warning limit and a rating against the optimal range; long lines are marked in the views. choose lets a person click the element in a view; clear removes the marks."
+      },
+      "panels": {
+        "picker": "Colour picker"
+      },
+      "settings": {
+        "defaultFormat": {
+          "label": "Default format",
+          "description": "The format the loupe shows and the panel lists first: HEX, rgb(), hsl() or oklch().",
+          "help": "The format the loupe shows and the panel lists first: hex (#1f6feb), rgb(), hsl() or oklch(). The other formats are one click away."
+        },
+        "loupeSize": {
+          "label": "Loupe size",
+          "description": "Device pixels per side of the pipette's loupe (an odd number).",
+          "help": "How many device pixels per side the pipette's loupe magnifies, an odd number from 5 to 31; larger shows more context, smaller picks more precisely."
+        },
+        "textMeasure": {
+          "selector": {
+            "label": "Elements to measure",
+            "description": "The CSS selector the text measure takes when no element is chosen, such as p, li.",
+            "help": "The elements the text measure rates when none is chosen, as a CSS selector. Example: p, li or article p."
+          },
+          "optimalMin": {
+            "label": "Shortest comfortable line",
+            "description": "An average below this many characters per line is rated too short.",
+            "help": "An average line shorter than this many characters is rated too short for comfortable reading. Typography guides name 45."
+          },
+          "optimalMax": {
+            "label": "Longest comfortable line",
+            "description": "An average above this many characters per line is rated too long.",
+            "help": "An average line longer than this many characters is rated too long for comfortable reading. Typography guides name 75."
+          },
+          "warnAbove": {
+            "label": "Mark lines longer than",
+            "description": "Lines with more characters are marked in the views (WCAG 1.4.8 asks for at most 80).",
+            "help": "Lines with more characters than this are marked in the views; WCAG 1.4.8 asks for at most 80."
+          }
+        },
+        "capture": {
+          "label": "Pipette reads",
+          "description": "Window: the view as it is shown, without flicker. Clip: a clip of the page, in its own colours; the view flickers at every read.",
+          "help": "Window reads the view as its window shows it and never makes it flicker; on a display with a colour profile the colours are the display's, which can differ from the page's CSS colours. Clip reads a clip of the page in its own colours; the view flickers for a frame at every read."
+        },
+        "option": {
+          "defaultFormat": {
+            "hex": "HEX",
+            "rgb": "RGB",
+            "hsl": "HSL",
+            "oklch": "OKLCH"
+          },
+          "capture": {
+            "window": "Window (no flicker)",
+            "clip": "Clip (page colours)"
+          }
+        }
+      },
+      "errors": {
+        "unknown_view": "There is no view {view}.",
+        "unsupported_engine": "The colour picker reads Chromium views only for now.",
+        "outside": "The point lies outside the view's page.",
+        "bad_selector": "The page cannot read this selector."
+      },
+      "notice": {
+        "picking": "Click a pixel in a view to pick it, Esc to stop.",
+        "picked": "Picked {value}.",
+        "stopped": "Stopped picking.",
+        "unreadable": "Cannot read {view} without flicker: its window image does not show where the page lies. Pipette reads: Clip in the settings (Colour picker & measuring) reads it; the view then flickers.",
+        "unreadable_size": "Cannot read {view} without flicker: its image has more than 8 megapixels. Make the view smaller, or choose Pipette reads: Clip in the settings (Colour picker & measuring); the view then flickers.",
+        "unreadable_image": "Cannot read {view} without flicker: the browser gave no image of its window. Pipette reads: Clip in the settings (Colour picker & measuring) reads it; the view then flickers."
+      },
+      "panel": {
+        "colors": "Colours and contrast",
+        "pick": "Pick from the page",
+        "pick_active": "Picking… Esc to stop",
+        "pick_hint": "Click a pixel in a view to take it as the foreground, Shift+click for the background. Arrow keys move by one pixel (Shift: ten), Enter takes; Esc or a second click on this button ends it.",
+        "swap": "Swap foreground and background",
+        "foreground": "Foreground",
+        "background": "Background",
+        "edit": "Colour (any CSS format)",
+        "format": {
+          "hex": "HEX",
+          "rgb": "RGB",
+          "hsl": "HSL",
+          "oklch": "OKLCH"
+        },
+        "copy": "Copy",
+        "copy_format": "Copy {format}: {value}",
+        "copied": "Copied {value}.",
+        "copy_failed": "Could not copy; select the value and press Ctrl+C.",
+        "contrast": "Contrast (WCAG 2.x)",
+        "ratio": "{ratio}:1",
+        "text_size": "Text",
+        "normal_text": "Normal text",
+        "large_text": "Large text (24 px, or 18.66 px bold)",
+        "pass": "Pass",
+        "fail": "Fail",
+        "picked": "Took {value} from the page.",
+        "picking": "Picking: click a pixel in a view, Shift+click for the background; Esc or this button stops.",
+        "stopped": "Stopped picking.",
+        "palette": "Palette of the active view",
+        "palette_read": "Read the palette",
+        "palette_read_done": "{count, plural, one {# colour} other {# colours}} in {view}.",
+        "palette_empty": "Read the palette to list the page's colours by use.",
+        "uses": "{count, plural, one {used once} other {used # times}}",
+        "mark": "Mark",
+        "mark_uses": "Mark the elements using {value}",
+        "marked": "Marked the elements using {value}.",
+        "use_as_foreground": "Use {value} as the foreground",
+        "use_as_background": "Use {value} as the background",
+        "marks_clear": "Clear marks",
+        "cleared": "Marks cleared.",
+        "reading": "Reading...",
+        "no_view": "no view",
+        "measure": "Characters per line",
+        "selector": "Elements (CSS selector)",
+        "measure_run": "Measure in every view",
+        "measure_choose": "Choose an element",
+        "choosing": "Click the element to measure in a view; Esc cancels.",
+        "measuring": "Measuring...",
+        "measure_hint": "{selector}: comfortable {min} to {max, plural, one {# character} other {# characters}} per line; lines above {warn} are marked.",
+        "view": "View",
+        "lines": "Lines",
+        "average": "Average",
+        "max": "Longest",
+        "over": "Over the limit",
+        "rating_head": "Rating",
+        "rating": {
+          "none": "no text",
+          "short": "too short",
+          "optimal": "comfortable",
+          "long": "too long"
+        },
+        "failed": "The colour picker could not finish this.",
+        "picked_managed": "Took {value} as your display shows it; its colour profile can shift it from the page's colour. Pipette reads: Clip in the settings takes the page's own colours (the view flickers)."
+      }
+    }
+  }
+}

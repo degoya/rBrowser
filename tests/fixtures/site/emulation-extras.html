@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser emulation extras fixture</title>
+<style>
+  /* RB-080-10: what the emulation extras change, as the page sees it - position, time zone,
+     a CPU-bound loop (compare its time with and without cpuThrottling), navigator.onLine and a
+     fetch, and print media (the navigation is hidden in print, the width shows the paper).
+     Served with `python3 emulation-server.py` from this folder (port 18765). */
+  html { font: 100% system-ui, sans-serif; }
+  body { margin: 0; padding: 12px; }
+  nav { padding: 8px; background: #ddd; }
+  td { padding: 2px 8px; border-bottom: 1px solid #ccc; }
+  td:first-child { font-family: ui-monospace, monospace; }
+  @media print { nav { display: none; } }
+</style>
+</head>
+<body>
+<nav id="nav">Navigation (hidden in print)</nav>
+<p><button id="locate">Locate</button> <button id="loop">CPU loop</button> <button id="fetch">Fetch</button></p>
+<table><tbody id="values"></tbody></table>
+<script>
+  const values = {};
+  const render = () => {
+    Object.assign(values, {
+      "Intl time zone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+      "navigator.onLine": String(navigator.onLine),
+      "media print": String(matchMedia("print").matches),
+      "nav display": getComputedStyle(document.getElementById("nav")).display,
+      "innerWidth": innerWidth,
+    });
+    window.__extras = values;
+    const rows = Object.entries(values).map(([key, value]) => {
+      const row = document.createElement("tr");
+      for (const text of [key, String(value)]) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.append(cell);
+      }
+      return row;
+    });
+    document.getElementById("values").replaceChildren(...rows);
+  };
+  document.getElementById("locate").onclick = () =>
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        values.position = `${position.coords.latitude}/${position.coords.longitude}`;
+        render();
+      },
+      (error) => {
+        values.position = `error ${error.code}`;
+        render();
+      },
+    );
+  document.getElementById("loop").onclick = () => {
+    const started = performance.now();
+    let sum = 0;
+    for (let i = 0; i < 2e7; i += 1) sum += Math.sqrt(i);
+    values["CPU loop ms"] = Math.round(performance.now() - started);
+    values.sum = Math.round(sum) % 7;
+    render();
+  };
+  document.getElementById("fetch").onclick = () =>
+    fetch("/echo-headers", { cache: "no-store" })
+      .then((response) => { values.fetch = `ok ${response.status}`; })
+      .catch((error) => { values.fetch = `failed ${error.name}`; })
+      .finally(render);
+  addEventListener("online", render);
+  addEventListener("offline", render);
+  setInterval(render, 500);
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[package]
+name = "rb-engine"
+description = "Views, engines, emulation and the ViewHost the CEF app implements; the engine contract and the external windows (RB-040-01)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+async-trait.workspace = true
+rb-config = { path = "../rb-config" }
+rb-util = { path = "../rb-util" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[features]
+# The test doubles and the engine conformance (`test_support`) for other crates' tests; never
+# in a release build.
+test-support = []
+
+[lints]
+workspace = true

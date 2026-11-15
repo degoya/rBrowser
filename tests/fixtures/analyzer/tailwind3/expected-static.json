@@ -1,0 +1,6 @@
+{
+  "framework": "tailwind",
+  "detected": [[640, "min", "sm", "tailwind.config.js: sm"], [768, "min", "md", "tailwind.config.js: md"], [1024, "min", "lg", "tailwind.config.js: lg"], [1280, "min", "xl", "tailwind.config.js: xl"], [1536, "min", "2xl", "tailwind.config.js: 2xl"], [1920, "min", "3xl", "tailwind.config.js: 3xl"]],
+  "sources": [["tailwind.config.js", 6]],
+  "all": [["mobile", 375, 667], ["sm", 640, 1138], ["md", 768, 1024], ["lg", 1024, 640], ["xl", 1280, 800], ["2xl", 1536, 960], ["3xl", 1920, 1200], ["desktop", 2240, 1400]]
+}

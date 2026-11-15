@@ -1,0 +1,24 @@
+Third-party code in the framework-devtools plugin (RB-080-24)
+==============================================================
+
+The panels (panel/dist/react.js, panel/dist/vue.js) are built from web/src with the packages below bundled
+in, unchanged, each under the MIT licence (https://opensource.org/license/mit). The matching
+backends ride in rbrowser.exe (agent/dist/rb-react-devtools.js, rb-vue-devtools.js; see
+packaging/windows/NOTICE). The versions are pinned in web/package-lock.json and
+agent/package-lock.json.
+
+panel/dist/react.js
+  react-devtools-inline 8.0.0 - Copyright (c) Meta Platforms, Inc. and affiliates.
+    https://github.com/facebook/react/tree/main/packages/react-devtools-inline
+  react 19.3.1, react-dom 19.3.1, react-is 19.3.1 - Copyright (c) Meta Platforms, Inc. and affiliates.
+    https://github.com/facebook/react
+
+panel/dist/vue.js
+  @vue/devtools-kit 8.2.1, @vue/devtools-shared 8.2.1 - Copyright (c) 2023-present webfansplz
+    https://github.com/vuejs/devtools
+  birpc 4.2.0 - Copyright (c) 2021 Anthony Fu
+    https://github.com/antfu/birpc
+  hookable 5.5.3 - Copyright (c) Pooya Parsa <pooya@pi0.io>
+    https://github.com/unjs/hookable
+  perfect-debounce 2.1.0 - Copyright (c) Pooya Parsa <pooya@pi0.io>
+    https://github.com/unjs/perfect-debounce

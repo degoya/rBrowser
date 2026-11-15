@@ -1,0 +1,10 @@
+# rBrowser's winget version manifest (RB-090-13). Rendered from
+# packaging/winget/degoya.rBrowser.yaml.in in @REPOSITORY@ by scripts/package-managers.sh and
+# submitted to microsoft/winget-pkgs by the release workflow: change the template, not this file.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.28.0.schema.json
+
+PackageIdentifier: degoya.rBrowser
+PackageVersion: @VERSION@
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.28.0

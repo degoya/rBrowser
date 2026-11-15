@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the Fonts plugin (RB-070-13): Settings > Checks > Fonts",
+  "type": "object",
+  "properties": {
+    "allowedHosts": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^(\\*\\.)?[A-Za-z0-9.-]+$"
+      },
+      "default": [],
+      "description": "Font hosts that are no privacy finding: a host name such as fonts.gstatic.com, or *.example.com for a domain and its subdomains.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "minTextPx": {
+      "type": "number",
+      "minimum": 6,
+      "maximum": 32,
+      "default": 12,
+      "description": "Text smaller than this, in CSS pixels, is reported.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 2,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "minInputPx": {
+      "type": "number",
+      "minimum": 8,
+      "maximum": 32,
+      "default": 16,
+      "description": "Form fields with smaller text are reported in views up to 1024 pixels wide: iOS zooms into them.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 3,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "minLineHeight": {
+      "type": "number",
+      "minimum": 0.8,
+      "maximum": 3,
+      "default": 1.2,
+      "description": "Paragraphs with a smaller line height, relative to their font size, are reported.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 4,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "maxWeightsPerFamily": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "default": 4,
+      "description": "A family with more loaded weights and styles is reported.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 5,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "maxFileKb": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "default": 100,
+      "description": "Font files larger than this, in KiB, are reported.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 6,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "fluidMinRatio": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 1.15,
+      "description": "A heading should grow at least by this factor from the narrowest to the widest view; one that does not is reported as not scaled.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 7,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "previewMaxKb": {
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 4096,
+      "default": 1024,
+      "description": "Font files up to this size, in KiB, are shown as a preview in the Fonts panel; a larger one says why it is missing.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 8,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "previewText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "default": "Aa Bb Cc 0123 - The quick brown fox jumps over the lazy dog",
+      "description": "The sample text the Fonts panel sets in each font; the panel can change it for the moment.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 9,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "previewSizePx": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 96,
+      "default": 24,
+      "description": "The size of the large preview in the Fonts panel, in CSS pixels; the panel can change it for the moment.",
+      "x-category": "checks",
+      "x-section": "fonts",
+      "x-order": 10,
+      "x-scope": [
+        "user"
+      ]
+    }
+  }
+}

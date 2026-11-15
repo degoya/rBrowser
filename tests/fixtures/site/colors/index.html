@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colour picker fixture (RB-070-10)</title>
+<style>
+  /*
+   * Five colours, each used a different number of times (computed colour of elements with text
+   * of their own, background, visible border - once per element):
+   *   #212121  text         7  (h1, the two paragraphs, four list items)
+   *   #1e88e5  background   5  (#pick and four .blue swatches)
+   *   #e53935  bg + border  4  (two .red, two .red-border)
+   *   #43a047  background   3  (three .green)
+   *   #fdd835  background   2  (two .yellow)
+   * html and body have no background of their own, so nothing else is counted.
+   */
+  html, body { margin: 0; }
+  body { color: #212121; font: 18px/1.5 Arial, Helvetica, sans-serif; }
+  main { padding: 24px; }
+  /* The pipette's target: a flat #1e88e5 area at (24, 24) to (264, 184) in every view. */
+  #pick { width: 240px; height: 160px; background: #1e88e5; }
+  h1 { margin: 16px 0; font-size: 24px; }
+  /* No max-width: on a desktop view the lines run far beyond 80 characters, on a phone below 45. */
+  #measure { margin: 16px 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .swatches div { width: 32px; height: 32px; }
+  .blue { background: #1e88e5; }
+  .red { background: #e53935; }
+  .red-border { border: 4px solid #e53935; box-sizing: border-box; }
+  .green { background: #43a047; }
+  .yellow { background: #fdd835; }
+</style>
+</head>
+<body>
+<main>
+  <div id="pick"></div>
+  <h1>Colours</h1>
+  <p id="measure">Typography guides recommend between forty-five and seventy-five characters per line for comfortable reading of running text. Lines that are much longer make it hard for the eye to find the start of the next line, while very short lines break the rhythm of reading. This paragraph has no maximum width, so on a wide desktop view each of its lines holds far more than eighty characters and is marked, while on a narrow phone view the same text wraps into short lines of fewer than forty-five characters.</p>
+  <div class="swatches">
+    <div class="blue"></div><div class="blue"></div><div class="blue"></div><div class="blue"></div>
+    <div class="red"></div><div class="red"></div><div class="red-border"></div><div class="red-border"></div>
+    <div class="green"></div><div class="green"></div><div class="green"></div>
+    <div class="yellow"></div><div class="yellow"></div>
+  </div>
+  <ul>
+    <li>Pick the blue area: #1e88e5 at DPR 1 and DPR 3.</li>
+    <li>Contrast of #767676 on #ffffff: 4.54:1.</li>
+    <li>Palette: five colours by use.</li>
+    <li>Text measure: the paragraph above.</li>
+  </ul>
+  <p class="note">Fixture of RB-070-10.</p>
+</main>
+</body>
+</html>

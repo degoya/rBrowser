@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Network fixture</title>
+    <style>
+      body { font: 16px/1.4 system-ui, sans-serif; margin: 1rem; }
+      img { max-width: 100%; height: auto; display: block; }
+      #user[data-state="error"] { color: #b3261e; }
+    </style>
+  </head>
+  <body>
+    <h1>Network fixture</h1>
+    <!-- RB-070-02: a narrow view loads hero-480.svg, a wide one hero-1600.svg. -->
+    <img id="hero" alt="Hero" sizes="100vw"
+         srcset="img/hero-480.svg 480w, img/hero-1600.svg 1600w" src="img/hero-480.svg" />
+    <p id="user" data-state="loading">Loading the user...</p>
+    <p id="tracking" data-state="off">Tracking not loaded.</p>
+    <script>
+      // The user's state: "error" with the time it took when the API answers an error status.
+      const started = performance.now();
+      fetch('api/user.json', { headers: { 'x-fixture': 'original' } })
+        .then((response) => {
+          const out = document.getElementById('user');
+          const took = Math.round(performance.now() - started);
+          if (!response.ok) {
+            out.dataset.state = 'error';
+            out.dataset.took = String(took);
+            out.textContent = 'The user could not be loaded (' + response.status + ', ' + took + ' ms).';
+            return null;
+          }
+          return response.json().then((user) => {
+            out.dataset.state = 'ok';
+            out.textContent = 'Hello, ' + user.name + '.';
+          });
+        })
+        .catch(() => {
+          document.getElementById('user').dataset.state = 'failed';
+        });
+    </script>
+    <script src="tracking.js"></script>
+  </body>
+</html>

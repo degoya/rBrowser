@@ -1,0 +1,3 @@
+error social.image_relative social.image_relative -
+warning social.twitter_card social.twitter_card_missing -
+warning social.image_small social.image_small -

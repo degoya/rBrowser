@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microdata fixture: a product as it should be</title>
+<meta name="description" content="A page of the SEO check fixture site that answers every essential rule but the ones it is made for.">
+<link rel="canonical" href="https://fixture.test/microdata-ok/">
+<meta property="og:title" content="Microdata fixture: a product as it should be">
+<meta property="og:description" content="A page of the SEO check fixture site.">
+<meta property="og:image" content="https://fixture.test/img/share.jpg">
+<meta property="og:image:alt" content="The fixture site logo on a white ground">
+<meta property="og:url" content="https://fixture.test/microdata-ok/">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Product", "name": "Desk lamp", "sku": "A-1"}</script>
+</head>
+<body>
+<main>
+<h1>Microdata fixture: a product as it should be</h1>
+<p>Text.</p>
+<div itemscope itemtype="https://schema.org/Product">
+<h2 itemprop="name">Desk lamp</h2>
+<p>Article number <span itemprop="sku">A-1</span></p>
+<div itemprop="offers" itemscope itemtype="https://schema.org/Offer"><meta itemprop="priceCurrency" content="EUR"><span itemprop="price">19.99</span> EUR</div>
+</div>
+<nav vocab="https://schema.org/" typeof="BreadcrumbList">
+<span property="itemListElement" typeof="ListItem"><a property="item" href="https://fixture.test/"><span property="name">Home</span></a><meta property="position" content="1"></span>
+</nav>
+</main>
+</body>
+</html>

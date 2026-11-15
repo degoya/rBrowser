@@ -1,0 +1,10 @@
+{
+  "plugin": {
+    "example-export": {
+      "formats": {
+        "playwright": "Playwright test (TypeScript)"
+      },
+      "name": "Example export"
+    }
+  }
+}

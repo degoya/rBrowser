@@ -1,0 +1,52 @@
+name: Package repository
+
+# RB-110-04: scripts/package-repo.sh, the signed apt and dnf repository the release's apt-dnf job
+# writes into <owner>/rbrowser-packages, with every tool it needs, so both halves run - a
+# workstation without rpmbuild, rpmsign and createrepo_c skips the rpm half of
+# scripts/tests/package-repo.sh. Fixture packages and a throwaway key, no secret, nothing
+# published (adapted from rCommander's packages-repo.yml). rCommander's install jobs - real
+# packages of two releases installed and upgraded with apt and dnf in containers - join once
+# RB-110-01 ships the deb and rpm packages and scripts/ci-package-repo.sh.
+on:
+  push:
+    branches: ["**", "!dependabot/**"]
+    paths:
+      - ".github/workflows/packages-repo.yml"
+      - "packaging/repository/**"
+      - "scripts/package-repo.sh"
+      - "scripts/lib/render-template.sh"
+      - "scripts/tests/package-repo.sh"
+  # The same list as above; keep the two in step.
+  pull_request:
+    paths:
+      - ".github/workflows/packages-repo.yml"
+      - "packaging/repository/**"
+      - "scripts/package-repo.sh"
+      - "scripts/lib/render-template.sh"
+      - "scripts/tests/package-repo.sh"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Bounded per request and per attempt, so a stalled mirror costs minutes, not the job.
+      - name: Install the package and repository tools
+        run: |
+          apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          timeout 180 sudo apt-get "${apt_opts[@]}" update -qq
+          timeout 300 sudo apt-get "${apt_opts[@]}" install -y --no-install-recommends apt-utils rpm createrepo-c
+      - name: Test the repository script, deb and rpm halves
+        run: scripts/tests/package-repo.sh

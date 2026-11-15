@@ -1,0 +1,140 @@
+{
+  "plugin": {
+    "rulers-guides": {
+      "commands": {
+        "toggle": "Rulers: Show or Hide",
+        "grid": "Rulers: Show or Hide the Baseline Grid",
+        "columns": "Rulers: Show or Hide the Column Overlay"
+      },
+      "tools": {
+        "set": "Sets the guides, the column overlay per breakpoint, the baseline grid and what is shown in every view, and answers the state. Without arguments it answers the state unchanged."
+      },
+      "panels": {
+        "guides": "Rulers and guides"
+      },
+      "errors": {
+        "bad_args": "Rulers and guides got a value it cannot use: {reason}"
+      },
+      "panel": {
+        "show": "Show",
+        "show_rulers": "Rulers",
+        "show_columns": "Column overlay",
+        "show_baseline": "Baseline grid",
+        "guides": "Guides",
+        "guides_empty": "No guides yet. Drag one out of a ruler or add one here.",
+        "add_vertical": "Add vertical guide",
+        "add_horizontal": "Add horizontal guide",
+        "axis_x": "Vertical",
+        "axis_y": "Horizontal",
+        "unit": "Measured",
+        "unit_px": "px from the left",
+        "unit_px_top": "px from the top",
+        "unit_px-right": "px from the right",
+        "unit_percent": "% of the width",
+        "value": "Position",
+        "remove_guide": "Remove guide {id}",
+        "guide_row": "Guide {id}, {axis}",
+        "columns": "Column overlay",
+        "breakpoint": "Breakpoint",
+        "breakpoint_any": "Every other breakpoint (*)",
+        "preset": "Template",
+        "preset_none": "None",
+        "preset_bootstrap": "Bootstrap",
+        "preset_tailwind": "Tailwind",
+        "columns_count": "Columns",
+        "gutter": "Gutter (px)",
+        "margin": "Margin (px)",
+        "max_width": "Max width (px)",
+        "max_width_hint": "Empty: from the template, else the full width.",
+        "align": "Align",
+        "align_left": "Left",
+        "align_center": "Centre",
+        "align_right": "Right",
+        "columns_off": "No columns for this breakpoint",
+        "baseline": "Baseline grid",
+        "line_height": "Line height (px)",
+        "offset": "Offset (px)",
+        "reset": "Reset to the shared settings",
+        "reset_hint": "Drops your own guides and setups; the project's settings apply again.",
+        "saved": "Saved.",
+        "not_saved": "Applied to the open views; not saved, as no project is open.",
+        "failed": "Not applied: {error}",
+    "max_width_range": "{min}-{max}",
+    "max_width_full": "full width",
+    "error_busy": "rBrowser is still busy with earlier requests of the rulers. Try again in a moment.",
+    "error_timed_out": "The rulers took too long and were stopped. Try again; the rBrowser log has the details.",
+    "error_no_answer": "The rulers did not answer in time. Try again in a moment.",
+    "error_suspended": "The rulers failed repeatedly and are paused. Resume them in Settings > Plugins.",
+    "error_other": "The rulers could not apply the change. The rBrowser log has the details."
+      },
+      "settings": {
+        "visible": {
+          "label": "Show the rulers",
+          "description": "Whether the rulers show in every view when a project opens. Ctrl+Shift+Space O R switches them.",
+          "help": "Whether the rulers show in every view when a project opens; Ctrl+Shift+Space, O, R switches them any time."
+        },
+        "unit": {
+          "label": "Unit of a new vertical guide",
+          "description": "How a vertical guide dragged out of the ruler counts: px from the left, px from the right, or per cent of the page's width for fluid layouts. Horizontal guides count px from the top.",
+          "help": "How a vertical guide dragged out of the ruler counts: px from the left, px from the right (px-right) for right-aligned layouts, or percent of the page's width for fluid layouts."
+        },
+        "snapPx": {
+          "label": "Snap step (px)",
+          "description": "With Shift held, a dragged guide snaps to a multiple of this many CSS px. 0 switches snapping off.",
+          "help": "With Shift held, a dragged guide snaps to a multiple of this many CSS px. Example: 8 for an 8-px grid. 0 switches snapping off."
+        },
+        "guides": {
+          "label": "Shared guides",
+          "description": "Guides every view shows until someone changes them; set in the project to share them with the team. Your own changes are kept in .rbrowser/out/rulers-guides/ and win.",
+          "help": "Guides every view shows, set in the project to share them with the team (axis, position, unit). Your own changes are kept in .rbrowser/out/rulers-guides/ and win over them."
+        },
+        "columns": {
+          "label": "Column overlay per breakpoint",
+          "description": "A setup per breakpoint id - columns, gutter, margin, maxWidth, align, or a template (bootstrap, tailwind) - and * for every other breakpoint.",
+          "help": "A column overlay per breakpoint id: columns, gutter, margin, maxWidth, align, or a template (bootstrap, tailwind); * applies to every other breakpoint. Example: desktop with 12 columns, gutter 24."
+        },
+        "baseline": {
+          "lineHeight": {
+            "label": "Baseline grid: line height (px)",
+            "description": "The distance of the baseline grid's lines in CSS px (2 to 1000).",
+            "help": "The distance between the baseline grid's lines in CSS px (2 to 1000), usually your body line height. Example: 24."
+          },
+          "offset": {
+            "label": "Baseline grid: offset (px)",
+            "description": "Where the baseline grid's first line lies, in CSS px from the top of the page.",
+            "help": "Where the baseline grid's first line lies, in CSS px from the top of the page, to align it with the first text line."
+          }
+        },
+        "option": {
+          "unit": {
+            "px": "px from the left",
+            "px-right": "px from the right",
+            "percent": "% of the width"
+          },
+          "guides": {
+            "axis": {
+              "x": "Vertical",
+              "y": "Horizontal"
+            },
+            "unit": {
+              "px": "px from the left",
+              "px-right": "px from the right",
+              "percent": "% of the width"
+            }
+          },
+          "columns": {
+            "preset": {
+              "bootstrap": "Bootstrap",
+              "tailwind": "Tailwind"
+            },
+            "align": {
+              "left": "Left",
+              "center": "Centre",
+              "right": "Right"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser mobile menu fixture</title>
+<style>
+  /* RB-020-02 and RB-020-03 (K2, hover): one page, two navigations.
+     - Wide views (700 px and up) show a desktop menu bar with a CSS :hover dropdown
+       ("Products"); hovering it in the active view opens it in every wide view.
+     - Narrow views have no desktop menu at all: the script removes it below 700 px at load,
+       so a click on "Pricing" in a wide view is `not_found` in a narrow one - that view shows
+       the desync badge within a second, the other views follow the click (K2).
+     - "Docs" exists everywhere but is display:none in narrow views: `not_visible`.
+     - The burger button opens the mobile menu; it is hidden in wide views.
+     Every click lands in window.__clicks (and the list), for the end-to-end run.
+     Served by tests/fixtures/server/post-counter.py. */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 24px; padding: 12px 16px; background: #223; }
+  header a, header button { color: #fff; }
+  .menu { display: flex; gap: 16px; list-style: none; margin: 0; padding: 0; }
+  .dropdown { position: relative; }
+  .dropdown ul { display: none; position: absolute; top: 100%; left: 0; margin: 0; padding: 8px;
+                 list-style: none; background: #fff; box-shadow: 0 2px 8px #0004; }
+  .dropdown ul a { color: #223; }
+  .dropdown:hover ul { display: block; }
+  #burger { display: none; }
+  #mobile-menu { display: none; padding: 12px 16px; }
+  #mobile-menu.open { display: block; }
+  @media (max-width: 699px) {
+    #docs { display: none; }
+    #burger { display: inline-block; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <strong>Fixture</strong>
+  <ul class="menu" id="desktop-menu" aria-label="Main">
+    <li class="dropdown"><a href="#products" id="products">Products</a>
+      <ul aria-label="Products">
+        <li><a href="#alpha" data-testid="product-alpha">Alpha</a></li>
+        <li><a href="#beta" data-testid="product-beta">Beta</a></li>
+      </ul>
+    </li>
+    <li><a href="#pricing" data-testid="nav-pricing">Pricing</a></li>
+  </ul>
+  <a href="#docs" id="docs">Docs</a>
+  <button type="button" id="burger" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+</header>
+<nav id="mobile-menu" aria-label="Main (mobile)">
+  <a href="#about" data-testid="nav-about">About</a>
+</nav>
+<main style="padding: 16px">
+  <p>Clicks: <span id="count">0</span></p>
+  <ol id="clicks"></ol>
+</main>
+<script>
+  'use strict';
+  window.__clicks = [];
+  if (innerWidth < 700) document.getElementById('desktop-menu').remove();
+  document.getElementById('burger').addEventListener('click', (event) => {
+    const menu = document.getElementById('mobile-menu');
+    const open = menu.classList.toggle('open');
+    event.currentTarget.setAttribute('aria-expanded', String(open));
+  });
+  addEventListener('click', (event) => {
+    const target = event.target.closest('a, button');
+    const entry = { target: target ? (target.dataset.testid || target.id) : null,
+                    at: Date.now(), trusted: event.isTrusted };
+    window.__clicks.push(entry);
+    document.getElementById('count').textContent = String(window.__clicks.length);
+    const line = document.createElement('li');
+    line.textContent = `${entry.target ?? '-'} trusted=${entry.trusted}`;
+    document.getElementById('clicks').append(line);
+  });
+</script>
+</body>
+</html>

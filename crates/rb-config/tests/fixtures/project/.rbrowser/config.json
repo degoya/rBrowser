@@ -1,0 +1,134 @@
+{
+  "$schema": "../../../../../../schema/config.v1.json",
+  "version": 1,
+  "startUrl": "http://localhost:5173",
+  "environments": [
+    {
+      "id": "local",
+      "url": "http://localhost:5173",
+      "color": "#2e7d32"
+    },
+    {
+      "id": "staging",
+      "url": "https://staging.example.com",
+      "color": "#f9a825"
+    }
+  ],
+  "sessions": [
+    "default",
+    "admin"
+  ],
+  "layouts": {
+    "default": "grid-main",
+    "presets": {
+      "grid-main": {
+        "mode": "grid"
+      },
+      "focus": {
+        "mode": "focus"
+      }
+    }
+  },
+  "breakpoints": [
+    {
+      "id": "mobile",
+      "label": "iPhone 15",
+      "width": 393,
+      "height": 852,
+      "dpr": 3,
+      "touch": true,
+      "engine": "chromium",
+      "userAgent": null,
+      "colorScheme": "light",
+      "reducedMotion": false,
+      "locale": "de-DE",
+      "network": null,
+      "headers": {},
+      "session": "default",
+      "syncNavigation": true,
+      "shortcut": "Alt+M"
+    },
+    {
+      "id": "desktop-ff",
+      "width": 1440,
+      "height": 900,
+      "engine": "firefox"
+    }
+  ],
+  "bookmarks": [
+    {
+      "id": "checkout",
+      "label": "Checkout",
+      "path": "/checkout",
+      "group": "Shop"
+    },
+    {
+      "id": "storybook",
+      "label": "Storybook",
+      "url": "http://localhost:6006",
+      "shortcut": "Alt+F7"
+    }
+  ],
+  "layout": {
+    "columns": 3,
+    "rows": 2,
+    "gap": 8,
+    "cells": [
+      {
+        "breakpoint": "mobile",
+        "col": 1,
+        "row": 1,
+        "colSpan": 1,
+        "rowSpan": 2,
+        "zoom": "fit"
+      },
+      {
+        "breakpoint": "desktop-ff",
+        "col": 2,
+        "row": 1,
+        "colSpan": 2,
+        "rowSpan": 2,
+        "zoom": 0.5
+      }
+    ]
+  },
+  "sync": {
+    "navigation": true,
+    "scroll": true,
+    "click": true,
+    "input": true,
+    "keyboard": true,
+    "hover": true,
+    "leaderOnlySubmit": true
+  },
+  "reload": {
+    "watch": [
+      "src/**"
+    ],
+    "ignore": [
+      "node_modules/**"
+    ],
+    "debounceMs": 200,
+    "mode": "auto"
+  },
+  "network": {
+    "hostResolverRules": null,
+    "ignoreCertificateErrors": false
+  },
+  "visual": {
+    "threshold": 0.1,
+    "fullPage": true
+  },
+  "checks": {
+    "axe": {
+      "tags": [
+        "wcag22aa"
+      ]
+    },
+    "lighthouse": {
+      "categories": [
+        "performance"
+      ]
+    }
+  }
+}

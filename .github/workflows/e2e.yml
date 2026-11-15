@@ -1,0 +1,101 @@
+name: E2E
+
+# The end-to-end criteria on Windows itself (RB-090-04, after rDownloader's e2e.yml; prepared,
+# inactive until the move to GitHub, RB-090-12): scripts/e2e-windows.sh --native (RB-090-05) in
+# Git Bash on the runner - no WSL, no run-windows.sh - with Firefox installed for the Firefox
+# engine. The report (artifacts/e2e/report.json and report.md) is kept as an artifact, and so are
+# the screenshots the run took: the runner's own visual baselines, since a runner renders fonts
+# and scaling differently from a workstation (docs/visual-baselines.md).
+#
+# The `paths` filters of push and pull_request are the same list: what the app, its front ends,
+# the tests and their scripts are built from.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - ".github/workflows/e2e.yml"
+      - ".nvmrc"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "agent/**"
+      - "crates/**"
+      - "plugins/**"
+      - "scripts/e2e-windows.sh"
+      - "scripts/lib/**"
+      - "sidecar/**"
+      - "tests/e2e/**"
+      - "tests/fixtures/**"
+      - "ui/**"
+  pull_request:
+    paths:
+      - ".github/workflows/e2e.yml"
+      - ".nvmrc"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "agent/**"
+      - "crates/**"
+      - "plugins/**"
+      - "scripts/e2e-windows.sh"
+      - "scripts/lib/**"
+      - "sidecar/**"
+      - "tests/e2e/**"
+      - "tests/fixtures/**"
+      - "ui/**"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RB_NO_LOCK: 1
+  RB_MIN_FREE_MB: 0
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: e2e-windows
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      # A missing Firefox fails the run rather than skipping its criteria (RB-090-05).
+      - uses: browser-actions/setup-firefox@0bc507ddf224827e3b1af68e014d5e42ab93e795 # v1.7.2
+      - name: scripts/e2e-windows.sh --native
+        run: scripts/e2e-windows.sh --native
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report-windows
+          path: |
+            artifacts/e2e/report.json
+            artifacts/e2e/report.md
+            artifacts/e2e/**/*.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the runner's visual baselines
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-baselines-windows-2025
+          path: artifacts/e2e/screenshots
+          if-no-files-found: warn
+          retention-days: 30

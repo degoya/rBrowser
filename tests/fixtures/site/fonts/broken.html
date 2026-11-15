@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fonts fixture: Inter cannot load</title>
+<!-- The Fonts plugin's rendered-vs-declared case (RB-070-13): Inter is declared, its file does
+     not exist, so Chromium renders Arial and the plugin reports "declared Inter, rendered Arial". -->
+<style>
+@font-face { font-family: "Inter"; src: url(missing-inter.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+body { font-family: Inter, Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 16px; }
+</style>
+</head>
+<body>
+<h1>Inter is missing</h1>
+<p>This text asks for Inter and gets Arial.</p>
+</body>
+</html>

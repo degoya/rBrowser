@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overflow fixture</title>
+    <!--
+      The overflow detector's fixture (RB-060-03, plugins/overlays). At 375 px the document
+      scrolls sideways because of exactly one element, .promo (16 px padding + 400 px = 416 px,
+      41 px past the viewport); its child, the clipped strip and the fixed bar pass the viewport
+      too but cause nothing. At 1440 px nothing scrolls. .hero is 100vw wide (the blue hint) and
+      sits in a clipping wrapper, so it never scrolls the page itself. Three .card elements for
+      the selector search. The page stays shorter than the viewport, so no vertical scrollbar
+      changes clientWidth.
+    -->
+    <style>
+      body { margin: 0; font: 16px/1.4 system-ui, sans-serif; }
+      .page { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+      .card { border: 1px solid #ccc; padding: 4px 8px; margin: 4px 0; }
+      .promo { width: 400px; height: 40px; background: #fde68a; }
+      .promo .inner { width: 100%; height: 100%; }
+      .strip { overflow-x: hidden; }
+      .strip .wide { width: 2000px; height: 10px; background: #bfdbfe; }
+      .bar { position: fixed; top: 0; left: 0; width: 3000px; height: 2px; background: #a3a3a3; }
+      .hero-wrap { overflow-x: hidden; }
+      .hero { width: 100vw; height: 40px; background: #dbeafe; }
+    </style>
+  </head>
+  <body>
+    <div class="bar"></div>
+    <main class="page">
+      <h1>Overflow</h1>
+      <div class="card">One</div>
+      <div class="card">Two</div>
+      <div class="card">Three</div>
+      <div class="promo"><div class="inner">Promo</div></div>
+      <div class="strip"><div class="wide"></div></div>
+    </main>
+    <div class="hero-wrap"><section class="hero">Hero</section></div>
+  </body>
+</html>

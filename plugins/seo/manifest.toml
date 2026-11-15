@@ -1,0 +1,124 @@
+# The SEO check (RB-060-08, docs/plugins.md): the raw response and HTML of a page, fetched here,
+# and the rendered DOM of the view that shows it, held to the SEO essentials and the alt text
+# group `seo.images`. A check for `checks_run` and the findings panel, and a feature for the MCP
+# tool `seo_check` and its commands, which also write a report into .rbrowser/out/seo/.
+# RB-060-09: the hreflang set (scope `hreflang`: head, Link header and sitemap, the alternates
+# loaded, a reciprocity matrix) and the parity of the views (`parity`).
+# RB-080-11: the share image and Twitter card (`social`), the site's llms.txt and security.txt
+# (`wellknown`), Microdata and RDFa (`microdata`), the order of the raw head (`head`), and the
+# social previews of six platforms - the MCP tool `seo_social_preview` and the SEO panel.
+# RB-080-99: each platform's card from its published rule (data/social.json), more platforms.
+manifest_version = 1
+id = "seo"
+name = "SEO"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "seo"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Checks a page, a small crawl of its site or its hreflang set for the SEO essentials and alt texts, raw and rendered, and compares the views."
+# Checks > SEO in the page's context menu (RB-080-43): the SEO check of the clicked view.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# The page, its redirects, robots.txt, the canonical target, the sitemaps and the alternates of
+# a hreflang set (each origin's robots.txt kept), the share image, /llms.txt and its links (HEAD,
+# GET when HEAD is refused), /.well-known/security.txt: GET and HEAD only, at most four requests a
+# second (the crawl's throttle). The views and their rendered DOM through
+# src/collect.js, which only reads. The report below .rbrowser/out/seo/, the findings of the MCP
+# tool into the findings panel.
+[capabilities]
+http = { rate_limit_per_second = 4 }
+views = true
+evaluate = true
+out-write = true
+findings = true
+
+# A crawl of up to 100 pages at four requests a second, and a rendered DOM of up to 3 MiB parsed
+# twice (host time is credited back).
+[limits]
+memory_bytes = 268435456
+fuel = 40000000000
+timeout_milliseconds = 120000
+max_response_bytes = 8388608
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `seo_check`: the page (`url`, default the view's), a crawl of its site, or its hreflang
+# set; `parity` compares the views showing the page.
+[[tools]]
+name = "check"
+description = "plugin.seo.tools.check"
+input = { type = "object", properties = { url = { type = "string", maxLength = 2048 }, scope = { type = "string", enum = ["page", "crawl", "hreflang"] }, maxPages = { type = "integer", minimum = 1, maximum = 100 }, parity = { type = "boolean" }, groups = { type = "array", minItems = 1, maxItems = 14, items = { type = "string", enum = ["index", "canonical", "meta", "headings", "social", "structured", "site", "render", "images", "hreflang", "parity", "wellknown", "microdata", "head"] } } } }
+
+# MCP `seo_social_preview` (the SEO panel calls it too): the link previews of the platforms of
+# `seo.social.platforms` for the page (`url`, default the view's), cut by data/social.json, each
+# card's layout by its platform's rule with the reason (RB-080-99), the share image's real size
+# and, while the answer stays below the panel's
+# 64 KiB, the image itself as a `data:` URI - the panel's frame has no network.
+[[tools]]
+name = "social_preview"
+description = "plugin.seo.tools.social_preview"
+input = { type = "object", properties = { url = { type = "string", maxLength = 2048 } } }
+
+# `plugin.seo.check`, Ctrl+Shift+Space K S: the SEO check of the active view's page.
+[[commands]]
+id = "check"
+title = "plugin.seo.commands.check"
+shortcut = "Ctrl+Shift+Space K S"
+group = "checks"
+tool = "check"
+
+# `plugin.seo.hreflang`, Ctrl+Shift+Space K H: the hreflang set of the active view's page.
+[[commands]]
+id = "hreflang"
+title = "plugin.seo.commands.hreflang"
+shortcut = "Ctrl+Shift+Space K H"
+group = "checks"
+tool = "check"
+
+# `plugin.seo.parity`, Ctrl+Shift+Space K P: the page's parity across the views.
+[[commands]]
+id = "parity"
+title = "plugin.seo.commands.parity"
+shortcut = "Ctrl+Shift+Space K P"
+group = "checks"
+tool = "check"
+
+# `plugin.seo.check_wellknown`, Ctrl+Shift+Space K W: the site's llms.txt and security.txt only
+# (`seo_check` with `groups: ["wellknown"]`).
+[[commands]]
+id = "check_wellknown"
+title = "plugin.seo.commands.check_wellknown"
+shortcut = "Ctrl+Shift+Space K W"
+group = "checks"
+tool = "check"
+
+# `plugin.seo.social_preview`, Ctrl+Shift+Space K G (G for graph, Open Graph): the SEO panel
+# opened at the social previews of the active view's page.
+[[commands]]
+id = "social_preview"
+title = "plugin.seo.commands.social_preview"
+shortcut = "Ctrl+Shift+Space K G"
+group = "checks"
+tool = "social_preview"
+
+# The SEO panel: the social preview cards, on Nuxt UI (RB-080-85, panel/dist built from web/src);
+# texts from locales/en.json through the panels window.
+[[panels]]
+id = "seo"
+title = "plugin.seo.panels.seo"
+entry = "panel/index.html"
+icon = "search-check"
+placement = "sidebar"

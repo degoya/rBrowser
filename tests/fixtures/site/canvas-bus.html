@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser canvas bus fixture</title>
+<style>
+  /* RB-020-08: the page API's fixture for the manual acceptance on Windows. A canvas the
+     auto-sync cannot follow: dragging pans it, and the pan goes to the other views over
+     window.__rbrowser.bus ("canvas:pan"). The strip shows the view info and changes on
+     rbrowser:viewchange. Served with `python3 -m http.server 18765` from this folder. */
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  #info { padding: 6px 8px; background: #eef; }
+  #user-agent { padding: 0 8px 6px; background: #eef; color: #555; word-break: break-all; }
+  canvas { display: block; width: 100%; height: 70vh; touch-action: none; cursor: grab; }
+</style>
+</head>
+<body>
+<div id="info">no window.__rbrowser (not in rBrowser, or pageApi.enabled is off)</div>
+<div id="user-agent"></div>
+<canvas id="board"></canvas>
+<script>
+  const canvas = document.getElementById('board');
+  const context = canvas.getContext('2d');
+  const offset = { x: 0, y: 0 };
+  let received = 0;
+
+  function draw() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.save();
+    context.translate(offset.x, offset.y);
+    for (let x = -2000; x <= 2000; x += 100) {
+      for (let y = -2000; y <= 2000; y += 100) {
+        context.fillStyle = (x / 100 + y / 100) % 2 === 0 ? '#36c' : '#f90';
+        context.fillRect(x, y, 40, 40);
+      }
+    }
+    context.restore();
+    context.fillStyle = '#000';
+    context.fillText(`offset ${offset.x}, ${offset.y} - received ${received}`, 8, 16);
+  }
+
+  function showInfo(rb) {
+    document.getElementById('info').textContent =
+      `view ${rb.id} "${rb.label}" ${rb.width}x${rb.height} index ${rb.index} ${rb.engine} ` +
+      `dpr ${rb.emulation.dpr} touch ${rb.emulation.touch}`;
+  }
+
+  function pan(delta) {
+    offset.x += delta.x;
+    offset.y += delta.y;
+    draw();
+  }
+
+  document.getElementById('user-agent').textContent = navigator.userAgent;
+  const rb = window.__rbrowser;
+  if (rb) {
+    showInfo(rb);
+    window.addEventListener('rbrowser:viewchange', (event) => showInfo(event.detail));
+    rb.bus.on('canvas:pan', (delta) => {
+      received += 1;
+      pan(delta);
+    });
+  }
+
+  let last = null;
+  canvas.addEventListener('pointerdown', (event) => {
+    last = { x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointermove', (event) => {
+    if (!last) return;
+    const delta = { x: event.clientX - last.x, y: event.clientY - last.y };
+    last = { x: event.clientX, y: event.clientY };
+    pan(delta);
+    if (rb) rb.bus.send('canvas:pan', delta);
+  });
+  canvas.addEventListener('pointerup', () => { last = null; });
+  window.addEventListener('resize', draw);
+  draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# Sitemap capture (RB-050-05, docs/plugins.md): finds, reads and selects a site's pages and
+# renders the gallery of a run. The core opens the hidden render views, captures every page in
+# every breakpoint, keeps run.json and writes the files below .rbrowser/out/sitemap-capture/ -
+# also the gallery this plugin renders - so the plugin needs no write capability.
+manifest_version = 1
+id = "sitemap-capture"
+name = "Sitemap capture"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+# Not `sitemap`: the core tools `sitemap_capture`, `sitemap_status` and `sitemap_cancel` hold that
+# area, and a plugin prefix may not cover core tools it does not declare.
+mcp_prefix = "sitemapcapture"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Finds a site's sitemaps, picks the pages to capture and renders the gallery of a run."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# robots.txt, the sitemaps and their indexes: http(s) only, a redirect is answered and followed
+# here within its origin only, nothing on this machine or the local network unless the site is
+# local, at most four requests a second.
+[capabilities]
+http = { rate_limit_per_second = 4 }
+
+# A sitemap may be 50 MiB unpacked (the protocol's limit) and an index names up to 1000 of them:
+# room for the parse, and time for the fetches (host time is credited back).
+[limits]
+memory_bytes = 268435456
+fuel = 40000000000
+timeout_milliseconds = 300000
+max_response_bytes = 52428800
+
+# MCP `sitemapcapture_discover`: the pages a capture would take; nothing is captured or written.
+[[tools]]
+name = "discover"
+description = "plugin.sitemap-capture.tools.discover"
+input = { type = "object", properties = { source = { type = "object", properties = { site = { type = "string" }, sitemap = { type = "string" }, file = { type = "string" }, urls = { type = "array", items = { type = "string" } } } }, limits = { type = "object" }, selection = { type = "object" }, rewrite = { type = "object", properties = { from = { type = "string" }, to = { type = "string" } } } } }
+
+# MCP `sitemapcapture_gallery`: the HTML gallery of a run, from its run.json; nothing is written.
+[[tools]]
+name = "gallery"
+description = "plugin.sitemap-capture.tools.gallery"
+input = { type = "object", properties = { run = { type = "object" }, labels = { type = "object" } } }

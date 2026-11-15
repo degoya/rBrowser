@@ -1,0 +1,132 @@
+{
+  "plugin": {
+    "form-autofill": {
+      "commands": {
+        "fill_invalid": "Fill forms with invalid values",
+        "fill_valid": "Fill forms with valid values"
+      },
+      "errors": {
+        "profile_unknown": "The autofill profile {name} is not in the settings (Settings > DevTools & Debugging > Form autofill > Profiles)."
+      },
+      "name": "Form autofill",
+      "panel": {
+        "blocked": "{count, plural, one {# submit cancelled} other {# submits cancelled}}",
+        "broken": "broken: {violation}",
+        "empty": "No fill yet. Fill the forms with the buttons above or Ctrl+Shift+Space D F and D N.",
+        "error": "The fill failed: {text}",
+        "field": "Field",
+        "fillInvalid": "Fill invalid",
+        "fillValid": "Fill valid",
+        "formInvalid": "Form invalid",
+        "formValid": "Form valid",
+        "fromProfile": "from the profile",
+        "invalidMark": "invalid",
+        "kind": "Kind",
+        "modes": {
+          "invalid": "invalid values",
+          "valid": "valid values"
+        },
+        "noFields": "No fields",
+        "noProfile": "None",
+        "profile": "Profile",
+        "results": "Results",
+        "running": "Filling the views...",
+        "seed": "Seed",
+        "selector": "Form",
+        "skipped": "skipped ({reason})",
+        "status": {
+          "empty": "no fields",
+          "failed": "failed: {error}",
+          "filled": "filled",
+          "not-found": "nothing matches the selector",
+          "selector": "the selector is not valid",
+          "unsupported": "{engine}, not filled"
+        },
+        "strategies": {
+          "bounds": "Out of bounds",
+          "chars": "Special characters",
+          "empty": "Empty",
+          "format": "Wrong format",
+          "length": "Wrong length",
+          "mixed": "Mixed"
+        },
+        "strategy": "Invalid values",
+        "summary": "Filled {fields, plural, one {# field} other {# fields}} with {mode} in {views, plural, one {# view} other {# views}}, seed {seed}.",
+        "title": "Form autofill",
+        "tooLarge": "Filled, seed {seed}; the result is too large to show here - autofill_fill answers it in full.",
+        "validMark": "valid",
+        "value": "Value",
+        "options": "Options",
+        "allForms": "All forms",
+        "formNumber": "Form {number}",
+        "outside": "Outside a form",
+        "required": "required",
+        "differs": "{count, plural, one {differs in # view} other {differs in # views}}",
+        "skippedFields": "{count, plural, one {# field skipped} other {# fields skipped}}",
+        "notOnPage": "not on the page",
+        "viewNote": "{view}: {state}.",
+        "reasons": {
+          "disabled": "disabled",
+          "file": "file input",
+          "hidden": "hidden",
+          "readonly": "read-only"
+        },
+        "formMixed": "Form invalid in {count, plural, one {# view} other {# views}}",
+        "profileUsed": "Profile: {name}",
+        "seedUsed": "Seed {seed}",
+        "copySeed": "Copy the seed",
+        "seedCopied": "Seed copied",
+        "newSeed": "New seed",
+        "seedEmpty": "From the settings",
+        "strategyHint": "Used by Fill invalid.",
+        "profileHint": "Used by Fill valid.",
+        "formHint": "The forms of the last fill; type a selector for another element.",
+        "perView": "Values per view",
+        "emptyValue": "empty"
+      },
+      "panels": {
+        "autofill": "Form autofill"
+      },
+      "settings": {
+        "activeProfile": {
+          "description": "The profile a fill uses when it names none; empty fills generated values only.",
+          "help": "The profile a fill uses when the command names none. Example: qa. Empty fills generated values only.",
+          "label": "Profile used"
+        },
+        "invalidStrategy": {
+          "description": "How an invalid fill breaks the fields: mixed (per field one violation the browser checks), empty (required fields left empty), format (an address without @, a value outside the pattern), bounds (just outside min, max or step), length (one character over maxlength or under minlength; browsers flag it only for typed edits) or chars (special characters, emoji and a very long word). A field the strategy does not apply to gets a valid value.",
+          "help": "How an invalid fill breaks the fields: mixed one violation per field, empty leaves required fields empty, format breaks patterns, bounds goes just outside min and max, length over or under the limits, chars uses emoji and long words.",
+          "label": "Invalid values"
+        },
+        "profiles": {
+          "description": "Test users with fixed values, each a name and its values by field kind (email, givenName, familyName, name, username, street, postalCode, city, region, country, phone, organization, url, birthday, ...), field name or field id. A profile replaces the generated value of the fields it names in a valid fill; password fields always get a generated password.",
+          "help": "Test users with fixed values: a name and values by field kind (email, givenName, street, ...), field name or field id. A profile overrides generated values; passwords are always generated. Example: name qa, values email qa@example.com.",
+          "label": "Profiles"
+        },
+        "seed": {
+          "description": "The seed of the generated values: the same seed fills the same values. 0 takes a new seed for every fill; the panel and autofill_fill name the seed used.",
+          "help": "The seed of the generated values; the same seed fills the same values every time, for reproducible tests. 0 takes a new seed per fill and names it.",
+          "label": "Seed"
+        },
+        "skipHidden": {
+          "description": "Leaves fields alone that the view does not show (display: none, hidden), so each breakpoint fills what it shows.",
+          "help": "Leaves fields alone the view does not show (display: none, hidden), so each breakpoint fills what it shows. Off fills hidden fields too.",
+          "label": "Skip hidden fields"
+        },
+        "option": {
+          "invalidStrategy": {
+            "mixed": "Mixed",
+            "empty": "Empty",
+            "format": "Wrong format",
+            "bounds": "Out of bounds",
+            "length": "Wrong length",
+            "chars": "Special characters"
+          }
+        }
+      },
+      "tools": {
+        "fill": "Fills the forms of the targeted views (Chromium views; others are marked unsupported) with plausible valid values (mode valid) or deliberately invalid ones (mode invalid, by strategy: mixed, empty, format, bounds, length, chars) from one seed, so every view gets the same data, matched to each view's locale. Optional selector (one form or element), profile (a test user from the settings; never for passwords), seed (repeat a run). Never submits and never touches file inputs. Answers per view and field the detected kind, the value set, whether the field accepts it, how it was broken, and the form's validity; per view also the page's forms (a selector and a name each, for `selector`), and per field its form and whether it is required."
+      }
+    }
+  }
+}

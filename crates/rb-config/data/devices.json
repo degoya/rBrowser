@@ -1,0 +1,237 @@
+[
+  {
+    "id": "iphone-se",
+    "kind": "mobile",
+    "viewport": {
+      "width": 375,
+      "height": 667
+    },
+    "dpr": 2,
+    "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "iphone-15",
+    "kind": "mobile",
+    "viewport": {
+      "width": 393,
+      "height": 852
+    },
+    "dpr": 3,
+    "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 59,
+      "right": 0,
+      "bottom": 34,
+      "left": 0
+    }
+  },
+  {
+    "id": "iphone-15-pro-max",
+    "kind": "mobile",
+    "viewport": {
+      "width": 430,
+      "height": 932
+    },
+    "dpr": 3,
+    "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 59,
+      "right": 0,
+      "bottom": 34,
+      "left": 0
+    }
+  },
+  {
+    "id": "iphone-16-pro",
+    "kind": "mobile",
+    "viewport": {
+      "width": 402,
+      "height": 874
+    },
+    "dpr": 3,
+    "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 62,
+      "right": 0,
+      "bottom": 34,
+      "left": 0
+    }
+  },
+  {
+    "id": "pixel-8",
+    "kind": "mobile",
+    "viewport": {
+      "width": 412,
+      "height": 915
+    },
+    "dpr": 2.625,
+    "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "galaxy-s24",
+    "kind": "mobile",
+    "viewport": {
+      "width": 360,
+      "height": 780
+    },
+    "dpr": 3,
+    "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "galaxy-s24-ultra",
+    "kind": "mobile",
+    "viewport": {
+      "width": 384,
+      "height": 832
+    },
+    "dpr": 3.75,
+    "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "ipad-mini",
+    "kind": "tablet",
+    "viewport": {
+      "width": 744,
+      "height": 1133
+    },
+    "dpr": 2,
+    "ua": "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPad",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 24,
+      "right": 0,
+      "bottom": 20,
+      "left": 0
+    }
+  },
+  {
+    "id": "ipad-air",
+    "kind": "tablet",
+    "viewport": {
+      "width": 820,
+      "height": 1180
+    },
+    "dpr": 2,
+    "ua": "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPad",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 24,
+      "right": 0,
+      "bottom": 20,
+      "left": 0
+    }
+  },
+  {
+    "id": "ipad-pro-13",
+    "kind": "tablet",
+    "viewport": {
+      "width": 1032,
+      "height": 1376
+    },
+    "dpr": 2,
+    "ua": "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "platform": "iPad",
+    "touch": true,
+    "orientation": "portrait",
+    "safeAreas": {
+      "top": 24,
+      "right": 0,
+      "bottom": 20,
+      "left": 0
+    }
+  },
+  {
+    "id": "galaxy-tab-s9",
+    "kind": "tablet",
+    "viewport": {
+      "width": 800,
+      "height": 1280
+    },
+    "dpr": 2,
+    "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "platform": "Linux armv81",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "surface-pro",
+    "kind": "tablet",
+    "viewport": {
+      "width": 912,
+      "height": 1368
+    },
+    "dpr": 2,
+    "platform": "Win32",
+    "touch": true,
+    "orientation": "portrait"
+  },
+  {
+    "id": "laptop",
+    "kind": "desktop",
+    "viewport": {
+      "width": 1366,
+      "height": 768
+    },
+    "dpr": 1,
+    "touch": false,
+    "orientation": "landscape"
+  },
+  {
+    "id": "macbook-air-13",
+    "kind": "desktop",
+    "viewport": {
+      "width": 1470,
+      "height": 956
+    },
+    "dpr": 2,
+    "touch": false,
+    "orientation": "landscape"
+  },
+  {
+    "id": "desktop-hd",
+    "kind": "desktop",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "dpr": 1,
+    "touch": false,
+    "orientation": "landscape"
+  },
+  {
+    "id": "desktop-qhd",
+    "kind": "desktop",
+    "viewport": {
+      "width": 2560,
+      "height": 1440
+    },
+    "dpr": 1,
+    "touch": false,
+    "orientation": "landscape"
+  }
+]

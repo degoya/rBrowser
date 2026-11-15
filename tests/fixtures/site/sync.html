@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser sync fixture</title>
+<style>
+  /* RB-020-01: the sync agent's fixture. A responsive layout (one DOM, a desktop and a mobile
+     navigation, a row that becomes a column below 700 px), elements with and without
+     data-testid, generated class names (css-1x2y3z, styled-components), a form and a hidden
+     element. Served with `python3 -m http.server 18765` from this folder, loaded by the agent's
+     Vitest tests. */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  .layout { display: flex; gap: 16px; }
+  .nav-mobile { display: none; }
+  #gone { display: none; }
+  @media (max-width: 699px) {
+    .nav-desktop { display: none; }
+    .nav-mobile { display: block; }
+    .layout { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav-desktop" aria-label="Main">
+    <a href="/pricing" data-testid="nav-pricing">Pricing</a>
+    <a href="/docs">Docs</a>
+  </nav>
+  <nav class="nav-mobile" aria-label="Main (mobile)">
+    <a href="/pricing" data-testid="nav-pricing">Pricing</a>
+    <a href="/docs">Docs</a>
+  </nav>
+</header>
+<main class="layout">
+  <section class="css-1x2y3z card">
+    <button data-testid="save" class="css-1x2y3z">Save</button>
+    <button class="sc-bdfBwQ kGfCyH">Cancel</button>
+    <p class="css-4a5b6c">Some text <span class="css-7d8e9f">Read more</span></p>
+    <ul class="jsx-123456 list">
+      <li class="css-a1b2c3"><i class="css-zz9y8x"></i></li>
+      <li class="css-a1b2c3 item"><i class="css-zz9y8x"></i></li>
+    </ul>
+  </section>
+  <form id="login" method="post" action="/login">
+    <label for="email">Email</label>
+    <input id="email" type="email" name="email">
+    <label>Password <input id="password" type="password" name="password"></label>
+    <label><input type="checkbox" id="remember" name="remember"> Remember me</label>
+    <select id="lang" name="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+    <textarea id="notes" name="notes" placeholder="Notes"></textarea>
+    <button type="submit">Sign in</button>
+  </form>
+  <div id="gone"><button data-testid="hidden-button">Hidden</button></div>
+</main>
+<div id="host"></div>
+</body>
+</html>

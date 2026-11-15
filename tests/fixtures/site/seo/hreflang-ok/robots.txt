@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fixture.test/hreflang-ok/sitemap.xml

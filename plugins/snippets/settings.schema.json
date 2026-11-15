@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Snippets plugin settings",
+  "type": "object",
+  "properties": {
+    "library": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": ["name", "code"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "code": { "type": "string", "minLength": 1, "maxLength": 100000 }
+        }
+      },
+      "default": [],
+      "x-category": "devtools",
+      "x-section": "snippets",
+      "x-order": 1,
+      "x-scope": ["user"],
+      "x-protected": true
+    },
+    "defaultWorld": {
+      "type": "string",
+      "enum": ["isolated", "main"],
+      "default": "isolated",
+      "x-category": "devtools",
+      "x-section": "snippets",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "defaultTimeoutMs": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 9000,
+      "default": 5000,
+      "x-category": "devtools",
+      "x-section": "snippets",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "projectEnabled": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "snippets",
+      "x-order": 4,
+      "x-scope": ["user"]
+    }
+  }
+}

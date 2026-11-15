@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Error report plugin settings",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "object",
+      "maxProperties": 7,
+      "propertyNames": {
+        "enum": ["js-exception", "http-not-found", "http-server-error", "mixed-content-blocked", "mixed-content-passive", "csp-violation", "deprecation"]
+      },
+      "additionalProperties": { "type": "string", "enum": ["off", "info", "warning", "error"] },
+      "default": {},
+      "x-category": "checks",
+      "x-section": "error-report",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "ignore": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+      "default": [],
+      "x-category": "checks",
+      "x-section": "error-report",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    },
+    "reloadBeforeReport": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "checks",
+      "x-section": "error-report",
+      "x-order": 3,
+      "x-scope": ["project", "local", "user"]
+    },
+    "thirdParty": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "checks",
+      "x-section": "error-report",
+      "x-order": 4,
+      "x-scope": ["project", "local", "user"]
+    },
+    "sinceNavigation": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "checks",
+      "x-section": "error-report",
+      "x-order": 5,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

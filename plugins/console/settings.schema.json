@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Console plugin settings",
+  "type": "object",
+  "properties": {
+    "levels": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["error", "warning", "info", "log", "debug", "network"] },
+      "uniqueItems": true,
+      "default": ["error", "warning", "info", "log", "network"],
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "bufferSize": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 10000,
+      "default": 1000,
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "clearOnNavigate": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "networkLevel": {
+      "type": "string",
+      "enum": ["off", "errors", "all"],
+      "default": "errors",
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 4,
+      "x-scope": ["user"]
+    },
+    "execTarget": {
+      "type": "string",
+      "enum": ["all", "active"],
+      "default": "all",
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 5,
+      "x-scope": ["user"]
+    },
+    "mcpExec": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 6,
+      "x-scope": ["user"],
+      "x-protected": true
+    },
+    "showRbrowserMessages": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "console",
+      "x-order": 7,
+      "x-scope": ["user"]
+    }
+  }
+}

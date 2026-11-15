@@ -1,0 +1,18 @@
+{
+  "url": "http://localhost:8080/pwa-ok/",
+  "secure": true,
+  "manifests": ["http://localhost:8080/pwa-ok/manifest.webmanifest"],
+  "themeColor": true,
+  "appleTouchIcon": "http://localhost:8080/pwa-ok/icons/apple-touch-icon.png",
+  "sw": {
+    "supported": true,
+    "controlled": true,
+    "registration": {
+      "scope": "http://localhost:8080/pwa-ok/",
+      "script": "http://localhost:8080/pwa-ok/sw.js",
+      "state": "activated",
+      "active": true
+    },
+    "error": null
+  }
+}

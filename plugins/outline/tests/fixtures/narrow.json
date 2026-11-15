@@ -1,0 +1,656 @@
+{
+  "url": "http://localhost:8080/outline/index.html",
+  "lang": "en",
+  "headings": [
+    {
+      "selector": "html > body > main > h1",
+      "path": "html > body > main > h1",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "level": 1,
+      "text": "Outline fixture"
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > h2",
+      "path": "html > body > main > section:nth-of-type(1) > h2",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "level": 2,
+      "text": "Introduction"
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > h4",
+      "path": "html > body > main > section:nth-of-type(1) > h4",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "level": 4,
+      "text": "Details"
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2) > h2",
+      "path": "html > body > main > section:nth-of-type(2) > h2",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "level": 2,
+      "text": "Contact"
+    },
+    {
+      "selector": "html > body > main > div > h2",
+      "path": "html > body > main > div > h2",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "level": 2,
+      "text": "Promotion"
+    }
+  ],
+  "landmarks": [
+    {
+      "selector": "html > body > header",
+      "path": "html > body > header",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "banner",
+      "tag": "header",
+      "name": ""
+    },
+    {
+      "selector": "#main-nav",
+      "path": "html > body > header > nav:nth-of-type(1)",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "navigation",
+      "tag": "nav",
+      "name": "Main"
+    },
+    {
+      "selector": "#mobile-menu",
+      "path": "html > body > header > nav:nth-of-type(2)",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "navigation",
+      "tag": "nav",
+      "name": "Mobile"
+    },
+    {
+      "selector": "html > body > main",
+      "path": "html > body > main",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "main",
+      "tag": "main",
+      "name": ""
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1)",
+      "path": "html > body > main > section:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "region",
+      "tag": "section",
+      "name": "Intro"
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2)",
+      "path": "html > body > main > section:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "region",
+      "tag": "section",
+      "name": "Contact"
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2) > form",
+      "path": "html > body > main > section:nth-of-type(2) > form",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "form",
+      "tag": "form",
+      "name": "Contact form"
+    },
+    {
+      "selector": "html > body > footer",
+      "path": "html > body > footer",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "role": "contentinfo",
+      "tag": "footer",
+      "name": ""
+    }
+  ],
+  "links": [
+    {
+      "selector": "#home",
+      "path": "html > body > header > a",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/index.html",
+      "text": "Outline fixture",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    },
+    {
+      "selector": "#main-nav > a:nth-of-type(1)",
+      "path": "html > body > header > nav:nth-of-type(1) > a:nth-of-type(1)",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/docs.html",
+      "text": "Docs",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    },
+    {
+      "selector": "#main-nav > a:nth-of-type(2)",
+      "path": "html > body > header > nav:nth-of-type(1) > a:nth-of-type(2)",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/pricing.html",
+      "text": "Pricing",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    },
+    {
+      "selector": "#mobile-menu > a",
+      "path": "html > body > header > nav:nth-of-type(2) > a",
+      "hidden": true,
+      "visible": false,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/docs.html",
+      "text": "Docs",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(1)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/missing.html",
+      "text": "Old page",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(2)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "https://example.com/",
+      "text": "external link",
+      "internal": false,
+      "blankUnsafe": true,
+      "nofollow": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > a",
+      "path": "html > body > main > section:nth-of-type(1) > a",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "href": "http://localhost:8080/outline/gallery.html",
+      "text": "",
+      "internal": true,
+      "blankUnsafe": false,
+      "nofollow": false
+    }
+  ],
+  "images": [
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(1)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "src": "http://localhost:8080/outline/photo.png",
+      "alt": "A harbour at dusk",
+      "decorative": false,
+      "width": 320,
+      "height": 200,
+      "naturalWidth": 0,
+      "naturalHeight": 0,
+      "lazy": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(2)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "src": "http://localhost:8080/outline/chart.png",
+      "alt": null,
+      "decorative": false,
+      "width": 320,
+      "height": 200,
+      "naturalWidth": 0,
+      "naturalHeight": 0,
+      "lazy": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(3)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(2) > img:nth-of-type(3)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "src": "http://localhost:8080/outline/divider.png",
+      "alt": "",
+      "decorative": false,
+      "width": 320,
+      "height": 2,
+      "naturalWidth": 0,
+      "naturalHeight": 0,
+      "lazy": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > a > img",
+      "path": "html > body > main > section:nth-of-type(1) > a > img",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "src": "http://localhost:8080/outline/thumb.png",
+      "alt": null,
+      "decorative": false,
+      "width": 64,
+      "height": 64,
+      "naturalWidth": 0,
+      "naturalHeight": 0,
+      "lazy": false
+    }
+  ],
+  "fields": [
+    {
+      "selector": "#email",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "type": "email",
+      "name": "email",
+      "label": "Email",
+      "labelSource": "label",
+      "autocomplete": "email",
+      "required": true
+    },
+    {
+      "selector": "#nickname",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "type": "text",
+      "name": "nickname",
+      "label": "",
+      "labelSource": "none",
+      "autocomplete": "",
+      "required": false
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(3)",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(3)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "type": "tel",
+      "name": "phone",
+      "label": "Phone",
+      "labelSource": "aria-label",
+      "autocomplete": "tel",
+      "required": false
+    }
+  ],
+  "focus": [
+    {
+      "selector": "#home",
+      "path": "html > body > header > a",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "a",
+      "role": "link",
+      "name": "Outline fixture",
+      "tabindex": 0
+    },
+    {
+      "selector": "#burger",
+      "path": "html > body > header > button",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "button",
+      "role": "button",
+      "name": "Menu",
+      "tabindex": 0
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(1)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "a",
+      "role": "link",
+      "name": "Old page",
+      "tabindex": 0
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(2)",
+      "path": "html > body > main > section:nth-of-type(1) > p:nth-of-type(1) > a:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "a",
+      "role": "link",
+      "name": "external link",
+      "tabindex": 0
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(1) > a",
+      "path": "html > body > main > section:nth-of-type(1) > a",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "a",
+      "role": "link",
+      "name": "",
+      "tabindex": 0
+    },
+    {
+      "selector": "#email",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(1)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "role": "textbox",
+      "name": "Email",
+      "tabindex": 0
+    },
+    {
+      "selector": "#nickname",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(2)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "role": "textbox",
+      "name": "",
+      "tabindex": 0
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(3)",
+      "path": "html > body > main > section:nth-of-type(2) > form > input:nth-of-type(3)",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "input",
+      "role": "textbox",
+      "name": "Phone",
+      "tabindex": 0
+    },
+    {
+      "selector": "html > body > main > section:nth-of-type(2) > form > button",
+      "path": "html > body > main > section:nth-of-type(2) > form > button",
+      "hidden": false,
+      "visible": true,
+      "box": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "tag": "button",
+      "role": "button",
+      "name": "Send",
+      "tabindex": 0
+    }
+  ],
+  "custom": [
+    {
+      "label": "CMS blocks",
+      "selector": "[data-cms-block]",
+      "invalid": false,
+      "count": 3,
+      "hits": [
+        {
+          "selector": "html > body > main > section:nth-of-type(1)",
+          "path": "html > body > main > section:nth-of-type(1)",
+          "hidden": false,
+          "visible": true,
+          "box": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": "Introduction Text with an Old page and an external link. Details"
+        },
+        {
+          "selector": "html > body > main > section:nth-of-type(2)",
+          "path": "html > body > main > section:nth-of-type(2)",
+          "hidden": false,
+          "visible": true,
+          "box": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": "Contact Email Send"
+        },
+        {
+          "selector": "html > body > main > div",
+          "path": "html > body > main > div",
+          "hidden": true,
+          "visible": false,
+          "box": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": "Promotion"
+        }
+      ]
+    }
+  ],
+  "truncated": []
+}

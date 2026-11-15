@@ -1,0 +1,69 @@
+# The storage panel (RB-070-01, docs/plugins.md): the cookies, localStorage and sessionStorage of
+# every view side by side - columns grouped by session, differing and missing cells marked -,
+# editable in one view or all of them, and pinned values that rBrowser sets again after every
+# navigation. Cookies come from CDP `Network` (HttpOnly ones included), the storage areas from a
+# script in the plugin's own isolated world (src/ops.js); the pins live in
+# `.rbrowser/out/storage-panel/pins.json` and the page script page/pins.js applies the storage pins
+# at document start, before the page's own scripts.
+manifest_version = 1
+id = "storage-panel"
+name = "Storage"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "storage"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Cookies, localStorage and sessionStorage of every view side by side: differences marked, editable in one view or all, pinned values set again after each navigation."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the columns; evaluate: localStorage and sessionStorage (src/ops.js, the plugin's world);
+# cdp Network: the cookies with every attribute (getCookies, setCookie, deleteCookies);
+# project-read: the breakpoints' sessions in `.rbrowser/config.json`, the pins, and a listing of
+# `.rbrowser/flows` that tells whether the workspace is trusted (pins only then); out-write: the
+# pins `.rbrowser/out/storage-panel/pins.json` (no globs: `.rbrowser/` only).
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Network"] }
+project-read = true
+out-write = true
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "get"
+description = "plugin.storage-panel.tools.get"
+input = { type = "object", properties = { kinds = { type = "array", items = { type = "string", enum = ["cookies", "localStorage", "sessionStorage"] }, uniqueItems = true }, origin = { type = "string", maxLength = 300 }, search = { type = "string", maxLength = 200 } } }
+
+[[tools]]
+name = "set"
+description = "plugin.storage-panel.tools.set"
+input = { type = "object", required = ["kind", "name"], properties = { kind = { type = "string", enum = ["cookie", "localStorage", "sessionStorage"] }, name = { type = "string", minLength = 1, maxLength = 4096 }, value = { type = "string" }, delete = { type = "boolean" }, origin = { type = "string", maxLength = 300 }, cookie = { type = "object", properties = { domain = { type = "string", maxLength = 253 }, path = { type = "string", maxLength = 1024 }, expires = { type = "number", minimum = 0 }, httpOnly = { type = "boolean" }, secure = { type = "boolean" }, sameSite = { type = "string", enum = ["Strict", "Lax", "None"] } } } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.storage-panel.commands.panel"
+shortcut = "Ctrl+Shift+Space P A"
+group = "panels"
+mcp_omitted = "ui-only: the storage panel; its reads and writes are storage_get and storage_set"
+
+[[page_scripts]]
+path = "page/pins.js"
+run_at = "document-start"
+
+[[panels]]
+id = "storage"
+title = "plugin.storage-panel.panels.storage"
+entry = "panel/index.html"
+icon = "database"
+placement = "sidebar"

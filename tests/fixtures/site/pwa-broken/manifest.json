@@ -1,0 +1,13 @@
+{
+  "id": "/pwa-broken/",
+  "name": "rBrowser broken PWA fixture",
+  "start_url": "/elsewhere/",
+  "scope": "/pwa-broken/",
+  "display": "standalone",
+  "theme_color": "#a3410b",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-96.png", "sizes": "96x96", "type": "image/png" }
+  ]
+}

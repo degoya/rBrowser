@@ -1,0 +1,82 @@
+{
+  "plugin": {
+    "json-xml-viewer": {
+      "name": "JSON/XML viewer",
+      "commands": {
+        "toggle_raw": "JSON/XML viewer: switch between tree and raw text"
+      },
+      "settings": {
+        "enabled": {
+          "label": "Show JSON and XML as a tree",
+          "description": "A JSON or XML document opened in a view is shown as a collapsible, searchable tree instead of plain text.",
+          "help": "A JSON or XML document opened in a view shows as a collapsible, searchable tree instead of plain text, for API responses and feeds. Off shows the raw text."
+        },
+        "maxBytes": {
+          "label": "Largest document (bytes)",
+          "description": "A larger document stays plain text, with a notice. Default 20 MiB.",
+          "help": "A document larger than this many bytes stays plain text with a notice, so a huge response cannot freeze the view. Example: 20971520 for 20 MiB."
+        },
+        "defaultView": {
+          "label": "Open in",
+          "description": "Whether a document opens as a tree or as its raw text.",
+          "help": "Whether a document opens as a tree or as its raw text; the other view is one click away."
+        },
+        "expandDepth": {
+          "label": "Levels open at first",
+          "description": "How many levels of the tree are open when a document opens; large documents open fewer.",
+          "help": "How many levels of the tree are open when a document opens; large documents open fewer. Example: 2."
+        },
+        "theme": {
+          "label": "Colours",
+          "description": "Light or dark, or Automatic to follow the colour scheme of the view.",
+          "help": "The viewer's colours: light, dark, or auto to follow the colour scheme the view emulates."
+        },
+        "option": {
+          "defaultView": {
+            "tree": "Tree",
+            "raw": "Raw"
+          },
+          "theme": {
+            "auto": "Auto (follow the view)",
+            "light": "Light",
+            "dark": "Dark"
+          }
+        }
+      },
+      "viewer": {
+        "label": "JSON/XML viewer",
+        "tree": "Tree",
+        "raw": "Raw",
+        "pretty": "Formatted",
+        "modes": "View",
+        "filter": "Filter",
+        "filterJson": "Text, or JSONPath such as $.items[*].id",
+        "filterXml": "Text, or XPath such as //url/loc",
+        "clear": "Clear",
+        "expandAll": "Expand all",
+        "collapseAll": "Collapse all",
+        "copyValue": "Copy value",
+        "copyPath": "Copy path",
+        "copied": "Copied",
+        "copyFailed": "Copy failed",
+        "items": "{count} items",
+        "item": "1 item",
+        "keys": "{count} keys",
+        "key": "1 key",
+        "children": "{count} children",
+        "child": "1 child",
+        "results": "{count} results",
+        "result": "1 result",
+        "noResults": "No results",
+        "truncated": "Only the first {count} are shown",
+        "budget": "Only the first {count} rows were opened",
+        "badQuery": "The query cannot be read at character {column}",
+        "invalidJson": "Invalid JSON at line {line}, column {column}: {reason}",
+        "reasonUnexpected": "unexpected character",
+        "reasonEnd": "unexpected end of the document",
+        "tooLarge": "This document has {size} - more than the viewer's limit of {limit}, so it stays plain text.",
+        "dismiss": "Close"
+      }
+    }
+  }
+}

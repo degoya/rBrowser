@@ -1,0 +1,119 @@
+{
+  "plugin": {
+    "storage-panel": {
+      "commands": {
+        "panel": "Show the storage panel"
+      },
+      "errors": {
+        "bad_args": "The storage panel got arguments it cannot read: {reason}",
+        "cannot_pin": "This value cannot be pinned ({field}).",
+        "mcp_values_off": "Reading and writing storage values over MCP is off. A person can switch it on in Settings > DevTools & Debugging > Storage > Values over MCP; the storage panel works without it.",
+        "no_entry": "The view has no such entry (any more).",
+        "no_origin": "The view shows no web page, so it has no storage to write.",
+        "no_pin": "There is no such pin (any more).",
+        "other_origin": "The view shows another origin.",
+        "quota": "The view's storage is full.",
+        "rejected": "The browser refused the cookie.",
+        "too_many_pins": "At most {limit} values can be pinned.",
+        "unavailable": "The view's page has no storage (an opaque origin, or storage is switched off).",
+        "unknown_view": "There is no view {view}.",
+        "unsupported_engine": "The storage panel reads Chromium views only for now."
+      },
+      "name": "Storage",
+      "panel": {
+        "add": "Add",
+        "addTitle": "Add an entry",
+        "allViews": "All views",
+        "applyAll": "Apply to all views",
+        "attributes": "Attributes",
+        "cancel": "Cancel",
+        "cell": "{view}: {state}",
+        "close": "Close",
+        "delete": "Delete in this view",
+        "deleteAll": "Delete in all views",
+        "deleteAllConfirm": "Delete {name} in {count, plural, one {# view} other {all # views}}?",
+        "deleteAllYes": "Delete everywhere",
+        "domain": "Domain",
+        "editTitle": "{name} in {view}",
+        "empty": "No entries.",
+        "enabled": "Pinned value on",
+        "engineHint": "{engine} views are not read by the storage panel yet.",
+        "error": "Error: {text}",
+        "expires": "Expires",
+        "filterKey": "Filter by name",
+        "filterOrigin": "Filter by origin or domain",
+        "grid": "Entries by view",
+        "httpOnly": "HttpOnly",
+        "keyHeader": "Name",
+        "missing": "missing",
+        "name": "Name",
+        "notApplicable": "not on this page",
+        "origin": "Origin",
+        "partitioned": "Partitioned",
+        "path": "Path",
+        "pin": "Pin this value",
+        "pinned": "pinned",
+        "pins": "Pinned values",
+        "pinsEmpty": "Nothing pinned. Pin a value to have it set again after every navigation.",
+        "pinsOff": "Pinned values are switched off in the settings.",
+        "pinsUntrusted": "Pinned values apply only in a trusted workspace; trust the workspace to use them.",
+        "plainLarge": "Shown in one colour: larger than 200 KiB.",
+        "remove": "Remove pin",
+        "results": "{ok} of {total, plural, one {# view} other {# views}} written.",
+        "sameSite": "SameSite",
+        "sameSiteUnset": "Not set",
+        "save": "Save in this view",
+        "scope": "Origin or domain",
+        "secure": "Secure",
+        "session": "Session {name}",
+        "sessionCookie": "session",
+        "sessionOnly": "Only in this session",
+        "state": {
+          "differs": "differs",
+          "missing": "missing",
+          "same": "same"
+        },
+        "tabs": {
+          "cookies": "Cookies",
+          "local": "Local Storage",
+          "session": "Session Storage"
+        },
+        "target": "Write in",
+        "truncated": "Showing {shown} of {total} entries; narrow the filter to see the rest.",
+        "unpin": "Unpin",
+        "unsupported": "not read",
+        "value": "Value",
+        "viewError": "Could not be read: {text}"
+      },
+      "panels": {
+        "storage": "Storage"
+      },
+      "settings": {
+        "mcpValues": {
+          "description": "Lets an AI agent read cookie and storage values through storage_get and write them through storage_set. Off by default: storage_get then answers names, attributes, lengths and which views agree, never a value, and storage_set is refused. The panel works either way.",
+          "help": "Lets an AI agent read cookie and storage values through storage_get and write them through storage_set. Off, storage_get answers names and attributes only and storage_set is refused. The panel works either way.",
+          "label": "Values over MCP"
+        },
+        "pinsEnabled": {
+          "description": "Pinned cookies and storage values are set again after every navigation, storage values before the page's own scripts run.",
+          "help": "Pinned cookies and storage values are set again after every navigation, storage values before the page's own scripts run, so a feature flag survives a reload. Off ignores the pins.",
+          "label": "Apply pinned values"
+        },
+        "pollMs": {
+          "description": "How often the open storage panel reads the views again, in milliseconds; 0 reads only on navigation and after an edit.",
+          "help": "How often the open storage panel reads the views again, in milliseconds; 0 reads only on navigation and after an edit. Example: 2000.",
+          "label": "Refresh interval"
+        },
+        "showHttpOnly": {
+          "description": "HttpOnly cookies appear in the panel and in storage_get (they are read through the DevTools protocol, not document.cookie).",
+          "help": "HttpOnly cookies appear in the panel and in storage_get, read through the DevTools protocol. Off hides them as document.cookie would.",
+          "label": "Show HttpOnly cookies"
+        }
+      },
+      "tools": {
+        "get": "The cookies, localStorage and sessionStorage of the targeted views as JSON (per view, Chromium views only; others are marked unsupported), with the entries that differ between the views: which views agree and which lack it. Values only while a person allows them (Settings > Storage > Values over MCP); otherwise names, attributes and lengths. Optional kinds, origin and search filter.",
+        "set": "Sets or deletes one cookie, localStorage or sessionStorage entry in the targeted views and answers per view success or error. A storage write goes to the views showing the given origin (default: each view's own). Refused unless a person allows values over MCP in the settings."
+      }
+    }
+  }
+}

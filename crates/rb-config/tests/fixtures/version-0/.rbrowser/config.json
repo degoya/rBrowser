@@ -1,0 +1,22 @@
+{
+  "version": 0,
+  "startUrl": "http://localhost:8080",
+  "breakpoints": [
+    {
+      "id": "mobile",
+      "width": 375,
+      "height": 667
+    }
+  ],
+  "layout": {
+    "columns": 1,
+    "rows": 1,
+    "cells": [
+      {
+        "breakpoint": "mobile",
+        "col": 1,
+        "row": 1
+      }
+    ]
+  }
+}

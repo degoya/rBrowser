@@ -1,0 +1,171 @@
+[package]
+name = "rbrowser"
+description = "rBrowser, a development browser that shows every breakpoint of a site at once"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# The sandboxed layout of ADR 0001 (Decision 6): CEF's bootstrap.exe, renamed rbrowser.exe, loads
+# rbrowser.dll and calls its `RunWinMain`. The rlib serves the plain executable and the tests.
+[lib]
+name = "rbrowser"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+# The same app without the sandbox (`no_sandbox`), for debugging; it carries the version
+# resource, the icon and the manifest that bootstrap.exe takes from CEF.
+[[bin]]
+name = "rbrowser-nosandbox"
+path = "src/main.rs"
+
+# The executable of the macOS bundle's helper apps (RB-090-15); elsewhere a stub.
+[[bin]]
+name = "rbrowser-helper"
+path = "src/bin/rbrowser-helper.rs"
+
+[dependencies]
+async-trait.workspace = true
+# The PNG data of `Page.captureScreenshot` (RB-050-03).
+base64.workspace = true
+clap.workspace = true
+# The DevTools endpoint (RB-010-06).
+futures-util.workspace = true
+# The secrets of the DevTools endpoint and the instance channel (`secret.rs`).
+getrandom.workspace = true
+# The globs of the analyser's static source (`analyzer/project_files.rs`, RB-030-07).
+globset.workspace = true
+notify.workspace = true
+# The CDP proxy's logic and the endpoint secrets (RB-030-06).
+rb-cdp = { path = "../rb-cdp" }
+rb-commands = { path = "../rb-commands" }
+# Firefox over WebDriver BiDi: the engine of the Firefox views (RB-040-02).
+rb-bidi = { path = "../rb-bidi" }
+rb-config = { path = "../rb-config" }
+rb-diag = { path = "../rb-diag" }
+rb-engine = { path = "../rb-engine" }
+rb-i18n = { path = "../rb-i18n" }
+rb-ipc = { path = "../rb-ipc" }
+# The MCP server and `rbrowser mcp` (RB-030-01).
+rb-mcp = { path = "../rb-mcp" }
+# The core `plugins.*` commands and the plugin list (RB-010-03); the loader is wired later.
+rb-plugin-host = { path = "../rb-plugin-host" }
+# The findings model and the check-plugin kind (RB-060-01).
+rb-plugin-types = { path = "../rb-plugin-types" }
+rb-process = { path = "../rb-process" }
+rb-settings = { path = "../rb-settings" }
+# The Node sidecar: started on first need, stopped on quit, its versions in diagnostics (RB-040-03).
+rb-sidecar = { path = "../rb-sidecar" }
+# The sync agent's protocol (RB-020-01).
+rb-sync = { path = "../rb-sync" }
+# Hot reload: the watch rules, the debounce, the WSL helper (RB-030-05); the answer of the MCP
+# tool `wsl_info` (RB-030-04, RB-030-01).
+rb-wsl = { path = "../rb-wsl" }
+# Screenshot names, folder and the overview image (RB-050-03).
+rb-visual = { path = "../rb-visual" }
+# Self-update (RB-090-02), linked only with the feature `self-update`.
+rb-update = { path = "../rb-update", optional = true }
+# hex, the poison-tolerant lock, origins and hosts, JSON pointers (RB-080-28).
+rb-util = { path = "../rb-util" }
+# The portal's pairing QR code (RB-080-05): the matrix only, no image or SVG renderer.
+qrcode = { version = "0.14.1", default-features = false }
+# The regex rules of the network interception (RB-070-02).
+regex.workspace = true
+# The CRX3 proofs of a Web Store extension: RSA-SHA256 and ECDSA P-256 (RB-080-23).
+ring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# The SHA-256 of a managed tool's download, checked while it streams (`tools/store.rs`, RB-080-02).
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+# The DevTools endpoint (RB-010-06).
+tokio-tungstenite.workspace = true
+tracing.workspace = true
+# `rbrowser init` fetches the page's CSS before any UI (RB-010-13).
+ureq.workspace = true
+# `app.open_link` opens the parsed form of a web address only (RB-080-92).
+url.workspace = true
+# The archive of a managed tool (ffmpeg, RB-080-02): its members are unpacked (`tools/store.rs`).
+zip.workspace = true
+
+[features]
+# Self-update (RB-090-02): off in phase 1 and switched on with the move to GitHub (RB-110-05).
+# Without it rb-update is not linked: the binary carries no update code and no update address,
+# and the settings window shows General > Updates locked (`src/updates/`).
+self-update = ["dep:rb-update"]
+
+[target.'cfg(windows)'.dependencies]
+# Not `cef.workspace`: the workspace entry keeps the crate's default features (build-util,
+# resources), which the app does not need, and a member cannot switch them off. Same version.
+cef = { version = "156.4.0", default-features = false, features = ["sandbox"] }
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    # The terminal of a command line call: AttachConsole, the standard handles (RB-010-11).
+    "Win32_System_Console",
+    # The window region that clips an external view's window to the grid area (RB-080-39).
+    "Win32_Graphics_Gdi",
+    # The memory of rBrowser's processes for the memory warning (RB-020-09).
+    # COM for the shell's handlers before `ShellExecuteW` opens a link (RB-080-92).
+    "Win32_System_Com",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Pipes",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    # The middle button's state while it pans the canvas (RB-080-50).
+    "Win32_UI_Input_KeyboardAndMouse",
+    # `ShellExecuteW`: a link to the default browser, no command line (RB-080-92).
+    "Win32_UI_Shell",
+    # The DevTools window's bounds (RB-010-06).
+    "Win32_UI_WindowsAndMessaging",
+    # The title bar's dark mode and Windows' app theme (RB-080-95).
+    "Win32_Graphics_Dwm",
+    "Win32_System_Registry",
+] }
+
+# The macOS test build (RB-090-15): the app bundle `scripts/package-macos.sh` makes.
+[target.'cfg(target_os = "macos")'.dependencies]
+# Without the sandbox feature: the helpers run unsandboxed until the signed build (RB-110-06).
+cef = { version = "156.4.0", default-features = false }
+# `dup2` and `fcntl` for the CDP pipe on descriptors 3 and 4 (`cef_app/macos/pipe.rs`).
+libc = "0.2.191"
+# The shared application Chromium's message pump needs (`CrAppProtocol`), the menu bar and the
+# system's appearance (`cef_app/macos/application.rs`, `theme_dwm.rs`).
+objc2 = "0.6.5"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "NSAppearance",
+    "NSApplication",
+    "NSEvent",
+    "NSMenu",
+    "NSMenuItem",
+    "NSResponder",
+] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "NSString",
+] }
+
+[build-dependencies]
+# The version resource, the icon and the long-path manifest of rbrowser-nosandbox.exe.
+embed-resource.workspace = true
+
+[dev-dependencies]
+# The fake Firefox of the Firefox engine's tests (`rb_bidi::testing`, RB-040-02).
+rb-bidi = { path = "../rb-bidi", features = ["test-support"] }
+# The engine conformance and doubles for the engines' tests (RB-040-01).
+rb-engine = { path = "../rb-engine", features = ["test-support"] }
+# The repo lints' own tests (tests/repo_lints).
+tempfile.workspace = true
+# The paused clock of the analyser's settle test (RB-080-26).
+tokio = { workspace = true, features = ["test-util"] }
+# Log scans: a form sync password (RB-020-05) and the CDP proxy's token (RB-030-06) never
+# reach a log line.
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

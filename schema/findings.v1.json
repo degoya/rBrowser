@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FindingsFile",
+  "description": "`.rbrowser/out/checks/<run-id>/findings.json`, version [`FINDINGS_VERSION`].",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "runId": {
+      "description": "Sortable by time (`run-<unix milliseconds>`).",
+      "type": "string"
+    },
+    "startedAt": {
+      "description": "Unix seconds.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "target": {
+      "$ref": "#/$defs/CheckTarget"
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plugins": {
+      "description": "The plugins that ran.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "views": {
+      "description": "The views checked; empty for a run without views.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CheckedView"
+      },
+      "default": []
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MergedFinding"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/FindingsSummary"
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CheckFailure"
+      }
+    },
+    "skipped": {
+      "description": "The plugin x view pairs not checked (a view of an engine the plugin cannot serve): their\nfindings are unknown, never clean (RB-080-98).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CheckSkip"
+      }
+    }
+  },
+  "required": [
+    "version",
+    "runId",
+    "startedAt",
+    "target",
+    "plugins",
+    "findings",
+    "summary"
+  ],
+  "$defs": {
+    "CheckTarget": {
+      "description": "\"all\" or a view id.",
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "all"
+        },
+        {
+          "type": "integer",
+          "minimum": 0
+        }
+      ]
+    },
+    "CheckedView": {
+      "description": "One view a run checked: what \"only in breakpoint X\" is measured against.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "breakpoint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "MergedFinding": {
+      "description": "One finding after the run: possibly found by several plugins, in several views.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "[`fingerprint`] of the rule (or the shared id), the URL and the element: the same in\nevery run while the page does not change.",
+          "type": "string"
+        },
+        "ruleId": {
+          "description": "`<plugin>.<rule>` of the first reporting plugin: the key of `checks.rules`.",
+          "type": "string"
+        },
+        "plugins": {
+          "description": "Every plugin that reported it, the first one's message kept; more than one only through a\nshared id.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "severity": {
+          "description": "The highest of the reports, after `checks.rules`.",
+          "$ref": "#/$defs/Severity"
+        },
+        "message": {
+          "$ref": "#/$defs/FindingMessage"
+        },
+        "views": {
+          "description": "The views it was found in, ascending.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "breakpoints": {
+          "description": "The breakpoint ids of those views, in the same order, each once.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "element": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "helpUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data": {
+          "description": "Free details of the first report."
+        },
+        "sharedId": {
+          "description": "The id the rule shares with other plugins' rules (`img-alt-missing`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "ruleId",
+        "plugins",
+        "severity",
+        "message",
+        "views",
+        "breakpoints"
+      ]
+    },
+    "Severity": {
+      "description": "How serious a finding is; ordered from `Info` to `Error`.",
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "error"
+      ]
+    },
+    "FindingMessage": {
+      "description": "A finding's text: an i18n key of the reporting plugin's locales and its parameters - never a\nfinished sentence.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "ElementRef": {
+      "description": "The element a finding is about.",
+      "type": "object",
+      "properties": {
+        "selector": {
+          "description": "A CSS selector that finds it; what the highlight uses.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Its normalised path from the root ([`normalize_path`]); what the id is made of.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "FindingsSummary": {
+      "description": "How many findings a run has, per severity and per plugin.",
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "error": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "warning": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "byPlugin": {
+          "description": "Per plugin: the findings it reported (a shared finding counts for each).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          }
+        }
+      },
+      "required": [
+        "total",
+        "error",
+        "warning",
+        "info",
+        "byPlugin"
+      ]
+    },
+    "CheckFailure": {
+      "description": "A plugin that failed in a run: the run goes on without its findings.",
+      "type": "object",
+      "properties": {
+        "plugin": {
+          "type": "string"
+        },
+        "view": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "code": {
+          "description": "The failure's i18n key (`plugins.error.timed_out`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "params": {
+          "description": "The key's parameters (`{service}` of `plugins.error.not_available`, RB-080-98).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "plugin"
+      ]
+    },
+    "CheckSkip": {
+      "description": "A plugin that did not check a view, and why (RB-080-98): not a failure, and not clean - its\nfindings in that view are unknown.",
+      "type": "object",
+      "properties": {
+        "plugin": {
+          "type": "string"
+        },
+        "view": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "reason": {
+          "description": "Why: [`SKIP_ENGINE`] - the view's engine cannot serve the plugin.",
+          "type": "string"
+        },
+        "engine": {
+          "description": "The view's engine (`webkit`) of an engine skip.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "plugin",
+        "reason"
+      ]
+    }
+  }
+}

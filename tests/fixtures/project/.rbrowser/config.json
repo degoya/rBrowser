@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "startUrl": "https://a.test/",
+  "breakpoints": [
+    { "id": "mobile", "label": "Mobile", "width": 375, "height": 812 },
+    { "id": "tablet", "label": "Tablet", "width": 768, "height": 1024 },
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 }
+  ]
+}

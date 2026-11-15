@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "rBrowser fixture: hello",
+  "version": "1.0.0",
+  "description": "Test fixture of RB-080-06: marks every page it runs in with data-rbrowser-extension=\"hello\" on <html>.",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*", "file:///*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}

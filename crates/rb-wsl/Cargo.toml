@@ -1,0 +1,37 @@
+[package]
+name = "rb-wsl"
+description = "WSL paths, distributions and networking mode, the helper protocol and lifecycle; the rbrowser-wsl helper (RB-030-04)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+# The helper inside the distribution, built for x86_64-unknown-linux-musl (static) and shipped in
+# the Windows package; it builds on every target so the workspace lints see it.
+name = "rbrowser-wsl"
+path = "src/bin/rbrowser-wsl.rs"
+
+[dependencies]
+# The bytes of the CDP tunnel's `data` frames (RB-030-06).
+base64.workspace = true
+clap.workspace = true
+# The ignore rules and watch globs of hot reload (RB-030-05).
+globset.workspace = true
+# inotify inside WSL; the app's own watcher shares the tree code (RB-030-05).
+notify.workspace = true
+rand.workspace = true
+rb-process = { path = "../rb-process" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# `io-std`: the helper's `cdp-proxy` reads and writes its stdio asynchronously (RB-030-06).
+tokio = { workspace = true, features = ["io-std"] }
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,698 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Recording",
+  "description": "One recording.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The schema reference for editors.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "version": {
+      "description": "The format version, 1.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "name": {
+      "description": "The name, also the file name (`[a-z0-9_-]`, at most 64 characters).",
+      "type": "string"
+    },
+    "startUrl": {
+      "description": "The leader's URL when the recording started.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "environment": {
+      "description": "The environment in effect (`local`, `staging`).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "breakpoints": {
+      "description": "The breakpoints of the views that took part, with their emulation.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RecordedBreakpoint"
+      },
+      "default": []
+    },
+    "startedAtMs": {
+      "description": "When the recording started, ms since the epoch.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "appVersion": {
+      "description": "The rBrowser version that recorded it.",
+      "type": "string"
+    },
+    "steps": {
+      "description": "The steps in order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Step"
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "name",
+    "startedAtMs",
+    "appVersion"
+  ],
+  "$defs": {
+    "RecordedBreakpoint": {
+      "description": "A breakpoint a view showed while recording.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The breakpoint id (`mobile`), or the size of a free-size view (`500x800`).",
+          "type": "string"
+        },
+        "width": {
+          "description": "Viewport width in CSS px.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "height": {
+          "description": "Viewport height in CSS px.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "deviceScaleFactor": {
+          "description": "Device pixel ratio.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "width",
+        "height",
+        "deviceScaleFactor"
+      ]
+    },
+    "Step": {
+      "description": "One step.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique in the recording; stays when steps are reordered.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "description": "A name the user gave it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action": {
+          "description": "What happens.",
+          "$ref": "#/$defs/Action"
+        },
+        "view": {
+          "description": "The breakpoint of the view it was recorded in.",
+          "type": "string"
+        },
+        "atMs": {
+          "description": "When, ms after the recording started.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "onlyIn": {
+          "description": "The breakpoints it ran in, when not all of the recording's; empty means all.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action",
+        "view",
+        "atMs"
+      ]
+    },
+    "Action": {
+      "description": "What a step does.",
+      "oneOf": [
+        {
+          "description": "Load a URL (typed into the address bar, back, forward, the start).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "navigate"
+            },
+            "url": {
+              "description": "The URL.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "url"
+          ]
+        },
+        {
+          "description": "Click an element.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "click"
+            },
+            "target": {
+              "description": "The element.",
+              "$ref": "#/$defs/Locator"
+            },
+            "button": {
+              "description": "The button; `left` when absent.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "modifiers": {
+              "description": "CDP modifier bits (1 Alt, 2 Ctrl, 4 Meta, 8 Shift).",
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "description": "Double-click an element.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "dblclick"
+            },
+            "target": {
+              "description": "The element.",
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "description": "Set a field's value (consecutive typing coalesced).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "fill"
+            },
+            "target": {
+              "description": "The field.",
+              "$ref": "#/$defs/Locator"
+            },
+            "value": {
+              "description": "The value, or a placeholder (`{{secret:password}}`) for a secret field.",
+              "type": "string"
+            },
+            "secret": {
+              "description": "The value is the placeholder of a secret field: set only by the recorder, and the\nonly value an exporter turns into an environment variable - text that merely looks\nlike a placeholder (typed, from a page, in a URL) stays text.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target",
+            "value"
+          ]
+        },
+        {
+          "description": "Press a key that is not text input (Enter, Escape, Tab, a shortcut).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "press"
+            },
+            "target": {
+              "description": "The focused element; absent for the page.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Locator"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "key": {
+              "description": "`KeyboardEvent.key`.",
+              "type": "string"
+            },
+            "modifiers": {
+              "description": "CDP modifier bits.",
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "key"
+          ]
+        },
+        {
+          "description": "Choose options of a `<select>`.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "select"
+            },
+            "target": {
+              "description": "The control.",
+              "$ref": "#/$defs/Locator"
+            },
+            "value": {
+              "description": "The value of the (first) chosen option.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "indexes": {
+              "description": "The chosen options' indexes.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target",
+            "indexes"
+          ]
+        },
+        {
+          "description": "Check a checkbox or radio.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "check"
+            },
+            "target": {
+              "description": "The control.",
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "description": "Uncheck a checkbox.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "uncheck"
+            },
+            "target": {
+              "description": "The control.",
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "description": "Move the pointer onto an element (kept only when a click into what it revealed\nfollows).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "hover"
+            },
+            "target": {
+              "description": "The element.",
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "description": "Scroll the page or an element (only with `automation.recorder.recordScroll`).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "scroll"
+            },
+            "target": {
+              "description": "The scrolled element; absent for the page.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Locator"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "x": {
+              "description": "`scrollLeft` in CSS px.",
+              "type": "number",
+              "format": "double"
+            },
+            "y": {
+              "description": "`scrollTop` in CSS px.",
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "x",
+            "y"
+          ]
+        },
+        {
+          "description": "Wait until the page is at a URL (a navigation that followed a click or a key).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "waitForUrl"
+            },
+            "url": {
+              "description": "The URL.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "url"
+          ]
+        },
+        {
+          "description": "Check something.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "assert"
+            },
+            "assertion": {
+              "description": "What.",
+              "$ref": "#/$defs/Assertion"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "assertion"
+          ]
+        }
+      ]
+    },
+    "Locator": {
+      "description": "How an element is found: selector candidates in rank order, inside the open shadow hosts\nand the iframes named.",
+      "type": "object",
+      "properties": {
+        "selectors": {
+          "description": "The candidates, best first; the last is always the CSS path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Selector"
+          }
+        },
+        "hosts": {
+          "description": "The open shadow hosts from the document inward, by their best selector.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Selector"
+          }
+        },
+        "frame": {
+          "description": "The iframes' CSS paths from the top document down; absent for the top frame.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "selectors"
+      ]
+    },
+    "Selector": {
+      "description": "One way to find an element.",
+      "oneOf": [
+        {
+          "description": "`[data-testid=\"...\"]`.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "testid"
+            },
+            "testid": {
+              "description": "The attribute's value.",
+              "type": "string"
+            },
+            "nth": {
+              "description": "The match to take among several (document order).",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "testid"
+          ]
+        },
+        {
+          "description": "ARIA role and accessible name.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "role"
+            },
+            "role": {
+              "description": "The role.",
+              "type": "string"
+            },
+            "name": {
+              "description": "The accessible name.",
+              "type": "string"
+            },
+            "nth": {
+              "description": "The match to take.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "role",
+            "name"
+          ]
+        },
+        {
+          "description": "Tag and normalised text.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "tag": {
+              "description": "The tag name.",
+              "type": "string"
+            },
+            "text": {
+              "description": "The text.",
+              "type": "string"
+            },
+            "nth": {
+              "description": "The match to take.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "tag",
+            "text"
+          ]
+        },
+        {
+          "description": "The CSS path.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "css"
+            },
+            "path": {
+              "description": "The path.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "path"
+          ]
+        }
+      ]
+    },
+    "Assertion": {
+      "description": "What an `assert` step checks.",
+      "oneOf": [
+        {
+          "description": "The element is visible.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "visible"
+            },
+            "target": {
+              "description": "The element.",
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "target"
+          ]
+        },
+        {
+          "description": "The element's text.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "target": {
+              "description": "The element.",
+              "$ref": "#/$defs/Locator"
+            },
+            "text": {
+              "description": "The expected text.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "target",
+            "text"
+          ]
+        },
+        {
+          "description": "A field's value.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "value"
+            },
+            "target": {
+              "description": "The field.",
+              "$ref": "#/$defs/Locator"
+            },
+            "value": {
+              "description": "The expected value.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "target",
+            "value"
+          ]
+        },
+        {
+          "description": "The page's URL.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "url"
+            },
+            "url": {
+              "description": "The expected URL.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "url"
+          ]
+        }
+      ]
+    }
+  }
+}

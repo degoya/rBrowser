@@ -1,0 +1,27 @@
+# The visual regression check (RB-050-04, docs/plugins.md). The core captures every view,
+# compares it with its baseline in `.rbrowser/baselines` (rb-visual) and hands the outcome to
+# `check.run` as its arguments; the plugin turns it into findings. It needs no capability: no
+# image crosses into WebAssembly and nothing is written by the plugin.
+manifest_version = 1
+id = "visual-regression"
+name = "Visual regression"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin"]
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Reports the views that differ from their baselines, by how much, and where."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# Nothing: the comparisons come in the arguments.
+[capabilities]
+

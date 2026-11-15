@@ -1,0 +1,24 @@
+[package]
+name = "rb-sidecar"
+description = "The Node sidecar: find and start the bundled Node, JSON-RPC 2.0 over stdio, restarts, the Playwright browser install (RB-040-03)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rb-commands = { path = "../rb-commands" }
+rb-diag = { path = "../rb-diag" }
+rb-process = { path = "../rb-process" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

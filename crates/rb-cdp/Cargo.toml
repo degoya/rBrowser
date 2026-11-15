@@ -1,0 +1,17 @@
+[package]
+name = "rb-cdp"
+description = "The CDP proxy's pure logic (RB-030-06): token, request routing, target filter, per-client sessions, the emulation and input rules; no I/O"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# The proxy's token and the other endpoint secrets, from the OS's random source.
+getrandom.workspace = true
+rb-util = { path = "../rb-util" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

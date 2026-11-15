@@ -1,0 +1,145 @@
+{
+  "about": "The message format of locales/*.json, shared by rb-i18n and the shell (docs/i18n.md). Each case formats message with args in locale; every invalid message must be refused.",
+  "cases": [
+    {
+      "name": "plain text",
+      "locale": "en",
+      "message": "Reload",
+      "args": {},
+      "expected": "Reload"
+    },
+    {
+      "name": "an apostrophe and a hash are text",
+      "locale": "en",
+      "message": "Can't open #1",
+      "args": {},
+      "expected": "Can't open #1"
+    },
+    {
+      "name": "named placeholders",
+      "locale": "en",
+      "message": "Open {url} in {view}",
+      "args": {
+        "url": "a.test",
+        "view": "Phone"
+      },
+      "expected": "Open a.test in Phone"
+    },
+    {
+      "name": "a missing argument keeps its placeholder",
+      "locale": "en",
+      "message": "Open {url}",
+      "args": {},
+      "expected": "Open {url}"
+    },
+    {
+      "name": "plural one",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "1"
+      },
+      "expected": "1 view"
+    },
+    {
+      "name": "plural zero is other in English",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "0"
+      },
+      "expected": "0 views"
+    },
+    {
+      "name": "plural other",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "3"
+      },
+      "expected": "3 views"
+    },
+    {
+      "name": "minus one is one",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "-1"
+      },
+      "expected": "-1 view"
+    },
+    {
+      "name": "visible fraction digits are other",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "1.0"
+      },
+      "expected": "1.0 views"
+    },
+    {
+      "name": "an exact selector wins",
+      "locale": "en",
+      "message": "{n, plural, =0 {No views} one {# view} other {# views}}",
+      "args": {
+        "n": "0"
+      },
+      "expected": "No views"
+    },
+    {
+      "name": "a branch holds placeholders",
+      "locale": "en",
+      "message": "{count, plural, one {# view of {name}} other {# views}}",
+      "args": {
+        "count": "1",
+        "name": "Grid"
+      },
+      "expected": "1 view of Grid"
+    },
+    {
+      "name": "a plural without its argument keeps its source",
+      "locale": "en",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {},
+      "expected": "{count, plural, one {# view} other {# views}}"
+    },
+    {
+      "name": "pseudo-locale accents and pads",
+      "locale": "en-XA",
+      "message": "Reload",
+      "args": {},
+      "expected": "[R\u00e9l\u00f3\u00e1d~]"
+    },
+    {
+      "name": "pseudo-locale leaves arguments alone",
+      "locale": "en-XA",
+      "message": "Open {url}",
+      "args": {
+        "url": "a.test"
+      },
+      "expected": "[\u00d3p\u00e9\u00f1 a.test~~~]"
+    },
+    {
+      "name": "pseudo-locale with a plural",
+      "locale": "en-XA",
+      "message": "{count, plural, one {# view} other {# views}}",
+      "args": {
+        "count": "3"
+      },
+      "expected": "[3 v\u00ed\u00e9ws~]"
+    }
+  ],
+  "invalid": [
+    "{",
+    "}",
+    "{url",
+    "{}",
+    "{1url}",
+    "{n, plural}",
+    "{n, plural, one {x}}",
+    "{n, plural, other {x} other {y}}",
+    "{n, plural, lots {x} other {y}}",
+    "{n, select, other {x}}",
+    "{n, plural, other {x}"
+  ]
+}

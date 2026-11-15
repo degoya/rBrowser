@@ -1,0 +1,28 @@
+[package]
+name = "rb-config"
+description = "The project config and the user settings: serde model, schema, discovery, merge (contract 0.1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+indexmap.workspace = true
+# `ui.language` offers the locales shipped (RB-010-14).
+rb-i18n = { path = "../rb-i18n" }
+rb-settings = { path = "../rb-settings" }
+rb-util = { path = "../rb-util" }
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_path_to_error.workspace = true
+# The content hash of a workspace's protected parts (workspace trust, RB-010-09).
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

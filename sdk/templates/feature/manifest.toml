@@ -1,0 +1,49 @@
+# The manifest of an rBrowser feature plugin (docs/plugins.md, "The manifest").
+manifest_version = 1
+# Your plugin's identity: lower-case words joined by `-`. Keep it across versions.
+id = "example-feature"
+name = "Example feature"
+version = "0.1.0"
+# The contract in `wit/` this plugin is built against.
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+# Its MCP tools are `<mcp_prefix>_<tool>`: lower-case letters and digits, unique per installation.
+mcp_prefix = "examplefeature"
+# Name your key as you like; `rb-plugin-pack keygen` makes the pair. Keep the private half out of
+# version control.
+key_id = "example-feature-release-v1"
+public_key = "REPLACE_WITH_YOUR_BASE64_ED25519_PUBLIC_KEY"
+description = "Counts the views of the grid."
+
+[metadata]
+author = "Your name"
+license = "MIT"
+# The first rBrowser release this plugin runs on; scripts/set-version.sh keeps the template's at the
+# release the SDK comes with.
+min_app_version = "0.7.0"
+
+[locales]
+en = "locales/en.json"
+
+# What the plugin may do: nothing is granted implicitly, nothing can be asked for at run time.
+[capabilities]
+views = true
+
+[[tools]]
+name = "count_views"
+description = "plugin.example-feature.tools.count_views"
+
+[[commands]]
+id = "count_views"
+title = "plugin.example-feature.commands.count_views"
+tool = "count_views"
+
+# A panel in the plugin panels window: Vue and Nuxt UI with rBrowser's panel-ui, built from web/
+# into panel/dist (`npm ci && npm run build` in web/ before packaging). It runs sandboxed without
+# network and reaches only this plugin's tools and commands. `icon` is a Lucide name; the shell
+# draws the icons it bundles and shows `puzzle` for any other.
+[[panels]]
+id = "main"
+title = "plugin.example-feature.panels.main"
+entry = "panel/index.html"
+icon = "puzzle"

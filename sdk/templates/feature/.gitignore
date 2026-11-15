@@ -1,0 +1,5 @@
+/target/
+# The panel's npm install and its build (`npm run build` in web/ writes panel/dist).
+/web/node_modules/
+/web/web-common/panel-ui/.nuxt-ui/
+/panel/dist/

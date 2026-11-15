@@ -1,0 +1,4 @@
+hello-panel is a test plugin (RB-060-12): it exercises every path of the plugin runtime - page
+script, page-script <-> component bridge, posts, panel, command, MCP tool - and is never shipped.
+scripts/lib/package.sh leaves every plugin folder with this file out of the package; build it
+on its own with `scripts/build-plugins.sh hello-panel`.

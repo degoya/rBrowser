@@ -1,0 +1,337 @@
+<script setup lang="ts">
+// The settings (RB-010-08): the categories on the left in their fixed order, the sections of the
+// chosen one on the right with their keys by `x-order`, all generated from the schema. Search
+// over label, key and description; "only changed"; reset per field and per section; the JSON
+// view per scope; a deep link (`#/settings/<key>`) opens the key's category and highlights it.
+// Each section is a card (`SectionCard`); a category of more than one section shows one section
+// per sub-tab, the tab in the address (`#/settings/layout?tab=grid`, RB-080-13, RB-080-71), unless
+// `settings.sectionTabs` is off. The search and "Only changed" list their hits across every
+// category and tab at once, the tabs hidden - a hit may lie in any category, and one list answers
+// "where is it" in one look where a count per tab would only cover the open category; "Show in
+// ..." on a hit opens its category and tab. A category reopens at the tab it was left on.
+// Plugins has its own tabs (RB-080-80): Installed and Disabled list the plugins with a count
+// each, Settings holds the category's cards; with the tabs off the list heads its card.
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import UButton from '@nuxt/ui/components/Button.vue';
+import USwitch from '@nuxt/ui/components/Switch.vue';
+import type { IpcClient } from '../ipc/client';
+import AboutPage from '../about/AboutPage.vue';
+import type { DevicePreset } from '../ipc/protocol';
+import DevicePresetList from '../presets/DevicePresetList.vue';
+import DiagnosticsSave from './DiagnosticsSave.vue';
+import TrustPage from '../trust/TrustPage.vue';
+import { SETTINGS_ICONS } from './icons';
+import JsonPanel from './JsonPanel.vue';
+import { createInstalledLoader } from './plugins/loader';
+import PluginsList from './plugins/PluginsList.vue';
+import { countTabs, disabledIds, type PluginListTab, showBundled } from './plugins/pluginTabs';
+import { routeHash } from './route';
+import { type CategoryView, findDef, layoutOf } from './schema';
+import { filterOf } from './search';
+import SectionCard from './SectionCard.vue';
+import SectionHeader from './SectionHeader.vue';
+import TabStrip from './TabStrip.vue';
+import { flagOf, SECTION_TABS_KEY } from './flags';
+import { createSettingsStore } from './store';
+import { activeTab, PLUGINS_CATEGORY, rememberedTab, rememberTab, sectionsOfTab, tabOfSection, tabsOf } from './tabs';
+
+const props = defineProps<{
+  client: IpcClient;
+  routeKey: string | null;
+  /** The sub-tab of the category the route opens (`?tab=`), RB-080-13. */
+  routeTab?: string | null;
+  /** Whether the open project is trusted (Project > workspace trust shows it). */
+  trusted?: boolean | null;
+}>();
+const { t } = useI18n();
+const store = createSettingsStore(props.client);
+
+const query = ref('');
+const onlyChanged = ref(false);
+const selected = ref('general');
+const highlighted = ref<string | null>(null);
+const showJson = ref(false);
+/** The wanted sub-tab of the selected category; `null` for its first. */
+const tab = ref<string | null>(null);
+
+// The installed plugins, for the plugin tabs and their counts (RB-080-80); asked for when
+// Plugins opens, so the list is fresh there.
+const plugins = createInstalledLoader(props.client);
+
+onMounted(() => void store.start());
+onUnmounted(() => {
+  store.stop();
+  plugins.stop();
+});
+watch(selected, (id) => {
+  if (id === PLUGINS_CATEGORY) plugins.refresh();
+});
+
+// Breakpoints & Devices > Device presets lists the presets in effect (RB-010-12).
+const devices = ref<DevicePreset[]>([]);
+watch(selected, (id) => {
+  if (id !== 'breakpoints') return;
+  props.client
+    .expect({ type: 'getDevices' }, 'devices')
+    .then((answer) => (devices.value = answer.items))
+    .catch(() => undefined);
+});
+
+const schema = computed(() => store.schema.value);
+const hasProject = computed(() => schema.value?.project !== null && schema.value !== null);
+const searching = computed(() => query.value.trim() !== '' || onlyChanged.value);
+const allCategories = computed(() => (schema.value === null ? [] : layoutOf(schema.value)));
+const sectionTabs = computed(() => flagOf(store.values.value, SECTION_TABS_KEY, true));
+const visible = computed(() => {
+  const current = schema.value;
+  if (current === null) {
+    return [];
+  }
+  if (!searching.value) {
+    // About has no keys: its page is the About page (RB-010-18), not empty sections.
+    return allCategories.value.filter((category) => category.id === selected.value && category.id !== 'about');
+  }
+  const include = filterOf({ query: query.value, onlyChanged: onlyChanged.value }, store.values.value, t);
+  return layoutOf(current, include)
+    .map((category) => ({
+      ...category,
+      sections: category.sections.filter((section) => !section.mirror),
+    }))
+    .filter((category) => category.sections.length > 0);
+});
+const tabs = computed(() => {
+  const category = allCategories.value.find((c) => c.id === selected.value);
+  return searching.value || category === undefined ? [] : tabsOf(category, sectionTabs.value);
+});
+/** The plugins per list tab, of those the list shows; none while they load. */
+const pluginCounts = computed(() => {
+  const list = plugins.list.value;
+  if (list === null || list.loading) return null;
+  const values = store.values.value;
+  const shown = list.plugins.filter((plugin) => showBundled(values) || plugin.source !== 'bundled');
+  return countTabs(shown, disabledIds(values));
+});
+const tabItems = computed(() =>
+  tabs.value.map((item) => ({
+    label: t(item.titleKey),
+    value: item.id,
+    badge: selected.value === PLUGINS_CATEGORY ? pluginCounts.value?.[item.id as PluginListTab] : undefined,
+  })),
+);
+/** The plugin tab that lists plugins, if one is open (RB-080-80). */
+const pluginListTab = computed<PluginListTab | null>(() => {
+  const open = selected.value === PLUGINS_CATEGORY ? tabModel.value : undefined;
+  return open === 'installed' || open === 'disabled' ? open : null;
+});
+const tabModel = computed<string | number | undefined>({
+  get: () => activeTab(tabs.value, tab.value) ?? undefined,
+  set: (id) => chooseTab(String(id)),
+});
+const resultCount = computed(() =>
+  visible.value.reduce(
+    (sum, category) => sum + category.sections.reduce((n, section) => n + section.defs.length, 0),
+    0,
+  ),
+);
+
+// Security & Privacy warns while the Chromium sandbox is off (RB-010-04, ADR 0001 Decision 6).
+const SANDBOX_KEY = 'engines.chromium.sandbox';
+const sandboxOff = computed(() => store.values.value.get(SANDBOX_KEY)?.value === false);
+
+function sectionsShown(category: CategoryView) {
+  return searching.value ? category.sections : sectionsOfTab(category, tab.value, sectionTabs.value);
+}
+
+/** Opens category `id`, at the tab it was left on unless `wantedTab` names one. */
+function select(id: string, wantedTab: string | null = rememberedTab(id)): void {
+  selected.value = id;
+  tab.value = wantedTab;
+  query.value = '';
+  onlyChanged.value = false;
+  highlighted.value = null;
+}
+
+/** Shows sub-tab `id` and puts it in the address, so back and forward walk the tabs and a copied
+ * address opens the same tab. The first tab is named too: `layout` and `breakpoints` are keys as
+ * well as categories, and `#/settings/layout` alone opens the key. */
+function chooseTab(id: string): void {
+  tab.value = id;
+  highlighted.value = null;
+  rememberTab(selected.value, id);
+  window.location.hash = routeHash({ page: 'settings', key: selected.value, tab: id });
+}
+
+async function openAt(key: string | null, wantedTab: string | null = null): Promise<void> {
+  const current = schema.value;
+  if (key === null || current === null) {
+    return;
+  }
+  const isCategory = current.categories.some((category) => category.id === key);
+  // With a tab the address names the category, also where a key has the same name (`layout`).
+  const def = wantedTab !== null && isCategory ? undefined : findDef(current, key);
+  if (def === undefined) {
+    // A link to a category opens the tab it names, else the first (`settings.open_plugins`
+    // opens the plugin list).
+    if (isCategory) {
+      select(key, wantedTab);
+    }
+    return;
+  }
+  // A key's tab is its section (`tabs.ts`), in Plugins the Settings tab; a category without
+  // tabs ignores it.
+  select(def.category, tabOfSection(def.category, def.section));
+  highlighted.value = def.key;
+  await nextTick();
+  const field = document.getElementById(`field-${def.key}`);
+  field?.scrollIntoView?.({ block: 'center' });
+  const control =
+    document.getElementById(`setting-${def.key.replace(/\./g, '-')}`) ??
+    field?.querySelector<HTMLElement>('input:not([disabled]), select, textarea, [tabindex="0"]');
+  control?.focus();
+}
+
+watch(
+  [() => props.routeKey, () => props.routeTab, schema],
+  ([key, routeTab]) => void openAt(key, routeTab ?? null),
+  { immediate: true },
+);
+</script>
+
+<template>
+  <!-- overflow-clip, not hidden: scrollIntoView would scroll a hidden root and leave it there. -->
+  <div class="flex h-screen overflow-clip bg-default text-default">
+    <nav
+      class="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto border-r border-default p-3"
+      :aria-label="t('settings.nav.label')"
+    >
+      <input
+        v-model="query"
+        type="search"
+        class="h-8 w-full rounded-md bg-default px-2 text-sm text-default ring ring-inset ring-accented focus-visible:outline-2 focus-visible:outline-primary"
+        :placeholder="t('settings.search.placeholder')"
+        :aria-label="t('settings.search.placeholder')"
+        data-testid="search"
+      />
+      <label class="flex items-center gap-2 text-sm">
+        <USwitch v-model="onlyChanged" :aria-label="t('settings.search.only_changed')" data-testid="only-changed" />
+        {{ t('settings.search.only_changed') }}
+      </label>
+      <ul class="flex flex-col gap-0.5">
+        <li v-for="category in allCategories" :key="category.id">
+          <button
+            type="button"
+            class="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-elevated focus-visible:outline-2 focus-visible:outline-primary"
+            :class="!searching && category.id === selected ? 'bg-elevated font-semibold text-highlighted' : 'text-default'"
+            :aria-current="!searching && category.id === selected ? 'page' : undefined"
+            :data-category="category.id"
+            @click="select(category.id)"
+          >
+            {{ t(category.titleKey) }}
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <main class="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6" data-testid="settings-main">
+      <p v-if="store.loadError.value" class="text-sm text-error" role="alert">
+        {{ t('settings.load_failed', { reason: store.loadError.value }) }}
+      </p>
+      <header class="flex flex-wrap items-end justify-between gap-2">
+        <SectionHeader
+          level="page"
+          :eyebrow="searching ? t('settings.search.eyebrow') : t('settings.eyebrow')"
+          :title="searching ? t('settings.search.results', { n: resultCount }) : t(`settings.category.${selected}`)"
+        />
+        <UButton
+          :icon="SETTINGS_ICONS.json"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          :label="showJson ? t('settings.json.hide') : t('settings.json.show')"
+          :aria-expanded="showJson"
+          data-testid="json-toggle"
+          @click="showJson = !showJson"
+        />
+      </header>
+      <!-- The hits of a search, said as they change; empty, and so silent, without one (RB-090-22). -->
+      <p class="sr-only" role="status" data-testid="search-status">
+        {{ searching ? t('settings.search.results', { n: resultCount }) : '' }}
+      </p>
+      <JsonPanel v-if="showJson" :values="[...store.values.value.values()]" />
+
+      <p
+        v-if="!searching && selected === 'project' && hasProject"
+        class="text-sm text-muted"
+        data-testid="trust-status"
+      >
+        {{ trusted ? t('settings.trust.trusted') : t('settings.trust.restricted') }}
+      </p>
+      <div
+        v-if="!searching && selected === 'security' && sandboxOff"
+        role="alert"
+        class="flex flex-wrap items-center gap-2 rounded-md border border-warning px-3 py-2 text-sm text-warning"
+        data-testid="sandbox-warning"
+      >
+        <span class="flex-1">{{ t('settings.security.sandbox_off') }}</span>
+        <UButton
+          color="warning"
+          variant="soft"
+          size="xs"
+          :label="t('settings.security.sandbox_open')"
+          @click="openAt(SANDBOX_KEY)"
+        />
+      </div>
+      <!-- Security & Privacy / Project > Workspace trust (RB-010-09). -->
+      <TrustPage
+        v-if="!searching && (selected === 'security' || (selected === 'project' && hasProject))"
+        data-testid="settings-trust"
+      />
+
+      <!-- About > version, engines, licences (RB-010-18). -->
+      <AboutPage v-if="!searching && selected === 'about'" :client="client" data-testid="settings-about" />
+
+      <TabStrip v-if="tabs.length > 0" v-model="tabModel" :items="tabItems" data-testid="settings-tabs" />
+      <!-- Plugins > Installed / Disabled: the plugins of the tab (RB-080-80). -->
+      <PluginsList
+        v-if="pluginListTab !== null"
+        :key="pluginListTab"
+        :client="client"
+        :store="store"
+        :loader="plugins"
+        :tab="pluginListTab"
+        @open="openAt"
+      />
+
+      <template v-for="category in visible" :key="category.id">
+        <p v-if="!searching && category.sections.length === 0" class="text-sm text-muted">
+          {{ t('settings.empty_category') }}
+        </p>
+        <SectionCard
+          v-for="section in sectionsShown(category)"
+          :key="section.id"
+          :client="client"
+          :store="store"
+          :category="category"
+          :section="section"
+          :has-project="hasProject"
+          :highlighted="highlighted"
+          :searching="searching"
+          @open="openAt"
+        >
+          <template v-if="category.id === 'breakpoints' && section.id === 'device-presets'" #default>
+            <DevicePresetList :items="devices" />
+          </template>
+          <!-- Advanced > Diagnostics: "Save diagnostics...", above its key (RB-080-73). -->
+          <template v-if="!searching && category.id === 'advanced' && section.id === 'diagnostics'" #before>
+            <DiagnosticsSave :client="client" />
+          </template>
+          <!-- Plugins > Installed plugins: the plugins themselves, above their keys (RB-080-51). -->
+          <template v-if="!searching && tabs.length === 0 && category.id === 'plugins' && section.id === 'installed'" #before>
+            <PluginsList :client="client" :store="store" :loader="plugins" @open="openAt" />
+          </template>
+        </SectionCard>
+      </template>
+    </main>
+  </div>
+</template>

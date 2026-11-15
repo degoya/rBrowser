@@ -1,0 +1,81 @@
+"""The names of the choices of the settings (RB-090-16), shared by the settings lint.
+
+A key whose value is a closed choice - an `enum`, or a `oneOf` of constants - shows each option by
+its name from the catalogue, never by its id. The walk is the one of ui/src/settings/kinds.ts
+(`enumOptions`, `kindOf`) and the window's names are ui/src/settings/optionNames.ts's; keep the
+three in step:
+
+- a core key's option is `settings.option.<key>.<value>`;
+- a plugin key's is `plugin.<id>.settings.option.<path>.<value>`, in the plugin's own catalogue
+  (the window gets the plugin's `plugin.<id>.settings.` texts), so `option` is no plugin key;
+- a nested field adds its name (`breakpoints.engine`), a list's items and a map's values add
+  nothing;
+- the value's first letter in lower case (`A4` -> `a4`), as an i18n key segment starts;
+- a number names itself and needs no text.
+"""
+
+from settings_schema import MAX_DEPTH, is_i18n_key, resolve
+
+RESERVED = "option"
+
+
+def options_of(node: dict):
+    """The allowed values of an `enum` or a `oneOf` of constants; `None` when the node is none."""
+    values = node.get("enum")
+    if isinstance(values, list):
+        return values
+    branches = node.get("oneOf")
+    if (
+        isinstance(branches, list) and branches
+        and all(isinstance(branch, dict) and "const" in branch for branch in branches)
+    ):
+        return [branch["const"] for branch in branches]
+    return None
+
+
+def choices(root: dict, node: object, name: str, depth: int = 0):
+    """`(name, value)` of every option of `node` and its nested values, `name` as the window
+    names it (the key, a nested field's with its path)."""
+    node = resolve(root, node)
+    if depth >= MAX_DEPTH or not isinstance(node, dict):
+        return
+    values = options_of(node)
+    if values is not None:
+        yield from ((name, value) for value in values)
+        return
+    for nested in ("items", "additionalProperties"):
+        if isinstance(node.get(nested), dict):
+            yield from choices(root, node[nested], name, depth + 1)
+    properties = node.get("properties")
+    if isinstance(properties, dict):
+        for field, child in properties.items():
+            yield from choices(root, child, f"{name}.{field}", depth + 1)
+
+
+def segment(value: str) -> str:
+    """The catalogue segment of an option: the value, its first letter in lower case."""
+    return value[:1].lower() + value[1:]
+
+
+def option_key(setting, name: str, value: str) -> str:
+    """The i18n key of `value` of the field `name` (the key, or a nested field's path)."""
+    if setting.plugin is None:
+        return f"settings.option.{name}.{segment(value)}"
+    path = name[len(setting.plugin) + 1:]
+    return f"plugin.{setting.plugin}.settings.{RESERVED}.{path}.{segment(value)}"
+
+
+def problems(setting, root: dict, known: dict) -> list[str]:
+    """The options of `setting` without a name in `known`, and a plugin key named `option`."""
+    found = []
+    if setting.plugin is not None and setting.key.split(".")[1] == RESERVED:
+        found.append(f"`{RESERVED}` is reserved for the names of the choices")
+    for name, value in choices(root, setting.schema, setting.key):
+        if not isinstance(value, str):
+            continue
+        key = option_key(setting, name, value)
+        if not is_i18n_key(key):
+            found.append(f"option {value!r} makes no i18n key ({key})")
+        elif key not in known:
+            found.append(f'missing i18n key {key} (option "{value}")')
+    return found

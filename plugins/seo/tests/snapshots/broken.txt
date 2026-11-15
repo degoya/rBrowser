@@ -1,0 +1,3 @@
+error index.noindex_header index.noindex_header -
+warning headings.h1_multiple headings.h1_multiple html > body > main > h1:nth-of-type(2)
+warning headings.skipped headings.skipped html > body > main > h4

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the outline (RB-070-03): Settings > DevTools & Debugging > Outline",
+  "type": "object",
+  "properties": {
+    "customSelectors": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["label", "selector"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "selector": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "additionalProperties": false
+      },
+      "default": [],
+      "description": "Your own selectors, such as [data-cms-block]: the outline lists their matches in every view.",
+      "x-category": "devtools",
+      "x-section": "outline",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "linkCheck": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Request the links of the current page to find broken ones.",
+          "x-category": "devtools",
+          "x-section": "outline",
+          "x-order": 2,
+          "x-scope": ["project", "local", "user"]
+        },
+        "rps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 2,
+          "description": "At most this many link requests a second (1 to 4).",
+          "x-category": "devtools",
+          "x-section": "outline",
+          "x-order": 3,
+          "x-scope": ["project", "local", "user"]
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 120000,
+          "default": 30000,
+          "description": "No further link is requested once one check has run this long, in milliseconds.",
+          "x-category": "devtools",
+          "x-section": "outline",
+          "x-order": 4,
+          "x-scope": ["project", "local", "user"]
+        }
+      }
+    }
+  }
+}

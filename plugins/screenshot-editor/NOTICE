@@ -1,0 +1,24 @@
+screenshot-editor - rBrowser's screenshot editor plugin
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+The plugin embeds the following third-party font, modified (a subset):
+
+Noto Sans Mono Bold, version 2.006 (a subset: Basic Latin, Latin-1, Latin Extended-A,
+typographic quotes and dashes, the euro sign and arrows; no hinting, no layout features)
+  https://github.com/notofonts/latin-greek-cyrillic
+  Copyright 2015 Google LLC. All Rights Reserved.
+  Licence: SIL Open Font License, version 1.1 (OFL-1.1), without a Reserved Font Name - the
+  full text is panel/annotation-font.OFL.txt and https://openfontlicense.org.
+  Files: font/annotation-font.ttf (the source, not shipped as a file), shipped as a data URL in
+  panel/annotation-font.css and embedded in component.wasm
+
+The plugin's panel (panel/dist/panel.js, panel/dist/panel.css) is built with Vite from web/src
+and bundles third-party code unchanged: Vue, Nuxt UI and the packages they use (reka-ui,
+Floating UI, VueUse, tailwind-variants, unhead, colortranslator and others), the compiled styles
+of Tailwind CSS, and a selection of Lucide icons (from @iconify-json/lucide). Each is under the
+MIT License, colortranslator under the Apache License 2.0, Lucide under the ISC License (and the
+MIT License for the icons derived from Feather). The name, version and full licence text of
+every bundled package is in panel/dist/THIRD-PARTY-LICENSES.txt, which the build writes beside
+the panel.

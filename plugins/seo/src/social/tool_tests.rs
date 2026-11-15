@@ -1,0 +1,150 @@
+use rb_plugin_api::test_support::MemoryHost;
+use rb_plugin_api::{Capability, HttpResponse, ViewInfo};
+
+use super::*;
+use crate::social::image::tests::png;
+
+const PAGE: &str = "https://shop.test/p/";
+
+fn host(head: &str) -> MemoryHost {
+    let mut host = MemoryHost::new()
+        .grant(Capability::Http)
+        .grant(Capability::Views);
+    host.responses.insert(
+        PAGE.to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "text/html".to_owned())],
+            body: format!("<html><head>{head}</head><body></body></html>").into_bytes(),
+        },
+    );
+    host.views.push(ViewInfo {
+        id: 4,
+        url: PAGE.to_owned(),
+        ..ViewInfo::default()
+    });
+    host.active = Some(4);
+    host
+}
+
+fn answer(host: &mut MemoryHost, args: &str) -> Value {
+    serde_json::from_str(&preview(host, args).expect("preview")).expect("json")
+}
+
+#[test]
+fn the_view_s_page_gives_the_default_cards_and_its_image_inline() {
+    let mut host = host(
+        r#"<title>T</title><meta property="og:image" content="/s.png">
+<meta property="og:url" content="https://shop.test/p/">"#,
+    );
+    host.responses.insert(
+        "https://shop.test/s.png".to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "image/png".to_owned())],
+            body: png(1200, 630),
+        },
+    );
+    let answer = answer(&mut host, r#"{"target": 4}"#);
+    assert_eq!(answer["cards"].as_array().map(Vec::len), Some(7));
+    assert_eq!(answer["domain"], "shop.test");
+    assert_eq!(answer["dataVersion"], 2);
+    // RB-080-99: the size rules settle with the image's real size, the card rules on twitter:card.
+    let card = |id: &str| {
+        answer["cards"]
+            .as_array()
+            .and_then(|cards| cards.iter().find(|card| card["id"] == id))
+            .cloned()
+            .unwrap_or_default()
+    };
+    assert_eq!(card("facebook")["layout"], "large");
+    assert_eq!(card("facebook")["reason"]["code"], "meets");
+    assert_eq!(card("facebook")["unsure"], false);
+    assert_eq!(card("x")["layout"], "small");
+    assert_eq!(card("x")["reason"]["code"], "card_missing");
+    let image = &answer["images"][0];
+    assert_eq!(
+        (image["width"].as_u64(), image["height"].as_u64()),
+        (Some(1200), Some(630))
+    );
+    assert!(
+        image["dataUri"]
+            .as_str()
+            .is_some_and(|uri| uri.starts_with("data:image/png;base64,"))
+    );
+}
+
+#[test]
+fn an_image_over_the_budget_is_described_but_not_inlined() {
+    let mut host = host(r#"<meta property="og:image" content="https://shop.test/big.png">"#);
+    let mut big = png(2400, 1260);
+    big.resize(ANSWER_BUDGET, 0);
+    host.responses.insert(
+        "https://shop.test/big.png".to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "image/png".to_owned())],
+            body: big,
+        },
+    );
+    let answer = answer(&mut host, "{}");
+    let image = &answer["images"][0];
+    assert_eq!(image["dataUri"], Value::Null);
+    assert_eq!(image["tooLarge"], true);
+    assert!(answer.to_string().len() < ANSWER_BUDGET);
+}
+
+#[test]
+fn the_platforms_setting_narrows_the_cards() {
+    let mut host = host("<title>T</title>");
+    host.settings.insert(
+        "social.platforms".to_owned(),
+        r#"["x", "slack"]"#.to_owned(),
+    );
+    let answer = answer(&mut host, r#"{"url": "https://shop.test/p/"}"#);
+    let ids: Vec<&str> = answer["cards"]
+        .as_array()
+        .expect("cards")
+        .iter()
+        .filter_map(|card| card["id"].as_str())
+        .collect();
+    assert_eq!(ids, ["x", "slack"]);
+    assert_eq!(answer["images"], json!([]));
+}
+
+#[test]
+fn bad_arguments_and_pages_are_refused() {
+    let mut host = host("");
+    let code = |result: Result<String, Failure>| {
+        result
+            .err()
+            .and_then(|failure| failure.code().map(str::to_owned))
+    };
+    assert_eq!(
+        code(preview(&mut host, r#"{"nope": 1}"#)).as_deref(),
+        Some("plugin.seo.errors.bad_args")
+    );
+    assert_eq!(
+        code(preview(&mut host, r#"{"url": "file:///etc/passwd"}"#)).as_deref(),
+        Some("plugin.seo.errors.bad_url")
+    );
+    host.active = None;
+    assert_eq!(
+        code(preview(&mut host, "{}")).as_deref(),
+        Some("plugin.seo.errors.no_url")
+    );
+}
+
+#[test]
+fn an_image_that_does_not_load_leaves_a_size_rule_unsure() {
+    let mut host = host(r#"<meta property="og:image" content="https://shop.test/gone.png">"#);
+    let answer = answer(&mut host, r#"{"target": 4}"#);
+    let facebook = &answer["cards"][0];
+    assert_eq!(facebook["id"], "facebook");
+    assert_eq!(facebook["unsure"], true);
+    assert_eq!(facebook["reason"]["code"], "size_unknown");
+    assert_eq!(
+        (&facebook["layout"], &facebook["alternate"]),
+        (&json!("large"), &json!("small"))
+    );
+}

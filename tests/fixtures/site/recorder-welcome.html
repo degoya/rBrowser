@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser recorder fixture: welcome</title>
+<style>
+  /* RB-050-02 (K12): where recorder.html's Sign in leads; the exported spec asserts its text. */
+  body { margin: 16px; font: 16px system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome</h1>
+<p id="who"></p>
+<p id="plan"></p>
+<script>
+  'use strict';
+  document.getElementById('who').textContent =
+    'Signed in as ' + (sessionStorage.getItem('fixture.email') || 'nobody');
+  document.getElementById('plan').textContent =
+    'Plan: ' + (new URLSearchParams(location.search).get('plan') || 'none');
+</script>
+</body>
+</html>

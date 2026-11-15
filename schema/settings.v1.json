@@ -1,0 +1,3377 @@
+{
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The schema reference for editors."
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "The format version; [`crate::CURRENT_VERSION`] after migration.",
+      "default": 1
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "The UI language: one of `rb_i18n::available_locales()` (only `en` in phase 1,\nRB-010-14).",
+          "default": "en",
+          "enum": [
+            "en"
+          ],
+          "x-category": "general",
+          "x-section": "language",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "theme": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "system",
+              "description": "Follow Windows."
+            },
+            {
+              "type": "string",
+              "const": "light",
+              "description": "Light."
+            },
+            {
+              "type": "string",
+              "const": "dark",
+              "description": "Dark."
+            }
+          ],
+          "description": "Light, dark or follow the system (RB-010-07).",
+          "default": "system",
+          "x-category": "general",
+          "x-section": "appearance",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "statusBar": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean",
+              "description": "Show the status bar at the bottom of the window; hidden, the grid takes its room and the\nmessages still reach the history.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "status-bar",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "infoTimeoutSec": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "How long an info or success message stays in the bar, in seconds; 0 keeps it until the\nnext one. Warnings and errors stay until closed.",
+              "maximum": 600,
+              "default": 6,
+              "x-category": "layout",
+              "x-section": "status-bar",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "historySize": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 10,
+              "description": "How many messages the history keeps, oldest dropped first.",
+              "maximum": 1000,
+              "default": 200,
+              "x-category": "layout",
+              "x-section": "status-bar",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "canvasZoom": {
+              "type": "boolean",
+              "description": "Show the canvas zoom at the right of the status bar while the canvas layout is shown: the\nactive view's page zoom, a slider, the minus and plus buttons and the presets (RB-080-94).",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "status-bar",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Layout > status bar (RB-080-15).",
+          "default": {
+            "visible": true,
+            "infoTimeoutSec": 6,
+            "historySize": 200,
+            "canvasZoom": true
+          }
+        },
+        "highlightActiveView": {
+          "type": "boolean",
+          "description": "The label strip of the active view (the leader) is drawn in the accent colour, in every\nlayout with label strips - grid, focus, horizontal, split; the canvas board marks it\nitself (RB-080-04).",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "engineBadge": {
+          "type": "boolean",
+          "description": "Every view's label strip ends in a badge naming its engine (Chromium, Firefox, WebKit);\na click on it chooses another engine for the view's breakpoint (RB-080-33). The canvas\nboard draws the same badge. Off hides the badge; the chord still opens the choice.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "pageContextMenu": {
+          "type": "boolean",
+          "description": "The page's context menu offers rBrowser's block below Chromium's entries: Inspect\nelement, DevTools, Screenshot, Video, Checks and Panels for the clicked view\n(RB-080-43). Off leaves Chromium's menu and \"Do not sync the next click\"; the commands\nand their chords stay.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "viewContextMenu": {
+          "type": "boolean",
+          "description": "The menus of the views (RB-080-41): on a view's label strip (the active view's click, a\nright-click on the canvas board's label) \"Remove view\", \"Set as active\", \"Size\", the\nengine, \"Pop out\"; on the free canvas, an empty cell or the toolbar's \"+\" the hidden\nbreakpoints to add. Off leaves the strips and the canvas as before; the \"+\" button, the\ncommands, the palette and MCP stay.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 8,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "viewFooter": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean",
+              "description": "Show the breakpoint bar under every view (formerly the footer), in the breakpoint's\ncolour, in every layout and in a view's own window; the view gives it 18 px of its height.\nOff gives the height back.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 9,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "fields": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "description": "One field of the breakpoint bar. The order of the variants is the order in the strip.",
+                "oneOf": [
+                  {
+                    "description": "The breakpoint's id (`md`).",
+                    "type": "string",
+                    "const": "breakpoint"
+                  },
+                  {
+                    "description": "The widths the breakpoint stands for (`768-1023px`).",
+                    "type": "string",
+                    "const": "range"
+                  },
+                  {
+                    "description": "The view's width, height and pixel ratio (`768 x 1024 @2x`).",
+                    "type": "string",
+                    "const": "size"
+                  },
+                  {
+                    "description": "The page's `min-width` / `max-width` conditions that hold at the view's width, from the\nanalysis of the page; the ends of the breakpoint's range until one ran.",
+                    "type": "string",
+                    "const": "queries"
+                  },
+                  {
+                    "description": "The framework's name for the width (`md`), when the analyser recognised one.",
+                    "type": "string",
+                    "const": "framework"
+                  }
+                ]
+              },
+              "description": "What the breakpoint bar names, in this order: `breakpoint`, `range`, `size`, `queries`,\n`framework`; `range` and `framework` by default. A breakpoint bar with no field left is\nnot shown.",
+              "default": [
+                "range",
+                "framework"
+              ],
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 10,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "analyze": {
+              "type": "boolean",
+              "description": "Read the media queries of the page a view shows from the loaded page itself, after\nevery load - nothing is requested again - so the breakpoint bar names the page's own\n`min-width` / `max-width` queries. Off, the breakpoint bar names the ends of the\nbreakpoint's range, or what Analyze Breakpoints found.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 11,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "wrap": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "auto",
+                  "description": "A second line when one does not hold the text, broken between two fields."
+                },
+                {
+                  "type": "string",
+                  "const": "never",
+                  "description": "Always one line; what does not fit is cut at the end."
+                }
+              ],
+              "description": "What the breakpoint bar does in a view too narrow for its text: `auto` breaks it into a\nsecond line between two fields, and the view gives the breakpoint bar 36 px while it has\ntwo lines; `never` keeps one line that ends in an ellipsis. What is cut is in the tooltip.",
+              "default": "auto",
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 13,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "align": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "center",
+                  "description": "In the middle of the strip, every line."
+                },
+                {
+                  "type": "string",
+                  "const": "start",
+                  "description": "At the strip's left edge."
+                }
+              ],
+              "description": "Where the breakpoint bar's text stands in the strip: `center` in the middle of every line,\n`start` at the left edge.",
+              "default": "center",
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 14,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Layout > the breakpoint bar under every view (RB-080-44).",
+          "default": {
+            "visible": true,
+            "fields": [
+              "range",
+              "framework"
+            ],
+            "analyze": true,
+            "wrap": "auto",
+            "align": "center"
+          }
+        },
+        "pageContextMenuEmulation": {
+          "type": "boolean",
+          "description": "The page's context menu offers the toolbar's emulation switches for the clicked view -\ncolour scheme, reduced motion, offline, location, time zone, reset - in an Emulation\nsubmenu, and \"Analyze breakpoints\" beside it (RB-080-49). Off, the submenu is gone and\n\"Analyze breakpoints\" stays under Checks. Needs `ui.pageContextMenu`.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "newViewSize": {
+          "type": "object",
+          "properties": {
+            "devices": {
+              "type": "boolean",
+              "description": "The \"New size...\" picker lists the device presets (the built-in ones and your own,\nwith their pixel ratio) below the sizes. Off leaves the sizes and \"Custom...\".",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 12,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Layout > what the \"New size...\" picker lists (RB-080-46).",
+          "default": {
+            "devices": true
+          }
+        },
+        "toolbar": {
+          "type": "object",
+          "properties": {
+            "overflow": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "menu",
+                  "description": "One row; what does not fit is in the overflow menu."
+                },
+                {
+                  "type": "string",
+                  "const": "wrap",
+                  "description": "Up to two rows; only what a second row does not hold either is in the overflow menu."
+                }
+              ],
+              "description": "What the toolbar does with the controls a narrow window has no room for: `menu` moves\nthem into the \"More\" menu at its right end, `wrap` breaks the toolbar into a second row\nand the views move down. The address bar and back, forward and reload always stay.",
+              "default": "menu",
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "footerToggle": {
+              "type": "boolean",
+              "description": "Shows the switch of the breakpoint bar under every view (formerly the footer) in the\ntoolbar (RB-080-60). Off, the breakpoint bar is still switched in Settings, the view\nmenus, the page's context menu and with `Leader O B`.",
+              "default": true,
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "themeToggle": {
+              "type": "boolean",
+              "description": "Shows the menu of rBrowser's own theme in the toolbar (RB-080-95, RB-090-10): a sun and a\nmoon in one with a mark for the theme in effect, and the choice of system, light or dark -\nthe shell, the panels and the windows, never the pages in the views. Off, the theme is\nstill set in Settings, the command palette and with `Leader V 0`.",
+              "default": true,
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 6,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "panelsToggle": {
+              "type": "boolean",
+              "description": "Shows the switch of the plugin panels at the right end of the toolbar (RB-080-79): it\nopens the docked panels and folds them to their icon rail again. Off by default\n(RB-090-10): the panels open from their rail beside the views, the commands and\n`Leader P Z`.",
+              "default": false,
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 8,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The toolbar in a narrow window (RB-080-52) and its breakpoint bar switch (RB-080-60).",
+          "default": {
+            "overflow": "menu",
+            "footerToggle": true,
+            "themeToggle": true,
+            "panelsToggle": false
+          }
+        },
+        "syntaxHighlight": {
+          "type": "boolean",
+          "description": "Code shows in syntax colours wherever rBrowser shows it - the plugin panels' values,\nstack traces, request and response bodies and headers, snippets and storage values, and\nthe settings window's JSON view (RB-080-65). Off, code is one colour; more than 200 KiB is\nalways one colour.",
+          "default": true,
+          "x-category": "general",
+          "x-section": "appearance",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "openLinksIn": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "system",
+              "description": "The system's default browser."
+            },
+            {
+              "type": "string",
+              "const": "activeView",
+              "description": "The active view of the grid."
+            },
+            {
+              "type": "string",
+              "const": "ask",
+              "description": "Ask on every link: the system browser or the active view."
+            }
+          ],
+          "description": "Where a link from rBrowser's own surfaces opens - a finding's help page, a plugin panel's\nreport or help link: `system` the default browser, `activeView` the grid's active view,\n`ask` asks on every link (RB-080-92).",
+          "default": "system",
+          "x-category": "general",
+          "x-section": "appearance",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "General: language and theme.",
+      "default": {
+        "language": "en",
+        "theme": "system",
+        "statusBar": {
+          "visible": true,
+          "infoTimeoutSec": 6,
+          "historySize": 200,
+          "canvasZoom": true
+        },
+        "highlightActiveView": true,
+        "engineBadge": true,
+        "pageContextMenu": true,
+        "viewContextMenu": true,
+        "viewFooter": {
+          "visible": true,
+          "fields": [
+            "range",
+            "framework"
+          ],
+          "analyze": true,
+          "wrap": "auto",
+          "align": "center"
+        },
+        "pageContextMenuEmulation": true,
+        "newViewSize": {
+          "devices": true
+        },
+        "toolbar": {
+          "overflow": "menu",
+          "footerToggle": true,
+          "themeToggle": true,
+          "panelsToggle": false
+        },
+        "syntaxHighlight": true,
+        "openLinksIn": "system"
+      }
+    },
+    "recentProjects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "General > recent projects, newest first (absolute paths).",
+      "default": [],
+      "x-category": "general",
+      "x-section": "recent-projects",
+      "x-order": 1,
+      "x-scope": [
+        "user"
+      ],
+      "x-protected": true
+    },
+    "startup": {
+      "type": "object",
+      "properties": {
+        "openLastProject": {
+          "type": "boolean",
+          "description": "Started without a project (and none found upwards): open the newest of\n`recentProjects`.",
+          "default": false,
+          "x-category": "general",
+          "x-section": "startup",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "focusOnOpen": {
+          "type": "boolean",
+          "description": "The window takes the focus when a project opens or a second call hands it a URL;\n`--background` overrides it for one call.",
+          "default": true,
+          "x-category": "general",
+          "x-section": "startup",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "General > start behaviour (RB-010-11).",
+      "default": {
+        "openLastProject": false,
+        "focusOnOpen": true
+      }
+    },
+    "grid": {
+      "type": "object",
+      "properties": {
+        "fitToWindow": {
+          "type": "boolean",
+          "description": "After a layout change (a layout preset, focus mode, the project opening or its config\nchanging), views zoomed by hand go back to their cell's zoom; off, they keep it. An\nenvironment change leaves the zoom alone.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "zoom",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "defaultZoom": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "fit"
+              ]
+            },
+            {
+              "type": "number",
+              "format": "double"
+            }
+          ],
+          "description": "The zoom of the cells rBrowser lays out itself (no `layout.cells` in the config, the\nfocus-mode view): `\"fit\"` or a factor `0.25`..=`1`; cells of the config keep their own.",
+          "default": "fit",
+          "x-category": "layout",
+          "x-section": "zoom",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Layout > zoom of the grid area (RB-010-12).",
+      "default": {
+        "fitToWindow": true,
+        "defaultZoom": "fit"
+      }
+    },
+    "focusMode": {
+      "type": "object",
+      "properties": {
+        "arrowKeys": {
+          "type": "boolean",
+          "description": "Left and right arrow switch the breakpoint while the shell has the focus.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "focus-mode",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "keepFocus": {
+          "type": "boolean",
+          "description": "A page loading in the focus view (each arrow key opens the next breakpoint's view) leaves\nthe keyboard focus where it is, so the toolbar's next arrow key steps again. Off: the\nview takes the focus, as a page does after a navigation.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "focus-mode",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Layout > focus mode (RB-010-12).",
+      "default": {
+        "arrowKeys": true,
+        "keepFocus": true
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "jsonHighlight": {
+          "type": "boolean",
+          "description": "The JSON view colours keys, strings, numbers, booleans, `null` and punctuation, in both\nthemes; off, the text is one colour. Copy delivers plain JSON either way.",
+          "default": true,
+          "x-category": "general",
+          "x-section": "appearance",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "showKeys": {
+          "type": "boolean",
+          "description": "Every setting prints its key (`updates.channel`) under its title. Off, the key is in the\ntitle's tooltip and behind the copy button that appears on the row; the search finds a\nsetting by its key either way (RB-080-70).",
+          "default": false,
+          "x-category": "general",
+          "x-section": "settings-window",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "sectionTabs": {
+          "type": "boolean",
+          "description": "A category with more than one section shows one section per tab; the search, \"Only\nchanged\" and a link to a setting reach every tab. Off, every section of a category stands\non one page (RB-080-71).",
+          "default": true,
+          "x-category": "general",
+          "x-section": "settings-window",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "General > appearance: the settings window's JSON view (RB-080-42).",
+      "default": {
+        "jsonHighlight": true,
+        "showKeys": false,
+        "sectionTabs": true
+      }
+    },
+    "layoutModes": {
+      "type": "object",
+      "properties": {
+        "snap": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Canvas: a moved view snaps to this grid in DIP (0 for none) and to the edges of views\ncloser than it, unless the preset sets its own `snap`.",
+          "maximum": 128,
+          "default": 8,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "minimap": {
+          "type": "boolean",
+          "description": "Canvas: the minimap in the toolbar strip shows every view and the visible area; a click\ncentres the canvas on that point.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "minimapPosition": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "end",
+              "description": "At the end of the toolbar, before the menus."
+            },
+            {
+              "type": "string",
+              "const": "start",
+              "description": "At the start of the toolbar, after the logo."
+            }
+          ],
+          "description": "Canvas: the minimap's place in the toolbar strip.",
+          "default": "end",
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "horizontalHeight": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "fit"
+              ]
+            },
+            {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          ],
+          "description": "Horizontal: the row height when the preset sets none - `\"fit\"` (the grid area's) or a\nheight in DIP.",
+          "default": "fit",
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "splitStep": {
+          "type": "number",
+          "format": "double",
+          "description": "Split: how far one keyboard step moves the divider, as a share of the area (0.01 to\n0.25).",
+          "minimum": 0.01,
+          "maximum": 0.25,
+          "default": 0.05,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "spacePan": {
+          "type": "boolean",
+          "description": "Canvas: Space held turns any drag on the canvas board - a view's label too - into a pan;\na drag on the empty board always pans.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "savePresetTo": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "local",
+              "description": "`config.local.json`: personal, not checked in."
+            },
+            {
+              "type": "string",
+              "const": "project",
+              "description": "`config.json`: checked in, shared with the team."
+            }
+          ],
+          "description": "The file \"Save layout as preset\" writes when the call names none: `local`\n(`config.local.json`, personal) or `project` (`config.json`, shared with the team).",
+          "default": "local",
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "wheelZoom": {
+          "type": "boolean",
+          "description": "Canvas: Ctrl + mouse wheel over the canvas board - the free area or a view's label -\nzooms the canvas around the pointer; the views grow and shrink with it. Off: the wheel\ndoes nothing there. Over a view the page zooms, as in every layout.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 8,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "middleButtonPan": {
+          "type": "boolean",
+          "description": "Canvas: the middle mouse button held and dragged pans the canvas, as Space + drag does -\nover a view, a label or a breakpoint bar too, where the page's autoscroll does not start\nthen. Off gives the middle button back to the pages.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 9,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "showPartialViews": {
+          "type": "boolean",
+          "description": "Canvas: a view that reaches past the edge of the grid area shows the part of its page\nthat lies inside; only a view wholly outside is hidden and paused. Off: a view is hidden\nas soon as any part of it leaves the area.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "modes",
+          "x-order": 10,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Layout > further modes: horizontal, split and canvas (RB-080-04).",
+      "default": {
+        "snap": 8,
+        "minimap": true,
+        "minimapPosition": "end",
+        "horizontalHeight": "fit",
+        "splitStep": 0.05,
+        "spacePan": true,
+        "savePresetTo": "local",
+        "wheelZoom": true,
+        "middleButtonPan": true,
+        "showPartialViews": true
+      }
+    },
+    "popOut": {
+      "type": "object",
+      "properties": {
+        "keepPlaceholder": {
+          "type": "boolean",
+          "description": "The grid keeps the popped-out view's cell with a placeholder (a click brings the window\nto the front); off, the other views close the gap.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "pop-out",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "fitToScreen": {
+          "type": "boolean",
+          "description": "A window larger than the screen is cut to it and the page shown at a zoom below 1, named\nin the title; off, the window keeps the real size beyond the screen.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "pop-out",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "rememberBounds": {
+          "type": "boolean",
+          "description": "Each breakpoint's window opens where and as large as it was last closed.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "pop-out",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Layout > pop-out: a view in a window of its own at its real size (RB-080-14).",
+      "default": {
+        "keepPlaceholder": true,
+        "fitToScreen": true,
+        "rememberBounds": true
+      }
+    },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "throttleHidden": {
+          "type": "boolean",
+          "description": "A view without area on screen is reported hidden to Chromium, which stops painting it\nand throttles its timers; navigation and scroll sync still reach it, and it catches up\nwith the leader's URL and scroll position when it shows again. Off, such views keep\nrendering.",
+          "default": true,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "inactiveFps": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Visible views that are not the active one run with their main thread slowed to about\nthis many frames per second of work (CDP CPU throttling, 60 / value); 0 (or 60) leaves\nthem at full speed. Sync still reaches them, a little later.",
+          "maximum": 60,
+          "default": 0,
+          "x-category": "layout",
+          "x-section": "grid",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "memoryWarningMb": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The shell warns once when rBrowser's processes together use more private memory than\nthis many MiB; 0 turns the warning off.",
+          "maximum": 65536,
+          "default": 3072,
+          "x-category": "advanced",
+          "x-section": "experimental",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Layout > grid and Advanced > experimental flags: throttling and the memory warning\n(RB-020-09).",
+      "default": {
+        "throttleHidden": true,
+        "inactiveFps": 0,
+        "memoryWarningMb": 3072
+      }
+    },
+    "cdp": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Off by default.",
+          "default": false,
+          "x-category": "automation",
+          "x-section": "cdp-proxy",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "A fixed port; random when absent.",
+          "x-category": "automation",
+          "x-section": "cdp-proxy",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Automation > CDP proxy (RB-030-06).",
+      "default": {
+        "enabled": false
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "The MCP server runs.",
+          "default": false,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "allowEvaluate": {
+          "type": "boolean",
+          "description": "The `evaluate` tool may run page JavaScript.",
+          "default": false,
+          "x-category": "security",
+          "x-section": "evaluate",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "A fixed port on 127.0.0.1; a free one at every start when absent (RB-030-01).",
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "navigationTimeoutMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1000,
+          "description": "How long MCP waits for each view, in milliseconds: the final URL of `navigate`,\n`reload`, `back` and `forward`, the input of `click`, `type`, `hover` and `press_key`,\nand `sync_set`'s work (RB-030-01).",
+          "maximum": 600000,
+          "default": 15000,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "consoleLogLimit": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 10,
+          "description": "Console messages kept per view for `console_logs` (RB-030-01).",
+          "maximum": 10000,
+          "default": 500,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "networkRequestLimit": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 10,
+          "description": "Network requests kept per view for `network_requests` (RB-030-01).",
+          "maximum": 10000,
+          "default": 500,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "errorLimit": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 10,
+          "description": "Uncaught exceptions kept per view for `errors` (RB-030-01).",
+          "maximum": 10000,
+          "default": 200,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "maxAnswerBytes": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 4096,
+          "description": "The most bytes `evaluate` and `snapshot` answer; more is cut (RB-030-01).",
+          "maximum": 16777216,
+          "default": 262144,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "stdioAutoStart": {
+          "type": "boolean",
+          "description": "`rbrowser mcp` starts the project's rBrowser in the background when none runs\n(RB-030-02).",
+          "default": false,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 8,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "notifyOnSettingChange": {
+          "type": "boolean",
+          "description": "A setting changed over MCP is shown in the shell (RB-030-03).",
+          "default": true,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 9,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Automation > MCP (RB-030-01).",
+      "default": {
+        "enabled": false,
+        "allowEvaluate": false,
+        "navigationTimeoutMs": 15000,
+        "consoleLogLimit": 500,
+        "networkRequestLimit": 500,
+        "errorLimit": 200,
+        "maxAnswerBytes": 262144,
+        "stdioAutoStart": false,
+        "notifyOnSettingChange": true
+      }
+    },
+    "portal": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "The portal may run. Off, `portal.toggle` refuses; on, the portal still listens only once a\nperson starts it (MCP cannot).",
+          "default": false,
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "interface": {
+          "type": "string",
+          "description": "The IPv4 address of the LAN interface the portal listens on; empty: the interface of the\ndefault route, and only when its address is private (RFC 1918, 169.254/16, 100.64/10) -\na public or VPN address refuses to start. Never every interface (`0.0.0.0`).",
+          "default": "",
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "A fixed port; a free one at every start when absent.",
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "pairingTtlSec": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 30,
+          "description": "How long the pairing code in the QR code stays valid, in seconds.",
+          "maximum": 3600,
+          "default": 300,
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "maxDevices": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "How many devices may be paired at once.",
+          "maximum": 20,
+          "default": 5,
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Security & Privacy > Portal: devices in the LAN (RB-080-05).",
+      "default": {
+        "enabled": false,
+        "interface": "",
+        "pairingTtlSec": 300,
+        "maxDevices": 5
+      }
+    },
+    "automation": {
+      "type": "object",
+      "properties": {
+        "flows": {
+          "type": "object",
+          "properties": {
+            "dir": {
+              "type": "string",
+              "description": "The folder of the flows, relative to the project; `.rbrowser/flows` or a folder inside it,\nwhich workspace trust covers.",
+              "default": ".rbrowser/flows",
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true,
+              "x-input": "folder"
+            },
+            "parallel": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "How many views run a flow at once; 0 runs all at once.",
+              "maximum": 32,
+              "default": 0,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1000,
+              "description": "How long a flow may run in one view, in milliseconds.",
+              "maximum": 3600000,
+              "default": 30000,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "syncDuringRun": {
+              "type": "boolean",
+              "description": "Keep syncing input between the views while a flow runs; off, the views of the run\nstop syncing until it ends (otherwise each action happens twice).",
+              "default": false,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "screenshotOnFailure": {
+              "type": "boolean",
+              "description": "Save a screenshot of a view whose flow failed or timed out.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Flows: Playwright scripts of the project that run in every view (RB-040-07).",
+          "default": {
+            "dir": ".rbrowser/flows",
+            "parallel": 0,
+            "timeoutMs": 30000,
+            "syncDuringRun": false,
+            "screenshotOnFailure": true
+          }
+        }
+      },
+      "description": "Automation > Playwright & flows (RB-040-07).",
+      "default": {
+        "flows": {
+          "dir": ".rbrowser/flows",
+          "parallel": 0,
+          "timeoutMs": 30000,
+          "syncDuringRun": false,
+          "screenshotOnFailure": true
+        }
+      }
+    },
+    "engines": {
+      "type": "object",
+      "properties": {
+        "chromium": {
+          "type": "object",
+          "properties": {
+            "sandbox": {
+              "type": "boolean",
+              "description": "Run the Chromium processes in the sandbox (ADR 0001, Decision 6). Off only where the\nsandbox fails on a machine; read at start-up, and while it is off the log says so at\nevery start. `--no-sandbox` on the command line switches it off for one start.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "chromium",
+              "x-order": 10,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Load the extensions below into the Chromium views. Off loads none; the list is kept.\nThe change takes effect at the next start.",
+                  "default": true,
+                  "x-category": "engines",
+                  "x-section": "chromium",
+                  "x-order": 2,
+                  "x-scope": [
+                    "user"
+                  ],
+                  "x-protected": true
+                },
+                "offerProjectRecommendations": {
+                  "type": "boolean",
+                  "description": "A trusted project's recommended extensions (`extensions` in its config) are offered in a\nnotice; they are added only by the command Extensions: add the project's\nrecommendations, never by themselves.",
+                  "default": true,
+                  "x-category": "engines",
+                  "x-section": "chromium",
+                  "x-order": 4,
+                  "x-scope": [
+                    "user"
+                  ]
+                },
+                "unpacked": {
+                  "type": "array",
+                  "items": {
+                    "description": "One entry of `engines.chromium.extensions.unpacked`.",
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "description": "The absolute path of the extension's folder (the one holding `manifest.json`); a path\nto the `manifest.json` itself names its folder.",
+                        "type": "string",
+                        "x-input": "folder"
+                      },
+                      "enabled": {
+                        "description": "Load this extension at the next start.",
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ]
+                  },
+                  "description": "Unpacked extensions: each a folder with a Manifest V3 `manifest.json`, referenced where\nit is, not copied. Changes take effect at the next start.",
+                  "default": [],
+                  "x-category": "engines",
+                  "x-section": "chromium",
+                  "x-order": 3,
+                  "x-scope": [
+                    "user"
+                  ],
+                  "x-protected": true
+                },
+                "allowWebStore": {
+                  "type": "boolean",
+                  "description": "Extensions from the Chrome Web Store (an id or a store URL) may be installed: downloaded\nfrom Google's update server, their CRX3 signatures checked, unpacked under rBrowser's\nlocal folder and loaded like an unpacked folder. Off hides the field and refuses the\ncommands; what is installed stays loaded.",
+                  "default": true,
+                  "x-category": "engines",
+                  "x-section": "chromium",
+                  "x-order": 5,
+                  "x-scope": [
+                    "user"
+                  ],
+                  "x-protected": true
+                },
+                "checkUpdatesAtStart": {
+                  "type": "boolean",
+                  "description": "At every start, ask the Web Store whether an installed extension has a newer version;\nan update is installed only after confirmation in the window. Off checks only on the\ncommand Extensions: check the Web Store for updates.",
+                  "default": false,
+                  "x-category": "engines",
+                  "x-section": "chromium",
+                  "x-order": 6,
+                  "x-scope": [
+                    "user"
+                  ]
+                }
+              },
+              "description": "Chrome extensions from unpacked folders (RB-080-06)."
+            }
+          },
+          "description": "Chromium, the engine of the grid (RB-010-04).",
+          "default": {
+            "sandbox": true
+          }
+        },
+        "nodePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A Node runtime of one's own instead of the bundled one.",
+          "x-category": "engines",
+          "x-section": "node",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "file"
+        },
+        "nodeRpcTimeoutMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1000,
+          "description": "How long a request to the Node sidecar waits for its answer, in milliseconds; a request\nthat takes longer is cancelled (RB-040-03).",
+          "maximum": 600000,
+          "default": 30000,
+          "x-category": "engines",
+          "x-section": "node",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "playwrightBrowsersPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The folder of the Playwright browsers (WebKit); `%LOCALAPPDATA%\\rBrowser\\ms-playwright`\nwhen absent (RB-040-03).",
+          "x-category": "engines",
+          "x-section": "webkit",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "folder"
+        },
+        "lighthouseBrowserPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The Chromium-based browser Lighthouse runs in; absent, an installed one is found\n(RB-080-58).",
+          "x-category": "engines",
+          "x-section": "node",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "file"
+        },
+        "external": {
+          "type": "object",
+          "properties": {
+            "placement": {
+              "type": "string",
+              "description": "Where a new external window goes: `beside` the main window, on `monitor:<n>` (1-based),\nor where it was last (`remember`); further windows cascade.",
+              "pattern": "^(beside|remember|monitor:[1-9][0-9]?)$",
+              "default": "beside",
+              "x-category": "engines",
+              "x-section": "external",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "restartOnCrash": {
+              "type": "boolean",
+              "description": "An external window whose engine crashed starts again by itself with its last page, at\nmost three times in a row with a growing wait; a window you closed stays closed until\nyou open it again (RB-080-38; `autoRestart` before 0.8).",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "external",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "showTiles": {
+              "type": "boolean",
+              "description": "The grid shows each external view's status with the buttons \"Show window\" and \"Restart\".",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "external",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "embed": {
+              "type": "boolean",
+              "description": "A Firefox or WebKit view sits in its grid cell like a Chromium view: its window is owned\nby the main window, has no frame, tabs or address bar and follows the cell (RB-080-39).\nOff (the default since the owner's test of 2026-11-13: the window shows the page at\n100 % cut to the cell, and WebKit's shell keeps its chrome), every such view is a window\nof its own beside the main window.",
+              "default": false,
+              "x-category": "engines",
+              "x-section": "external",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "scaleToCell": {
+              "type": "boolean",
+              "description": "A view in its cell shows its page at the breakpoint's width scaled to the cell, as a\nChromium view does (RB-080-40): WebKit through its context's scale factor, every\nFirefox view at the one factor of the profile. Off, the page is shown at 100 % and cut\nto the cell. Nothing without `embed`.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "external",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The external windows of Firefox and WebKit views (RB-040-01).",
+          "default": {
+            "placement": "beside",
+            "restartOnCrash": true,
+            "showTiles": true,
+            "embed": false,
+            "scaleToCell": true
+          }
+        },
+        "firefox": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The Firefox executable; found automatically when empty (the registry's App Paths entry,\nthen the Mozilla Firefox folder under Program Files or the local app data).",
+              "x-category": "engines",
+              "x-section": "firefox",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true,
+              "x-input": "file",
+              "x-options": "dynamic"
+            },
+            "profileDir": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The folder of rBrowser's Firefox profile, absolute or relative to rBrowser's local folder;\na folder per project in the local folder when empty, never inside the project. A folder\nthat is not empty and not rBrowser's (a profile of your own Firefox), or a link, is refused.",
+              "x-category": "engines",
+              "x-section": "firefox",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true,
+              "x-input": "folder"
+            },
+            "syncSource": {
+              "type": "boolean",
+              "description": "The Firefox windows are a sync source too: a click in one makes it the active view and\nthe other views follow it.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "firefox",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "extraPrefs": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Extra Firefox prefs written to the profile's `user.js` at every start, name to `true`,\n`false`, an integer or a string - for what WebDriver BiDi cannot emulate per view\n(`ui.prefersReducedMotion: 1`). The remote agent's `remote.*` prefs are refused.",
+              "default": {},
+              "x-category": "engines",
+              "x-section": "firefox",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            }
+          },
+          "description": "Firefox over WebDriver BiDi (RB-040-02).",
+          "default": {
+            "syncSource": true,
+            "extraPrefs": {}
+          }
+        },
+        "webkit": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Breakpoints on WebKit open in a WebKit window (Playwright's WebKit build, not Safari);\noff, they stay with Chromium. `engine.webkit.toggle` switches it for the session.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "webkit",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "syncSource": {
+              "type": "boolean",
+              "description": "Input in a WebKit window is synced to the other views while it is the active view;\noff, WebKit windows only follow.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "webkit",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "WebKit through Playwright (RB-040-04).",
+          "default": {
+            "enabled": true,
+            "syncSource": true
+          }
+        },
+        "cookies": {
+          "type": "object",
+          "properties": {
+            "copy": {
+              "type": "string",
+              "description": "When the cookies are copied: by hand (`manual`, the command \"Copy cookies\"), into each\nFirefox or WebKit view as it starts (`onStart`), or after each page load of a Chromium\nview into the Firefox and WebKit views of its session (`onNavigate`).",
+              "pattern": "^(manual|onStart|onNavigate)$",
+              "default": "manual",
+              "enum": [
+                "manual",
+                "onStart",
+                "onNavigate"
+              ],
+              "x-category": "project",
+              "x-section": "sessions",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "domainFilter": {
+              "type": "string",
+              "description": "Which cookies: those of the sites the views show and of the current environment\n(`environment`), or every cookie of the session (`all`).",
+              "pattern": "^(environment|all)$",
+              "default": "environment",
+              "enum": [
+                "environment",
+                "all"
+              ],
+              "x-category": "project",
+              "x-section": "sessions",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Cookies never copied: a cookie name (`*` matches any text, `_ga*`) or a domain, which\ncovers its subdomains (`tracker.example`).",
+              "default": [],
+              "x-category": "project",
+              "x-section": "sessions",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "reload": {
+              "type": "boolean",
+              "description": "The Firefox and WebKit views that got cookies load their page again, so it sees them.",
+              "default": true,
+              "x-category": "project",
+              "x-section": "sessions",
+              "x-order": 6,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Copying Chromium's cookies into the Firefox and WebKit views (RB-040-05).",
+          "default": {
+            "copy": "manual",
+            "domainFilter": "environment",
+            "exclude": [],
+            "reload": true
+          }
+        }
+      },
+      "description": "Engines: paths of external programs.",
+      "default": {
+        "chromium": {
+          "sandbox": true
+        },
+        "nodeRpcTimeoutMs": 30000,
+        "external": {
+          "placement": "beside",
+          "restartOnCrash": true,
+          "showTiles": true,
+          "embed": false,
+          "scaleToCell": true
+        },
+        "firefox": {
+          "syncSource": true,
+          "extraPrefs": {}
+        },
+        "webkit": {
+          "enabled": true,
+          "syncSource": true
+        },
+        "cookies": {
+          "copy": "manual",
+          "domainFilter": "environment",
+          "exclude": [],
+          "reload": true
+        }
+      }
+    },
+    "devtools": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "docked-bottom",
+              "description": "Docked below the grid (hosted frontend)."
+            },
+            {
+              "type": "string",
+              "const": "docked-right",
+              "description": "Docked beside the grid (hosted frontend)."
+            },
+            {
+              "type": "string",
+              "const": "window",
+              "description": "A window of its own (`show_dev_tools`, the native frontend)."
+            }
+          ],
+          "description": "Where DevTools open.",
+          "default": "docked-bottom",
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "followActiveView": {
+          "type": "boolean",
+          "description": "Docked DevTools follow the active view; off, they stay with the view they were opened\nfor.",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "dockHeight": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 120,
+          "description": "The height of DevTools docked below the grid, in DIP; the splitter sets it. The grid\nkeeps at least a quarter of the window.",
+          "maximum": 4000,
+          "default": 320,
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "dockWidth": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 120,
+          "description": "The width of DevTools docked beside the grid, in DIP; the splitter sets it.",
+          "maximum": 4000,
+          "default": 480,
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "screencast": {
+          "type": "boolean",
+          "description": "The hosted frontend's screencast beside the panels (the inspected page once more, in\nDevTools' own picture). Off, the panels take the whole dock and inspect mode picks in\nthe view itself (RB-080-21).",
+          "default": false,
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "openOnInspect": {
+          "type": "boolean",
+          "description": "\"Inspect element\" (the page's context menu, the shortcut) opens DevTools for the view\nwhen they are closed or with another view, then selects the element. Off, it selects\nonly in DevTools already open for that view. MCP's `devtools_inspect_at` always opens.",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "devtools",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "DevTools & Debugging (RB-010-06).",
+      "default": {
+        "mode": "docked-bottom",
+        "followActiveView": true,
+        "dockHeight": 320,
+        "dockWidth": 480,
+        "screencast": false,
+        "openOnInspect": true
+      }
+    },
+    "vitals": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Measure the Web Vitals of every view and show them as badges in the cell label.",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "web-vitals",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lcp": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "good": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest good value.",
+                  "minimum": 0.0
+                },
+                "poor": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest value that only needs improvement.",
+                  "minimum": 0.0
+                }
+              },
+              "required": [
+                "good",
+                "poor"
+              ],
+              "description": "Largest Contentful Paint.",
+              "default": {
+                "good": 2500.0,
+                "poor": 4000.0
+              }
+            },
+            "cls": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "good": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest good value.",
+                  "minimum": 0.0
+                },
+                "poor": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest value that only needs improvement.",
+                  "minimum": 0.0
+                }
+              },
+              "required": [
+                "good",
+                "poor"
+              ],
+              "description": "Cumulative Layout Shift.",
+              "default": {
+                "good": 0.1,
+                "poor": 0.25
+              }
+            },
+            "inp": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "good": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest good value.",
+                  "minimum": 0.0
+                },
+                "poor": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest value that only needs improvement.",
+                  "minimum": 0.0
+                }
+              },
+              "required": [
+                "good",
+                "poor"
+              ],
+              "description": "Interaction to Next Paint.",
+              "default": {
+                "good": 200.0,
+                "poor": 500.0
+              }
+            },
+            "fcp": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "good": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest good value.",
+                  "minimum": 0.0
+                },
+                "poor": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest value that only needs improvement.",
+                  "minimum": 0.0
+                }
+              },
+              "required": [
+                "good",
+                "poor"
+              ],
+              "description": "First Contentful Paint.",
+              "default": {
+                "good": 1800.0,
+                "poor": 3000.0
+              }
+            },
+            "ttfb": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "good": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest good value.",
+                  "minimum": 0.0
+                },
+                "poor": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "The highest value that only needs improvement.",
+                  "minimum": 0.0
+                }
+              },
+              "required": [
+                "good",
+                "poor"
+              ],
+              "description": "Time to First Byte.",
+              "default": {
+                "good": 800.0,
+                "poor": 1800.0
+              }
+            }
+          },
+          "description": "The rating thresholds per metric; web.dev's by default.",
+          "default": {
+            "lcp": {
+              "good": 2500.0,
+              "poor": 4000.0
+            },
+            "cls": {
+              "good": 0.1,
+              "poor": 0.25
+            },
+            "inp": {
+              "good": 200.0,
+              "poor": 500.0
+            },
+            "fcp": {
+              "good": 1800.0,
+              "poor": 3000.0
+            },
+            "ttfb": {
+              "good": 800.0,
+              "poor": 1800.0
+            }
+          },
+          "x-category": "devtools",
+          "x-section": "web-vitals",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "DevTools & Debugging > Web Vitals & resources: the badges and thresholds (RB-060-10).",
+      "default": {
+        "enabled": true,
+        "thresholds": {
+          "lcp": {
+            "good": 2500.0,
+            "poor": 4000.0
+          },
+          "cls": {
+            "good": 0.1,
+            "poor": 0.25
+          },
+          "inp": {
+            "good": 200.0,
+            "poor": 500.0
+          },
+          "fcp": {
+            "good": 1800.0,
+            "poor": 3000.0
+          },
+          "ttfb": {
+            "good": 800.0,
+            "poor": 1800.0
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Read each view's CPU share and memory and show them in the cell label.",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "web-vitals",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "ramWarnMb": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 16,
+          "description": "A view whose memory is above this many MB warns.",
+          "maximum": 65536,
+          "default": 500,
+          "x-category": "devtools",
+          "x-section": "web-vitals",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "cpuWarnPercent": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "A view whose CPU share stays above this percentage for five seconds warns.",
+          "maximum": 100,
+          "default": 50,
+          "x-category": "devtools",
+          "x-section": "web-vitals",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "DevTools & Debugging > Web Vitals & resources: CPU and memory per view (RB-060-10).",
+      "default": {
+        "enabled": true,
+        "ramWarnMb": 500,
+        "cpuWarnPercent": 50
+      }
+    },
+    "frameworkDevtools": {
+      "type": "object",
+      "properties": {
+        "vue": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "auto",
+              "description": "The probe looks for the framework in every page; once it is found, the view offers the\nDevTools and the hook goes into the view's next document (reload the view once)."
+            },
+            {
+              "type": "string",
+              "const": "on",
+              "description": "The hook goes into every document of every view before the page's own scripts, so\nthe DevTools connect without a reload."
+            },
+            {
+              "type": "string",
+              "const": "off",
+              "description": "Nothing is injected and nothing is offered."
+            }
+          ],
+          "description": "Vue DevTools (Vue 3, `@vue/devtools-kit`). A production build shows its components only\nwhen it is built with `__VUE_PROD_DEVTOOLS__`; the panel says so.",
+          "default": "auto",
+          "x-category": "devtools",
+          "x-section": "framework-devtools",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "react": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "auto",
+              "description": "The probe looks for the framework in every page; once it is found, the view offers the\nDevTools and the hook goes into the view's next document (reload the view once)."
+            },
+            {
+              "type": "string",
+              "const": "on",
+              "description": "The hook goes into every document of every view before the page's own scripts, so\nthe DevTools connect without a reload."
+            },
+            {
+              "type": "string",
+              "const": "off",
+              "description": "Nothing is injected and nothing is offered."
+            }
+          ],
+          "description": "React DevTools (`react-devtools-inline`): components, props, hooks and the profiler.\nReact registers with the hook only when the hook is there before React loads, so a view\nopened before the hook needs one reload.",
+          "default": "auto",
+          "x-category": "devtools",
+          "x-section": "framework-devtools",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "DevTools & Debugging > Framework DevTools: the Vue and React DevTools backends in the\nviews' pages (RB-080-24).",
+      "default": {
+        "vue": "auto",
+        "react": "auto"
+      }
+    },
+    "reload": {
+      "type": "object",
+      "properties": {
+        "pollingFallback": {
+          "type": "boolean",
+          "description": "Poll instead of relying on file events.",
+          "default": false,
+          "x-category": "reload",
+          "x-section": "polling",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "pollIntervalMs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 250,
+          "description": "How often polling looks for changes, in milliseconds (RB-030-05).",
+          "default": 1000,
+          "x-category": "reload",
+          "x-section": "polling",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "intervalPauseSec": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "How long input in a view pauses the interval reload, in seconds (RB-030-05).",
+          "default": 10,
+          "x-category": "reload",
+          "x-section": "interval",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Reload & Files: the polling fallback (RB-030-05).",
+      "default": {
+        "pollingFallback": false,
+        "pollIntervalMs": 1000,
+        "intervalPauseSec": 10
+      }
+    },
+    "updates": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Self-update at all: off, nothing is fetched and nothing installed (RB-090-02).",
+          "default": false,
+          "x-category": "general",
+          "x-section": "updates",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "channel": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "stable",
+              "description": "Releases."
+            },
+            {
+              "type": "string",
+              "const": "beta",
+              "description": "Pre-releases."
+            }
+          ],
+          "description": "The update channel.",
+          "default": "stable",
+          "x-category": "general",
+          "x-section": "updates",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "check": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "off",
+              "description": "Never by itself."
+            },
+            {
+              "type": "string",
+              "const": "onStart",
+              "description": "Once at every start."
+            }
+          ],
+          "description": "When to look for an update (RB-090-02).",
+          "default": "off",
+          "x-category": "general",
+          "x-section": "updates",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "autoInstall": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "off",
+              "description": "Only when a person asks."
+            },
+            {
+              "type": "string",
+              "const": "onQuit",
+              "description": "When rBrowser quits."
+            }
+          ],
+          "description": "When a downloaded update installs by itself (RB-090-02).",
+          "default": "off",
+          "x-category": "general",
+          "x-section": "updates",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "cefAgeWarning": {
+          "type": "boolean",
+          "description": "A notice when the bundled CEF is older than six weeks (RB-010-10).",
+          "default": true,
+          "x-category": "general",
+          "x-section": "updates",
+          "x-order": 10,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "General > updates (inactive until the move to GitHub, RB-090-02).",
+      "default": {
+        "enabled": false,
+        "channel": "stable",
+        "check": "off",
+        "autoInstall": "off",
+        "cefAgeWarning": true
+      }
+    },
+    "shortcuts": {
+      "type": "object",
+      "properties": {
+        "leaderTimeoutMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How long the leader waits for the next key, in ms; `0` (the default): until `Escape` or\nthe next key, the which-key bar staying up (RB-080-18).",
+          "maximum": 10000,
+          "default": 0,
+          "x-category": "shortcuts",
+          "x-section": "behaviour",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "disableInDevtools": {
+          "type": "boolean",
+          "description": "rBrowser's shortcuts are off while DevTools have focus.",
+          "default": true,
+          "x-category": "shortcuts",
+          "x-section": "behaviour",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": "The user's bindings by command id, in the text form of `rb-commands`; they replace the\ncommand's defaults. An empty list unbinds the command.",
+          "default": {},
+          "x-category": "shortcuts",
+          "x-section": "bindings",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Keyboard Shortcuts (RB-010-17).",
+      "default": {
+        "leaderTimeoutMs": 0,
+        "disableInDevtools": true,
+        "bindings": {}
+      }
+    },
+    "breakpointShortcuts": {
+      "type": "object",
+      "properties": {
+        "newViewModifier": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "Shift",
+                  "description": "`Shift`."
+                },
+                {
+                  "type": "string",
+                  "const": "Ctrl",
+                  "description": "`Ctrl`."
+                }
+              ],
+              "description": "`breakpointShortcuts.newViewModifier`. No `Alt`: with the `Ctrl` of a breakpoint key it is\nAltGr on German, French and Spanish keyboards; no `Win`: Windows keeps it."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A modifier (`Shift` or `Ctrl`) that, held with a breakpoint shortcut that does not\ncontain it already (a project's own `shortcut`) or with a click in the size quick pick,\nopens a new view instead of changing the active one.",
+          "x-category": "shortcuts",
+          "x-section": "behaviour",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "overlayMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How long the overlay naming the breakpoint stays, in ms.",
+          "default": 1200,
+          "x-category": "shortcuts",
+          "x-section": "behaviour",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Breakpoint shortcuts (RB-010-16).",
+      "default": {
+        "overlayMs": 1200
+      }
+    },
+    "palette": {
+      "type": "object",
+      "properties": {
+        "recentCount": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How many recently used entries the palette lists first; 0 keeps no history.",
+          "maximum": 50,
+          "default": 8,
+          "x-category": "shortcuts",
+          "x-section": "command-palette",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "showDescriptions": {
+          "type": "boolean",
+          "description": "The palette shows the description of the selected entry.",
+          "default": true,
+          "x-category": "shortcuts",
+          "x-section": "command-palette",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "prefixes": {
+          "type": "boolean",
+          "description": "`>` lists only commands, `@` only views, `#` only settings; off, they are searched as\ntext.",
+          "default": true,
+          "x-category": "shortcuts",
+          "x-section": "command-palette",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "The command palette (RB-060-11).",
+      "default": {
+        "recentCount": 8,
+        "showDescriptions": true,
+        "prefixes": true
+      }
+    },
+    "devices": {
+      "type": "object",
+      "properties": {
+        "replaceDefaults": {
+          "type": "boolean",
+          "description": "`true`: `items` replace the built-in list; `false`: they are added (same id wins).",
+          "default": false,
+          "x-category": "breakpoints",
+          "x-section": "device-presets",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "description": "A device preset: the built-in list `crates/rb-config/data/devices.json` (RB-010-12) and the\nuser's own (`devices` in the user settings).",
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Unique id, referenced by `breakpoints[].device` (e.g. `iphone-15`).",
+                "type": "string"
+              },
+              "label": {
+                "description": "The display name; built-in presets use an i18n key (`devices.<id>`) instead.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "kind": {
+                "description": "Mobile, tablet or desktop: groups the quick pick.",
+                "oneOf": [
+                  {
+                    "description": "A phone.",
+                    "type": "string",
+                    "const": "mobile"
+                  },
+                  {
+                    "description": "A tablet.",
+                    "type": "string",
+                    "const": "tablet"
+                  },
+                  {
+                    "description": "A desktop or laptop.",
+                    "type": "string",
+                    "const": "desktop"
+                  }
+                ]
+              },
+              "viewport": {
+                "description": "Viewport in CSS px.",
+                "type": "object",
+                "properties": {
+                  "width": {
+                    "description": "Width.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "description": "Height.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "width",
+                  "height"
+                ]
+              },
+              "dpr": {
+                "description": "Device pixel ratio.",
+                "type": "number",
+                "format": "double"
+              },
+              "ua": {
+                "description": "User agent.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "platform": {
+                "description": "`navigator.platform`.",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-options": [
+                  "Win32",
+                  "MacIntel",
+                  "Linux x86_64",
+                  "Linux armv81",
+                  "iPhone",
+                  "iPad"
+                ]
+              },
+              "touch": {
+                "description": "Touch input.",
+                "type": "boolean",
+                "default": false
+              },
+              "orientation": {
+                "description": "Default orientation.",
+                "anyOf": [
+                  {
+                    "description": "Screen orientation.",
+                    "oneOf": [
+                      {
+                        "description": "Portrait.",
+                        "type": "string",
+                        "const": "portrait"
+                      },
+                      {
+                        "description": "Landscape.",
+                        "type": "string",
+                        "const": "landscape"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "safeAreas": {
+                "description": "Safe-area insets.",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "top": {
+                    "description": "Top inset.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "right": {
+                    "description": "Right inset.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "bottom": {
+                    "description": "Bottom inset.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "left": {
+                    "description": "Left inset.",
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "default": 0
+                  }
+                }
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "viewport",
+              "dpr"
+            ]
+          },
+          "description": "The presets. A breakpoint whose `device` names a preset takes its viewport, pixel ratio,\nuser agent, platform and touch for every field it leaves out; what the breakpoint sets\nitself wins (RB-010-12). Picking a preset for the active view sizes it to the viewport\n(RB-010-16).",
+          "default": [],
+          "x-category": "breakpoints",
+          "x-section": "device-presets",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "The user's own device presets (RB-010-12).",
+      "default": {
+        "replaceDefaults": false,
+        "items": []
+      }
+    },
+    "emulation": {
+      "type": "object",
+      "properties": {
+        "defaultGeolocation": {
+          "type": "string",
+          "description": "The geolocation preset (built in or your own) the shortcut sets on a view without one.",
+          "default": "berlin",
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "geolocationPresets": {
+          "type": "array",
+          "items": {
+            "description": "A named position.",
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Unique among the presets (`office`); a built-in id is replaced by yours.",
+                "type": "string"
+              },
+              "label": {
+                "description": "The name shown; built-in presets use an i18n key instead.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latitude": {
+                "description": "Latitude in degrees, -90 to 90.",
+                "type": "number",
+                "format": "double",
+                "minimum": -90.0,
+                "maximum": 90.0
+              },
+              "longitude": {
+                "description": "Longitude in degrees, -180 to 180.",
+                "type": "number",
+                "format": "double",
+                "minimum": -180.0,
+                "maximum": 180.0
+              },
+              "accuracy": {
+                "description": "Accuracy in metres; 50 when absent.",
+                "type": "number",
+                "format": "double",
+                "minimum": 0.0,
+                "default": 50.0
+              }
+            },
+            "required": [
+              "id",
+              "latitude",
+              "longitude"
+            ]
+          },
+          "description": "Your own geolocation presets, offered beside Berlin, New York, Tokyo and Sydney.",
+          "default": [],
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "defaultTimezone": {
+          "type": "string",
+          "description": "The IANA time zone the shortcut sets on a view without one.",
+          "default": "America/New_York",
+          "x-options": [
+            "UTC",
+            "Europe/Berlin",
+            "Europe/London",
+            "America/New_York",
+            "America/Los_Angeles",
+            "America/Sao_Paulo",
+            "Asia/Tokyo",
+            "Australia/Sydney"
+          ],
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "defaultCpuThrottling": {
+          "type": "number",
+          "format": "double",
+          "description": "The CPU throttling factor the shortcut sets on a view without one.",
+          "minimum": 1.0,
+          "maximum": 100.0,
+          "default": 4.0,
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Emulation > geolocation, time zone and CPU: the shortcuts' values and own presets\n(RB-080-10).",
+      "default": {
+        "defaultGeolocation": "berlin",
+        "geolocationPresets": [],
+        "defaultTimezone": "America/New_York",
+        "defaultCpuThrottling": 4.0
+      }
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "The level of the log file: `error`, `warn`, `info`, `debug` or `trace` (`RUST_LOG`, when\nset, wins).",
+          "default": "info",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug",
+            "trace"
+          ],
+          "x-category": "advanced",
+          "x-section": "log-level",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "maxFileSizeMb": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "The size in MiB at which the log file rotates.",
+          "maximum": 500,
+          "default": 10,
+          "x-category": "security",
+          "x-section": "logs",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "maxFiles": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "The log files kept, the current one included.",
+          "maximum": 50,
+          "default": 5,
+          "x-category": "security",
+          "x-section": "logs",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "crashDumpsInBundle": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The newest crash dumps the diagnostics bundle takes; 0 takes none.",
+          "maximum": 20,
+          "default": 3,
+          "x-category": "advanced",
+          "x-section": "diagnostics",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Logging and diagnostics (RB-010-10, read as `rb_diag::LogSettings`).",
+      "default": {
+        "level": "info",
+        "maxFileSizeMb": 10,
+        "maxFiles": 5,
+        "crashDumpsInBundle": 3
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "items": {
+            "description": "A plugin id: lower-case words joined by `-` (`overlay-grid`).",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "description": "The ids of the plugins switched off. The settings window offers the installed plugins\nby name (`x-options`, RB-080-72).",
+          "default": [],
+          "uniqueItems": true,
+          "x-options": "plugins",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "trustedKeys": {
+          "type": "array",
+          "items": {
+            "description": "A trusted plugin signing key.",
+            "type": "object",
+            "properties": {
+              "keyId": {
+                "description": "The key's id as the package names it.",
+                "type": "string"
+              },
+              "publicKey": {
+                "description": "The public key (PEM or base64, as `rb-plugin-pack` writes it).",
+                "type": "string"
+              },
+              "fingerprint": {
+                "description": "SHA-256 of the public key, lower-case hex.",
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "keyId",
+              "publicKey",
+              "fingerprint"
+            ]
+          },
+          "description": "The signing keys trusted on first use (pinned by fingerprint).",
+          "default": [],
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "developmentMode": {
+          "type": "boolean",
+          "description": "Load unsigned plugins from the plugin folders (development only).",
+          "default": false,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "crashLimit": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "Failures after which a plugin is suspended until it is resumed.",
+          "maximum": 10,
+          "default": 3,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "compileCache": {
+          "type": "boolean",
+          "description": "Keep the compiled plugins on disk between starts.",
+          "default": true,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "pageScriptsDisabled": {
+          "type": "array",
+          "items": {
+            "description": "A plugin id: lower-case words joined by `-` (`overlay-grid`).",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "description": "The ids of the plugins whose page scripts do not run in the views (RB-060-12); the\nwindow offers the plugins that have page scripts.",
+          "default": [],
+          "uniqueItems": true,
+          "x-options": "plugin-page-scripts",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 6,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "panelsHidden": {
+          "type": "array",
+          "items": {
+            "description": "A plugin id: lower-case words joined by `-` (`overlay-grid`).",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "description": "The ids of the plugins whose panels the shell does not offer (RB-060-12); the window\noffers the plugins that have panels.",
+          "default": [],
+          "uniqueItems": true,
+          "x-options": "plugin-panels",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "showBundled": {
+          "type": "boolean",
+          "description": "List the plugins that ship with rBrowser in Settings > Plugins (RB-080-51).",
+          "default": true,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 9,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "lighthouseAnyUrl": {
+          "type": "boolean",
+          "description": "Let plugins run Lighthouse on any address. Off holds a run a plugin starts to the sites\nthe views show, so it cannot read local or LAN pages through Lighthouse's report\n(RB-090-21).",
+          "default": false,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 8,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Settings > Plugins (RB-010-03); every key that widens a plugin is protected from MCP.",
+      "default": {
+        "disabled": [],
+        "trustedKeys": [],
+        "developmentMode": false,
+        "crashLimit": 3,
+        "compileCache": true,
+        "pageScriptsDisabled": [],
+        "panelsHidden": [],
+        "showBundled": true,
+        "lighthouseAnyUrl": false
+      }
+    },
+    "sessions": {
+      "type": "object",
+      "properties": {
+        "persistSessionCookies": {
+          "type": "boolean",
+          "description": "Session cookies (logins without an expiry) are written to disk and survive a restart, in\nevery session. Off, they end with the app as in a browser. Read when rBrowser starts.",
+          "default": false,
+          "x-category": "security",
+          "x-section": "sessions",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Security > Sessions: whether session cookies outlive the app (RB-020-07).",
+      "default": {
+        "persistSessionCookies": false
+      }
+    },
+    "wsl": {
+      "type": "object",
+      "properties": {
+        "helperPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Another rbrowser-wsl helper than the one in the package, as a Linux path or a Windows\npath; empty for the packaged one.",
+          "x-category": "reload",
+          "x-section": "wsl-watcher",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "file"
+        },
+        "distro": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The WSL distribution the helper runs in; empty for the project's distribution, else WSL's\ndefault.",
+          "x-category": "reload",
+          "x-section": "wsl-watcher",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "networkingModeOverride": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "auto",
+              "description": "Detect it (`wslinfo`, `.wslconfig`, NAT)."
+            },
+            {
+              "type": "string",
+              "const": "mirrored",
+              "description": "Treat every distribution as mirrored."
+            },
+            {
+              "type": "string",
+              "const": "nat",
+              "description": "Treat every distribution as NAT."
+            }
+          ],
+          "description": "The WSL networking mode: detected (auto), or mirrored or NAT set by hand.",
+          "default": "auto",
+          "x-category": "automation",
+          "x-section": "cdp-proxy",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Reload & Files > WSL watcher and the WSL networking mode (RB-030-04, read as\n`rb_wsl::settings::WslSettings`).",
+      "default": {
+        "networkingModeOverride": "auto"
+      }
+    },
+    "tools": {
+      "type": "object",
+      "properties": {
+        "ffmpegPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "An ffmpeg of your own: the absolute path of the program. Empty uses the LGPL build\nrBrowser downloads when you run \"Video: download ffmpeg\".",
+          "x-category": "capture",
+          "x-section": "video",
+          "x-order": 5,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "file"
+        }
+      },
+      "description": "Capture > Video: an ffmpeg of the user's own, never a project's (RB-080-02)."
+    },
+    "bookmarks": {
+      "type": "object",
+      "properties": {
+        "followEnvironment": {
+          "type": "boolean",
+          "description": "A page that lies under an environment of the project is bookmarked as its path\n(`/shop/cart?x=1#top`), so the bookmark opens on whichever environment is in effect; a\npage of a foreign host stays an absolute URL. Off, every new bookmark is an absolute URL.",
+          "default": true,
+          "x-category": "project",
+          "x-section": "bookmarks",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Project > bookmarks: whether a new bookmark follows the environment (RB-080-48).",
+      "default": {
+        "followEnvironment": true
+      }
+    },
+    "panels": {
+      "type": "object",
+      "properties": {
+        "dock": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "floating",
+              "description": "A window of their own."
+            },
+            {
+              "type": "string",
+              "const": "left",
+              "description": "Left of the views."
+            },
+            {
+              "type": "string",
+              "const": "right",
+              "description": "Right of the views."
+            },
+            {
+              "type": "string",
+              "const": "bottom",
+              "description": "Below the views."
+            }
+          ],
+          "description": "Where the plugin panels show: docked `right` (the default), `left` or `bottom` in the\nmain window, where the views make room, or `floating` in a window of their own. The dock\ncommands and the Dock menu in the panels' header set it.",
+          "default": "right",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 10,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "dockSize": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 120,
+              "description": "The width of the panels docked left of the views, in DIP.",
+              "maximum": 4000,
+              "default": 520,
+              "x-category": "plugins",
+              "x-section": "installed",
+              "x-order": 11,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "right": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 120,
+              "description": "The width of the panels docked right of the views, in DIP.",
+              "maximum": 4000,
+              "default": 520,
+              "x-category": "plugins",
+              "x-section": "installed",
+              "x-order": 12,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "bottom": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 120,
+              "description": "The height of the panels docked below the views, in DIP.",
+              "maximum": 4000,
+              "default": 320,
+              "x-category": "plugins",
+              "x-section": "installed",
+              "x-order": 13,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The docked panels' size per side, in DIP.",
+          "default": {
+            "left": 520,
+            "right": 520,
+            "bottom": 320
+          }
+        },
+        "dockState": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "open",
+              "description": "Open at their size (in their own window: the window is open)."
+            },
+            {
+              "type": "string",
+              "const": "rail",
+              "description": "Folded to the icon rail."
+            },
+            {
+              "type": "string",
+              "const": "hidden",
+              "description": "Hidden: no rail, no window."
+            }
+          ],
+          "description": "The docked panels now: `open` at their size, `rail` folded to the icon rail (the header\nbelow the views, the icon column beside them) so the views get the room, or `hidden`.\nThe expand and collapse buttons, a panel icon in the rail, Close and\n`panels.dock.toggle` set it (RB-080-93).",
+          "default": "rail",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 14,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "sidebar": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "expanded",
+              "description": "Icons with titles."
+            },
+            {
+              "type": "string",
+              "const": "icons",
+              "description": "Icons only."
+            }
+          ],
+          "description": "The panels' side bar: `expanded` shows icons with titles, `icons` only the icons, with\nthe title as a tooltip (RB-080-61). A narrow dock shows only icons either way.",
+          "default": "expanded",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 15,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "dockAtStart": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "rail",
+              "description": "Folded to the icon rail."
+            },
+            {
+              "type": "string",
+              "const": "hidden",
+              "description": "Hidden."
+            },
+            {
+              "type": "string",
+              "const": "last",
+              "description": "As they were left: open, the rail or hidden."
+            }
+          ],
+          "description": "How the docked panels start: `rail` folded to the icon rail (the default), `hidden`, or\n`last` as they were left (RB-080-93). Panels in their own window start at the rail.",
+          "default": "rail",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 16,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "closeTo": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "rail",
+              "description": "Folded to the icon rail."
+            },
+            {
+              "type": "string",
+              "const": "hidden",
+              "description": "Hidden."
+            }
+          ],
+          "description": "What Close does to the panels (the X in their header, `panels.close`, closing their own\nwindow): `rail` folds them to the icon rail (the default), `hidden` hides them\n(RB-080-93).",
+          "default": "rail",
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 17,
+          "x-scope": [
+            "user"
+          ]
+        }
+      },
+      "description": "Plugins > Installed: the plugin panels floating or docked in the window (RB-080-57).",
+      "default": {
+        "dock": "right",
+        "dockSize": {
+          "left": 520,
+          "right": 520,
+          "bottom": 320
+        },
+        "dockState": "rail",
+        "sidebar": "expanded",
+        "dockAtStart": "rail",
+        "closeTo": "rail"
+      }
+    },
+    "views": {
+      "type": "object",
+      "properties": {
+        "pageZoom": {
+          "type": "object",
+          "properties": {
+            "keys": {
+              "type": "boolean",
+              "description": "With the focus in a page, Ctrl+0 sets the view's page zoom back to 100 % and Ctrl+Plus\nand Ctrl+Minus zoom it in Chromium's steps, as in Chrome. Off, the keys reach the page;\nthe commands and the badge in the label strip stay.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "zoom",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "wheel": {
+              "type": "boolean",
+              "description": "Ctrl and the mouse wheel over a page zoom it, as in Chromium. Off, rBrowser puts a\nzoom the wheel made back at once; only the keys, the commands and MCP zoom.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "zoom",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "sync": {
+              "type": "boolean",
+              "description": "A page zoom applies to every view at once, wherever it was made. Off, it is the view's\nown - except that Chromium keeps the zoom per site: views of one session showing the\nsame host zoom together, and each one's badge says so.",
+              "default": false,
+              "x-category": "layout",
+              "x-section": "zoom",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "keepOnReload": {
+              "type": "boolean",
+              "description": "A zoomed page keeps its zoom when it reloads or navigates, as Chromium keeps it per\nsite. Off, every load starts at 100 %.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "zoom",
+              "x-order": 6,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The page zoom inside a view (RB-090-20).",
+          "default": {
+            "keys": true,
+            "wheel": true,
+            "sync": false,
+            "keepOnReload": true
+          }
+        }
+      },
+      "description": "Layout > zoom: the page zoom inside a view (RB-090-20).",
+      "default": {
+        "pageZoom": {
+          "keys": true,
+          "wheel": true,
+          "sync": false,
+          "keepOnReload": true
+        }
+      }
+    }
+  },
+  "additionalProperties": true,
+  "description": "The whole user settings file. Every section defaults.",
+  "title": "UserSettings",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,50 @@
+# The first first-party plugin and the reference implementation of the plugin contract
+# (RB-010-13, docs/plugins.md). The host loads the page in a hidden view, reads every stylesheet
+# over CDP and hands their text to `detect`; for the static source (RB-030-07) it also hands over
+# the project files that both `project-read.globs` below and `analyzer.staticGlobs` match.
+manifest_version = 1
+id = "breakpoint-analyzer"
+name = "Breakpoint analyser"
+version = "0.2.0"
+api_version = "0.1.0"
+# `analyzer.analyze` answers proposals; the MCP tools need the `feature` export.
+kinds = ["analyzer-plugin", "feature-plugin"]
+mcp_prefix = "breakpoints"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Reads the media queries of a site and its Tailwind, Bootstrap, SCSS and Less sources and proposes breakpoints and a grid."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# The project files of the static source (RB-030-07): Tailwind v3 configs and the CSS, SCSS and
+# Less sources. This is the upper bound - `analyzer.staticGlobs` narrows it, never widens it -
+# and the host reads them read-only, inside the project, without links, `node_modules`, `.git`
+# or another dot folder. The stylesheets come in the arguments; nothing is written by the plugin.
+[capabilities]
+project-read = { globs = ["**/tailwind.config.{js,cjs,mjs,ts}", "**/*.{css,scss,less}"] }
+
+# A large site hands over a few MiB of CSS in one call.
+[limits]
+memory_bytes = 268435456
+fuel = 10000000000
+timeout_milliseconds = 30000
+
+# MCP `breakpoints_detect`: the proposal, nothing written. The host reads the stylesheets of
+# `startUrl`, `analyzer.urls` and `urls` and passes them on.
+[[tools]]
+name = "detect"
+description = "plugin.breakpoint-analyzer.tools.detect"
+input = { type = "object", properties = { urls = { type = "array", items = { type = "string" } }, mode = { type = "string", enum = ["all", "simplified", "edges"] } } }
+
+# MCP `breakpoints_apply`: writes the chosen breakpoints of the last proposal into config.json.
+[[tools]]
+name = "apply"
+description = "plugin.breakpoint-analyzer.tools.apply"
+input = { type = "object", properties = { selected = { type = "array", items = { type = "string" } }, replace = { type = "boolean" } } }

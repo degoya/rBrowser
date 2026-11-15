@@ -1,0 +1,7 @@
+# SEO fixture site
+
+> The pages the SEO check of rBrowser is tested against.
+
+## Pages
+
+- [Clean page](https://fixture.test/clean/): a page without SEO findings

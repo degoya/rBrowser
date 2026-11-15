@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Simulators colour chart</title>
+    <!-- The fixture of RB-070-08's e2e suite (web/e2e/): twelve flat swatches of 100 x 100 CSS px
+         (sample their centres; a blur of a few px leaves them untouched), a fixed header and a
+         button, on a page tall enough to scroll. -->
+    <style>
+      html, body { margin: 0; background: #ffffff; }
+      body { padding: 80px 0 0 40px; font: 14px/1.4 system-ui, sans-serif; }
+      #header { position: fixed; top: 0; left: 0; right: 0; height: 40px; background: #20304a; color: #ffffff; }
+      #chart { display: grid; grid-template-columns: repeat(4, 100px); grid-auto-rows: 100px; gap: 20px; }
+      #chart div { width: 100px; height: 100px; }
+      #press { margin-top: 24px; width: 160px; height: 48px; }
+      #spacer { height: 3000px; }
+    </style>
+  </head>
+  <body>
+    <div id="header">Fixed header</div>
+    <div id="chart">
+      <div style="background: #e53935"></div>
+      <div style="background: #43a047"></div>
+      <div style="background: #1e88e5"></div>
+      <div style="background: #fdd835"></div>
+      <div style="background: #8e24aa"></div>
+      <div style="background: #fb8c00"></div>
+      <div style="background: #00acc1"></div>
+      <div style="background: #6d4c41"></div>
+      <div style="background: #ff00ff"></div>
+      <div style="background: #808080"></div>
+      <div style="background: #000000"></div>
+      <div style="background: #c0ca33"></div>
+    </div>
+    <button id="press" type="button">Press</button>
+    <div id="spacer"></div>
+    <script>
+      document.getElementById('press').addEventListener('click', () => (window.pressed = (window.pressed || 0) + 1));
+    </script>
+  </body>
+</html>

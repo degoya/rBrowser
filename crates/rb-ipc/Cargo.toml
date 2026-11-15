@@ -1,0 +1,21 @@
+[package]
+name = "rb-ipc"
+description = "The shell UI to core protocol (contract 0.1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rb-commands = { path = "../rb-commands" }
+rb-config = { path = "../rb-config" }
+rb-engine = { path = "../rb-engine" }
+rb-settings = { path = "../rb-settings" }
+rb-sync = { path = "../rb-sync" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

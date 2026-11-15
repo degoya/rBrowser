@@ -1,0 +1,28 @@
+[package]
+name = "rbrowser-plugin-export-example"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# The template is a crate of its own, not a member of a workspace around it.
+[workspace]
+
+# Reads the recording; builds for wasm32 as well.
+[dependencies]
+serde_json = "1.0.154"
+
+# Only the component needs wit-bindgen: `cargo test` builds the logic for your own machine
+# without it. A guest needs nothing but the contract, which ships in `wit/`.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = "0.63.0"
+
+[lib]
+# `cdylib` makes the core module `wasm-tools component new` turns into the component; `rlib`
+# lets `cargo test` build the logic for your own machine.
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

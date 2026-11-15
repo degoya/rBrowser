@@ -1,0 +1,64 @@
+[package]
+name = "sitemap-capture"
+description = "rBrowser's first-party sitemap capture: finds, reads and selects a site's pages and renders the gallery of a run (RB-050-05)"
+# The plugin's own version (manifest.toml, CHANGES.md), not the workspace's.
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A crate of its own, outside the app's workspace, like the SDK templates: scripts/build-plugins.sh
+# builds it in this folder for wasm32 and `cargo test` here runs its logic natively.
+[workspace]
+
+# The native side of the contract (`Feature`, `PluginHost`); it builds for wasm32 too.
+# The guest binding (src/guest.rs) needs wit-bindgen on wasm32 only, against
+# `crates/rb-plugin-api/wit`, so the native build neither builds nor links it.
+[dependencies]
+rb-plugin-api = { path = "../../crates/rb-plugin-api" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+# A file source (`.xml.gz` handed in by the core) arrives as base64.
+base64 = "0.23.1"
+# gzip sitemaps: raw deflate in pure Rust; the gzip frame is read in src/gzip.rs.
+miniz_oxide = "0.9.1"
+# The sitemap XML: a small DOM parser, DTDs refused, a node limit.
+roxmltree = "0.21.2"
+# `re:` include and exclude patterns; linear time, a size limit per pattern.
+regex = { version = "1.13.1", default-features = false, features = ["std", "unicode-perl"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = "0.63.0"
+
+[dev-dependencies]
+# `MemoryHost`: the native trait run against the host's rules, without WebAssembly.
+rb-plugin-api = { path = "../../crates/rb-plugin-api", features = ["test-support"] }
+# The acceptance test (tests/acceptance.rs): the core's run state and render pool with a fake
+# capture, so the plugin's pages, the run and the gallery meet as they do in the app.
+rb-engine = { path = "../../crates/rb-engine" }
+rb-visual = { path = "../../crates/rb-visual" }
+tempfile = "3.27.0"
+async-trait = "0.1.92"
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+
+[lib]
+# `cdylib` is the core module `wasm-tools component new` turns into the component; `rlib` lets
+# `cargo test` build the logic natively.
+crate-type = ["cdylib", "rlib"]
+
+# The app's workspace lints, repeated: this crate is no member of that workspace.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+allow_attributes_without_reason = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "warn"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

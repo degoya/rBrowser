@@ -1,0 +1,10 @@
+{
+  "about": "Made by make_fixtures.py; read by crates/rbrowser/src/extensions/crx3 tests.",
+  "id": "ijiofbjmoaijpldnnmahadcgbblnogfo",
+  "otherId": "nmfcgahncplacjhmodnhnapbcdofojbc",
+  "publisherKeyHash": "9c9d567ad4f315912ad7f18d172fc02e173c483a10ac0c0f670681c2e4950371",
+  "developerKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA98sMr3OX+Se0OCY5X0C0MF6Kmm8cUS10YrFlfCe0kO680YT7+fVuimVtRgoZHiATIoqzVBf/ZDoq66eyqDMR595bjSX83vxg9VaLiOiKfgLCcfrPpPRzAtsCvWJw7hy1mbcyxwBnrRdFeTd0aIbKPriSZ4+9prWatugVP1/YBO0epYUdkq8LxZaRrrE3lsLHPoeo30NTPNKc3VmFSRoZD/bGzmEn2Qb5gFwCp/t1pEkPdp4uxq/W2fc706UlIfYfees3/Fx3qAUlmT79jT3hrDjpwkqmz1OJ2M6k3JDd7za0fyyr1BSa7ABz6iHeBpvhpDCkq040+vI3XBMH4bYBZQIDAQAB",
+  "publisherKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDMCsVH8p1sRoKJGPKIAsOqjWnUtFayBKrnZk1LIYVUgNRLvya+JaXiEiMk61/W4nV0Cx9WDS+OExygDtPLxfMQ==",
+  "version": "1.0.0",
+  "updateVersion": "2.0.0"
+}

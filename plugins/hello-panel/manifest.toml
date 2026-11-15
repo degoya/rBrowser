@@ -1,0 +1,45 @@
+# The test plugin of the plugin runtime (RB-060-12, docs/plugins.md "Page scripts and panels"):
+# one page script, one panel, one command and one MCP tool, so every path of the runtime runs once.
+# Never shipped (TEST-ONLY); it needs no capability.
+manifest_version = 1
+id = "hello-panel"
+name = "Hello panel"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "hello"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Greets every view: a badge in each page, a panel that lists the pages and a command and MCP tool that greet them."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+[capabilities]
+
+[[tools]]
+name = "greet"
+description = "plugin.hello-panel.tools.greet"
+input = { type = "object", properties = { name = { type = "string", maxLength = 64 } } }
+
+[[commands]]
+id = "say_hello"
+title = "plugin.hello-panel.commands.say_hello"
+shortcut = "Ctrl+Shift+Space X H"
+tool = "greet"
+
+[[page_scripts]]
+path = "page/hello.js"
+run_at = "document-idle"
+
+[[panels]]
+id = "main"
+title = "plugin.hello-panel.panels.main"
+entry = "panel/index.html"
+icon = "hand"

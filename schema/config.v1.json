@@ -1,0 +1,4350 @@
+{
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The schema reference for editors (`./schema/config.v1.json`)."
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "description": "The format version; [`crate::CURRENT_VERSION`] after migration."
+    },
+    "startUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The URL every view loads first: an absolute `http`/`https` URL (`crate::check`).",
+      "x-category": "project",
+      "x-section": "start-url",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "environments": {
+      "type": "array",
+      "items": {
+        "description": "One environment of `environments[]`.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Unique id (`local`, `staging`).",
+            "type": "string"
+          },
+          "url": {
+            "description": "The origin (path is kept when switching): an absolute `http`/`https` URL.",
+            "type": "string"
+          },
+          "color": {
+            "description": "The border colour of the views, `#rrggbb`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reloadIntervalSec": {
+            "description": "The interval reload of this environment in seconds, over `reload.intervalSec`; 0 is off\n(RB-030-05).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "url"
+        ]
+      },
+      "description": "The environments (local, staging, ...) the toolbar switches between (RB-010-12).",
+      "default": [],
+      "x-category": "project",
+      "x-section": "environments",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Named sessions; `default` always exists, shared by every Chromium view without one.",
+      "default": [],
+      "x-category": "project",
+      "x-section": "sessions",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "sessionColors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^#[0-9a-fA-F]{6}$"
+      },
+      "description": "The badge colour of each named session as `#rrggbb`; a session without one gets a colour\nof its own, and `default` shows no badge (RB-020-07).",
+      "x-category": "project",
+      "x-section": "sessions",
+      "x-order": 2,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "layouts": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The preset at start; the top-level `layout` when absent."
+        },
+        "presets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "const": "grid",
+                    "description": "Every cell of the grid."
+                  },
+                  {
+                    "type": "string",
+                    "const": "focus",
+                    "description": "One large view with a quick switcher."
+                  },
+                  {
+                    "type": "string",
+                    "const": "horizontal",
+                    "description": "Every view in one row at the same height, scrolled sideways (RB-080-04)."
+                  },
+                  {
+                    "type": "string",
+                    "const": "split",
+                    "description": "Two sides with a movable divider (RB-080-04)."
+                  },
+                  {
+                    "type": "string",
+                    "const": "canvas",
+                    "description": "Views placed freely, with snapping and a minimap (RB-080-04)."
+                  }
+                ],
+                "description": "Grid, focus, horizontal, split or canvas.",
+                "default": "grid"
+              },
+              "layout": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "columns": {
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "description": "Columns of the grid.",
+                    "default": 1
+                  },
+                  "rows": {
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "description": "Rows of the grid.",
+                    "default": 1
+                  },
+                  "gap": {
+                    "type": "integer",
+                    "format": "uint32",
+                    "minimum": 0,
+                    "description": "Gap between cells in DIP (cell labels live in it).",
+                    "default": 8
+                  },
+                  "cells": {
+                    "type": "array",
+                    "items": {
+                      "description": "One cell of `layout.cells[]`; `col` and `row` are 1-based.",
+                      "type": "object",
+                      "properties": {
+                        "breakpoint": {
+                          "description": "The breakpoint id shown in the cell.",
+                          "type": "string"
+                        },
+                        "col": {
+                          "description": "Column, 1-based.",
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0
+                        },
+                        "row": {
+                          "description": "Row, 1-based.",
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0
+                        },
+                        "colSpan": {
+                          "description": "Columns spanned.",
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0,
+                          "default": 1
+                        },
+                        "rowSpan": {
+                          "description": "Rows spanned.",
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0,
+                          "default": 1
+                        },
+                        "zoom": {
+                          "description": "`\"fit\"` (default) or a factor `0.25`..=`1`.",
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "fit"
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "format": "double"
+                            }
+                          ],
+                          "default": "fit"
+                        }
+                      },
+                      "required": [
+                        "breakpoint",
+                        "col",
+                        "row"
+                      ]
+                    },
+                    "description": "The cells; one view each.",
+                    "default": []
+                  },
+                  "modes": {
+                    "type": "object",
+                    "properties": {
+                      "horizontal": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "height": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fit"
+                                    ]
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "format": "uint32",
+                                    "minimum": 0
+                                  }
+                                ],
+                                "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                          },
+                          "gap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                          },
+                          "orientation": {
+                            "anyOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "vertical",
+                                    "description": "A vertical divider: the primary side left, the others stacked on the right."
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "horizontal",
+                                    "description": "A horizontal divider: the primary side on top, the others side by side below."
+                                  }
+                                ],
+                                "description": "The divider of the split mode."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                          },
+                          "ratio": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "format": "double",
+                            "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                          },
+                          "primary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                          },
+                          "secondary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                          },
+                          "snap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                              "type": "object",
+                              "properties": {
+                                "breakpoint": {
+                                  "description": "The breakpoint id.",
+                                  "type": "string"
+                                },
+                                "x": {
+                                  "description": "Left edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "y": {
+                                  "description": "Top edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "zoom": {
+                                  "description": "The view's zoom, `0.1`..=`1`.",
+                                  "type": "number",
+                                  "format": "double",
+                                  "default": 0.5
+                                }
+                              },
+                              "required": [
+                                "breakpoint",
+                                "x",
+                                "y"
+                              ]
+                            },
+                            "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                          }
+                        },
+                        "description": "The horizontal mode's fields."
+                      },
+                      "split": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "height": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fit"
+                                    ]
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "format": "uint32",
+                                    "minimum": 0
+                                  }
+                                ],
+                                "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                          },
+                          "gap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                          },
+                          "orientation": {
+                            "anyOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "vertical",
+                                    "description": "A vertical divider: the primary side left, the others stacked on the right."
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "horizontal",
+                                    "description": "A horizontal divider: the primary side on top, the others side by side below."
+                                  }
+                                ],
+                                "description": "The divider of the split mode."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                          },
+                          "ratio": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "format": "double",
+                            "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                          },
+                          "primary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                          },
+                          "secondary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                          },
+                          "snap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                              "type": "object",
+                              "properties": {
+                                "breakpoint": {
+                                  "description": "The breakpoint id.",
+                                  "type": "string"
+                                },
+                                "x": {
+                                  "description": "Left edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "y": {
+                                  "description": "Top edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "zoom": {
+                                  "description": "The view's zoom, `0.1`..=`1`.",
+                                  "type": "number",
+                                  "format": "double",
+                                  "default": 0.5
+                                }
+                              },
+                              "required": [
+                                "breakpoint",
+                                "x",
+                                "y"
+                              ]
+                            },
+                            "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                          }
+                        },
+                        "description": "The split mode's fields."
+                      },
+                      "canvas": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "height": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fit"
+                                    ]
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "format": "uint32",
+                                    "minimum": 0
+                                  }
+                                ],
+                                "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                          },
+                          "gap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                          },
+                          "orientation": {
+                            "anyOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "vertical",
+                                    "description": "A vertical divider: the primary side left, the others stacked on the right."
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "horizontal",
+                                    "description": "A horizontal divider: the primary side on top, the others side by side below."
+                                  }
+                                ],
+                                "description": "The divider of the split mode."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                          },
+                          "ratio": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "format": "double",
+                            "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                          },
+                          "primary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                          },
+                          "secondary": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                          },
+                          "snap": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint32",
+                            "minimum": 0,
+                            "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                              "type": "object",
+                              "properties": {
+                                "breakpoint": {
+                                  "description": "The breakpoint id.",
+                                  "type": "string"
+                                },
+                                "x": {
+                                  "description": "Left edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "y": {
+                                  "description": "Top edge in canvas DIP.",
+                                  "type": "integer",
+                                  "format": "int32"
+                                },
+                                "zoom": {
+                                  "description": "The view's zoom, `0.1`..=`1`.",
+                                  "type": "number",
+                                  "format": "double",
+                                  "default": 0.5
+                                }
+                              },
+                              "required": [
+                                "breakpoint",
+                                "x",
+                                "y"
+                              ]
+                            },
+                            "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                          }
+                        },
+                        "description": "The canvas mode's fields."
+                      }
+                    },
+                    "description": "The top-level layout: the fields of the horizontal, split and canvas modes shown over it\n(RB-080-04). Ignored in a preset's `layout`."
+                  },
+                  "hidden": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The breakpoints whose views are not open, in every layout mode (RB-080-41): the\nselection `view.remove` and `view.add` keep in `config.local.json`. A breakpoint not\nlisted is open; the last open view cannot be hidden. Ignored in a preset's `layout`."
+                  }
+                },
+                "description": "The grid of this preset; the top-level `layout` when absent."
+              },
+              "focus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Focus mode: the breakpoint shown first; the first breakpoint when absent."
+              },
+              "height": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fit"
+                        ]
+                      },
+                      {
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0
+                      }
+                    ],
+                    "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+              },
+              "gap": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0,
+                "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+              },
+              "orientation": {
+                "anyOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "const": "vertical",
+                        "description": "A vertical divider: the primary side left, the others stacked on the right."
+                      },
+                      {
+                        "type": "string",
+                        "const": "horizontal",
+                        "description": "A horizontal divider: the primary side on top, the others side by side below."
+                      }
+                    ],
+                    "description": "The divider of the split mode."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+              },
+              "ratio": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "format": "double",
+                "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+              },
+              "primary": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Split: the breakpoints of the primary side; the active view's when empty."
+              },
+              "secondary": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+              },
+              "snap": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0,
+                "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                  "type": "object",
+                  "properties": {
+                    "breakpoint": {
+                      "description": "The breakpoint id.",
+                      "type": "string"
+                    },
+                    "x": {
+                      "description": "Left edge in canvas DIP.",
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "y": {
+                      "description": "Top edge in canvas DIP.",
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "zoom": {
+                      "description": "The view's zoom, `0.1`..=`1`.",
+                      "type": "number",
+                      "format": "double",
+                      "default": 0.5
+                    }
+                  },
+                  "required": [
+                    "breakpoint",
+                    "x",
+                    "y"
+                  ]
+                },
+                "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+              },
+              "hidden": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "description": "The breakpoints whose views are not open while this preset is shown (RB-080-41):\nchoosing the preset writes it as `layout.hidden`; absent, the preset leaves the\nselection as it is. `[]` opens every view."
+              }
+            },
+            "description": "A named layout preset."
+          },
+          "description": "The presets in config order (`leader L 1...9` follows it).",
+          "default": {}
+        }
+      },
+      "description": "Named layout presets (RB-010-12).",
+      "default": {
+        "presets": {}
+      },
+      "x-category": "layout",
+      "x-section": "presets",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "breakpoints": {
+      "type": "array",
+      "items": {
+        "description": "One breakpoint of `breakpoints[]`: a size plus the emulation that makes it a device.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Unique among the breakpoints; referenced by `layout.cells[].breakpoint`.",
+            "type": "string"
+          },
+          "label": {
+            "description": "The label shown in the cell; the id when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "width": {
+            "description": "Viewport width in CSS px. May be left out when `device` names a device preset: the\npreset's viewport width applies.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "height": {
+            "description": "Viewport height in CSS px. May be left out when `device` names a device preset: the\npreset's viewport height applies.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "device": {
+            "description": "A device preset id (`devices.json` or the user's `devices`) whose values fill the fields\nthis breakpoint leaves out - width and height included; whatever the breakpoint sets\nwins (RB-010-12).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "engine": {
+            "description": "The engine; `chromium` by default.",
+            "oneOf": [
+              {
+                "description": "CEF, embedded in the grid.",
+                "type": "string",
+                "const": "chromium"
+              },
+              {
+                "description": "The installed Firefox over WebDriver BiDi.",
+                "type": "string",
+                "const": "firefox"
+              },
+              {
+                "description": "Playwright's WebKit build (\"WebKit, not Safari\").",
+                "type": "string",
+                "const": "webkit"
+              }
+            ],
+            "default": "chromium"
+          },
+          "session": {
+            "description": "The session (cookie/storage partition) of `sessions[]`; `default` when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "syncNavigation": {
+            "description": "Whether the view follows synced navigation; `true` by default.",
+            "type": "boolean",
+            "default": true
+          },
+          "shortcut": {
+            "description": "A shortcut of its own that sets the active view to this breakpoint, in the text form of\n`rb-commands` (`\"Ctrl+Shift+F9\"`); checked against the reserved list (RB-010-16).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "description": "The colour of the breakpoint bar under the breakpoint's views, `#rrggbb` (RB-080-44); one\nof a fixed palette by the breakpoint's place in the list when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dpr": {
+            "description": "Device pixel ratio.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "touch": {
+            "description": "Touch input (`maxTouchPoints`, touch events, `pointer: coarse`).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "mobile": {
+            "description": "Mobile device type (meta viewport, overlay scrollbars); defaults to `touch`.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "userAgent": {
+            "description": "User agent override; `null` keeps the engine's.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "platform": {
+            "description": "`navigator.platform` and UA-CH platform override.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-options": [
+              "Win32",
+              "MacIntel",
+              "Linux x86_64",
+              "Linux armv81",
+              "iPhone",
+              "iPad"
+            ]
+          },
+          "locale": {
+            "description": "BCP 47 locale: Intl, `navigator.language`, `Accept-Language`.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-options": [
+              "en-US",
+              "en-GB",
+              "de-DE",
+              "de-AT",
+              "de-CH",
+              "fr-FR",
+              "es-ES",
+              "it-IT",
+              "nl-NL",
+              "ja-JP"
+            ]
+          },
+          "colorScheme": {
+            "description": "`prefers-color-scheme`.",
+            "anyOf": [
+              {
+                "description": "`prefers-color-scheme`.",
+                "oneOf": [
+                  {
+                    "description": "`light`.",
+                    "type": "string",
+                    "const": "light"
+                  },
+                  {
+                    "description": "`dark`.",
+                    "type": "string",
+                    "const": "dark"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reducedMotion": {
+            "description": "`prefers-reduced-motion: reduce` when `true`.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "media": {
+            "description": "The other media features.",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "reducedData": {
+                "description": "`prefers-reduced-data: reduce` when `true`.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "reducedTransparency": {
+                "description": "`prefers-reduced-transparency: reduce` when `true`.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "forcedColors": {
+                "description": "`forced-colors`.",
+                "anyOf": [
+                  {
+                    "description": "`forced-colors`.",
+                    "oneOf": [
+                      {
+                        "description": "`none`.",
+                        "type": "string",
+                        "const": "none"
+                      },
+                      {
+                        "description": "`active`.",
+                        "type": "string",
+                        "const": "active"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "contrast": {
+                "description": "`prefers-contrast`.",
+                "anyOf": [
+                  {
+                    "description": "`prefers-contrast`.",
+                    "oneOf": [
+                      {
+                        "description": "`no-preference`.",
+                        "type": "string",
+                        "const": "no-preference"
+                      },
+                      {
+                        "description": "`more`.",
+                        "type": "string",
+                        "const": "more"
+                      },
+                      {
+                        "description": "`less`.",
+                        "type": "string",
+                        "const": "less"
+                      },
+                      {
+                        "description": "`custom`.",
+                        "type": "string",
+                        "const": "custom"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "colorGamut": {
+                "description": "`color-gamut`.",
+                "anyOf": [
+                  {
+                    "description": "`color-gamut`.",
+                    "oneOf": [
+                      {
+                        "description": "`srgb`.",
+                        "type": "string",
+                        "const": "srgb"
+                      },
+                      {
+                        "description": "`p3`.",
+                        "type": "string",
+                        "const": "p3"
+                      },
+                      {
+                        "description": "`rec2020`.",
+                        "type": "string",
+                        "const": "rec2020"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "mediaType": {
+                "description": "The media type: `print` emulates print media.",
+                "anyOf": [
+                  {
+                    "description": "The emulated CSS media type.",
+                    "oneOf": [
+                      {
+                        "description": "`screen`.",
+                        "type": "string",
+                        "const": "screen"
+                      },
+                      {
+                        "description": "`print`.",
+                        "type": "string",
+                        "const": "print"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "network": {
+            "description": "Network throttling: a preset name or custom conditions; `null` for none.",
+            "anyOf": [
+              {
+                "description": "Network throttling: `\"slow-3g\"` or `{ \"latencyMs\": .., \"downloadKbps\": .., ... }`.",
+                "anyOf": [
+                  {
+                    "description": "A named preset.",
+                    "oneOf": [
+                      {
+                        "description": "No network.",
+                        "type": "string",
+                        "const": "offline"
+                      },
+                      {
+                        "description": "Slow 3G.",
+                        "type": "string",
+                        "const": "slow-3g"
+                      },
+                      {
+                        "description": "Fast 3G.",
+                        "type": "string",
+                        "const": "fast-3g"
+                      },
+                      {
+                        "description": "4G.",
+                        "type": "string",
+                        "const": "4g"
+                      }
+                    ]
+                  },
+                  {
+                    "description": "Custom conditions.",
+                    "type": "object",
+                    "properties": {
+                      "offline": {
+                        "description": "No network at all.",
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "latencyMs": {
+                        "description": "Added round-trip latency in ms.",
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0,
+                        "default": 0
+                      },
+                      "downloadKbps": {
+                        "description": "Download throughput in kbit/s; 0 = unthrottled.",
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0,
+                        "default": 0
+                      },
+                      "uploadKbps": {
+                        "description": "Upload throughput in kbit/s; 0 = unthrottled.",
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0,
+                        "default": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headers": {
+            "description": "Extra request headers. Headers from `config.json` and `config.local.json` apply only in a\ntrusted workspace; an untrusted one sends only headers set live (RB-010-09).",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "orientation": {
+            "description": "Screen orientation.",
+            "anyOf": [
+              {
+                "description": "Screen orientation.",
+                "oneOf": [
+                  {
+                    "description": "Portrait.",
+                    "type": "string",
+                    "const": "portrait"
+                  },
+                  {
+                    "description": "Landscape.",
+                    "type": "string",
+                    "const": "landscape"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "safeAreas": {
+            "description": "Safe-area insets (notch, home indicator).",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "top": {
+                "description": "Top inset.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 0
+              },
+              "right": {
+                "description": "Right inset.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 0
+              },
+              "bottom": {
+                "description": "Bottom inset.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 0
+              },
+              "left": {
+                "description": "Left inset.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 0
+              }
+            }
+          },
+          "textScale": {
+            "description": "Text scale factor (accessibility font scaling), `1.0` = none.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "geolocation": {
+            "description": "The emulated position, granted to the view's origin without a prompt; `null` switches\na position of the device or the defaults off (RB-080-10).",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "latitude": {
+                "description": "Latitude in degrees, -90 to 90.",
+                "type": "number",
+                "format": "double",
+                "minimum": -90.0,
+                "maximum": 90.0
+              },
+              "longitude": {
+                "description": "Longitude in degrees, -180 to 180.",
+                "type": "number",
+                "format": "double",
+                "minimum": -180.0,
+                "maximum": 180.0
+              },
+              "accuracy": {
+                "description": "Accuracy in metres; 50 when absent.",
+                "type": "number",
+                "format": "double",
+                "minimum": 0.0,
+                "default": 50.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          },
+          "timezone": {
+            "description": "IANA time zone (`America/New_York`); empty keeps the system's (RB-080-10).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-options": [
+              "UTC",
+              "Europe/Berlin",
+              "Europe/London",
+              "America/New_York",
+              "America/Los_Angeles",
+              "America/Sao_Paulo",
+              "Asia/Tokyo",
+              "Australia/Sydney"
+            ]
+          },
+          "cpuThrottling": {
+            "description": "CPU throttling factor, 1 to 100; `1` is none (RB-080-10).",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 1.0,
+            "maximum": 100.0
+          },
+          "offline": {
+            "description": "No network: over the throttling's conditions, `false` lifts an offline preset\n(RB-080-10).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "paper": {
+            "description": "The paper of a print view: width and height in CSS px at 96 dpi for a side the\nbreakpoint leaves out (A4 794 px, Letter 816 px wide). With `media.mediaType: \"print\"`\n(RB-080-10).",
+            "anyOf": [
+              {
+                "description": "The paper a print view is as wide (and high) as, at 96 dpi.",
+                "oneOf": [
+                  {
+                    "description": "ISO A4, 210 x 297 mm: 794 x 1123 px.",
+                    "type": "string",
+                    "const": "A4"
+                  },
+                  {
+                    "description": "US Letter, 8.5 x 11 in: 816 x 1056 px.",
+                    "type": "string",
+                    "const": "Letter"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "description": "The breakpoints, in config order (`Ctrl+Shift+1...9` follows it).",
+      "default": [],
+      "x-category": "breakpoints",
+      "x-section": "breakpoints",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ],
+      "x-protected": true
+    },
+    "bookmarks": {
+      "type": "array",
+      "items": {
+        "description": "One entry of `bookmarks[]`.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Unique id; `config.local.json` changes or adds a bookmark by it.",
+            "type": "string"
+          },
+          "label": {
+            "description": "The name in the toolbar list and the command palette.",
+            "type": "string"
+          },
+          "path": {
+            "description": "A path such as `/products/42` (query and hash allowed), put after the URL of the\nenvironment in effect. Exactly one of `path` and `url`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "description": "An absolute `http`/`https` URL, the same in every environment. Exactly one of `path` and\n`url`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group": {
+            "description": "The group the toolbar list files it under.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shortcut": {
+            "description": "A direct shortcut that opens it (`Alt+F7`); held to the reserved list and to every other\nbinding like a breakpoint's.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "path"
+            ]
+          },
+          {
+            "required": [
+              "url"
+            ]
+          }
+        ]
+      },
+      "description": "Project bookmarks: a path after the environment's URL or an absolute URL (RB-070-06).",
+      "x-category": "project",
+      "x-section": "bookmarks",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Columns of the grid.",
+          "default": 1
+        },
+        "rows": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Rows of the grid.",
+          "default": 1
+        },
+        "gap": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Gap between cells in DIP (cell labels live in it).",
+          "default": 8
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "description": "One cell of `layout.cells[]`; `col` and `row` are 1-based.",
+            "type": "object",
+            "properties": {
+              "breakpoint": {
+                "description": "The breakpoint id shown in the cell.",
+                "type": "string"
+              },
+              "col": {
+                "description": "Column, 1-based.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              "row": {
+                "description": "Row, 1-based.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              "colSpan": {
+                "description": "Columns spanned.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 1
+              },
+              "rowSpan": {
+                "description": "Rows spanned.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0,
+                "default": 1
+              },
+              "zoom": {
+                "description": "`\"fit\"` (default) or a factor `0.25`..=`1`.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "fit"
+                    ]
+                  },
+                  {
+                    "type": "number",
+                    "format": "double"
+                  }
+                ],
+                "default": "fit"
+              }
+            },
+            "required": [
+              "breakpoint",
+              "col",
+              "row"
+            ]
+          },
+          "description": "The cells; one view each.",
+          "default": []
+        },
+        "modes": {
+          "type": "object",
+          "properties": {
+            "horizontal": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "height": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fit"
+                          ]
+                        },
+                        {
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0
+                        }
+                      ],
+                      "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                },
+                "gap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                },
+                "orientation": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "const": "vertical",
+                          "description": "A vertical divider: the primary side left, the others stacked on the right."
+                        },
+                        {
+                          "type": "string",
+                          "const": "horizontal",
+                          "description": "A horizontal divider: the primary side on top, the others side by side below."
+                        }
+                      ],
+                      "description": "The divider of the split mode."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                },
+                "ratio": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                },
+                "primary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                },
+                "secondary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                },
+                "snap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                    "type": "object",
+                    "properties": {
+                      "breakpoint": {
+                        "description": "The breakpoint id.",
+                        "type": "string"
+                      },
+                      "x": {
+                        "description": "Left edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "y": {
+                        "description": "Top edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "zoom": {
+                        "description": "The view's zoom, `0.1`..=`1`.",
+                        "type": "number",
+                        "format": "double",
+                        "default": 0.5
+                      }
+                    },
+                    "required": [
+                      "breakpoint",
+                      "x",
+                      "y"
+                    ]
+                  },
+                  "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                }
+              },
+              "description": "The horizontal mode's fields."
+            },
+            "split": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "height": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fit"
+                          ]
+                        },
+                        {
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0
+                        }
+                      ],
+                      "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                },
+                "gap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                },
+                "orientation": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "const": "vertical",
+                          "description": "A vertical divider: the primary side left, the others stacked on the right."
+                        },
+                        {
+                          "type": "string",
+                          "const": "horizontal",
+                          "description": "A horizontal divider: the primary side on top, the others side by side below."
+                        }
+                      ],
+                      "description": "The divider of the split mode."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                },
+                "ratio": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                },
+                "primary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                },
+                "secondary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                },
+                "snap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                    "type": "object",
+                    "properties": {
+                      "breakpoint": {
+                        "description": "The breakpoint id.",
+                        "type": "string"
+                      },
+                      "x": {
+                        "description": "Left edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "y": {
+                        "description": "Top edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "zoom": {
+                        "description": "The view's zoom, `0.1`..=`1`.",
+                        "type": "number",
+                        "format": "double",
+                        "default": 0.5
+                      }
+                    },
+                    "required": [
+                      "breakpoint",
+                      "x",
+                      "y"
+                    ]
+                  },
+                  "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                }
+              },
+              "description": "The split mode's fields."
+            },
+            "canvas": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "height": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fit"
+                          ]
+                        },
+                        {
+                          "type": "integer",
+                          "format": "uint32",
+                          "minimum": 0
+                        }
+                      ],
+                      "description": "The row height of the horizontal mode: `\"fit\"` or a height in DIP."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Horizontal: the row height, `\"fit\"` (the grid area's) or a height in DIP."
+                },
+                "gap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Horizontal: the gap between the views in DIP; the grid's `gap` when absent."
+                },
+                "orientation": {
+                  "anyOf": [
+                    {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "const": "vertical",
+                          "description": "A vertical divider: the primary side left, the others stacked on the right."
+                        },
+                        {
+                          "type": "string",
+                          "const": "horizontal",
+                          "description": "A horizontal divider: the primary side on top, the others side by side below."
+                        }
+                      ],
+                      "description": "The divider of the split mode."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Split: a `vertical` divider (primary left) or a `horizontal` one (primary on top)."
+                },
+                "ratio": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double",
+                  "description": "Split: the primary side's share of the area, `0.1`..=`0.9`."
+                },
+                "primary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the primary side; the active view's when empty."
+                },
+                "secondary": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Split: the breakpoints of the other side, stacked; every other one when empty."
+                },
+                "snap": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0,
+                  "description": "Canvas: the grid a moved view snaps to in DIP, `0` for none; the user setting\n`layoutModes.snap` when absent."
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "description": "One view of the canvas: its breakpoint, the top-left corner of the view (its label strip\nsits in the gap above) in canvas DIP, and its zoom.",
+                    "type": "object",
+                    "properties": {
+                      "breakpoint": {
+                        "description": "The breakpoint id.",
+                        "type": "string"
+                      },
+                      "x": {
+                        "description": "Left edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "y": {
+                        "description": "Top edge in canvas DIP.",
+                        "type": "integer",
+                        "format": "int32"
+                      },
+                      "zoom": {
+                        "description": "The view's zoom, `0.1`..=`1`.",
+                        "type": "number",
+                        "format": "double",
+                        "default": 0.5
+                      }
+                    },
+                    "required": [
+                      "breakpoint",
+                      "x",
+                      "y"
+                    ]
+                  },
+                  "description": "Canvas: where each view sits; a breakpoint without an item is placed after the others."
+                }
+              },
+              "description": "The canvas mode's fields."
+            }
+          },
+          "description": "The top-level layout: the fields of the horizontal, split and canvas modes shown over it\n(RB-080-04). Ignored in a preset's `layout`."
+        },
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The breakpoints whose views are not open, in every layout mode (RB-080-41): the\nselection `view.remove` and `view.add` keep in `config.local.json`. A breakpoint not\nlisted is open; the last open view cannot be hidden. Ignored in a preset's `layout`."
+        }
+      },
+      "description": "The grid when no preset overrides it (RB-010-04).",
+      "default": {
+        "columns": 1,
+        "rows": 1,
+        "gap": 8,
+        "cells": []
+      },
+      "x-category": "layout",
+      "x-section": "grid",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "emulation": {
+      "type": "object",
+      "properties": {
+        "dpr": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "description": "Device pixel ratio.",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "touch": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Touch input (`maxTouchPoints`, touch events, `pointer: coarse`).",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "mobile": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Mobile device type (meta viewport, overlay scrollbars); defaults to `touch`.",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "userAgent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "User agent override; `null` keeps the engine's.",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "platform": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "`navigator.platform` and UA-CH platform override.",
+          "x-options": [
+            "Win32",
+            "MacIntel",
+            "Linux x86_64",
+            "Linux armv81",
+            "iPhone",
+            "iPad"
+          ],
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "locale": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "BCP 47 locale: Intl, `navigator.language`, `Accept-Language`.",
+          "x-options": [
+            "en-US",
+            "en-GB",
+            "de-DE",
+            "de-AT",
+            "de-CH",
+            "fr-FR",
+            "es-ES",
+            "it-IT",
+            "nl-NL",
+            "ja-JP"
+          ],
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "colorScheme": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "light",
+                  "description": "`light`."
+                },
+                {
+                  "type": "string",
+                  "const": "dark",
+                  "description": "`dark`."
+                }
+              ],
+              "description": "`prefers-color-scheme`."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "`prefers-color-scheme`.",
+          "x-category": "emulation",
+          "x-section": "media-features",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "reducedMotion": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "`prefers-reduced-motion: reduce` when `true`.",
+          "x-category": "emulation",
+          "x-section": "media-features",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "media": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "reducedData": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "`prefers-reduced-data: reduce` when `true`."
+            },
+            "reducedTransparency": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "`prefers-reduced-transparency: reduce` when `true`."
+            },
+            "forcedColors": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "none",
+                      "description": "`none`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "active",
+                      "description": "`active`."
+                    }
+                  ],
+                  "description": "`forced-colors`."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`forced-colors`."
+            },
+            "contrast": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "no-preference",
+                      "description": "`no-preference`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "more",
+                      "description": "`more`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "less",
+                      "description": "`less`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "custom",
+                      "description": "`custom`."
+                    }
+                  ],
+                  "description": "`prefers-contrast`."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`prefers-contrast`."
+            },
+            "colorGamut": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "srgb",
+                      "description": "`srgb`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "p3",
+                      "description": "`p3`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "rec2020",
+                      "description": "`rec2020`."
+                    }
+                  ],
+                  "description": "`color-gamut`."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`color-gamut`."
+            },
+            "mediaType": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "screen",
+                      "description": "`screen`."
+                    },
+                    {
+                      "type": "string",
+                      "const": "print",
+                      "description": "`print`."
+                    }
+                  ],
+                  "description": "The emulated CSS media type."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The media type: `print` emulates print media."
+            }
+          },
+          "description": "The other media features.",
+          "x-category": "emulation",
+          "x-section": "media-features",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "network": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "offline",
+                      "description": "No network."
+                    },
+                    {
+                      "type": "string",
+                      "const": "slow-3g",
+                      "description": "Slow 3G."
+                    },
+                    {
+                      "type": "string",
+                      "const": "fast-3g",
+                      "description": "Fast 3G."
+                    },
+                    {
+                      "type": "string",
+                      "const": "4g",
+                      "description": "4G."
+                    }
+                  ],
+                  "description": "A named preset."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "offline": {
+                      "type": "boolean",
+                      "description": "No network at all.",
+                      "default": false
+                    },
+                    "latencyMs": {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0,
+                      "description": "Added round-trip latency in ms.",
+                      "default": 0
+                    },
+                    "downloadKbps": {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0,
+                      "description": "Download throughput in kbit/s; 0 = unthrottled.",
+                      "default": 0
+                    },
+                    "uploadKbps": {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0,
+                      "description": "Upload throughput in kbit/s; 0 = unthrottled.",
+                      "default": 0
+                    }
+                  },
+                  "description": "Custom conditions."
+                }
+              ],
+              "description": "Network throttling: `\"slow-3g\"` or `{ \"latencyMs\": .., \"downloadKbps\": .., ... }`."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Network throttling: a preset name or custom conditions; `null` for none.",
+          "x-category": "emulation",
+          "x-section": "throttling",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra request headers. Headers from `config.json` and `config.local.json` apply only in a\ntrusted workspace; an untrusted one sends only headers set live (RB-010-09).",
+          "x-category": "network",
+          "x-section": "headers",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ],
+          "x-protected": true
+        },
+        "orientation": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "portrait",
+                  "description": "Portrait."
+                },
+                {
+                  "type": "string",
+                  "const": "landscape",
+                  "description": "Landscape."
+                }
+              ],
+              "description": "Screen orientation."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Screen orientation.",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "safeAreas": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "top": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "Top inset.",
+              "default": 0
+            },
+            "right": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "Right inset.",
+              "default": 0
+            },
+            "bottom": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "Bottom inset.",
+              "default": 0
+            },
+            "left": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "description": "Left inset.",
+              "default": 0
+            }
+          },
+          "description": "Safe-area insets (notch, home indicator).",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 8,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "textScale": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "description": "Text scale factor (accessibility font scaling), `1.0` = none.",
+          "x-category": "emulation",
+          "x-section": "defaults",
+          "x-order": 9,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "geolocation": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "format": "double",
+              "description": "Latitude in degrees, -90 to 90.",
+              "minimum": -90.0,
+              "maximum": 90.0
+            },
+            "longitude": {
+              "type": "number",
+              "format": "double",
+              "description": "Longitude in degrees, -180 to 180.",
+              "minimum": -180.0,
+              "maximum": 180.0
+            },
+            "accuracy": {
+              "type": "number",
+              "format": "double",
+              "description": "Accuracy in metres; 50 when absent.",
+              "minimum": 0.0,
+              "default": 50.0
+            }
+          },
+          "required": [
+            "latitude",
+            "longitude"
+          ],
+          "description": "The emulated position, granted to the view's origin without a prompt; `null` switches\na position of the device or the defaults off (RB-080-10).",
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "IANA time zone (`America/New_York`); empty keeps the system's (RB-080-10).",
+          "x-options": [
+            "UTC",
+            "Europe/Berlin",
+            "Europe/London",
+            "America/New_York",
+            "America/Los_Angeles",
+            "America/Sao_Paulo",
+            "Asia/Tokyo",
+            "Australia/Sydney"
+          ],
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "cpuThrottling": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "description": "CPU throttling factor, 1 to 100; `1` is none (RB-080-10).",
+          "minimum": 1.0,
+          "maximum": 100.0,
+          "x-category": "emulation",
+          "x-section": "geo-time-cpu",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "offline": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "No network: over the throttling's conditions, `false` lifts an offline preset\n(RB-080-10).",
+          "x-category": "emulation",
+          "x-section": "throttling",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "paper": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "A4",
+                  "description": "ISO A4, 210 x 297 mm: 794 x 1123 px."
+                },
+                {
+                  "type": "string",
+                  "const": "Letter",
+                  "description": "US Letter, 8.5 x 11 in: 816 x 1056 px."
+                }
+              ],
+              "description": "The paper a print view is as wide (and high) as, at 96 dpi."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The paper of a print view: width and height in CSS px at 96 dpi for a side the\nbreakpoint leaves out (A4 794 px, Letter 816 px wide). With `media.mediaType: \"print\"`\n(RB-080-10).",
+          "x-category": "emulation",
+          "x-section": "media-features",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Project-wide emulation defaults (Settings > Emulation > Defaults, RB-010-05).",
+      "default": {}
+    },
+    "sync": {
+      "type": "object",
+      "properties": {
+        "navigation": {
+          "type": "boolean",
+          "description": "Navigation.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "navigation",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "scroll": {
+          "type": "boolean",
+          "description": "Scrolling.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "scroll",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "click": {
+          "type": "boolean",
+          "description": "Clicks.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "input": {
+          "type": "boolean",
+          "description": "Text input.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "keyboard": {
+          "type": "boolean",
+          "description": "Keyboard.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "hover": {
+          "type": "boolean",
+          "description": "Hover.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "leaderOnlySubmit": {
+          "type": "boolean",
+          "description": "Form submits and non-GET navigations run only in the active view.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "leader-submit",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "leaderPerSession": {
+          "type": "boolean",
+          "description": "With `leader_only_submit`, every session has a leader of its own (RB-020-07).",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "leader-submit",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "activateOnFocus": {
+          "type": "boolean",
+          "description": "A click into a view (it gets the keyboard focus) makes it the active view, the leader;\noff (the default), only a click on its label does (RB-020-02).",
+          "default": false,
+          "x-category": "sync",
+          "x-section": "leader-submit",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "hoverThrottleMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The least time between two hover events of the sync agent, in ms (RB-020-01).",
+          "maximum": 2000,
+          "default": 100,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "desyncTimeoutMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 100,
+          "description": "How long a view may take to replay an event before it is desynced, in ms (RB-020-02).",
+          "maximum": 5000,
+          "default": 750,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "contextMenu": {
+          "type": "boolean",
+          "description": "Right clicks are replayed, so the page's context menu opens in every view (RB-020-03). Off\nby default: the browser's own menu would open in every view at once.",
+          "default": false,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "forms": {
+          "type": "boolean",
+          "description": "The state of form controls (select, radio, checkbox, range, ...) follows a change in the\nactive view (RB-020-05).",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 8,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "focus": {
+          "type": "boolean",
+          "description": "The focused field follows the active view's focus (RB-020-05). Off by default.",
+          "default": false,
+          "x-category": "sync",
+          "x-section": "interaction",
+          "x-order": 9,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "navigationSettleMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 100,
+          "description": "How long input sync has to take the other views to the active view's page before they\nload its URL, in ms (RB-020-06).",
+          "maximum": 10000,
+          "default": 1000,
+          "x-category": "sync",
+          "x-section": "navigation",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "navigationIncludeHash": {
+          "type": "boolean",
+          "description": "A different fragment (`#part`) counts as a different page for navigation sync\n(RB-020-06).",
+          "default": false,
+          "x-category": "sync",
+          "x-section": "navigation",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "detectBrowsersync": {
+          "type": "boolean",
+          "description": "Switch sync off when a page carries Browsersync's client, whose ghost mode syncs by\nitself (RB-020-06).",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "navigation",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "scrollMode": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "anchor",
+              "description": "The same content at the same edge: an anchor element and its offset, set directly."
+            },
+            {
+              "type": "string",
+              "const": "wheel",
+              "description": "Real wheel events over the same element, for pages that take over scrolling."
+            }
+          ],
+          "description": "How scroll sync moves the other views (RB-020-04).",
+          "default": "anchor",
+          "x-category": "sync",
+          "x-section": "scroll",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "scrollDebounceMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How long scrolling rests before its end position is sent once more, freshly anchored, in\nms; 0 never (RB-020-04).",
+          "maximum": 2000,
+          "default": 150,
+          "x-category": "sync",
+          "x-section": "scroll",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "What is synced between the views.",
+      "default": {
+        "navigation": true,
+        "scroll": true,
+        "click": true,
+        "input": true,
+        "keyboard": true,
+        "hover": true,
+        "leaderOnlySubmit": true,
+        "leaderPerSession": true,
+        "activateOnFocus": false,
+        "hoverThrottleMs": 100,
+        "desyncTimeoutMs": 750,
+        "contextMenu": false,
+        "forms": true,
+        "focus": false,
+        "navigationSettleMs": 1000,
+        "navigationIncludeHash": false,
+        "detectBrowsersync": true,
+        "scrollMode": "anchor",
+        "scrollDebounceMs": 150
+      }
+    },
+    "pageApi": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "`window.__rbrowser` (view info and message bus) in every view's page, from the next\ndocument on.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "page-api",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "uaSuffix": {
+          "type": "boolean",
+          "description": "` rBrowser/<version>` at the end of every view's user agent, an emulated one included.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "page-api",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "The page API `window.__rbrowser` and the user-agent suffix (RB-020-08).",
+      "default": {
+        "enabled": true,
+        "uaSuffix": true
+      }
+    },
+    "bus": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Messages of a page reach the same page in the other views.",
+          "default": true,
+          "x-category": "sync",
+          "x-section": "message-bus",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxPayloadBytes": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "The largest payload, in bytes of its JSON text; larger ones are refused with an error.",
+          "maximum": 196608,
+          "default": 65536,
+          "x-category": "sync",
+          "x-section": "message-bus",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxPerSecond": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "Messages per second a view may send; more are dropped.",
+          "maximum": 1000,
+          "default": 100,
+          "x-category": "sync",
+          "x-section": "message-bus",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "The page API's message bus (RB-020-08).",
+      "default": {
+        "enabled": true,
+        "maxPayloadBytes": 65536,
+        "maxPerSecond": 100
+      }
+    },
+    "reload": {
+      "type": "object",
+      "properties": {
+        "watch": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Globs to watch, relative to the project.",
+          "default": [],
+          "x-category": "reload",
+          "x-section": "watch",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Globs to ignore.",
+          "default": [],
+          "x-category": "reload",
+          "x-section": "ignore",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "debounceMs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Debounce in ms.",
+          "default": 200,
+          "x-category": "reload",
+          "x-section": "watch",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "mode": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "auto",
+              "description": "Reload on change (CSS only where possible)."
+            },
+            {
+              "type": "string",
+              "const": "full",
+              "description": "Every change reloads the whole page."
+            },
+            {
+              "type": "string",
+              "const": "manual",
+              "description": "Only on command."
+            }
+          ],
+          "description": "When to reload.",
+          "default": "auto",
+          "x-category": "reload",
+          "x-section": "watch",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "respectHmr": {
+          "type": "boolean",
+          "description": "Leave pages with their own HMR client (Vite, webpack) to their dev server.",
+          "default": true,
+          "x-category": "reload",
+          "x-section": "watch",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "intervalSec": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "description": "Reload every view this often, in seconds; 0 is off.",
+          "default": 0,
+          "x-category": "reload",
+          "x-section": "interval",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Hot reload.",
+      "default": {
+        "watch": [],
+        "ignore": [],
+        "debounceMs": 200,
+        "mode": "auto",
+        "respectHmr": true,
+        "intervalSec": 0
+      }
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "hostResolverRules": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Chromium `--host-resolver-rules`.",
+          "x-category": "network",
+          "x-section": "host-resolver",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ],
+          "x-protected": true
+        },
+        "ignoreCertificateErrors": {
+          "type": "boolean",
+          "description": "Accept invalid certificates. Local only.",
+          "default": false,
+          "x-category": "network",
+          "x-section": "certificates",
+          "x-order": 1,
+          "x-scope": [
+            "local"
+          ],
+          "x-local-only": true,
+          "x-protected": true
+        },
+        "proxy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Proxy server (`host:port` or a PAC URL). Local only.",
+          "x-category": "network",
+          "x-section": "proxy",
+          "x-order": 1,
+          "x-scope": [
+            "local"
+          ],
+          "x-local-only": true,
+          "x-protected": true
+        }
+      },
+      "description": "Process-wide network settings; two keys are local-only ([`crate::LOCAL_ONLY_KEYS`]).",
+      "default": {
+        "ignoreCertificateErrors": false
+      }
+    },
+    "visual": {
+      "type": "object",
+      "properties": {
+        "threshold": {
+          "type": "number",
+          "format": "double",
+          "description": "How different two pixels may be and still count as equal, from 0 (exactly equal) to 1\n(anything goes); anti-aliased edges are tolerated apart from it.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.1,
+          "x-category": "capture",
+          "x-section": "visual-regression",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Compare and store the whole page, not only the viewport.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "visual-regression",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "slugStrategy": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "path",
+              "description": "The path only (`/shop/cart` is `shop-cart`): every environment shares the baselines."
+            },
+            {
+              "type": "string",
+              "const": "hostPath",
+              "description": "The host, then the path: each host has its own."
+            },
+            {
+              "type": "string",
+              "const": "pathQuery",
+              "description": "The path, then the query: `?page=2` has its own."
+            }
+          ],
+          "description": "How a page's URL names its folder below `.rbrowser/baselines`: its path, the host and\nthe path, or the path and the query.",
+          "default": "path",
+          "x-category": "capture",
+          "x-section": "visual-regression",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "lfsCheck": {
+          "type": "boolean",
+          "description": "After saving a baseline, check that Git LFS tracks `.rbrowser/baselines` and is\ninstalled, and offer the set-up when not.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "visual-regression",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "failOnMetaMismatch": {
+          "type": "boolean",
+          "description": "Treat a comparison against a baseline taken with another monitor DPI, engine version,\nviewport or full-page setting as an error instead of a warning.",
+          "default": false,
+          "x-category": "capture",
+          "x-section": "visual-regression",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Capture > Visual regression (RB-050-04).",
+      "default": {
+        "threshold": 0.1,
+        "fullPage": true
+      }
+    },
+    "sitemap": {
+      "type": "object",
+      "properties": {
+        "parallel": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "Pages captured at once, each in its own hidden view (1 to 8).",
+          "maximum": 8,
+          "default": 4,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "waitNetworkIdle": {
+          "type": "boolean",
+          "description": "Wait until the page has made no request for a moment after its load.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "waitSelector": {
+          "type": "string",
+          "description": "A CSS selector the page must show before its screenshot; empty for none.",
+          "maxLength": 1024,
+          "default": "",
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "delayMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "A further pause before each screenshot, in milliseconds (0 to 30000).",
+          "maximum": 30000,
+          "default": 0,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "timeoutSec": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 5,
+          "description": "The longest one page may take, from navigation to screenshot, in seconds (5 to 300).",
+          "maximum": 300,
+          "default": 30,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Capture the whole page, not only the viewport.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "autoScroll": {
+          "type": "boolean",
+          "description": "Scroll each page to its end and back first, so lazy-loaded content is there.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Capture only the pages matching one of these patterns: a glob over the path (`/blog/**`)\nor a regular expression after `re:`; empty for every page.",
+          "default": [],
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 8,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Leave out the pages matching one of these patterns (glob or `re:`).",
+          "default": [],
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 9,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxPages": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "At most this many pages per run; 0 for all.",
+          "maximum": 100000,
+          "default": 0,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 10,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "hostIntervalMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The least time between two page loads on one host, in milliseconds (0 to 60000).",
+          "maximum": 60000,
+          "default": 250,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 11,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "respectRobots": {
+          "type": "boolean",
+          "description": "Leave out the pages the site's robots.txt disallows.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 12,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "hideSelectors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Deprecated, kept so older configs work: more elements to hide before every capture, as\nCSS selectors - they join `capture.hideSelectors` (RB-080-12), which also holds the\nbuilt-in list of consent managers.",
+          "default": [],
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 13,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "retries": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How often a failed page is tried again (0 to 5).",
+          "maximum": 5,
+          "default": 1,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 14,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxDepth": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How deep sitemap indexes may nest (0 to 5).",
+          "maximum": 5,
+          "default": 3,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 15,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxSitemapMib": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "The largest sitemap read, unpacked, in MiB (1 to 50).",
+          "maximum": 50,
+          "default": 10,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 16,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxUrls": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "The most pages read from the sitemaps (1 to 200000).",
+          "maximum": 200000,
+          "default": 50000,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 17,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Capture > Sitemap (RB-050-05); written only when it differs from the defaults."
+    },
+    "envCompare": {
+      "type": "object",
+      "properties": {
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The environment ids compared when a call names none; every environment when empty.\nThe settings window offers the project's environments (`x-options`, RB-080-72).",
+          "default": [],
+          "x-options": "environments",
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "breakpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The breakpoint ids compared when a call names none; every Chromium breakpoint when\nempty. The settings window offers the project's breakpoints.",
+          "default": [],
+          "x-options": "breakpoints",
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "description": "How different two pixels may be and still count as equal, 0 to 1; `visual.threshold`\nwhen absent.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxDiffPercent": {
+          "type": "number",
+          "format": "double",
+          "description": "The share of differing pixels, in percent, up to which two shots still count as the\nsame (0 to 100).",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "default": 0.0,
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Capture the whole page, not only the viewport.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "waitMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "A further pause before each screenshot, in milliseconds (0 to 30000).",
+          "maximum": 30000,
+          "default": 0,
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "parallel": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "Shots taken at once, each in its own hidden view (1 to 8).",
+          "maximum": 8,
+          "default": 4,
+          "x-category": "capture",
+          "x-section": "env-compare",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Capture > Environment compare (RB-080-03); written only when it differs from the\ndefaults."
+    },
+    "capture": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The folder screenshots are written to; empty for `.rbrowser/out/screenshots` in the\nproject. A project may only name a folder inside the project, the user settings also an\nabsolute one.",
+          "x-category": "capture",
+          "x-section": "screenshots",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "folder"
+        },
+        "pathPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The file path below the folder, without `.png`: `{date}` (date and time of the run),\n`{day}`, `{time}`, `{env}`, `{breakpoint}`, `{view}`, `{mode}`, `{width}`, `{height}`,\n`{dpr}`; `/` separates folders.",
+          "minLength": 1,
+          "default": "{date}/{breakpoint}",
+          "x-category": "capture",
+          "x-section": "screenshots",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "elementPadding": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "description": "CSS pixels around an element screenshot, on every side.",
+          "maximum": 512,
+          "default": 16,
+          "x-category": "capture",
+          "x-section": "screenshots",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "defaultDelay": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Seconds before a screenshot from a shortcut, the toolbar or the palette (0, 5 or 10);\n`Ctrl+Shift+Space C D` cycles it for the session.",
+          "enum": [
+            0,
+            5,
+            10
+          ],
+          "default": 0,
+          "x-category": "capture",
+          "x-section": "screenshots",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "overviewLabels": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "The overview image shows label, size, engine and environment above each view.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "screenshots",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "hideBanners": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Hide cookie banners, consent dialogs and chat widgets before every capture.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "cookie-banners",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "hideSelectors": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "description": "The project's own elements to hide before every capture, as CSS selectors, beside the\nbuilt-in list (at most 200).",
+          "maxItems": 200,
+          "x-category": "capture",
+          "x-section": "cookie-banners",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "useBuiltinList": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Hide the elements of rBrowser's built-in list of consent managers and chat widgets.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "cookie-banners",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "freezeAnimations": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Freeze CSS animations, transitions, the caret and videos, with\n`prefers-reduced-motion: reduce`, during every capture.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "cookie-banners",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "settleMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The wait after hiding and freezing, before the capture, in milliseconds (0 to 5000).",
+          "maximum": 5000,
+          "default": 100,
+          "x-category": "capture",
+          "x-section": "cookie-banners",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "video": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "mp4",
+                      "description": "MP4 with H.264 from Windows Media Foundation (`h264_mf`)."
+                    },
+                    {
+                      "type": "string",
+                      "const": "webm",
+                      "description": "WebM with VP9 (`libvpx-vp9`)."
+                    }
+                  ],
+                  "description": "The container and codec of a recording."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "MP4 (H.264 through Windows Media Foundation) or WebM (VP9).",
+              "default": "mp4",
+              "x-category": "capture",
+              "x-section": "video",
+              "x-order": 1,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            },
+            "fps": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 1,
+              "description": "Frames per second of the file; a frame that did not change is repeated.",
+              "maximum": 60,
+              "default": 30,
+              "x-category": "capture",
+              "x-section": "video",
+              "x-order": 2,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            },
+            "maxDurationSec": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 1,
+              "description": "A recording stops by itself after this many seconds and its files are written.",
+              "maximum": 3600,
+              "default": 300,
+              "x-category": "capture",
+              "x-section": "video",
+              "x-order": 3,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            },
+            "quality": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 1,
+              "description": "Image quality from 1 to 100, of the captured frames and of the encoder.",
+              "maximum": 100,
+              "default": 80,
+              "x-category": "capture",
+              "x-section": "video",
+              "x-order": 4,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            }
+          },
+          "description": "Capture > Video (RB-080-02)."
+        }
+      },
+      "description": "Capture > Screenshots (RB-050-03); the user settings may set the same keys."
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "lighthouse": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "performance",
+                  "accessibility",
+                  "best-practices",
+                  "seo"
+                ]
+              },
+              "description": "Lighthouse categories; empty runs all four. The schema names them (the settings window\noffers them as a choice, RB-080-20); the plugin skips what it does not know.",
+              "default": []
+            }
+          },
+          "description": "Lighthouse.",
+          "default": {
+            "categories": []
+          },
+          "x-category": "checks",
+          "x-section": "lighthouse",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "parallel": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 1,
+          "description": "How many check plugins run at once, counted per view.",
+          "maximum": 16,
+          "default": 4,
+          "x-category": "checks",
+          "x-section": "findings",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "keepRuns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 1,
+          "description": "How many check runs stay under `.rbrowser/out/checks/`; older ones are removed.",
+          "maximum": 100,
+          "default": 10,
+          "x-category": "checks",
+          "x-section": "findings",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "const": "off",
+                "description": "The rule does not run."
+              },
+              {
+                "type": "string",
+                "const": "info",
+                "description": "Its findings are infos."
+              },
+              {
+                "type": "string",
+                "const": "warning",
+                "description": "Its findings are warnings."
+              },
+              {
+                "type": "string",
+                "const": "error",
+                "description": "Its findings are errors."
+              }
+            ],
+            "description": "One value of `checks.rules`."
+          },
+          "description": "Per rule id (`<plugin>.<rule>`): off, or the severity its findings get. The settings\nwindow offers the rules of the loaded check plugins by name (`x-options`, RB-080-72).",
+          "x-options": "check-rules",
+          "x-category": "checks",
+          "x-section": "findings",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "description": "One entry of `checks.ignore`; a field left out matches anything.",
+            "type": "object",
+            "properties": {
+              "rule": {
+                "description": "A glob of the qualified rule id.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "description": "A glob of the page URL.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selector": {
+                "description": "A glob of the element selector.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Findings to leave out: each entry's rule id, page URL and element selector globs (`*`\nany text) must all match.",
+          "x-category": "checks",
+          "x-section": "findings",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local",
+            "user"
+          ]
+        }
+      },
+      "description": "The check plugins.",
+      "additionalProperties": true,
+      "default": {
+        "lighthouse": {
+          "categories": []
+        }
+      }
+    },
+    "seo": {
+      "type": "object",
+      "properties": {
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-options": [
+              "en-US",
+              "en-GB",
+              "de-DE",
+              "de-AT",
+              "de-CH",
+              "fr-FR",
+              "es-ES",
+              "it-IT",
+              "nl-NL",
+              "ja-JP"
+            ]
+          },
+          "description": "The locales the site is expected to have (hreflang parity).",
+          "default": []
+        },
+        "maxPages": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Pages of the mini crawl."
+        }
+      },
+      "additionalProperties": true,
+      "description": "The SEO plugin.",
+      "default": {
+        "locales": []
+      },
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "analyzer": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "all",
+              "description": "One view per breakpoint."
+            },
+            {
+              "type": "string",
+              "const": "simplified",
+              "description": "Five groups."
+            },
+            {
+              "type": "string",
+              "const": "edges",
+              "description": "A view at every edge plus or minus 1 px."
+            }
+          ],
+          "description": "How views are proposed.",
+          "default": "all",
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Further URLs to analyse besides `startUrl`.",
+          "default": [],
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "edgeViews": {
+          "type": "boolean",
+          "description": "Add a view at boundary - 1 px.",
+          "default": false,
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "mergeTolerancePx": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "Boundaries within this many px are merged.",
+          "default": 8,
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 4,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "static": {
+          "type": "boolean",
+          "description": "Also scan project files (Tailwind, SCSS, Bootstrap).",
+          "default": true,
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 5,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "checkOnOpen": {
+          "type": "boolean",
+          "description": "Look for new breakpoints when the project opens.",
+          "default": false,
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "staticGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The project files the static source reads, as globs relative to the project root; the\nanalyser plugin's `project-read` globs bound them (RB-030-07).",
+          "default": [
+            "**/tailwind.config.{js,cjs,mjs,ts}",
+            "**/*.{css,scss,less}"
+          ],
+          "x-category": "breakpoints",
+          "x-section": "analyzer",
+          "x-order": 7,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "The breakpoint analyser (RB-010-13).",
+      "default": {
+        "mode": "all",
+        "urls": [],
+        "edgeViews": false,
+        "mergeTolerancePx": 8,
+        "static": true,
+        "checkOnOpen": false,
+        "staticGlobs": [
+          "**/tailwind.config.{js,cjs,mjs,ts}",
+          "**/*.{css,scss,less}"
+        ]
+      }
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "description": "One entry of `extensions[]`: a Chrome Web Store id/URL or an unpacked folder.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The extension id.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "description": "A Chrome Web Store URL.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "An unpacked extension folder, relative to the project.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-input": "folder"
+          }
+        }
+      },
+      "description": "Recommended extensions; applied only in a trusted workspace (RB-080-06).",
+      "default": [],
+      "x-category": "engines",
+      "x-section": "chromium",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local"
+      ],
+      "x-protected": true
+    },
+    "automation": {
+      "type": "object",
+      "properties": {
+        "recorder": {
+          "type": "object",
+          "properties": {
+            "recordScroll": {
+              "type": "boolean",
+              "description": "Scrolls are steps, consecutive scrolls of one container as one. Off by default: the\nviews scroll along with the clicks they follow.",
+              "default": false,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 1,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "recordHover": {
+              "type": "boolean",
+              "description": "A hover is kept as a step when it revealed what the next click hits (a menu trigger).",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 2,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "secretFields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Further fields whose values are never recorded, besides password fields: a CSS path as\nthe recorder shows it (`#otp`), `[data-testid=\"...\"]` or a field's accessible name. An\nentry also names a URL query or fragment parameter whose value is recorded masked.",
+              "default": [],
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 3,
+              "x-scope": [
+                "project",
+                "local"
+              ],
+              "x-protected": true
+            },
+            "dir": {
+              "type": "string",
+              "description": "The recordings folder, relative to the project root; it must lie inside `.rbrowser/`\nand outside the folders workspace trust protects.",
+              "default": ".rbrowser/out/recordings",
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 4,
+              "x-scope": [
+                "project",
+                "local"
+              ],
+              "x-protected": true,
+              "x-input": "folder"
+            }
+          },
+          "description": "The recorder (RB-050-01).",
+          "default": {
+            "recordScroll": false,
+            "recordHover": true,
+            "secretFields": [],
+            "dir": ".rbrowser/out/recordings"
+          }
+        },
+        "recorderExport": {
+          "type": "object",
+          "properties": {
+            "locatorPreference": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "auto",
+                  "description": "The recorder's rank order: test id, role and name, text, CSS path."
+                },
+                {
+                  "type": "string",
+                  "const": "testid",
+                  "description": "`getByTestId`."
+                },
+                {
+                  "type": "string",
+                  "const": "role",
+                  "description": "`getByRole` with the accessible name."
+                },
+                {
+                  "type": "string",
+                  "const": "text",
+                  "description": "`getByText`."
+                },
+                {
+                  "type": "string",
+                  "const": "css",
+                  "description": "`locator(css)`."
+                }
+              ],
+              "description": "Which selector candidate a locator prefers when the element has it; the recorder's rank\norder (`auto`) otherwise.",
+              "default": "auto",
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 5,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "dir": {
+              "type": "string",
+              "description": "The exports folder, relative to the project root; it must lie inside `.rbrowser/` and\noutside the folders workspace trust protects. Each export is a new folder in it.",
+              "default": ".rbrowser/out/exports",
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 6,
+              "x-scope": [
+                "project",
+                "local"
+              ],
+              "x-protected": true,
+              "x-input": "folder"
+            },
+            "includeConfig": {
+              "type": "boolean",
+              "description": "A spec export writes its `playwright.config.ts` (one project per breakpoint) beside it.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 7,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            }
+          },
+          "description": "The recorder's export (RB-050-02).",
+          "default": {
+            "locatorPreference": "auto",
+            "dir": ".rbrowser/out/exports",
+            "includeConfig": true
+          }
+        }
+      },
+      "description": "Automation: the recorder (RB-050-01).",
+      "default": {
+        "recorder": {
+          "recordScroll": false,
+          "recordHover": true,
+          "secretFields": [],
+          "dir": ".rbrowser/out/recordings"
+        },
+        "recorderExport": {
+          "locatorPreference": "auto",
+          "dir": ".rbrowser/out/exports",
+          "includeConfig": true
+        }
+      }
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "additionalProperties": true,
+  "description": "The whole project config.",
+  "title": "ProjectConfig",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

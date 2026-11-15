@@ -1,0 +1,7 @@
+# The build output, embedded into the binary by RB-010-04; never committed.
+/dist/
+# Theme templates Nuxt UI generates at build time.
+/node_modules/
+/.nuxt-ui/
+/auto-imports.d.ts
+/components.d.ts

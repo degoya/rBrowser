@@ -1,0 +1,15 @@
+{
+  "id": 42,
+  "name": "Ada Lovelace",
+  "email": "ada@example.test",
+  "active": true,
+  "manager": null,
+  "address": { "street": "1 Analytical Way", "city": "London", "geo": { "lat": 51.5072, "lng": -0.1276 } },
+  "roles": ["admin", "editor"],
+  "items": [
+    { "id": 101, "title": "Notes on the engine", "tags": ["math", "history"], "price": 12.5 },
+    { "id": 102, "title": "Bernoulli numbers", "tags": [], "price": 0 },
+    { "id": 103, "title": "Poetical science", "tags": ["essay"], "price": 7.25 }
+  ],
+  "odd key": "needs brackets in a path"
+}

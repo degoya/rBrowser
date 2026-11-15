@@ -1,0 +1,25 @@
+rBrowser
+Copyright (c) DEGOYA.digital
+
+rBrowser is free software, licensed under the GNU General Public License,
+version 3 or (at your option) any later version. See LICENSE.
+
+This test build bundles the following third-party software, each under its own
+licence. VERSION.txt names the exact versions.
+
+
+Chromium Embedded Framework (CEF)
+  https://github.com/chromiumembedded/cef
+  Licence: BSD 3-Clause - the full text is licenses/cef-license.txt.
+  Files: Contents/Frameworks/Chromium Embedded Framework.framework
+
+Chromium
+  https://www.chromium.org
+  Licence: BSD 3-Clause (The Chromium Authors) and the licences of the
+  third-party components Chromium contains (among them ANGLE, SwiftShader,
+  ICU, V8 and the Vulkan loader), listed in full in
+  licenses/chromium-credits.html.
+  Files: part of the framework above
+
+The Rust crates and npm packages rBrowser is built from are listed with their
+licences under Settings > About > Licences.

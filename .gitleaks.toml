@@ -1,0 +1,22 @@
+# gitleaks configuration: the default rules, plus the findings that are known not to be secrets.
+# A whole path is allowed only where the file or directory is test material; elsewhere pair the
+# path with the exact value (condition AND) and name the rule in targetRules, so a real secret
+# added to the same source file is still reported. A global allowlist with paths skips the whole
+# file and ignores the condition; a rule's allowlist does not.
+#
+# gitleaks reads this file from the root of the scanned directory; scripts/check.sh --preflight
+# runs `gitleaks dir .` from there.
+
+title = "rBrowser"
+
+[extend]
+useDefault = true
+
+# One entry per known false positive, with its reason and job ID.
+
+# The CRX3 fixtures' index (RB-080-23): the test developer's and publisher's public keys and the
+# publisher key's hash, written by tests/fixtures/extensions/crx/make_fixtures.py, which keeps no
+# private key. Test material: the whole file is allowed.
+[[allowlists]]
+description = "RB-080-23: public keys of the CRX3 test fixtures"
+paths = ['''tests/fixtures/extensions/crx/fixtures\.json''']

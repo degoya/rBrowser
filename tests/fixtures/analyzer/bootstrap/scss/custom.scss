@@ -1,0 +1,5 @@
+// The project source of the Bootstrap fixture (RB-030-07): Bootstrap imported with its own
+// $grid-breakpoints, a colour overridden before the import.
+$primary: #0f766e;
+
+@import "bootstrap/scss/bootstrap";

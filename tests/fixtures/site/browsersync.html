@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser Browsersync fixture</title>
+<!-- RB-020-06: a page as Browsersync serves it - the snippet it injects after <body>, which
+     writes the client script. Loaded by the agent's Vitest tests (`?raw`); for the manual
+     acceptance run Browsersync itself (`npx browser-sync start --server --files '*.html'` in
+     this folder) and open it in rBrowser: sync switches off with a notice. -->
+</head>
+<body>
+<script id="__bs_script__">//<![CDATA[
+  (function() {
+    try {
+      var script = document.createElement('script');
+      if ('async') { script.async = true; }
+      script.src = '/browser-sync/browser-sync-client.js?v=3.0.3'.replace("HOST", location.hostname);
+      if (document.body) { document.body.appendChild(script); }
+    } catch (e) {}
+  })()
+//]]></script>
+<main>
+  <h1>Browsersync fixture</h1>
+  <p><a href="/next.html" data-testid="next">Next page</a></p>
+</main>
+</body>
+</html>

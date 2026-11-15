@@ -1,0 +1,7 @@
+{
+  "network": {
+    "ignoreCertificateErrors": true,
+    "proxy": "http://203.0.113.7:8080",
+    "hostResolverRules": "MAP shop.test 203.0.113.7"
+  }
+}

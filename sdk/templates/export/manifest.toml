@@ -1,0 +1,27 @@
+# The manifest of an rBrowser export plugin (docs/plugins.md, "The manifest").
+manifest_version = 1
+# Your plugin's identity: lower-case words joined by `-`. Keep it across versions.
+id = "example-export"
+name = "Example export"
+version = "0.1.0"
+# The contract in `wit/` this plugin is built against.
+api_version = "0.1.0"
+kinds = ["export-plugin"]
+# Name your key as you like; `rb-plugin-pack keygen` makes the pair. Keep the private half out of
+# version control.
+key_id = "example-export-release-v1"
+public_key = "REPLACE_WITH_YOUR_BASE64_ED25519_PUBLIC_KEY"
+description = "Writes the pages of a recording as a Playwright test."
+
+[metadata]
+author = "Your name"
+license = "MIT"
+# The first rBrowser release this plugin runs on; scripts/set-version.sh keeps the template's at the
+# release the SDK comes with.
+min_app_version = "0.7.0"
+
+[locales]
+en = "locales/en.json"
+
+# An export plugin turns the recording it is handed into text; it needs no capability.
+[capabilities]

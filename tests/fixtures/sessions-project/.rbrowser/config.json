@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "startUrl": "http://127.0.0.1:18766/",
+  "sessions": ["default", "admin"],
+  "sessionColors": { "admin": "#e5484d" },
+  "breakpoints": [
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 },
+    { "id": "tablet", "label": "Tablet", "width": 768, "height": 1024 },
+    { "id": "mobile", "label": "Mobile admin", "width": 393, "height": 852, "session": "admin" }
+  ],
+  "layout": {
+    "columns": 3,
+    "rows": 1,
+    "gap": 8,
+    "cells": [
+      { "breakpoint": "desktop", "col": 1, "row": 1 },
+      { "breakpoint": "tablet", "col": 2, "row": 1 },
+      { "breakpoint": "mobile", "col": 3, "row": 1 }
+    ]
+  }
+}

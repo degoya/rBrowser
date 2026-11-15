@@ -1,0 +1,119 @@
+{
+  "plugin": {
+    "error-report": {
+      "commands": {
+        "clear": "Clear the error report",
+        "panel": "Show the error report",
+        "run": "Report the views' errors now"
+      },
+      "errors": {
+        "bad_args": "The error report got arguments it cannot read: {reason}"
+      },
+      "findings": {
+        "csp_violation": "CSP violation: {text}",
+        "csp_violation_only": "CSP violation: {text} - only in views: {views}",
+        "deprecation": "Deprecated feature used: {text} ({source})",
+        "deprecation_only": "Deprecated feature used: {text} ({source}) - only in views: {views}",
+        "http_not_found": "Resource not found: {text}",
+        "http_not_found_only": "Resource not found: {text} - only in views: {views}",
+        "http_server_error": "Server error: {text}",
+        "http_server_error_only": "Server error: {text} - only in views: {views}",
+        "js_exception": "Uncaught exception: {text} ({source})",
+        "js_exception_only": "Uncaught exception: {text} ({source}) - only in views: {views}",
+        "mixed_content_blocked": "Mixed content blocked: {text}",
+        "mixed_content_blocked_only": "Mixed content blocked: {text} - only in views: {views}",
+        "mixed_content_passive": "Mixed content loaded or upgraded: {text}",
+        "mixed_content_passive_only": "Mixed content loaded or upgraded: {text} - only in views: {views}"
+      },
+      "html": {
+        "count": "{count} times",
+        "detail": "Detail",
+        "generated": "Generated {time} UTC over {count} views.",
+        "none": "No errors.",
+        "only": "Only in views: {views}",
+        "request": "Request",
+        "source": "Source",
+        "stack": "Stack trace",
+        "title": "Error report",
+        "views": "Views"
+      },
+      "name": "Error Report",
+      "panel": {
+        "clear": "Clear",
+        "count": "{count, plural, one {# time} other {# times}}",
+        "detail": "Detail",
+        "empty": "No errors in the views.",
+        "entries": "Errors by category",
+        "noCapture": "The report receives nothing yet: the app does not hand this plugin the views' errors.",
+        "onlyIn": "only in: {views}",
+        "published": "Report written to .rbrowser/out/error-report/ and the findings panel.",
+        "reload": "Reload the views first",
+        "reloaded": "Reloaded {count, plural, one {# view} other {# views}}; the report shows the fresh load.",
+        "request": "Request",
+        "run": "Report now",
+        "source": "Source or initiator",
+        "stack": "Stack trace",
+        "truncated": "Showing {shown} of {total} errors.",
+        "url": "Resource",
+        "viewDot": "{label} ({breakpoint}, {engine}): {count, plural, one {# time} other {# times}}",
+        "views": "Views"
+      },
+      "panels": {
+        "report": "Error Report"
+      },
+      "rules": {
+        "csp_violation": "Content Security Policy violation",
+        "deprecation": "Deprecated feature",
+        "http_not_found": "Resource not found (404, 410)",
+        "http_server_error": "Server error (5xx)",
+        "js_exception": "Uncaught JavaScript exception",
+        "mixed_content_blocked": "Mixed content blocked",
+        "mixed_content_passive": "Mixed content loaded or upgraded"
+      },
+      "settings": {
+        "ignore": {
+          "description": "Glob patterns (* any text, ? one character, case-blind) matched against an error's URL, source and text; a match leaves the error out of the report and the findings.",
+          "help": "Glob patterns (* any text, ? one character, case-blind) matched against an error's URL, source and text; a match leaves the error out. Example: *analytics.js*, *ResizeObserver loop*.",
+          "label": "Ignore patterns"
+        },
+        "reloadBeforeReport": {
+          "description": "Report now reloads the views and waits until their network is idle, so the report covers one fresh load.",
+          "help": "Report now reloads the views and waits for a quiet network first, so the report covers one fresh load instead of everything since the session started.",
+          "label": "Reload before the report"
+        },
+        "rules": {
+          "description": "Per category (js-exception, http-not-found, http-server-error, mixed-content-blocked, mixed-content-passive, csp-violation, deprecation): off, or the severity it gets.",
+          "help": "Per category (js-exception, http-not-found, http-server-error, mixed-content-blocked, mixed-content-passive, csp-violation, deprecation): off, or the severity its findings get. Example: deprecation to info.",
+          "label": "Categories and severities"
+        },
+        "sinceNavigation": {
+          "description": "Only what a view reported since its page last loaded counts; off, everything still in the capture does.",
+          "help": "Only what a view reported since its page last loaded counts. Off includes everything still in the capture, across navigations.",
+          "label": "Since the page loaded"
+        },
+        "thirdParty": {
+          "description": "Errors of resources and scripts from other sites than the view's page count too.",
+          "help": "Errors of resources and scripts from other sites than the view's page count too. Off reports the site's own only.",
+          "label": "Include third-party origins"
+        },
+        "option": {
+          "rules": {
+            "off": "Off",
+            "info": "Info",
+            "warning": "Warning",
+            "error": "Error"
+          }
+        }
+      },
+      "severities": {
+        "error": "Error",
+        "info": "Note",
+        "warning": "Warning"
+      },
+      "tools": {
+        "clear": "Clears the error report: what the views reported so far leaves it.",
+        "get": "The error report over the views as JSON: JS exceptions, 404/410 and 5xx resources, mixed content, CSP violations and deprecations, deduplicated with the views that reported each (onlyIn when not all did), with source, stack and request. reload: true reloads the targeted views and waits for network idle instead; call again for the report of the fresh load. limit caps the entries (default 500)."
+      }
+    }
+  }
+}

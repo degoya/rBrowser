@@ -1,0 +1,298 @@
+{
+  "plugin": {
+    "network-panel": {
+      "breakpoints": {
+        "abort": "Abort",
+        "abortAll": "Abort for all views",
+        "add": "Add breakpoint",
+        "allViews": "all",
+        "badPattern": "Enter a URL pattern of at most 2048 characters.",
+        "body": "Body",
+        "bodyCut": "The body is cut to the limit; sending it back replaces the original.",
+        "continue": "Continue",
+        "continueAll": "Continue for all views",
+        "disabled": "Breakpoints off",
+        "enableBreakpoint": "Breakpoint {id} on",
+        "enabled": "Breakpoints on",
+        "headers": "Headers (one per line, name: value)",
+        "held": "Held requests",
+        "heldCount": "{count} held",
+        "heldIn": "{label} ({stage})",
+        "heldNone": "No request is held.",
+        "masked": "Cookies and tokens show as ***; sent back as they are, they stay unchanged.",
+        "method": "Method",
+        "none": "No breakpoints yet.",
+        "pattern": "URL pattern",
+        "pending": "{count} waiting for the app",
+        "queued": "Sent to the app.",
+        "regex": "Regular expression",
+        "remove": "Remove",
+        "removeBreakpoint": "Remove breakpoint {id}",
+        "stage": "Stage",
+        "stageRequest": "Request",
+        "stageResponse": "Response",
+        "status": "Status",
+        "timeout": "Held requests go on unchanged after {seconds} s.",
+        "timeoutNone": "Held requests wait until you decide.",
+        "title": "Breakpoints",
+        "url": "URL",
+        "views": "Views",
+        "viewsHelp": "No view chosen: the breakpoint holds requests in every view."
+      },
+      "commands": {
+        "breakpoints_toggle": "Switch the request breakpoints on or off",
+        "cache_toggle": "Switch the cache off or on",
+        "har_export": "Export the requests as HAR",
+        "mocks_toggle": "Switch the mocks on or off",
+        "panel": "Show the network panel",
+        "site_data_clear": "Clear the site data of every view"
+      },
+      "compose": {
+        "badUrl": "Enter an http(s) URL.",
+        "body": "Body",
+        "composed": "composed",
+        "cut": "(cut)",
+        "failed": "{method} {url}: {error}",
+        "headers": "Headers (one per line, name: value)",
+        "method": "Method",
+        "noView": "no view (no cookies)",
+        "none": "No request sent yet.",
+        "repeat": "Repeat",
+        "repeatTen": "Repeat 10x",
+        "result": "{method} {url}: {status} in {time} ms",
+        "results": "Results",
+        "send": "Send",
+        "times": "Times",
+        "title": "Compose",
+        "url": "URL",
+        "view": "Context of view"
+      },
+      "confirm": {
+        "no": "Cancel",
+        "text": "Clear cookies, storage and caches of every view's site? This cannot be undone.",
+        "yes": "Clear"
+      },
+      "detail": {
+        "binary": "The body is binary.",
+        "body": "Body",
+        "cache": "Cache",
+        "close": "Close the request",
+        "cut": "(cut)",
+        "fromCache": "from cache",
+        "mockThis": "Mock this request",
+        "notLoaded": "not loaded in this view",
+        "plainLarge": "Shown in one colour: larger than 200 KiB.",
+        "showBody": "Show",
+        "size": "Size",
+        "status": "Status",
+        "time": "Time",
+        "type": "MIME type",
+        "view": "View"
+      },
+      "done": {
+        "cache": "Cache switched.",
+        "cleared": "Site data cleared.",
+        "exported": "Written: {path}",
+        "mocks": "Mocks switched."
+      },
+      "editor": {
+        "action": "Action",
+        "badDelay": "The delay is a whole number from 0 to 60000.",
+        "badMethod": "The method is one word of letters (GET, POST, ...).",
+        "badPattern": "Enter a URL pattern of at most 2048 characters.",
+        "badStatus": "The status is a number from 100 to 599.",
+        "body": "Body",
+        "cancel": "Cancel",
+        "delay": "Delay (ms)",
+        "method": "Method",
+        "pattern": "URL pattern",
+        "save": "Save",
+        "status": "Status",
+        "title": "New rule"
+      },
+      "errors": {
+        "bad_args": "The network panel got arguments it cannot read: {reason}",
+        "bad_rule": "The rule does not read: {reason}",
+        "har_invalid": "This is no HAR file: {reason}",
+        "har_path": "Only a .har file below .rbrowser/ can be imported.",
+        "har_read": "The HAR file cannot be read.",
+        "no_body": "The view no longer holds this response's body.",
+        "too_many": "The plugin keeps at most {limit} added rules.",
+        "unknown_breakpoint": "There is no breakpoint {id}.",
+        "unknown_rule": "There is no rule {id}.",
+        "untrusted": "Mocks are project content: trust this workspace first (the trust dialog lists the mock files)."
+      },
+      "kinds": {
+        "block": "Block",
+        "mapLocal": "Map local",
+        "mapRemote": "Map remote",
+        "mock": "Mock",
+        "rewrite": "Rewrite"
+      },
+      "list": {
+        "blocked": "blocked",
+        "columns": {
+          "method": "Method",
+          "name": "Request",
+          "views": "Views"
+        },
+        "differs": "differs",
+        "empty": "No requests captured yet.",
+        "failed": "failed",
+        "partial": "only some views",
+        "title": "Requests",
+        "viewMissing": "{label}: not loaded",
+        "viewSeen": "{label}: {status}, {size}"
+      },
+      "mocks": {
+        "blockList": "Blocked by the settings",
+        "blocked": "blocked",
+        "enableRule": "Rule {id} on",
+        "harImport": "Import HAR",
+        "harPath": "HAR file below .rbrowser/",
+        "hits": "{count, plural, one {# hit} other {# hits}}",
+        "imported": "Imported {rules, plural, one {# rule} other {# rules}} ({skipped, plural, one {# entry} other {# entries}} skipped).",
+        "none": "No mock files and no blocked URLs.",
+        "rejected": "rejected by the app: {reason}",
+        "remove": "Remove",
+        "removeRule": "Remove rule {id}",
+        "title": "Mocks and blocking",
+        "untrusted": "This workspace is not trusted: the mock files are not loaded."
+      },
+      "name": "Network",
+      "panels": {
+        "network": "Network"
+      },
+      "sessions": {
+        "close": "Back to live requests",
+        "none": "No saved sessions.",
+        "open": "Open",
+        "opened": "Opened {path}: {entries, plural, one {# request} other {# requests}}.",
+        "save": "Save session",
+        "saved": "Saved: {path}",
+        "title": "Sessions",
+        "viewing": "Showing session {path} (display only)."
+      },
+      "settings": {
+        "allowComposeFromMcp": {
+          "description": "Whether network_compose and network_repeat answer over MCP. Off by default: they send requests with the cookies of the person's views.",
+          "help": "Whether the MCP tools network_compose and network_repeat send requests. They use the cookies, user agent and headers of the view you name, so an AI agent could act as you on a site you are logged in to. Off by default; the panel's Compose tab works either way.",
+          "label": "Compose and repeat over MCP"
+        },
+        "block": {
+          "description": "URL patterns blocked in every Chromium view (* any characters, ? one), whether the workspace is trusted or not.",
+          "help": "URL patterns blocked in every Chromium view (* any characters, ? one), trusted workspace or not. Example: *googletagmanager.com/*, *.woff2 to see the page without analytics or web fonts.",
+          "label": "Blocked URLs"
+        },
+        "breakpoints": {
+          "timeoutMs": {
+            "description": "A request held at a breakpoint goes on unchanged after this many milliseconds (0: never), so the grid never hangs on a forgotten pause.",
+            "help": "A request held at a breakpoint goes on unchanged after this many milliseconds, so the grid never hangs on a forgotten pause. 0 holds it until you continue or abort it. Default 30000.",
+            "label": "Breakpoint timeout (ms)"
+          }
+        },
+        "cacheDisabled": {
+          "description": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space R N switches it for the session.",
+          "help": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space, R, N switches it for the session. On shows every load as a first visit.",
+          "label": "Cache off at start"
+        },
+        "harBodies": {
+          "description": "A HAR export carries the response bodies the views still hold (at most 1 MiB each).",
+          "help": "A HAR export carries the response bodies the views still hold, at most 1 MiB each. Off exports headers and timings only, for a smaller file.",
+          "label": "Bodies in HAR exports"
+        },
+        "mapLocalRoots": {
+          "description": "Folders map-local rules may serve files from, beside the project's own folder. A rule naming a folder outside these is rejected.",
+          "help": "Folders map-local rules may serve files from, beside the project's own folder. A rule naming a folder outside the project and this list is rejected with its reason in the panel. Example: a shared fixtures folder next to the project. Protected: only you change it, never an MCP caller.",
+          "label": "Map local folders"
+        },
+        "mocksDir": {
+          "description": "The folder of the project's mock files, below .rbrowser/ (default .rbrowser/mocks).",
+          "help": "The folder of the project's mock files, below .rbrowser/. Example: .rbrowser/mocks. Each file describes a request pattern and the response it gets.",
+          "label": "Mocks folder"
+        },
+        "mocksEnabled": {
+          "description": "Whether the mocks of .rbrowser/mocks apply when a session starts; the panel and Ctrl+Shift+Space P M switch them for the session. Mocks apply only in a trusted workspace.",
+          "help": "Whether the mock responses of the mocks folder apply when a session starts; the panel and Ctrl+Shift+Space, P, M switch them for the session. Mocks apply only in a trusted workspace.",
+          "label": "Mocks on at start"
+        },
+        "rewrite": {
+          "maxBodyBytes": {
+            "description": "A response body larger than this is not rewritten; the panel counts it as skipped for the rule.",
+            "help": "A response body larger than this is left as it is by a rewrite rule's body replacement and not shown at a response breakpoint; the panel counts it as skipped for the rule. Default 4194304 (4 MiB).",
+            "label": "Largest rewritten body (bytes)"
+          }
+        }
+      },
+      "status": {
+        "noCapture": "The panel receives no requests: the app does not hand this plugin the views' capture.",
+        "noRules": "The app runs no network rules for this plugin.",
+        "skipped": "Bodies over the rewrite limit left as they were: {count}.",
+        "truncated": "Showing the newest {shown} of {total} requests.",
+        "unsupported": "Not intercepted (mocks and blocking apply to Chromium views only): {views}.",
+        "untrusted": "Mocks are off until the workspace is trusted."
+      },
+      "statuses": {
+        "all": "Any status",
+        "error": "HTTP errors",
+        "failed": "Failed",
+        "ok": "OK"
+      },
+      "tabs": {
+        "breakpoints": "Breakpoints",
+        "compose": "Compose",
+        "mocks": "Mocks",
+        "requests": "Requests",
+        "sessions": "Sessions"
+      },
+      "toolbar": {
+        "allTypes": "All types",
+        "cacheOff": "Cache off",
+        "cacheOn": "Cache on",
+        "clearSite": "Clear site data",
+        "differences": "Differences only",
+        "export": "Export HAR",
+        "mocksOff": "Mocks off",
+        "mocksOn": "Mocks on",
+        "search": "Filter by URL",
+        "status": "Status",
+        "type": "Type"
+      },
+      "tools": {
+        "abort": "Fails a held request (id from debug), with allViews the same request held in every view.",
+        "body": "The response body of one request (view and request id from networkpanel_list) while the view still holds it, cut to 32 KiB.",
+        "breakpoint_add": "Adds a breakpoint: urlPattern (glob, or regex: true), method, resourceType, stage (request: method, URL, headers and body editable before it leaves; response: status, headers and body), views (ids; every view when absent). A held request goes on unchanged after network-panel.breakpoints.timeoutMs. Answers the id.",
+        "breakpoint_enable": "Switches one breakpoint on or off.",
+        "breakpoint_remove": "Removes a breakpoint.",
+        "breakpoints_toggle": "Switches every breakpoint on or off for this session (enabled, else the other way round).",
+        "cache_toggle": "Switches the browser cache off or on for this session in every Chromium view (disabled, else the other way round).",
+        "compose": "Sends a request (method, url, headers, body) from the context of view (its cookies, user agent and headers), times in a row (at most 10); the results arrive in debug's composed, masked. The panel's path; over MCP only with mcp.allowEvaluate and network-panel.allowComposeFromMcp. A redirect is answered, never followed.",
+        "continue": "Lets a held request go on (id from debug), with edits (method, url, headers, body or bodyBase64, status) and with allViews the same request held in every view; a masked value sent back means as it was. The panel's path; over MCP only with mcp.allowEvaluate - network_continue carries the finer gate.",
+        "debug": "The HTTP debugger's state: the requests held at breakpoints (masked), the breakpoints, the composed and repeated results, the host's answers to the panel's asks and the limits in force. Over MCP only with mcp.allowEvaluate (it carries the held bodies); network_breakpoints lists the held requests without them.",
+        "har_export": "Writes the captured requests as HAR 1.2 to .rbrowser/out/network-panel/ - merged, per view (merged: false) or of the target view - with the response bodies the views still hold; answers the file paths.",
+        "har_import": "Imports a HAR file below .rbrowser/ as replay mocks (one rule per method and URL) into the plugin's own mock files. Needs workspace trust, and over MCP the evaluate switch (mcp.allowEvaluate).",
+        "list": "The requests of every view in one list, grouped by method and URL, each with what every view saw (status, size, time); partial marks a request some views did not load (srcset picking another image), differs one the views saw differently. Filters: search, types, status (ok, error, failed), differences.",
+        "mock_add": "Adds a mock, block or rewrite rule: match (urlPattern as glob or regex, method, resourceType) and one of mock (status, headers, body, delayMs), block, rewrite (url, headers). Needs workspace trust, and over MCP the evaluate switch (mcp.allowEvaluate): a mocked response is content the page runs. Answers the rule's id.",
+        "mock_enable": "Switches one rule on or off.",
+        "mock_remove": "Removes a rule the plugin added (own:...); a rule of a project mock file is switched off instead.",
+        "mocks": "The mock files (.rbrowser/mocks/*.json and the plugin's own) with their rules, whether each is on, its hits and why the host rejected one; the block list from the settings. Without workspace trust only the file names, marked blocked.",
+        "mocks_toggle": "Switches all mocks on or off for this session (enabled, else the other way round).",
+        "repeat": "Sends a captured request (view and requestId from networkpanel_list) again with edits, times in a row (at most 10), from the view's context; the results arrive in debug's composed, masked. The panel's path; over MCP only with mcp.allowEvaluate and network-panel.allowComposeFromMcp. Moved to another origin, the captured cookies and tokens stay behind.",
+        "session_open": "Opens a saved session (a .har below .rbrowser/) as the list's rows, for display only; nothing of it is applied.",
+        "session_save": "Saves the captured requests of every view as a HAR session in .rbrowser/out/network-panel/sessions/ (name, else a time stamp), with rBrowser's view, breakpoint and difference marks and the secrets masked; answers the path.",
+        "sessions_list": "The saved sessions."
+      },
+      "types": {
+        "document": "Document",
+        "fetch": "Fetch",
+        "font": "Font",
+        "image": "Image",
+        "media": "Media",
+        "other": "Other",
+        "script": "Script",
+        "stylesheet": "Stylesheet",
+        "xhr": "XHR"
+      }
+    }
+  }
+}
