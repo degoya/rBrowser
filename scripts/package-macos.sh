@@ -183,7 +183,17 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 echo "==> writing $ZIP and $DMG"
 (cd "$STAGE" && ditto -c -k --keepParent rBrowser.app "$ZIP")
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -quiet -volname "rBrowser $version" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+# hdiutil fails now and then with "Resource busy" on a busy machine (GitHub's Intel runners):
+# three tries, each one saying why it failed.
+for try in 1 2 3; do
+    hdiutil create -volname "rBrowser $version" -srcfolder "$STAGE" -ov -format UDZO "$DMG" && break
+    if [[ "$try" -eq 3 ]]; then
+        echo "!! hdiutil could not write $DMG" >&2
+        exit 1
+    fi
+    echo "==> hdiutil failed (try $try of 3); again in 10 s"
+    sleep 10
+done
 du -sh "$APP" "$ZIP" "$DMG"
 rm -rf "$STAGE"
 echo "==> done"

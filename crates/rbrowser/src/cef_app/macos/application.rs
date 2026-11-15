@@ -3,8 +3,8 @@
 //! Chromium's message pump asks the shared `NSApplication` whether it is inside `sendEvent:`
 //! (`CrAppProtocol`, `CrAppControlProtocol`; CEF names the set `CefAppProtocol`), so the shared
 //! application must be of a class that answers: [`RbApplication`], made the shared one before
-//! CEF starts ([`install`]). Its `terminate:` - the Quit item, Cmd+Q, the Dock's Quit, a log-out
-//! - closes the main window as its close button does, so the app always ends through CEF's own
+//! CEF starts ([`install`]). Its `terminate:` (the Quit item, Cmd+Q, the Dock's Quit, a log-out)
+//! closes the main window as its close button does, so the app always ends through CEF's own
 //! shutdown (`window.rs`, `on_window_destroyed`), never through `exit`.
 //!
 //! The menu bar has the standard items: the app menu (About, Settings, Hide, Quit; About and

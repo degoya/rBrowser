@@ -183,7 +183,8 @@ wrap_menu_model_delegate! {
                 return;
             };
             let flags: cef::sys::cef_event_flags_t = event_flags.into();
-            let modifiers = modifiers_from_event_flags(u32::try_from(flags.0).unwrap_or(0));
+            // The bits as they are: `cef_event_flags_t` is i32 on Windows and u32 on macOS.
+            let modifiers = modifiers_from_event_flags(u32::from_ne_bytes(flags.0.to_ne_bytes()));
             breakpoint_keys::pick(core, self.view, item, modifiers);
         }
     }
