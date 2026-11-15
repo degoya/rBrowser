@@ -137,19 +137,27 @@ rb_macos_stage "$cef_dir" "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "
 resources="$APP/Contents/Resources"
 python3 -I scripts/lib/icns.py "$resources/rbrowser.icns" crates/rbrowser/resources/rbrowser.ico
 mkdir -p "$resources/licenses"
-for file in CREDITS.html LICENSE.txt; do
-    [[ -f "$cef_dir/$file" ]] || { echo "!! no $cef_dir/$file: the licences cannot be shipped" >&2; exit 1; }
-done
+[[ -f "$cef_dir/CREDITS.html" ]] || { echo "!! no $cef_dir/CREDITS.html: the licences cannot be shipped" >&2; exit 1; }
 install -m 644 "$cef_dir/CREDITS.html" "$resources/licenses/chromium-credits.html"
-install -m 644 "$cef_dir/LICENSE.txt" "$resources/licenses/cef-license.txt"
+# The cef crate extracts no LICENSE.txt; CEF's own licence comes from the archive, checked
+# against its pin above.
+cef_pin="$(rb_cef_macos_pin "$arch")"
+cef_archive="${cef_pin% *}"
+if [[ -f "$cef_dir/LICENSE.txt" ]]; then
+    install -m 644 "$cef_dir/LICENSE.txt" "$resources/licenses/cef-license.txt"
+elif ! tar -xjOf "$CEF_PATH/$RB_CEF_VERSION/$cef_archive" "${cef_archive%.tar.bz2}/LICENSE.txt" \
+    > "$resources/licenses/cef-license.txt" || [[ ! -s "$resources/licenses/cef-license.txt" ]]; then
+    echo "!! no LICENSE.txt in $cef_dir or $cef_archive: the licences cannot be shipped" >&2
+    exit 1
+fi
 install -m 644 packaging/macos/README.txt packaging/macos/NOTICE LICENSE CHANGELOG.md "$resources/"
 if ((${#plugins[@]})); then
     mkdir -p "$resources/plugins"
     install -m 644 "${plugins[@]}" "$resources/plugins/"
 fi
-cef_build="${RB_CEF_ARCHIVE_MACOS_ARM64#cef_binary_}"
+cef_build="${cef_archive#cef_binary_}"
 printf '%s\n' "rBrowser $version" "commit $RB_BUILD_COMMIT" "built $RB_BUILD_TIME" \
-    "target $TARGET, profile $profile" "cef ${cef_build%_macosarm64*}" \
+    "target $TARGET, profile $profile" "cef ${cef_build%_macos*}" \
     > "$resources/VERSION.txt"
 
 echo "==> checking the bundle"

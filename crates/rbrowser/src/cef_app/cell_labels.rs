@@ -71,6 +71,13 @@ pub fn strip_of(view: ViewId) -> Option<LabelButton> {
 /// Every label strip that is drawn in a window - the views' and the empty cells' - with its
 /// rectangle in screen DIP and its window: what a right-click can hit (RB-080-46). A strip the
 /// grid built before and took out again (the canvas board draws its own) is in no window.
+#[cfg_attr(
+    target_os = "macos",
+    allow(
+        dead_code,
+        reason = "used by the Windows-only strip right-click; its macOS twin is a no-op"
+    )
+)]
 pub fn strips() -> Vec<(Strip, ScreenRect, Window)> {
     let placed = |strip: Strip, button: &LabelButton| {
         let view = View::from(button);
