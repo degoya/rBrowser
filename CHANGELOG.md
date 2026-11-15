@@ -191,6 +191,12 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ### Fixed
 
+- On Windows a `file:` URL typed with backslashes (`file://C:\site\index.html`) is read as the
+  browser reads it: `rbrowser init --url` and the breakpoint analyzer no longer fail with "The
+  network path was not found", and MCP `navigate` no longer refuses such a project file as
+  outside the project; a `..` step written with backslashes is refused everywhere (RB-090-30).
+- On Windows a CSS change swaps the stylesheet again instead of reloading the page: the folder
+  Windows reports as modified beside the file is no change of its own (RB-090-30).
 - Settings choices show names instead of ids, core and plugin keys (e.g. the SEO preview
   platforms); the id only with `settings.showKeys`; the settings lint requires a name for every
   option (RB-090-16).

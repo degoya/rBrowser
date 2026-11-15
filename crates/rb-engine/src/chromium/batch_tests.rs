@@ -142,7 +142,7 @@ async fn a_page_that_takes_too_long_times_out() {
 async fn loads_of_one_host_are_spaced_by_the_interval() {
     let backend = Arc::new(FakeBackend::default());
     let mut options = options(4);
-    options.host_interval = Duration::from_millis(40);
+    options.host_interval = Duration::from_millis(100);
     let one_host: Vec<BatchTask> = tasks(&["https://a.test/1", "https://a.test/2"])
         .into_iter()
         .take(4)
@@ -152,9 +152,12 @@ async fn loads_of_one_host_are_spaced_by_the_interval() {
     let visits = lock(&backend.visits).clone();
     let mut times: Vec<Instant> = visits.iter().map(|(_, when)| *when).collect();
     times.sort();
+    // Windows wakes timers on its ~15.6 ms tick, so one load can come up to two ticks late (the
+    // gate's sleep and the view's open) while the next is on time: half the interval still proves
+    // the spacing, since without the gate the four loads start together.
     for pair in times.windows(2) {
         assert!(
-            pair[1] - pair[0] >= Duration::from_millis(35),
+            pair[1] - pair[0] >= Duration::from_millis(50),
             "{:?}",
             pair[1] - pair[0]
         );

@@ -40,15 +40,23 @@ fn the_project_wins_and_every_value_is_bounded() {
 
 #[test]
 fn only_an_absolute_ffmpeg_path_is_taken() {
+    // A rooted path without a drive is relative to the current drive on Windows.
+    const ROOTED: &str = "/usr/bin/ffmpeg";
+    const DRIVE: &str = "C:\\tools\\ffmpeg.exe";
     let tools = |path: &str| ToolsSettings {
         ffmpeg_path: Some(path.to_owned()),
     };
     let none = VideoConfig::default();
-    for relative in ["ffmpeg.exe", "bin/ffmpeg", "  "] {
+    let (relatives, absolutes): (&[&str], &[&str]) = if cfg!(windows) {
+        (&["ffmpeg.exe", "bin/ffmpeg", "  ", ROOTED], &[DRIVE])
+    } else {
+        (&["ffmpeg.exe", "bin/ffmpeg", "  "], &[DRIVE, ROOTED])
+    };
+    for &relative in relatives {
         let settings = VideoSettings::resolve(&none, &none, &tools(relative));
         assert_eq!(settings.ffmpeg_path, None, "{relative:?}");
     }
-    for absolute in ["C:\\tools\\ffmpeg.exe", "/usr/bin/ffmpeg"] {
+    for &absolute in absolutes {
         let settings = VideoSettings::resolve(&none, &none, &tools(absolute));
         assert_eq!(
             settings.ffmpeg_path.as_deref(),

@@ -29,8 +29,9 @@ clap = { version = "4.6.7", features = ["derive"] }
 embed-resource = "3.0.12"
 # Ordered maps whose order is meaning: layout presets in config order (leader L 1-9, rb-config).
 indexmap = { version = "2.14.2", features = ["serde"] }
-# The project watcher (Reload & Files): ReadDirectoryChangesW on Windows, inotify inside WSL.
-notify = { version = "8.2.2", default-features = false }
+# The project watcher (Reload & Files): ReadDirectoryChangesW on Windows, inotify inside WSL,
+# FSEvents on macOS (RB-090-15; without the feature notify 8 does not build there).
+notify = { version = "8.2.2", default-features = false, features = ["macos_fsevent"] }
 # The MCP server (rb-mcp): HTTP on 127.0.0.1 plus stdio forwarding from WSL.
 rmcp = { version = "3.10.0", default-features = false, features = ["macros", "server", "transport-io", "transport-streamable-http-server"] }
 # The JSON Schema of the project config and the settings (rb-config).

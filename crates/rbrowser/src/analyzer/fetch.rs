@@ -96,10 +96,12 @@ fn read_file(path: &Path, limit: u64) -> Result<String, String> {
 }
 
 /// The local path of a `file:` URL (`file:///C:/site/a.css`, `file:///home/me/a.css`,
-/// `file://server/share/a.css` as the UNC path `//server/share/a.css`), its percent-escapes
-/// decoded; `None` for another scheme, a broken escape or a path that is no UTF-8.
+/// `file://server/share/a.css` as the UNC path `//server/share/a.css`), read as
+/// [`normalize_file_url`] reads it, its percent-escapes decoded; `None` for another scheme, a
+/// broken escape or a path that is no UTF-8.
 pub(crate) fn file_path(url: &str) -> Option<std::path::PathBuf> {
-    if !is_file(url) || !url.get(5..)?.starts_with("//") {
+    let url = normalize_file_url(url);
+    if !is_file(&url) || !url.get(5..)?.starts_with("//") {
         return None;
     }
     let rest = url.get(7..)?;
@@ -117,6 +119,25 @@ pub(crate) fn file_path(url: &str) -> Option<std::path::PathBuf> {
         _ => path,
     };
     Some(std::path::PathBuf::from(path))
+}
+
+/// A `file:` URL as a browser reads it (WHATWG URL, RB-090-30): a backslash before the query is
+/// a slash, and a Windows drive in the host's place is the path's first segment, so
+/// `file://C:\site\a.css` is `file:///C:/site/a.css`, not a share on a server `C:`. `..` steps
+/// and escapes stay; another URL, or a `file:` URL without `//`, comes back as it is.
+pub(crate) fn normalize_file_url(url: &str) -> String {
+    let Some(rest) = url.get(5..).filter(|_| is_file(url)) else {
+        return url.to_owned();
+    };
+    let (before, suffix) = rest.split_at(rest.find(['?', '#']).unwrap_or(rest.len()));
+    let before = before.replace('\\', "/");
+    let Some(after) = before.strip_prefix("//") else {
+        return url.to_owned();
+    };
+    let host = after.split('/').next().unwrap_or_default();
+    let drive = matches!(host.as_bytes(), [letter, b':'] if letter.is_ascii_alphabetic());
+    let slash = if drive { "/" } else { "" };
+    format!("file://{slash}{after}{suffix}")
 }
 
 /// `text` with every `%XX` decoded; `None` for a broken escape or bytes that are no UTF-8.
@@ -156,6 +177,8 @@ pub fn collect(fetch: &dyn Fetch, urls: &[String]) -> Result<Collected, String> 
     let mut seen = BTreeSet::new();
     let mut failures = Vec::new();
     for page in urls {
+        // The base the sheets resolve against, with slashes where a person typed backslashes.
+        let page = &normalize_file_url(page);
         let html = match fetch.text(page, MAX_HTML_BYTES) {
             Ok(html) => html,
             Err(error) => {

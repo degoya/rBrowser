@@ -21,6 +21,12 @@ fn launcher() -> ConfiguredLauncher {
     )
 }
 
+/// An absolute browsers folder on the platform the test runs on.
+#[cfg(windows)]
+const BROWSERS: &str = "C:\\pw";
+#[cfg(not(windows))]
+const BROWSERS: &str = "/pw";
+
 #[test]
 fn the_launcher_reads_the_settings_in_effect_at_each_start() {
     let launcher = launcher();
@@ -31,10 +37,10 @@ fn the_launcher_reads_the_settings_in_effect_at_each_start() {
         first.browsers_path,
         PathBuf::from("/home/user/AppData/Local/rBrowser/ms-playwright")
     );
-    launcher.set_settings(settings(Some("/node/bin/node"), Some("/pw"), 5_000));
+    launcher.set_settings(settings(Some("/node/bin/node"), Some(BROWSERS), 5_000));
     let second = launcher.node_launcher().expect("changed");
     assert_eq!(second.node_path.as_deref(), Some("/node/bin/node"));
-    assert_eq!(second.browsers_path, PathBuf::from("/pw"));
+    assert_eq!(second.browsers_path, PathBuf::from(BROWSERS));
 }
 
 #[test]

@@ -83,6 +83,20 @@ run_status rb_stage_app "$BUILD" "$APP" "$UI"
 expect_status "a second run updates the folder" 0
 expect_true "without a shell build the folder has no ui\\" '[[ ! -e $APP/ui ]]'
 
+# A build output without the runtime (the build script's copy went to another profile): the
+# runtime comes from the extracted distribution in the CEF cache, rbrowser.dll from the build.
+DIST="$(rb_cef_windows_dir "$SCRATCH/cef-cache")"
+mkdir -p "$DIST/locales" "$SCRATCH/bare"
+for file in bootstrap.exe libcef.dll chrome_elf.dll resources.pak icudtl.dat locales/de.pak; do
+    printf 'dist %s' "$file" > "$DIST/$file"
+done
+printf 'rbrowser.dll' > "$SCRATCH/bare/rbrowser.dll"
+CEF_PATH="$SCRATCH/cef-cache" run_status rb_stage_app "$SCRATCH/bare" "$SCRATCH/app3"
+expect_status "a build without the runtime takes it from the CEF cache" 0
+expect "rbrowser.exe is the distribution's bootstrap" "dist bootstrap.exe" "$(cat "$SCRATCH/app3/rbrowser.exe")"
+expect_true "the DLL from the build, the runtime and locales from the distribution" \
+    '[[ $(cat $SCRATCH/app3/rbrowser.dll) == rbrowser.dll && -f $SCRATCH/app3/libcef.dll && -f $SCRATCH/app3/locales/de.pak ]]'
+
 rm "$BUILD/rbrowser.dll"
 run_status rb_stage_app "$BUILD" "$SCRATCH/app2"
 expect_status "a build without rbrowser.dll fails" 1

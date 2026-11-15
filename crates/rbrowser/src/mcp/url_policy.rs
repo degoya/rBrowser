@@ -3,8 +3,9 @@
 //! wider list of `host::nav` (`file:` anywhere, `about:`, `data:`, `chrome:`, `view-source:`):
 //! a person chose those; an agent would read local files or Chromium's internal pages with them.
 //!
-//! A `file:` URL is decoded into its path and refused before the file system is touched when it
-//! has a `..` step or does not lie below the project root as written (a `file://server/...`
+//! A `file:` URL is decoded into its path as the browser reads it (a backslash is a slash, and
+//! `file://C:\site` names a drive, RB-090-30) and refused before the file system is touched when
+//! it has a `..` step or does not lie below the project root as written (a `file://server/...`
 //! share never makes Windows connect). Then the file itself must be no link (never followed) and
 //! its canonical path must lie inside the canonical project root, so no folder link on the way
 //! leads out. A link swapped in between this check and the load is the residual risk

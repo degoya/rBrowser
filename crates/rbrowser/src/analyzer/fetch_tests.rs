@@ -183,8 +183,63 @@ fn a_file_url_is_decoded_into_its_path() {
         path("file://server/share/a.css").as_deref(),
         Some("//server/share/a.css")
     );
+    // RB-090-30: as a browser reads them (WHATWG URL), a backslash is a slash and a Windows
+    // drive in the host's place is the path's first segment - never a share named `C:`.
+    assert_eq!(
+        path("file://C:\\My%20Site\\a.css").as_deref(),
+        Some("C:/My Site/a.css")
+    );
+    assert_eq!(
+        path("file://c:/site/a.css").as_deref(),
+        Some("c:/site/a.css")
+    );
+    assert_eq!(
+        path("file:///D:\\site\\..\\a.css").as_deref(),
+        Some("D:/site/../a.css"),
+        "a parent step stays for the caller to see"
+    );
+    assert_eq!(
+        path("file://server\\share\\a.css").as_deref(),
+        Some("//server/share/a.css")
+    );
     assert_eq!(path("file:///a%zz.css"), None, "a broken escape");
     assert_eq!(path("file:///a%+f.css"), None, "a sign is no hex digit");
     assert_eq!(path("file:///a%FF.css"), None, "no UTF-8");
     assert_eq!(path("http://site.test/a.css"), None);
+}
+
+#[test]
+fn a_file_url_with_backslashes_is_read_as_a_browser_reads_it() {
+    use super::normalize_file_url;
+    assert_eq!(
+        normalize_file_url("file://C:\\site\\index.html?a\\b#c"),
+        "file:///C:/site/index.html?a\\b#c"
+    );
+    assert_eq!(
+        normalize_file_url("FILE:///C:\\site/a.css"),
+        "file:///C:/site/a.css"
+    );
+    for unchanged in [
+        "file:///home/me/a.css",
+        "file:///C:/site/a.css",
+        "file://server/share/a.css",
+        "https://a.test/a\\b",
+    ] {
+        assert_eq!(normalize_file_url(unchanged), unchanged);
+    }
+    let pages = Pages(BTreeMap::from([
+        (
+            "file:///C:/site/index.html",
+            "<link rel=stylesheet href=css/a.css>",
+        ),
+        ("file:///C:/site/css/a.css", "@media (min-width: 600px) {}"),
+    ]));
+    let collected =
+        collect(&pages, &["file://C:\\site\\index.html".to_owned()]).expect("collected");
+    let urls: Vec<&str> = collected
+        .sheets
+        .iter()
+        .map(|sheet| sheet.url.as_str())
+        .collect();
+    assert_eq!(urls, vec!["file:///C:/site/css/a.css"]);
 }

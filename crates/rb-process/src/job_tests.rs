@@ -119,9 +119,10 @@ async fn the_tree_ends_with_its_job() {
     assert!(job.active_processes() >= Some(2), "ping joined the job");
     assert!(job.pids().contains(&pid));
     drop(job);
-    let status = tokio::time::timeout(std::time::Duration::from_secs(10), child.wait())
+    // Ending within the give-up deadline (ping runs 60 s) is the proof: a process the closing job
+    // ends (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) exits with code 0, so the status says nothing.
+    tokio::time::timeout(std::time::Duration::from_secs(10), child.wait())
         .await
         .expect("cmd ended with its job")
         .expect("a status");
-    assert!(!status.success());
 }

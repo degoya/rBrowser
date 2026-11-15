@@ -192,8 +192,10 @@ fn installed_keeps_every_existing_file_once_in_search_order_with_its_version() {
     let exists = |path: &Path| {
         path.to_string_lossy().eq_ignore_ascii_case(release) || path == Path::new(developer)
     };
+    // `Path::join` puts a backslash before `application.ini` on Windows.
     let read = |path: &Path| {
         path.to_string_lossy()
+            .replace('\\', "/")
             .eq_ignore_ascii_case("C:/Program Files/Mozilla Firefox/application.ini")
             .then(|| "[App]\nVersion=134.0\n".to_owned())
     };

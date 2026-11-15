@@ -23,6 +23,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    # Held by hand in Cargo.toml: ureq 3.5.2 caps a JSON body at 10 MiB and cef-dll-sys reads the
+    # CEF builds index (larger) with it; free again once cef-dll-sys moves on.
+    ignore:
+      - dependency-name: "ureq"
     groups:
       cargo-compatible:
         update-types: [minor, patch]
@@ -55,6 +59,10 @@ updates:
     # would offer APIs the runtime does not have.
     ignore:
       - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (the native compiler) has no `lib/tsc` and vue-tsc's Volar wants `<7`; the
+      # shell and the panels type-check with vue-tsc, so the major waits for vue-tsc.
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     groups:
       npm-compatible:

@@ -73,6 +73,53 @@ fn a_parent_step_a_foreign_host_or_a_broken_escape_is_refused_before_any_lookup(
     assert!(check("file:///a%zz.html", Some(Path::new("/"))).is_err());
 }
 
+/// RB-090-30: a backslash is a slash to the browser, so `a\..\..\x.html` climbs out of the
+/// project there; the policy reads it the same way, even where a file of that name exists.
+#[cfg(unix)]
+#[test]
+fn a_backslash_parent_step_is_a_parent_step() {
+    let project = tempfile::tempdir().expect("temp");
+    let sub = project.path().join("sub");
+    std::fs::create_dir_all(&sub).expect("dirs");
+    std::fs::write(sub.join("a\\..\\..\\x.html"), "x").expect("a file named so");
+    let url = format!("{}/a\\..\\..\\x.html", url_of(&sub));
+    let refused = check(&url, Some(project.path())).expect_err("a parent step");
+    assert!(refused.contains("outside the project"), "{refused}");
+}
+
+/// RB-090-30: a Windows path pasted after `file://` (backslashes, the drive in the host's
+/// place, a drive letter in another case) is read as the browser reads it; a verbatim or UNC
+/// form never passes.
+#[cfg(windows)]
+#[test]
+fn a_windows_file_url_is_read_as_the_browser_reads_it() {
+    let project = tempfile::tempdir().expect("temp");
+    let page = project.path().join("a.html");
+    std::fs::write(&page, "x").expect("file");
+    let shown = page.display().to_string();
+    let other_case = format!("{}{}", shown[..1].to_ascii_lowercase(), &shown[1..]);
+    for url in [
+        format!("file://{shown}"),
+        format!("file:///{shown}"),
+        format!("file:///{}", shown.replace('\\', "/")),
+        format!("file://{other_case}"),
+    ] {
+        assert_eq!(
+            check(&url, Some(project.path())).as_deref(),
+            Ok(url.as_str()),
+            "{url}"
+        );
+    }
+    for url in [
+        format!("file:///%5C%5C%3F%5C{shown}"),
+        format!("file:////%3F/{shown}"),
+        format!("file://127.0.0.1/{}", shown.replace(':', "$")),
+        format!("file://{shown}\\..\\..\\a.html"),
+    ] {
+        assert!(check(&url, Some(project.path())).is_err(), "{url}");
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn a_link_is_never_followed() {

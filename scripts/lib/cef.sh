@@ -42,25 +42,38 @@ rb_cef_verify() {
 # Assembles the app folder $2 from the build output $1 (target/<triple>/<profile>): bootstrap.exe
 # as rbrowser.exe, rbrowser.dll (and its PDB when there), the CEF runtime (*.dll, *.pak, *.dat,
 # *.bin, the SwiftShader ICD, locales\) and, when $3 holds a build of the shell, $3 as ui\.
+# The cef crate's build script copies the runtime into the build output, but only into the
+# profile its run was shared with: a release-test build after a clippy run (the CI's Windows
+# job) finds none there. The runtime then comes from the extracted distribution in the CEF cache
+# (rb_cef_windows_dir), the files the build script would have copied.
 # Files are copied only when newer, so a second run is quick.
 rb_stage_app() {
-    local build="$1" app="$2" ui="${3:-}" file name
-    for name in bootstrap.exe rbrowser.dll libcef.dll; do
-        if [[ ! -f "$build/$name" ]]; then
-            echo "!! $build has no $name: build -p rbrowser for Windows first" >&2
+    local build="$1" app="$2" ui="${3:-}" cef="$1" dist file name
+    dist="$(rb_cef_windows_dir "$(rb_cef_path)")"
+    if [[ ! -f "$build/bootstrap.exe" || ! -f "$build/libcef.dll" ]] \
+        && [[ -f "$dist/bootstrap.exe" && -f "$dist/libcef.dll" ]]; then
+        cef="$dist"
+    fi
+    if [[ ! -f "$build/rbrowser.dll" ]]; then
+        echo "!! $build has no rbrowser.dll: build -p rbrowser for Windows first" >&2
+        return 1
+    fi
+    for name in bootstrap.exe libcef.dll; do
+        if [[ ! -f "$cef/$name" ]]; then
+            echo "!! $build has no $name (nor $dist): build -p rbrowser for Windows first" >&2
             return 1
         fi
     done
     mkdir -p "$app"
-    cp -u "$build/bootstrap.exe" "$app/rbrowser.exe"
-    for file in "$build"/*.dll "$build"/*.pak "$build"/*.dat "$build"/*.bin \
-        "$build/vk_swiftshader_icd.json" "$build/rbrowser.pdb"; do
+    cp -u "$cef/bootstrap.exe" "$app/rbrowser.exe"
+    for file in "$cef"/*.dll "$cef"/*.pak "$cef"/*.dat "$cef"/*.bin \
+        "$cef/vk_swiftshader_icd.json" "$build/rbrowser.dll" "$build/rbrowser.pdb"; do
         [[ -f "$file" ]] || continue
         cp -u "$file" "$app/"
     done
-    if [[ -d "$build/locales" ]]; then
+    if [[ -d "$cef/locales" ]]; then
         mkdir -p "$app/locales"
-        cp -ru "$build/locales/." "$app/locales/"
+        cp -ru "$cef/locales/." "$app/locales/"
     fi
     if [[ -n "$ui" && -f "$ui/index.html" ]]; then
         rm -rf "$app/ui"
@@ -68,6 +81,11 @@ rb_stage_app() {
     else
         rm -rf "$app/ui"
     fi
+}
+
+# The Windows distribution the cef crate extracted into cache $1: <cache>/<version>/cef_windows_x86_64.
+rb_cef_windows_dir() {
+    printf '%s\n' "$1/$RB_CEF_VERSION/cef_windows_x86_64"
 }
 
 # --- macOS (RB-090-15) -------------------------------------------------------------------------

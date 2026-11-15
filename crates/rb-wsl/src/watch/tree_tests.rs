@@ -62,6 +62,31 @@ fn a_recursive_watch_holds_the_root_alone() {
     assert_eq!(tree.folders(), 1);
 }
 
+/// RB-090-30: ReadDirectoryChangesW reports a folder as modified when a file in it is written,
+/// beside the file's own event; that folder is no change of the page (a CSS edit would reload).
+#[test]
+fn a_modified_folder_is_no_change_but_a_created_one_is() {
+    let dir = project();
+    let root = dir.path();
+    let mut tree = TreeWatch::new(root, filter(), watcher(), TreeMode::Recursive).expect("watched");
+    for kind in [modify(), EventKind::Modify(ModifyKind::Any), EventKind::Any] {
+        let seen = tree
+            .on_event(&event(kind, &root.join("src/styles")))
+            .expect("an event");
+        assert!(seen.is_empty(), "{kind:?}: {seen:?}");
+    }
+    let created = tree
+        .on_event(&event(
+            EventKind::Create(CreateKind::Folder),
+            &root.join("src/styles"),
+        ))
+        .expect("an event");
+    assert_eq!(
+        created,
+        vec![Seen::Change(Change::new("src/styles", ChangeKind::Create))]
+    );
+}
+
 #[test]
 fn events_become_relative_changes_and_ignored_ones_vanish() {
     let dir = project();

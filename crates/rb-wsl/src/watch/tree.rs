@@ -170,7 +170,11 @@ impl<W: Watcher> TreeWatch<W> {
             {
                 self.walk(path)?;
             }
-            if self.filter.accepts(&rel, is_dir) {
+            // A folder reported as modified (ReadDirectoryChangesW does when an entry in it
+            // changes, inotify when its attributes do) changes no page: the entry's own event
+            // reports what changed.
+            let folder_touched = is_dir && kind == ChangeKind::Modify;
+            if !folder_touched && self.filter.accepts(&rel, is_dir) {
                 seen.push(Seen::Change(Change::new(rel, kind)));
             }
         }
