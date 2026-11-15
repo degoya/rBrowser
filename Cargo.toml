@@ -90,7 +90,7 @@ axum = { version = "0.8.9", default-features = false, features = ["http1", "json
 # (RB-010-13); the version and features download-cef already brings into the lock.
 # ureq 3.5.2 caps a JSON body at 10 MiB; cef-dll-sys reads the CEF builds index (larger) with it,
 # so the Windows lanes failed on 2026-11-13. Held at 3.5.1 until cef-dll-sys moves on.
-ureq = "=3.5.1"
+ureq = "=3.5.2"
 # CRX3 signature checks of Web Store extensions (RB-080-23): RSA-SHA256 and SHA-256; the
 # version rustls already brings into the lock.
 ring = "0.17.14"
