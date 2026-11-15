@@ -7,7 +7,15 @@ import { ErrorCode, RpcError } from '../../rpc.ts';
 import { Router } from '../../router.ts';
 import { realFlowsDeps } from './real.ts';
 import { CLOSE_TIMEOUT_MS, SCREENSHOT_TIMEOUT_MS, VIEW_OVERHEAD_MS } from './result.ts';
-import { type FlowsDeps, type WorkerChild, nodeArgs, registerFlows, runBudgetMs, workerEnv } from './spawn.ts';
+import {
+  type FlowsDeps,
+  LINUX_WSL_PROBES,
+  type WorkerChild,
+  nodeArgs,
+  registerFlows,
+  runBudgetMs,
+  workerEnv,
+} from './spawn.ts';
 
 const TOKEN = 'be5'.repeat(22);
 
@@ -197,6 +205,20 @@ describe('flows.run', () => {
     ]) {
       await expect(call(params(bad))).rejects.toBeInstanceOf(RpcError);
     }
+  });
+});
+
+describe('nodeArgs', () => {
+  const deps = { sidecarDir: '/sidecar', workerScript: '/sidecar/dist/flow-worker.js', netFlag: false };
+
+  it("grants on Linux only the two paths Playwright's WSL check asks after, nothing else of the system", () => {
+    const linux = nodeArgs(deps, '/site', '/site/out', 'linux');
+    for (const path of LINUX_WSL_PROBES) {
+      expect(linux).toContain(`--allow-fs-read=${path}`);
+    }
+    expect(linux.filter((a) => a.startsWith('--allow-fs-read='))).toHaveLength(3 + LINUX_WSL_PROBES.length);
+    const windows = nodeArgs(deps, 'C:\\site', 'C:\\site\\out', 'win32');
+    expect(windows.some((a) => LINUX_WSL_PROBES.some((path) => a.endsWith(path)))).toBe(false);
   });
 });
 

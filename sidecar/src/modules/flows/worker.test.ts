@@ -113,6 +113,18 @@ describe('the permission flags', () => {
     expect(out.code).toBe(0);
   });
 
+  it("answer Playwright's WSL check on Linux instead of refusing it", async () => {
+    if (process.platform !== 'linux') {
+      return;
+    }
+    const fs = "const fs = process.getBuiltinModule('node:fs');";
+    const checks = await probe(
+      `${fs} console.log(fs.existsSync('/proc/sys/fs/binfmt_misc/WSLInterop') || fs.existsSync('/run/WSL'));`,
+    );
+    expect(checks.stderr).not.toContain('ERR_ACCESS_DENIED');
+    expect(checks.code).toBe(0);
+  });
+
   it('refuse child processes', async () => {
     const spawned = await probe("process.getBuiltinModule('node:child_process').execFileSync(process.execPath, ['-v']);");
     expect(spawned.stderr).toContain('ERR_ACCESS_DENIED');

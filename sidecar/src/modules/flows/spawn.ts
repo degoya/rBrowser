@@ -61,17 +61,27 @@ export function runBudgetMs(job: Pick<RunParams, 'views' | 'parallel' | 'timeout
   return Math.ceil(job.views.length / Math.max(lanes, 1)) * (job.timeoutMs + overheadMs);
 }
 
+/**
+ * The two paths Playwright's bundled `is-wsl` checks with `existsSync` when it loads on a Linux
+ * kernel that is not WSL's. Under the permission model `existsSync` of a path not granted throws
+ * instead of answering false, so the worker could not load Playwright on plain Linux (the first
+ * public CI run, ubuntu-24.04). Existence only; nothing is read from them.
+ */
+export const LINUX_WSL_PROBES = ['/proc/sys/fs/binfmt_misc/WSLInterop', '/run/WSL'] as const;
+
 /** The Node arguments of a worker for `projectRoot` writing into `outDir`. */
 export function nodeArgs(
   deps: Pick<FlowsDeps, 'sidecarDir' | 'workerScript' | 'netFlag'>,
   projectRoot: string,
   outDir: string,
+  platform: NodeJS.Platform = process.platform,
 ): string[] {
   return [
     '--permission',
     `--allow-fs-read=${deps.sidecarDir}`,
     `--allow-fs-read=${projectRoot}`,
     `--allow-fs-read=${outDir}`,
+    ...(platform === 'linux' ? LINUX_WSL_PROBES.map((path) => `--allow-fs-read=${path}`) : []),
     `--allow-fs-write=${outDir}`,
     ...(deps.netFlag ? ['--allow-net'] : []),
     '--disable-warning=ExperimentalWarning',
