@@ -48,9 +48,12 @@ linters() {
 cross() {
     local apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
     timeout 300 sudo apt-get "${apt_opts[@]}" update -q
+    # MSVC's STL (cargo-xwin's CRT) refuses a Clang older than 19 (STL1000); ubuntu-24.04's
+    # default `clang` is 18, so the versioned packages, their bin/ first on PATH.
+    local llvm=19
     timeout 600 sudo apt-get "${apt_opts[@]}" install -y -q --no-install-recommends \
-        build-essential clang cmake lld llvm nasm ninja-build pkg-config
-    dirname "$(readlink -f "$(command -v clang)")" >> "${GITHUB_PATH:?set by the runner}"
+        build-essential "clang-$llvm" cmake "lld-$llvm" "llvm-$llvm" nasm ninja-build pkg-config
+    echo "/usr/lib/llvm-$llvm/bin" >> "${GITHUB_PATH:?set by the runner}"
 }
 
 case "${1:-}" in

@@ -127,13 +127,13 @@ rb_rust_version() {
 # The Node version checkout $1 pins: .nvmrc, without a leading `v`. The packaged runtime and every
 # build of ui/, agent/ and sidecar/ use it.
 rb_node_version() {
-    sed -n '1{s/^v//;s/[[:space:]]*$//;p}' "$1/.nvmrc"
+    sed -n '1{s/^v//;s/[[:space:]]*$//;p;}' "$1/.nvmrc"
 }
 
 # The version of the `node` first on PATH, without the leading `v`; empty when there is none.
 rb_node_found() {
     command -v node > /dev/null 2>&1 || return 0
-    node --version 2> /dev/null | sed -n '1{s/^v//;p}'
+    node --version 2> /dev/null | sed -n '1{s/^v//;p;}'
 }
 
 # Makes the `node` (and its npm) first on PATH the version checkout $1 pins in .nvmrc, for the
