@@ -9,6 +9,12 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ### Added
 
+- Page zoom inside a view: Ctrl+0, Ctrl+Plus and Ctrl+Minus as in Chrome, the level as a badge
+  in the label strip (a click resets it), `view.page_zoom.*`, MCP `view_page_zoom`, the
+  `views.pageZoom.*` settings (RB-090-20).
+- A public README for github.com/degoya/rBrowser, put in place of the private one by
+  `scripts/export-public.sh`; the release flow in rCommander's order, with a `ci/` test branch
+  (RB-090-24).
 - A macOS test build: `rBrowser.app` for Apple Silicon and Intel with the CEF framework and its
   five helper apps, ad hoc signed, as a ZIP and a DMG from `scripts/package-macos.sh` on the
   macOS runners of CI; a menu bar (About, Settings, Hide, Quit, Edit) and the macOS shortcut
@@ -185,6 +191,16 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ### Fixed
 
+- Settings choices show names instead of ids, core and plugin keys (e.g. the SEO preview
+  platforms); the id only with `settings.showKeys`; the settings lint requires a name for every
+  option (RB-090-16).
+- Overlays' stacking and tab order no longer fail with "larger than the plugin may handle": one
+  byte budget for every answer, the panel says "N of M shown" (RB-090-17).
+- The status bar's canvas zoom presets open as a native menu above the bar, so they stay on the
+  screen in fullscreen (RB-090-18).
+- The colour picker calibrates reliably: a window image of exactly viewport x pixel ratio is read
+  directly, a scaled one through four framed markers with a scale check; large views no longer
+  fail, and the status bar says why a view cannot be read (RB-090-19).
 - Security review findings: MCP `cdp_endpoint` answers the CDP token only while
   `mcp.allowEvaluate` is on (`evaluate_disabled` otherwise); MCP can no longer switch Chrome
   extensions or the Web Store (`engines.chromium.extensions.enabled`, `allowWebStore` protected);

@@ -74,7 +74,8 @@ async function results(source: string): Promise<ViewResult[]> {
   const { stdout, stderr } = await run(args, `${JSON.stringify(job(source))}\n`);
   const last = stdout.trim().split('\n').at(-1) ?? '';
   const event = JSON.parse(last) as { type: string; views?: ViewResult[] };
-  expect(event.type, stderr).toBe('result');
+  // The worker's own error is in its last line, not on stderr: both in the message.
+  expect(event.type, `${last}\n${stderr}`).toBe('result');
   return event.views ?? [];
 }
 
