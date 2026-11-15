@@ -52,7 +52,12 @@ cross() {
     # default `clang` is 18, so the versioned packages, their bin/ first on PATH.
     local llvm=19
     timeout 600 sudo apt-get "${apt_opts[@]}" install -y -q --no-install-recommends \
-        build-essential "clang-$llvm" cmake "lld-$llvm" "llvm-$llvm" nasm ninja-build pkg-config
+        build-essential "clang-$llvm" cmake "lld-$llvm" "llvm-$llvm" nasm ninja-build pkg-config \
+        wine wine64
+    # rcedit (rb_patch_exe) writes the icon and version into CEF's bootstrap.exe under Wine.
+    if ! command -v wine > /dev/null 2>&1 && command -v wine64 > /dev/null 2>&1; then
+        sudo ln -s "$(command -v wine64)" /usr/local/bin/wine
+    fi
     echo "/usr/lib/llvm-$llvm/bin" >> "${GITHUB_PATH:?set by the runner}"
 }
 

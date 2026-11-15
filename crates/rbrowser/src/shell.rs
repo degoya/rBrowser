@@ -183,7 +183,7 @@ pub const CONSOLE_MAX_CHARS: usize = 2000;
 
 /// The log level of a shell page's console line by CEF's `cef_log_severity_t` value: errors
 /// and warnings stay visible at the default level, `console.log` is debug, verbose is trace.
-pub fn console_level(severity: i32) -> tracing::Level {
+pub fn console_level(severity: i64) -> tracing::Level {
     match severity {
         4 | 5 => tracing::Level::ERROR,
         3 => tracing::Level::WARN,
@@ -202,7 +202,7 @@ pub fn console_text(message: &str) -> String {
 
 /// Writes a shell page's console line (`source`:`line`) into the app's log, so a shell that
 /// does not come up says why (CEF's own log keeps console lines only at `info`).
-pub fn log_console(severity: i32, message: &str, source: &str, line: i32) {
+pub fn log_console(severity: i64, message: &str, source: &str, line: i32) {
     let message = console_text(message);
     match console_level(severity) {
         tracing::Level::ERROR => tracing::error!(source, line, "shell console: {message}"),

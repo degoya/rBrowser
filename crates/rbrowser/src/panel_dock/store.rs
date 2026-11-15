@@ -4,8 +4,13 @@
 //! `dockState` is written) and named to the shell pages with `settingsChanged`, as the DevTools
 //! splitter keeps its size.
 
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::sync::{LazyLock, Mutex};
+
 use rb_config::{PanelSettings, UserSettings};
 use rb_ipc::CoreToShell;
+use rb_util::lock;
 use serde_json::{Value, json};
 
 use super::PanelSide;
@@ -45,24 +50,45 @@ pub fn keep(core: &Core, user: UserSettings) {
     }
     core.replace_user_settings(user);
     if let Some(path) = core.user_settings_path().map(std::path::Path::to_path_buf) {
-        let written = keys.clone();
-        core.runtime().spawn_blocking(move || {
-            let result = crate::settings_window::user_file::update(&path, |root| {
-                for (key, value) in written {
-                    if key == STATE_KEY {
-                        drop_legacy(root);
-                    }
-                    set_path(root, &key, value);
-                }
-            });
-            if let Err(error) = result {
-                tracing::warn!(%error, "the plugin panels' dock was not saved");
+        {
+            let mut latest = lock(&LATEST);
+            for (key, value) in &keys {
+                latest.insert((path.clone(), key.clone()), value.clone());
             }
-        });
+        }
+        let names: Vec<String> = keys.iter().map(|(key, _)| key.clone()).collect();
+        core.runtime()
+            .spawn_blocking(move || write_latest(&path, &names));
     }
     core.send(&CoreToShell::SettingsChanged {
         keys: keys.into_iter().map(|(key, _)| key).collect(),
     });
+}
+
+/// The newest value of each dock key per settings file, set on the calling thread in the order
+/// of the changes. Each write runs on the blocking pool and in any order: it takes the newest
+/// values under this lock, so a fold followed at once by an undock never leaves the fold in the
+/// file, and two writes never interleave their read and write (seen on Windows, RB-090-30).
+static LATEST: LazyLock<Mutex<BTreeMap<(PathBuf, String), Value>>> =
+    LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+/// Writes the newest values of `keys` into the settings file at `path`.
+fn write_latest(path: &std::path::Path, keys: &[String]) {
+    let latest = lock(&LATEST);
+    let result = crate::settings_window::user_file::update(path, |root| {
+        for key in keys {
+            let Some(value) = latest.get(&(path.to_path_buf(), key.clone())) else {
+                continue;
+            };
+            if key == STATE_KEY {
+                drop_legacy(root);
+            }
+            set_path(root, key, value.clone());
+        }
+    });
+    if let Err(error) = result {
+        tracing::warn!(%error, "the plugin panels' dock was not saved");
+    }
 }
 
 /// Drops RB-080-61's `panels.dockCollapsed`: `panels.dockState` says it now (RB-080-93).

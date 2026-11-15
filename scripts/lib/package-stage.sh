@@ -219,9 +219,22 @@ rb_windows_path() {
         cygpath -w "$1"
     elif command -v wslpath > /dev/null 2>&1; then
         wslpath -w "$1"
+    elif command -v winepath > /dev/null 2>&1; then
+        winepath -w "$1" 2> /dev/null
     else
-        echo "!! neither cygpath nor wslpath: rcedit runs only on Windows or in WSL with interop" >&2
+        echo "!! neither cygpath, wslpath nor winepath: rcedit runs on Windows, in WSL with interop or under Wine" >&2
         return 1
+    fi
+}
+
+# What runs a Windows program here: nothing on Windows or in WSL, Wine on another Linux (the
+# CI's cross-build job, which installs it with scripts/ci-tools.sh cross).
+rb_windows_runner() {
+    if command -v cygpath > /dev/null 2>&1 || command -v wslpath > /dev/null 2>&1; then
+        return 0
+    fi
+    if command -v wine > /dev/null 2>&1; then
+        printf '%s\n' wine
     fi
 }
 
@@ -246,10 +259,11 @@ rb_patch_exe() {
     rb_fetch_pinned "https://github.com/electron/rcedit/releases/download/v$RB_RCEDIT_VERSION/rcedit-x64.exe" \
         "$rcedit" "$RB_RCEDIT_SHA256" || return 1
     chmod +x "$rcedit"
-    local win_exe win_icon
+    local win_exe win_icon run
     win_exe="$(rb_windows_path "$exe")" || return 1
     win_icon="$(rb_windows_path "$icon")" || return 1
-    if ! "$rcedit" "$win_exe" --set-icon "$win_icon" \
+    run="$(rb_windows_runner)"
+    if ! ${run:+"$run"} "$rcedit" "$win_exe" --set-icon "$win_icon" \
         --set-file-version "$version" --set-product-version "$version" \
         --set-version-string CompanyName "DEGOYA.digital" \
         --set-version-string FileDescription "rBrowser" \

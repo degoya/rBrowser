@@ -19,7 +19,7 @@ wrap_display_handler! {
             line: c_int,
         ) -> c_int {
             let text = |value: Option<&CefString>| value.map(ToString::to_string).unwrap_or_default();
-            crate::shell::log_console(level.get_raw(), &text(message), &text(source), line);
+            crate::shell::log_console(i64::from(level.get_raw()), &text(message), &text(source), line);
             // CEF goes on as before (its own log at `info`).
             0
         }

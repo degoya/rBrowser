@@ -56,3 +56,21 @@ fn the_old_collapsed_key_goes_with_the_new_state() {
         json!({ "panels": { "dock": "left", "dockState": "rail" } })
     );
 }
+
+/// RB-090-30 (seen on Windows): the write of an earlier change that runs after the write of a
+/// later one still leaves the later value in the file.
+#[test]
+fn a_late_write_of_an_earlier_change_keeps_the_newest_value() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("settings.json");
+    let key = STATE_KEY.to_owned();
+    // The fold, then the undock, in the order of the changes on the calling thread.
+    lock(&LATEST).insert((path.clone(), key.clone()), json!("rail"));
+    lock(&LATEST).insert((path.clone(), key.clone()), json!("open"));
+    // The undock's write runs first, the fold's last.
+    write_latest(&path, std::slice::from_ref(&key));
+    write_latest(&path, std::slice::from_ref(&key));
+    let file: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("written")).expect("json");
+    assert_eq!(file["panels"]["dockState"], "open");
+}
