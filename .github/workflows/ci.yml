@@ -249,6 +249,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The Intel image ran out of disk writing the DMG (the build, the bundle and the image
+      # together): the Xcode versions the job does not use go first.
+      - name: Free disk space
+        run: |
+          df -h /
+          active="$(xcode-select -p)"
+          for xcode in /Applications/Xcode*.app; do
+            [[ "$active" == "$xcode"/* ]] || sudo rm -rf "$xcode"
+          done
+          df -h /
       # The scripts want bash 4 or later (macOS ships 3.2); CEF's wrapper builds with Ninja.
       - name: Install bash and ninja
         run: brew install bash ninja
