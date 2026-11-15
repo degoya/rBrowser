@@ -59,6 +59,10 @@ async function main(): Promise<void> {
     await emit({ type: 'result', views: await runFlow(job, await deps()) });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    // Where it failed goes to rBrowser's log (stderr), masked like the message.
+    if (error instanceof Error && error.stack !== undefined) {
+      process.stderr.write(`${redact(error.stack, secretsOf(job))}\n`);
+    }
     await emit({ type: 'error', message: redact(message, secretsOf(job)) });
   }
 }
