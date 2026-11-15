@@ -225,6 +225,10 @@ rb_public_replace_tree() {
     echo "==> replacing the tree of $1"
     find "$1" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
     cp -a "$2"/. "$1"/
+    # The index forgets every entry first, so each file is hashed anew: `git archive` stamps
+    # its files with the commit's time, and a file of the same size from a commit in the same
+    # second (a fast CI runner) would otherwise pass git's stat check as unchanged.
+    git -C "$1" rm -r -q --cached --ignore-unmatch .
     git -C "$1" add --all
     RB_PUBLIC_STAGED_TREE="$(git -C "$1" write-tree)"
 }
