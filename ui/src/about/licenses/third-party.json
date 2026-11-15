@@ -358,6 +358,7 @@
     "objc2@0.6.5",
     "objc2-app-kit@0.3.2",
     "objc2-core-foundation@0.3.2",
+    "objc2-core-services@0.3.2",
     "objc2-encode@4.1.0",
     "objc2-foundation@0.3.2",
     "pastey@0.2.3",
