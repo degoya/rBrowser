@@ -183,10 +183,14 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 echo "==> writing $ZIP and $DMG"
 (cd "$STAGE" && ditto -c -k --keepParent rBrowser.app "$ZIP")
 ln -s /Applications "$STAGE/Applications"
-# hdiutil fails now and then with "Resource busy" on a busy machine (GitHub's Intel runners):
-# three tries, each one saying why it failed.
+# hdiutil sizes the image from -srcfolder itself and can get it too small: "No space left on
+# device" with 143 GiB free (GitHub's Intel runner). The size is given: the folder and a half
+# again. Three tries, each one saying why it failed.
+dmg_mb="$(du -sm "$STAGE" | cut -f 1)"
+dmg_mb=$((dmg_mb * 3 / 2 + 64))
 for try in 1 2 3; do
-    hdiutil create -volname "rBrowser $version" -srcfolder "$STAGE" -ov -format UDZO "$DMG" && break
+    hdiutil create -volname "rBrowser $version" -srcfolder "$STAGE" -size "${dmg_mb}m" -ov \
+        -format UDZO "$DMG" && break
     if [[ "$try" -eq 3 ]]; then
         echo "!! hdiutil could not write $DMG" >&2
         exit 1
