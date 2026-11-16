@@ -1,0 +1,64 @@
+# Simulators (RB-070-08, docs/plugins.md): colour vision deficiencies, vision impairments and
+# surroundings, chosen per view. Chromium renders six types itself (CDP
+# Emulation.setEmulatedVisionDeficiency); the page script draws the rest - a CSS filter on the
+# root element (no containing block for position: fixed) and a layer without pointer events.
+# The component holds the catalogue, each view's choice (.rbrowser/out/simulators/state.json)
+# and the settings.
+manifest_version = 1
+id = "simulators"
+name = "Simulators"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "simulator"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Colour vision deficiencies, vision impairments, sunlight and a dimmed screen, chosen per view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: each view's engine and the active view. cdp: Emulation.setEmulatedVisionDeficiency
+# alone (the host's allowlist), Chromium views only. project-read: the views' choices,
+# `.rbrowser/out/simulators/state.json` (no glob: nothing outside `.rbrowser/`). out-write: that
+# file, below `.rbrowser/out/simulators/` only.
+[capabilities]
+views = true
+cdp = { domains = ["Emulation"] }
+project-read = true
+out-write = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `simulator_set`: sets the simulation of the target views ("none" removes it); without
+# `type` it answers every view's simulation and the catalogue.
+[[tools]]
+name = "set"
+description = "plugin.simulators.tools.set"
+input = { type = "object", properties = { type = { type = "string", enum = ["none", "protanopia", "protanomaly", "deuteranopia", "deuteranomaly", "tritanopia", "tritanomaly", "achromatopsia", "achromatomaly", "myopia", "cataract", "glaucoma", "macular-degeneration", "low-contrast", "sunlight", "dimmed"] }, severity = { type = "number", minimum = 0, maximum = 1 } } }
+
+[[commands]]
+id = "pick"
+title = "plugin.simulators.commands.pick"
+shortcut = "Ctrl+Shift+Space O I"
+group = "overlays"
+tool = "set"
+
+[[page_scripts]]
+path = "page/simulators.js"
+run_at = "document-start"
+
+[[panels]]
+id = "picker"
+title = "plugin.simulators.panels.picker"
+entry = "panel/index.html"
+icon = "glasses"
+placement = "dialog"

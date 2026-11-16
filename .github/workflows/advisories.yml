@@ -1,0 +1,37 @@
+name: Advisories
+
+# The advisory databases move between pushes: a dependency nobody touched can gain an advisory any
+# day, and ci.yml only sees it at the next push. This asks once a week (RB-090-04, after
+# rDownloader's advisories.yml; prepared, inactive until the move to GitHub, RB-090-12):
+# scripts/advisories.sh, which runs `cargo deny check advisories` and `npm audit --omit=dev` in
+# every npm package - the same script a workstation runs by hand. Licences, bans and sources
+# change only with the tree; ci.yml's preflight checks those on every push.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  advisories:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-deny@0.20.2
+      - name: scripts/advisories.sh
+        run: scripts/advisories.sh

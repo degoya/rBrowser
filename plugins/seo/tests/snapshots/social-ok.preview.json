@@ -1,0 +1,213 @@
+{
+  "url": "https://fixture.test/social-ok/",
+  "finalUrl": "https://fixture.test/social-ok/",
+  "status": 200,
+  "domain": "fixture.test",
+  "dataVersion": 2,
+  "cards": [
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "meets",
+        "params": {
+          "height": "630",
+          "width": "1200"
+        }
+      },
+      "confidence": "official",
+      "source": "https://developers.facebook.com/docs/sharing/webmasters/images/",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": false,
+        "source": "og:title"
+      },
+      "description": {
+        "text": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the…",
+        "full": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "truncated": true,
+        "source": "og:description"
+      },
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "x",
+      "name": "X",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "card_large",
+        "params": {}
+      },
+      "confidence": "official",
+      "source": "https://developer.x.com/en/docs/x-for-websites/cards/overview/markup",
+      "title": {
+        "text": "Social fixture as X shows it",
+        "full": "Social fixture as X shows it",
+        "truncated": false,
+        "source": "twitter:title"
+      },
+      "description": {
+        "text": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what i…",
+        "full": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "truncated": true,
+        "source": "og:description"
+      },
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "meets",
+        "params": {
+          "height": "630",
+          "width": "1200"
+        }
+      },
+      "confidence": "official",
+      "source": "https://www.linkedin.com/help/linkedin/answer/a521928",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": false,
+        "source": "og:title"
+      },
+      "description": null,
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "card_large",
+        "params": {}
+      },
+      "confidence": "official",
+      "source": "https://medium.com/slack-developer-blog/everything-you-ever-wanted-to-know-about-unfurling-but-were-afraid-to-ask-or-how-to-make-your-e64b4bb9254",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": false,
+        "source": "og:title"
+      },
+      "description": {
+        "text": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "full": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "truncated": false,
+        "source": "og:description"
+      },
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "meets",
+        "params": {
+          "height": "630",
+          "width": "1200"
+        }
+      },
+      "confidence": "official",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/link-previews/",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long e…",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": true,
+        "source": "og:title"
+      },
+      "description": {
+        "text": "This description of the social preview fixture is long on purpose: every platfo…",
+        "full": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "truncated": true,
+        "source": "og:description"
+      },
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "card_large",
+        "params": {}
+      },
+      "confidence": "official",
+      "source": "https://docs.discord.com/developers/link-previews/overview",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long enough…",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": true,
+        "source": "og:title"
+      },
+      "description": {
+        "text": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "full": "This description of the social preview fixture is long on purpose: every platform cuts it at its own length, so the cards of Facebook, X, WhatsApp and the others show where their texts end and what is lost.",
+        "truncated": false,
+        "source": "og:description"
+      },
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    },
+    {
+      "id": "imessage",
+      "name": "iMessage",
+      "layout": "large",
+      "alternate": "small",
+      "unsure": false,
+      "reason": {
+        "code": "meets",
+        "params": {
+          "height": "630",
+          "width": "1200"
+        }
+      },
+      "confidence": "official",
+      "source": "https://developer.apple.com/documentation/technotes/tn3156-create-rich-previews-for-messages",
+      "title": {
+        "text": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "full": "The social preview fixture of the SEO check, with a title long enough to be cut",
+        "truncated": false,
+        "source": "og:title"
+      },
+      "description": null,
+      "image": "https://fixture.test/img/share.jpg",
+      "imageSource": "og:image"
+    }
+  ],
+  "images": [
+    {
+      "url": "https://fixture.test/img/share.jpg",
+      "status": 200,
+      "error": null,
+      "format": "image/jpeg",
+      "width": 1200,
+      "height": 630,
+      "bytes": 17,
+      "dataUri": "data:image/jpeg;base64,/9j/4AAEAAD/wAARCAJ2BLA=",
+      "tooLarge": false
+    }
+  ]
+}

@@ -1,0 +1,587 @@
+{
+  "plugin": {
+    "seo": {
+      "commands": {
+        "check": "SEO check of the page",
+        "check_wellknown": "SEO check of the site's llms.txt and security.txt",
+        "hreflang": "SEO check of the page's hreflang set",
+        "parity": "SEO parity of the views",
+        "social_preview": "Social previews of the page"
+      },
+      "errors": {
+        "bad_args": "The SEO check got arguments it cannot read ({reason}).",
+        "bad_render": "The rendered page of the view could not be read ({reason}).",
+        "bad_url": "The SEO check can only check http and https pages, not {url}.",
+        "no_url": "The SEO check has no page: give a URL or open one in a view."
+      },
+      "findings": {
+        "canonical": {
+          "missing": "The page names no canonical URL.",
+          "multiple": "The page names {count, plural, one {# canonical} other {# canonicals}} ({values}); search engines may ignore all of them.",
+          "not_self": "The canonical points to {target}, not to this page. Fine if meant.",
+          "relative": "The canonical \"{href}\" is relative; write it as an absolute URL.",
+          "target_failed": "The canonical target {target} could not be fetched ({detail}).",
+          "target_invalid": "The canonical \"{href}\" is no valid URL.",
+          "target_noindex": "The canonical target {target} is marked noindex.",
+          "target_redirect": "The canonical target {target} redirects ({detail}); point to the final URL.",
+          "target_status": "The canonical target {target} answers {detail}, not 200."
+        },
+        "head": {
+          "charset_late": "<meta charset> starts at byte {offset}; it has to lie within the first 1024 bytes.",
+          "charset_not_first": "<meta charset> comes after <{first}>; make it the head's first element.",
+          "in_body": "<{element}> is in the body; it belongs into the head, and search engines may ignore it there.",
+          "in_body_after": "<{element}> lands in the body: <{breaker}> in the head ended it early. Move <{breaker}> into the body.",
+          "preconnect_late": "The preconnect to {origin} comes after {resource} loads from there; move it up.",
+          "rendered_differs": "The rendered head orders {rendered}, the raw HTML {raw}.",
+          "script_before_css": "{script} blocks the page before {stylesheet} loads; load the script async or defer, or after the CSS.",
+          "title_late": "<title> comes after {resource}; put it before the head loads anything.",
+          "viewport_late": "The viewport meta tag comes after {resource}; put it near the top of the head."
+        },
+        "headings": {
+          "h1_missing": "The page has no h1.",
+          "h1_multiple": "The page has {count} h1 elements; this one is extra: \"{text}\".",
+          "skipped": "The heading jumps from {from} to {to}: \"{text}\"."
+        },
+        "hreflang": {
+          "code_invalid": "The hreflang value \"{code}\" is no valid language (ISO 639-1) or region (ISO 3166-1) code.",
+          "code_suggestion": "The hreflang value \"{code}\" is not valid; write \"{suggestion}\".",
+          "content_detected": "The page's text looks {language}, its hreflang is {code}.",
+          "content_language_mismatch": "The Content-Language header \"{value}\" does not match the page's hreflang {code}.",
+          "duplicate_code": "The code {code} is declared {count, plural, one {once} other {# times}} in the {source}.",
+          "duplicate_url": "The URL {url} is declared for several codes ({codes}) in the {source}.",
+          "lang_mismatch": "The page's lang \"{lang}\" does not match its hreflang {code}.",
+          "locale_missing": "The hreflang set has no page for the expected locale {locale}.",
+          "none": "The page declares no hreflang alternates.",
+          "return_missing": "{target} lists this page as an alternate, but this page does not link back to it ({code}).",
+          "self_missing": "The page is missing from its own hreflang set (no self reference).",
+          "set_incomplete": "This page does not link to {target} ({code}) of its hreflang set.",
+          "source_conflict": "The sources give {code} different URLs: {values}.",
+          "source_missing": "The code {code} is declared in {in} but not in {missing}.",
+          "target_canonical": "The canonical of this page of the hreflang set points to {canonical}, not to itself.",
+          "target_canonical_language": "The canonical of this page of the hreflang set points to the {code} page {canonical}, another language.",
+          "target_failed": "This page of the hreflang set could not be fetched ({detail}).",
+          "target_noindex": "This page of the hreflang set is marked noindex.",
+          "target_redirect": "This page of the hreflang set redirects ({detail}); point the hreflang to the final URL.",
+          "target_relative": "The hreflang {code} points to the relative URL \"{href}\"; write it as an absolute URL.",
+          "target_robots": "robots.txt keeps search engines away from this page of the hreflang set.",
+          "target_status": "This page of the hreflang set answers {detail}, not 200.",
+          "unchecked_limit": "This page of the hreflang set was not loaded: the run reads robots.txt of at most 10 sites.",
+          "unchecked_local": "This page of the hreflang set was not loaded: a public site's alternate on this machine or the local network.",
+          "unchecked_robots": "This page of the hreflang set was not loaded: robots.txt disallows it for rBrowser.",
+          "unchecked_set": "The hreflang set has {count} more pages than a run loads ({max}); they were not checked.",
+          "x_default_missing": "The hreflang set has no x-default."
+        },
+        "images": {
+          "alt_duplicate": "Another image ({other}) has the same alt text \"{alt}\".",
+          "alt_empty": "The image {src} has an empty alt but does not look decorative.",
+          "alt_filename": "The alt text \"{alt}\" is a file name.",
+          "alt_language": "The alt text \"{alt}\" looks {language}, the page is \"{lang}\".",
+          "alt_missing": "The image {src} has no alt attribute.",
+          "alt_placeholder": "The alt text \"{alt}\" is only a placeholder word.",
+          "alt_prefix": "The alt text \"{alt}\" starts with \"{prefix}\"; screen readers already say it is an image.",
+          "alt_redundant": "The alt text \"{alt}\" repeats the caption or the text next to the image.",
+          "alt_too_long": "The alt text has {length} characters, more than {max}: \"{alt}\".",
+          "alt_untranslated": "The alt text \"{alt}\" is the same as on {other}, a page in another language: translate it.",
+          "area_alt_missing": "The image map area {href} has no alt text.",
+          "background": "The background image {url} ({width} x {height}) may carry content without a text alternative.",
+          "input_alt_missing": "The image button {src} has no alt text.",
+          "linked_no_name": "The link around the image {src} has no name: give the image an alt text or the link a text.",
+          "social_alt_missing": "The share image has no {property}.",
+          "svg_name_missing": "This inline SVG draws something but has no title or label."
+        },
+        "index": {
+          "fetch_failed": "The page could not be fetched ({code}).",
+          "noindex_header": "The X-Robots-Tag header keeps the page out of the index: \"{value}\".",
+          "noindex_meta": "A meta robots tag keeps the page out of the index: \"{value}\".",
+          "redirect": "The page redirects {hops} time(s) before it answers: {chain}. Link to {target} directly.",
+          "redirect_location": "A redirect points to a location that cannot be followed: {location}",
+          "redirect_loop": "The redirects loop or go on too long after {hops, plural, one {# hop} other {# hops}}: {chain}",
+          "robots_blocked": "robots.txt ({robots}) disallows this page for search engines.",
+          "status": "The page answers {status}, not 200."
+        },
+        "meta": {
+          "charset_missing": "Neither the Content-Type header nor a meta tag names the charset.",
+          "description_duplicate": "{count, plural, one {# page shares} other {# pages share}} this meta description, {other} among them: \"{text}\".",
+          "description_empty": "The meta description is empty.",
+          "description_long": "The meta description has {length, plural, one {# character} other {# characters}}, more than {max}: \"{text}\".",
+          "description_missing": "The page has no meta description.",
+          "description_multiple": "The page has {count} meta descriptions.",
+          "description_short": "The meta description has {length, plural, one {# character} other {# characters}}, fewer than {min}: \"{text}\".",
+          "lang_missing": "The html element has no lang attribute.",
+          "title_duplicate": "{count, plural, one {# page shares} other {# pages share}} this title, {other} among them: \"{text}\".",
+          "title_empty": "The page's title is empty.",
+          "title_long": "The title has {length, plural, one {# character} other {# characters}}, more than {max}: \"{text}\".",
+          "title_missing": "The page has no title.",
+          "title_multiple": "The page has {count} title elements.",
+          "title_short": "The title has {length, plural, one {# character} other {# characters}}, fewer than {min}: \"{text}\".",
+          "viewport_missing": "The page has no viewport meta tag; it will not render well on phones."
+        },
+        "microdata": {
+          "jsonld_conflict": "{syntax} gives this {type} the {property} \"{ours}\", the page's JSON-LD \"{theirs}\".",
+          "required_any": "This {type} needs at least one of {properties}.",
+          "required_missing": "This {type} lacks the property {property}, which its rich result needs.",
+          "type_missing": "This {syntax} item has no type (itemtype or typeof).",
+          "type_unknown": "\"{type}\" ({syntax}) is no schema.org type rBrowser knows; check its spelling."
+        },
+        "parity": {
+          "differs": "The {field} of {breakpoint} differs from the reference {reference}: \"{value}\" against \"{reference_value}\".",
+          "text": "The main text of {breakpoint} is only {similarity} % like that of the reference {reference} (at least {min} %)."
+        },
+        "render": {
+          "changed": "JavaScript changes the {field} from \"{raw}\" to \"{rendered}\".",
+          "js_only": "The {field} is set only by JavaScript: the raw HTML has none, the rendered page \"{rendered}\".",
+          "removed": "JavaScript removes the {field}: the raw HTML has \"{raw}\", the rendered page none."
+        },
+        "site": {
+          "robots_missing": "The site has no robots.txt (status {status}), so it names no sitemap.",
+          "sitemap_missing": "robots.txt names no sitemap.",
+          "sitemap_unreachable": "The sitemap {sitemap} answers {status}, not 200."
+        },
+        "social": {
+          "image_ratio": "The share image {url} is {width} x {height} pixels (ratio {ratio}); large cards crop it to 1.91:1.",
+          "image_relative": "og:image \"{href}\" is relative; the platforms need an absolute URL.",
+          "image_small": "The share image {url} is {width} x {height} pixels, smaller than {min_width} x {min_height}.",
+          "image_svg": "The share image {url} is an SVG, which no platform shows; use PNG, JPEG or WebP.",
+          "image_type": "The share image {url} is no image (type {type}).",
+          "image_unreachable": "The share image {url} answers {status}, not 200.",
+          "og_missing": "The Open Graph property {property} is missing.",
+          "twitter_card_invalid": "twitter:card \"{value}\" is no card type X knows (summary, summary_large_image, app, player).",
+          "twitter_card_missing": "The page has no twitter:card, so X shows no card or only a small one.",
+          "url_canonical": "og:url {og_url} is not the canonical {canonical}; shares then count for another URL.",
+          "card_small_below": "On {platform} the card is small although twitter:card asks for a large one: the share image is {width} x {height}, below {min_width} x {min_height}.",
+          "card_small_narrow": "On {platform} the card is small although twitter:card asks for a large one: the share image is {width} pixels wide, below {min_width}.",
+          "card_small_low": "On {platform} the card is small although twitter:card asks for a large one: the share image is {height} pixels high, below {min_height}.",
+          "card_small_ratio": "On {platform} the card is small although twitter:card asks for a large one: the share image ({width} x {height}) is wider than {max_ratio}:1.",
+          "card_small_heavy": "On {platform} the card is small although twitter:card asks for a large one: the share image has {bytes, plural, one {# byte} other {# bytes}}, not under {max_bytes}.",
+          "card_small_not_landscape": "On {platform} the card is small although twitter:card asks for a large one: the share image ({width} x {height}) is not wider than high.",
+          "card_small_square": "On {platform} the card is small although twitter:card asks for a large one: the share image ({width} x {height}) is nearly square."
+        },
+        "structured": {
+          "jsonld_invalid": "This JSON-LD block is no valid JSON (line {line}, column {column}): {error}"
+        },
+        "wellknown": {
+          "llms_bad_item": "Line {line} of llms.txt is a list item without a link \"[name](url)\".",
+          "llms_empty_section": "The section \"{section}\" (line {line}) of llms.txt lists no link.",
+          "llms_h1_multiple": "llms.txt has a second H1 in line {line}; use H2 for sections.",
+          "llms_h1_not_first": "llms.txt starts with something else; its H1 (line {line}) has to be the first line.",
+          "llms_link": "llms.txt links {url}, which answers {status}.",
+          "llms_link_invalid": "llms.txt links \"{url}\", which is no http or https URL.",
+          "llms_missing": "The site has no /llms.txt (llmstxt.org) that guides language models through it.",
+          "llms_no_h1": "llms.txt has no H1 (\"# Name\"); the format requires it as the first line.",
+          "llms_no_summary": "llms.txt has no summary as a blockquote (\"> ...\") after its H1.",
+          "security_contact": "security.txt has no Contact field.",
+          "security_expired": "security.txt expired on {value}; renew it.",
+          "security_expires_far": "Expires {value} of security.txt lies more than a year ahead; keep it within a year so the file stays current.",
+          "security_expires_invalid": "Expires \"{value}\" of security.txt is no date and time as RFC 3339 writes it (2027-01-31T23:59:59Z).",
+          "security_expires_missing": "security.txt has no Expires field.",
+          "security_expires_multiple": "security.txt has {count} Expires fields; it may have only one.",
+          "security_http": "security.txt is served over HTTP; RFC 9116 requires HTTPS.",
+          "security_location": "security.txt is only at /security.txt; RFC 9116 places it at /.well-known/security.txt.",
+          "security_missing": "The site has no /.well-known/security.txt (RFC 9116) that says how to report a vulnerability.",
+          "security_type": "security.txt is served as {type}; RFC 9116 requires text/plain."
+        }
+      },
+      "name": "SEO",
+      "panel": {
+        "empty": "No social preview could be built for this page.",
+        "error": "The previews could not be built: {reason}",
+        "image_failed": "The share image could not be loaded ({reason}).",
+        "image_large": "The share image is too large to show here ({bytes, plural, one {# byte} other {# bytes}}).",
+        "image_size": "{width} x {height} {format}",
+        "layout": {
+          "large": "Large image card",
+          "small": "Small image card",
+          "text": "Text only"
+        },
+        "loading": "Loading the previews...",
+        "no_image": "No share image",
+        "no_title": "(no title)",
+        "page": "Page: {url}",
+        "refresh": "Refresh",
+        "source": "from {source}",
+        "status": "The page answered {status}; the previews may be empty.",
+        "title": "Social previews",
+        "truncated": "Cut: the full text has {count, plural, one {# character} other {# characters}}.",
+        "reasons": {
+          "no_image": "No share image, so the card shows text only.",
+          "card_large": "twitter:card is summary_large_image.",
+          "card_other": "twitter:card is {card}, not summary_large_image.",
+          "card_missing": "The page has no twitter:card, so the card stays small.",
+          "always_large": "This platform always shows the image large.",
+          "always_small": "This platform always shows the image small.",
+          "always_text": "This platform shows the text alone, without the image.",
+          "unverified": "No published rule: both variants are shown.",
+          "size_unknown": "The share image's size is not known: both variants are shown.",
+          "meets": "The share image ({width} x {height}) meets the platform's rule for a large card.",
+          "below": "The share image ({width} x {height}) is below {min_width} x {min_height}.",
+          "narrow": "The share image is {width} pixels wide, below {min_width}.",
+          "low": "The share image is {height} pixels high, below {min_height}.",
+          "ratio": "The share image ({width} x {height}) is wider than {max_ratio}:1.",
+          "heavy": "The share image has {bytes, plural, one {# byte} other {# bytes}}, not under {max_bytes}.",
+          "not_landscape": "The share image ({width} x {height}) is not wider than high.",
+          "square": "The share image ({width} x {height}) is nearly square."
+        },
+        "confidence": {
+          "official": "Documented rule",
+          "code": "Rule from the client's code",
+          "unverified": "Unverified"
+        },
+        "show_other": {
+          "large": "How it would look large",
+          "small": "How it would look small"
+        },
+        "hide_other": "Hide the other variant",
+        "other": "Not shown: {layout}",
+        "open_source": "Open the rule's source",
+        "count": "{count, plural, one {# platform} other {# platforms}}"
+      },
+      "panels": {
+        "seo": "SEO"
+      },
+      "report": {
+        "alt": "Alt text",
+        "element": "Element",
+        "finding": "Finding",
+        "findings": "Findings",
+        "images": "Images",
+        "images_ok": "Images ok",
+        "indexable": "Indexable",
+        "matrix": {
+          "caption": "Reciprocity: does the page of the row link to the page of the column?",
+          "code": "Code",
+          "lacks": "does not link to",
+          "missing": "Missing",
+          "missing_pairs": "Missing pairs",
+          "none_missing": "Every page of the set links to every other.",
+          "own": "self",
+          "title": "hreflang set",
+          "unknown": "-",
+          "yes": "yes"
+        },
+        "no": "no",
+        "no_alt": "(none)",
+        "ok": "ok",
+        "page_title": "Title",
+        "pages": "Pages",
+        "parity": {
+          "breakpoint": "View",
+          "canonical": "Canonical",
+          "caption": "What each view's rendered page holds; differences from the reference are findings.",
+          "h1": "h1",
+          "hreflang": "hreflang",
+          "reference": "reference",
+          "structured_data": "Structured data",
+          "text_similarity": "Text like the reference",
+          "title": "Parity of the views",
+          "width": "Width"
+        },
+        "run": "Run",
+        "severity": {
+          "error": "Error",
+          "info": "Hint",
+          "warning": "Warning"
+        },
+        "severity_column": "Severity",
+        "src": "Source",
+        "status": "Status",
+        "title": "SEO report",
+        "url": "URL",
+        "yes": "yes"
+      },
+      "rules": {
+        "canonical": {
+          "missing": "No canonical",
+          "multiple": "More than one canonical",
+          "not_self": "Canonical points to another page",
+          "relative": "Relative canonical",
+          "target": "Canonical target not indexable"
+        },
+        "head": {
+          "charset_late": "Charset not in the first 1024 bytes",
+          "charset_not_first": "Charset not first in the head",
+          "in_body": "Head element in the body",
+          "preconnect_late": "Preconnect after its resources",
+          "rendered_differs": "Rendered head ordered otherwise",
+          "script_before_css": "Synchronous script before CSS",
+          "title_late": "Title after resources",
+          "viewport_late": "Viewport late in the head"
+        },
+        "headings": {
+          "h1_missing": "No h1",
+          "h1_multiple": "More than one h1",
+          "skipped": "Heading level skipped"
+        },
+        "hreflang": {
+          "code_invalid": "Invalid hreflang code",
+          "content_detected": "Text in another language than the hreflang",
+          "duplicate_code": "hreflang code declared twice",
+          "duplicate_url": "hreflang URL used for several codes",
+          "lang_mismatch": "Language does not match the hreflang",
+          "locale_missing": "Expected locale missing",
+          "none": "No hreflang",
+          "return_missing": "hreflang return link missing",
+          "self_missing": "No hreflang self reference",
+          "set_incomplete": "hreflang set incomplete",
+          "source_conflict": "hreflang sources contradict each other",
+          "source_missing": "hreflang code missing in a source",
+          "target_canonical": "hreflang target canonicalised elsewhere",
+          "target_noindex": "hreflang target not indexable",
+          "target_relative": "Relative hreflang URL",
+          "target_status": "hreflang target does not answer 200",
+          "target_unchecked": "hreflang target not checked",
+          "x_default_missing": "No x-default"
+        },
+        "images": {
+          "alt_duplicate": "Same alt text on different images",
+          "alt_empty": "Empty alt on a content image",
+          "alt_filename": "Alt text is a file name",
+          "alt_language": "Alt text in another language",
+          "alt_missing": "Image without alt",
+          "alt_placeholder": "Alt text is a placeholder",
+          "alt_prefix": "Alt text starts with \"image of\"",
+          "alt_redundant": "Alt text repeats the text next to it",
+          "alt_too_long": "Alt text too long",
+          "alt_untranslated": "Alt text not translated",
+          "area_alt_missing": "Image map area without alt",
+          "background": "Background image that may carry content",
+          "input_alt_missing": "Image button without alt",
+          "linked_no_name": "Linked image without a name",
+          "social_alt_missing": "Share image without alt text",
+          "svg_name_missing": "Inline SVG without a title"
+        },
+        "index": {
+          "noindex_header": "noindex in the X-Robots-Tag header",
+          "noindex_meta": "noindex in a meta robots tag",
+          "redirect": "Page redirects",
+          "redirect_broken": "Broken redirect",
+          "robots_blocked": "Blocked by robots.txt",
+          "status": "Page does not answer 200"
+        },
+        "meta": {
+          "charset_missing": "No charset",
+          "description_duplicate": "Meta description used by another page",
+          "description_length": "Meta description length",
+          "description_missing": "No meta description",
+          "description_multiple": "More than one meta description",
+          "lang_missing": "No html lang",
+          "title_duplicate": "Title used by another page",
+          "title_length": "Title length",
+          "title_missing": "No title",
+          "title_multiple": "More than one title",
+          "viewport_missing": "No viewport meta tag"
+        },
+        "microdata": {
+          "jsonld_conflict": "Microdata contradicts JSON-LD",
+          "required_missing": "Required property missing",
+          "type_missing": "Microdata or RDFa item without type",
+          "type_unknown": "Unknown schema.org type"
+        },
+        "parity": {
+          "canonical": "Canonical differs between views",
+          "h1": "h1 differs between views",
+          "hreflang": "hreflang differs between views",
+          "structured_data": "Structured data differs between views",
+          "text": "Main text differs between views",
+          "title": "Title differs between views"
+        },
+        "render": {
+          "differs": "Raw HTML and rendered DOM differ"
+        },
+        "site": {
+          "sitemap_missing": "No sitemap in robots.txt",
+          "sitemap_unreachable": "Sitemap not reachable"
+        },
+        "social": {
+          "image_ratio": "Share image not 1.91:1",
+          "image_relative": "Relative share image",
+          "image_small": "Share image too small",
+          "image_type": "Share image is no usable image",
+          "image_unreachable": "Share image not reachable",
+          "og_missing": "Open Graph basics missing",
+          "twitter_card": "Twitter card missing or invalid",
+          "url_canonical": "og:url is not the canonical",
+          "card_small": "Small card on a chosen platform"
+        },
+        "structured": {
+          "jsonld_invalid": "JSON-LD is no valid JSON"
+        },
+        "wellknown": {
+          "llms_h1": "llms.txt without its H1",
+          "llms_link": "llms.txt links a broken page",
+          "llms_missing": "No llms.txt",
+          "llms_structure": "llms.txt not in the format",
+          "security_contact": "security.txt without Contact",
+          "security_expires": "security.txt expired or without Expires",
+          "security_expires_far": "security.txt expires more than a year ahead",
+          "security_location": "security.txt at the old place",
+          "security_missing": "No security.txt",
+          "security_transport": "security.txt not HTTPS or not text/plain"
+        }
+      },
+      "settings": {
+        "description": {
+          "maxLength": {
+            "description": "Meta descriptions with more characters are reported.",
+            "help": "Meta descriptions with more characters than this are reported; search results cut longer ones. Example: 160.",
+            "label": "Longest meta description"
+          },
+          "minLength": {
+            "description": "Meta descriptions with fewer characters are reported.",
+            "help": "Meta descriptions with fewer characters than this are reported as too short. Example: 70.",
+            "label": "Shortest meta description"
+          }
+        },
+        "head": {
+          "enabled": {
+            "description": "Run the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body.",
+            "help": "Runs the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body. Off skips it.",
+            "label": "Check the head order"
+          }
+        },
+        "hreflang": {
+          "checkContentLanguage": {
+            "description": "Guess the language of each page's text and report one that differs from its hreflang (a warning).",
+            "help": "Guesses the language of each page's text and reports one that differs from its hreflang, as a warning. Off trusts the hreflang.",
+            "label": "Check the text's language"
+          }
+        },
+        "ignore": {
+          "description": "Patterns for the rule id, the URL and the selector (* any text); a finding matching every field given is left out.",
+          "help": "Patterns for the rule id, the URL and the selector (* any text); a finding that matches every field given is left out. Example: rule hreflang-*, url */legacy/*.",
+          "label": "Ignored findings"
+        },
+        "images": {
+          "decorativeMaxSize": {
+            "description": "An image this many pixels wide and high or smaller may have an empty alt.",
+            "help": "An image this many pixels wide and high or smaller may have an empty alt as decoration; larger images without alt are reported. Example: 32.",
+            "label": "Largest decorative image"
+          },
+          "maxAltLength": {
+            "description": "Alt texts with more characters are reported.",
+            "help": "Alt texts with more characters than this are reported as too long for a screen reader. Example: 125.",
+            "label": "Longest alt text"
+          },
+          "placeholders": {
+            "description": "Words that alone are no alt text, such as image or logo.",
+            "help": "Words that alone are no alt text and are reported, such as image or logo. Add your own in other languages.",
+            "label": "Placeholder words"
+          }
+        },
+        "locales": {
+          "description": "hreflang codes the language set has to have, such as de or en-GB; a bare language accepts any of its regions.",
+          "help": "The hreflang codes the language set has to have, such as de or en-GB; a bare language accepts any of its regions. Empty checks no parity.",
+          "label": "Expected locales"
+        },
+        "maxPages": {
+          "description": "How many pages of the same site a crawl checks (1 to 100).",
+          "help": "How many pages of the same site a crawl checks (1 to 100), following internal links from the start page. Example: 10.",
+          "label": "Pages of a crawl"
+        },
+        "microdata": {
+          "enabled": {
+            "description": "Run the microdata group: types, required properties and contradictions to the JSON-LD.",
+            "help": "Runs the microdata group: Microdata and RDFa types, required properties and contradictions to the JSON-LD. Off skips it.",
+            "label": "Check Microdata and RDFa"
+          }
+        },
+        "parity": {
+          "reference": {
+            "description": "The view the others are compared with: smallest (the narrowest view), or a breakpoint or view label.",
+            "help": "The view the other views' text is compared with: smallest for the narrowest view, or a breakpoint id or view label. Example: desktop.",
+            "label": "Parity reference view"
+          },
+          "textSimilarity": {
+            "description": "How alike (0 to 1) a view's main text has to be to the reference view's.",
+            "help": "How alike (0 to 1) a view's main text has to be to the reference view's before a difference is reported; 0.9 tolerates small changes.",
+            "label": "Least text similarity"
+          }
+        },
+        "requireXDefault": {
+          "description": "Report a hreflang set without an x-default page.",
+          "help": "Reports a hreflang set without an x-default page, which search engines use for unmatched languages. Off accepts sets without it.",
+          "label": "Require x-default"
+        },
+        "rules": {
+          "description": "A rule id or group (images) switched off or given another severity: off, info, warning or error.",
+          "help": "A rule id or group (images) switched off or given another severity: off, info, warning or error. Example: title-length to warning, images to off.",
+          "label": "Rules"
+        },
+        "social": {
+          "enabled": {
+            "description": "Run the social group: Open Graph, the share image, the Twitter card and og:url.",
+            "help": "Runs the social group: Open Graph tags, the share image, the Twitter card and og:url. Off skips them.",
+            "label": "Check social tags"
+          },
+          "imageMinHeight": {
+            "description": "A share image lower than this many pixels is reported.",
+            "help": "A share image lower than this many pixels is reported. Example: 630, what Facebook recommends.",
+            "label": "Least share image height"
+          },
+          "imageMinWidth": {
+            "description": "A share image narrower than this many pixels is reported.",
+            "help": "A share image narrower than this many pixels is reported. Example: 1200, what Facebook recommends.",
+            "label": "Least share image width"
+          },
+          "platforms": {
+            "description": "The platforms the social preview shows. Empty shows all.",
+            "help": "The platforms the social preview shows cards for, each with the card its rule picks. The default is Facebook, X, LinkedIn, Slack, WhatsApp, Discord and iMessage; empty shows all.",
+            "label": "Preview platforms"
+          }
+        },
+        "title": {
+          "maxLength": {
+            "description": "Titles with more characters are reported.",
+            "help": "Titles with more characters than this are reported; search results cut longer ones. Example: 60.",
+            "label": "Longest title"
+          },
+          "minLength": {
+            "description": "Titles with fewer characters are reported.",
+            "help": "Titles with fewer characters than this are reported as too short. Example: 30.",
+            "label": "Shortest title"
+          }
+        },
+        "wellknown": {
+          "enabled": {
+            "description": "Fetch the site's /llms.txt and /.well-known/security.txt once per run and check them.",
+            "help": "Fetches the site's /llms.txt and /.well-known/security.txt once per run and checks them. Off skips both.",
+            "label": "Check llms.txt and security.txt"
+          },
+          "maxLinks": {
+            "description": "How many links of llms.txt are fetched to see that they answer (0 to 50).",
+            "help": "How many links of llms.txt are fetched to see that they answer (0 to 50). Example: 20.",
+            "label": "llms.txt links checked"
+          }
+        },
+        "option": {
+          "rules": {
+            "off": "Off",
+            "info": "Info",
+            "warning": "Warning",
+            "error": "Error"
+          },
+          "social": {
+            "platforms": {
+              "facebook": "Facebook",
+              "x": "X",
+              "linkedin": "LinkedIn",
+              "slack": "Slack",
+              "whatsapp": "WhatsApp",
+              "discord": "Discord",
+              "imessage": "iMessage",
+              "telegram": "Telegram",
+              "teams": "Microsoft Teams",
+              "mastodon": "Mastodon",
+              "bluesky": "Bluesky",
+              "threads": "Threads",
+              "signal": "Signal"
+            }
+          }
+        }
+      },
+      "tools": {
+        "check": "Checks a page, a small crawl of its site, or its hreflang set for SEO: status, redirects, indexability, canonical, title, description, headings, lang, viewport, charset, Open Graph, JSON-LD, the sitemap and alt texts; compares the raw HTML with the rendered page and writes a report to .rbrowser/out/seo/. scope hreflang checks the language set from the head, the Link header and the sitemap (codes, x-default, self reference, return links as a matrix, targets, languages); parity true compares title, h1, canonical, hreflang, structured data and main text across the views. It also checks the share image and Twitter card, the site's llms.txt and security.txt, Microdata and RDFa, and the order of the raw head. Arguments: url (default: the view's page), scope page, crawl or hreflang, maxPages, parity, groups (rule groups to run, such as wellknown, social, microdata, head).",
+        "social_preview": "Shows how Facebook, X, LinkedIn, Slack, WhatsApp, Discord, iMessage and the other chosen platforms (Telegram, Microsoft Teams, Mastodon, Bluesky, Threads, Signal) preview a shared link to a page: per platform the title and description as it cuts them (with the full text and the tag each came from), the card it shows (large, small or text only) by its published rule with the reason (layout, alternate, unsure when no rule is published or the image size is unknown, reason code and params, confidence and source), and the share image's real format and size, as a data: URI while the answer stays within budget. Built from the raw HTML, as the platforms' scrapers see it. Arguments: url (default: the target view's page), budget (the most bytes of the answer with its images, 4096 to 4194304; default 60000)."
+      }
+    }
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "plugin": {
+    "overlays": {
+      "name": "Overlays",
+      "commands": {
+        "outlines": "Toggle layout outlines",
+        "overflow": "Toggle the overflow detector",
+        "highlight": "Toggle the element highlight",
+        "stacking": "Toggle the stacking context overlay",
+        "scrollbars": "Toggle the unneeded scrollbar overlay",
+        "text_spacing": "Toggle WCAG text spacing",
+        "target_size": "Toggle the target size overlay",
+        "small_text": "Toggle the small text overlay",
+        "focus_tracking": "Toggle focus tracking",
+        "force_state": "Toggle forced hover/focus state",
+        "content_chaos": "Toggle content chaos",
+        "placeholdifier": "Toggle the placeholdifier",
+        "css_off": "Toggle CSS off",
+        "js_off": "Toggle JavaScript off",
+        "images_off": "Toggle images off",
+        "tab_order": "Toggle the tab order overlay",
+        "off": "Switch every overlay off"
+      },
+      "tools": {
+        "set": "Switches a debug overlay in the views of the target (every view, a view id, or \"active\"). overlay is one of: overflow (horizontal scroll and its causes), outlines (option containersOnly), highlight (options selector, index), stacking (stacking contexts labelled with z-index and reason), scrollbars (scrollbars that overflow by at most tolerancePx), text-spacing (WCAG 1.4.12 spacing applied, clipped text marked), target-size (targets under sizePx, default 24, with the 2.5.8 spacing exception), small-text (text under px), focus-tracking (a ring on the focused element), force-state (options selector and states: hover, focus, active, focus-visible, focus-within, visited; Chromium only), content-chaos (texts longer or shorter by factor), placeholdifier (text and images as blocks), css-off (option includeInline), js-off (scripts disabled and the view reloaded; Chromium only), images-off, tab-order (the tab order numbered in every view, see tab_order); or all with enabled false to switch every overlay off. Answers the overlays of the target; for a new highlight selector its matches per view; for a checking overlay its hits per view (count, the whole number, and shown, how many of the first hits it lists: at most 50 per view and what fits one answer; every hit also reported as a finding); for force-state and js-off the result per view (unsupported in Firefox and WebKit views); for tab-order the answer of tab_order as tabOrder, its warnings also reported as findings.",
+        "overflow": "Measures horizontal overflow in each view of the target: hasHorizontalScroll, scrollWidth, clientWidth and the causing elements (selector, rectangle, overhang in px), plus the elements as wide as 100vw (show100vw, default from the settings).",
+        "state": "Answers which overlays the views of the target show, with their options, and the overlay settings.",
+        "tab_order": "Measures the tab order of each view of the target as the browser walks it (positive tabindex first, open shadow roots and same-origin iframes in place, inert, disabled and hidden elements out) and compares the views. Answers per view the ordered list (count, the whole number, and shown, how many of the first stops fit one answer): index, selector (\" >>> \" steps into a shadow root or an iframe), path (the same element has the same path in every view), tabindex, rect (document px) and warnings (positive-tabindex; invisible-size, invisible-opacity, invisible-offscreen, invisible-clipped for a focusable element nobody sees; reverse-jump for a step up or back along a row; visual-order for a stop far from its place in the visual order); and differences: onlyIn (elements only some views reach, with the views that do and do not) and moved (elements the views reach at another place, with their index per view), at most 25 each and what fits one answer, with the full counts. includeIframes defaults to the setting."
+      },
+      "panels": {
+        "main": "Overlays"
+      },
+      "panel": {
+        "toggle": {
+          "overflow": "Overflow detector",
+          "outlines": "Layout outlines",
+          "highlight": "Element highlight",
+          "stacking": "Stacking contexts",
+          "scrollbars": "Unneeded scrollbars",
+          "text_spacing": "Text spacing (WCAG 1.4.12)",
+          "target_size": "Target size",
+          "small_text": "Small text",
+          "focus_tracking": "Focus tracking",
+          "force_state": "Force state on the selector",
+          "content_chaos": "Content chaos",
+          "placeholdifier": "Placeholdifier",
+          "css_off": "CSS off",
+          "js_off": "JavaScript off",
+          "images_off": "Images off",
+          "tab_order": "Tab order"
+        },
+        "off": "All overlays off",
+        "selector": "CSS selector",
+        "selector_hint": "Enter searches every view; the arrow keys step through the matches.",
+        "find": "Find",
+        "previous": "Previous match",
+        "next": "Next match",
+        "views": "Views",
+        "empty": "No view has reported yet.",
+        "view": "View {view}",
+        "matches": "match {current} of {count}",
+        "invalid": "not a valid selector",
+        "scroll": "scrolls {px} px sideways, caused by {causes}",
+        "no_scroll": "no horizontal scroll",
+        "found": "{count, plural, one {# match} other {# matches}} in {views, plural, one {# view} other {# views}}.",
+        "state": "Forced state",
+        "shift_hint": "Shift-click a switch to change the active view only.",
+        "hits": "{overlay}: {count}",
+        "tab_title": "Tab order across views",
+        "tab_compare": "Compare the views",
+        "tab_only": "{selector}: only in views {views}",
+        "tab_moved": "{selector}: at another place ({positions})",
+        "tab_position": "view {view} #{index}",
+        "tab_same": "Every view tabs through the same elements in the same order.",
+        "tab_more": "and {count} more",
+        "tab_single": "Comparing needs at least two views that answered.",
+        "group": {
+          "layout": "Layout",
+          "selector": "Elements by selector",
+          "accessibility": "Accessibility",
+          "content": "Page content"
+        },
+        "hits_shown": "{overlay}: {shown} of {count} shown"
+      },
+      "errors": {
+        "no_selector": "Enter a CSS selector in the Overlays panel first.",
+        "bad_selector": "\"{selector}\" is not a valid CSS selector.",
+        "bad_option": "The overlay {overlay} has no option {option} of that type.",
+        "unknown_overlay": "There is no overlay \"{overlay}\".",
+        "all_on": "Overlays can only be switched on one at a time; \"all\" switches them off."
+      },
+      "settings": {
+        "restoreOnStart": {
+          "label": "Restore overlays on start",
+          "description": "Shows the overlays that were on when the project was last open.",
+          "help": "Switches the overlays on that were on when the project was last open, so a review continues where it stopped. Off starts with every overlay off."
+        },
+        "overflow": {
+          "mutationThrottleMs": {
+            "label": "Overflow re-check delay (ms)",
+            "description": "The overflow detector and the other overlays measure again at most this often while the page changes (50 to 5000).",
+            "help": "The overflow detector and the other overlays measure again at most this often while the page changes, in milliseconds (50 to 5000). Raise it for pages that animate constantly."
+          },
+          "show100vw": {
+            "label": "Mark 100vw elements",
+            "description": "Marks elements as wide as the viewport including its scrollbar in blue, even without a horizontal scroll.",
+            "help": "Marks elements as wide as the viewport including its scrollbar in blue, even without a horizontal scroll, as they will scroll once a scrollbar shows."
+          }
+        },
+        "outlines": {
+          "containersOnly": {
+            "label": "Outline flex and grid containers only",
+            "description": "Frames only elements with display flex or grid instead of every element.",
+            "help": "The outlines overlay frames only elements with display flex or grid instead of every element, to see the layout skeleton."
+          }
+        },
+        "colors": {
+          "overflow": {
+            "label": "Horizontal scroll colour",
+            "description": "The frame around a view that scrolls sideways (#rrggbb).",
+            "help": "The colour of the frame around a view that scrolls sideways, as #rrggbb. Example: #f5b800."
+          },
+          "cause": {
+            "label": "Overflow cause colour",
+            "description": "The elements that make the page scroll sideways (#rrggbb).",
+            "help": "The colour of the elements that make the page scroll sideways, as #rrggbb. Example: #e5262b."
+          },
+          "vw100": {
+            "label": "100vw element colour",
+            "description": "Elements as wide as the viewport including its scrollbar (#rrggbb).",
+            "help": "The colour of elements as wide as the viewport including its scrollbar, as #rrggbb."
+          },
+          "highlight": {
+            "label": "Highlight colour",
+            "description": "The elements the selector matches (#rrggbb).",
+            "help": "The colour of the elements the highlight selector matches, as #rrggbb."
+          }
+        },
+        "targetSizePx": {
+          "label": "Minimum target size (px)",
+          "description": "Interactive elements smaller than this are marked: 24 for WCAG 2.5.8 (with its spacing exception), 44 for 2.5.5.",
+          "help": "Interactive elements smaller than this many pixels are marked: 24 for WCAG 2.5.8 (with its spacing exception), 44 for the stricter 2.5.5."
+        },
+        "smallTextPx": {
+          "label": "Small text limit (px)",
+          "description": "Text with a computed font size below this is marked.",
+          "help": "Text with a computed font size below this many pixels is marked by the small-text overlay. Example: 12."
+        },
+        "scrollbarTolerancePx": {
+          "label": "Scrollbar tolerance (px)",
+          "description": "A shown scrollbar whose content overflows by at most this many pixels is marked as unneeded.",
+          "help": "A shown scrollbar whose content overflows by at most this many pixels is marked as unneeded, a sign of a rounding or padding slip."
+        },
+        "chaos": {
+          "factor": {
+            "label": "Content chaos factor",
+            "description": "Content chaos makes every text this many times as long (2 doubles, 0.5 halves) and adds a long word when it lengthens.",
+            "help": "Content chaos makes every text this many times as long (2 doubles, 0.5 halves) and adds a long unbreakable word when it lengthens, to test how layouts cope with translations."
+          }
+        },
+        "cssOff": {
+          "includeInline": {
+            "label": "CSS off includes inline styles",
+            "description": "CSS off also reverts style attributes, not only the style sheets.",
+            "help": "CSS off also reverts style attributes, not only the style sheets, so the page shows as bare HTML. Off keeps inline styles."
+          }
+        },
+        "reportFindings": {
+          "label": "Report overlay findings",
+          "description": "Switching on target size, small text, text spacing, the scrollbar overlay or the tab order reports its hits to the findings panel.",
+          "help": "Switching on target size, small text, text spacing, the scrollbar overlay or the tab order reports its hits to the findings panel, so they join the checks. Off shows them in the views only."
+        },
+        "tabOrder": {
+          "showLines": {
+            "label": "Tab order lines",
+            "description": "Joins the numbered tab stops with lines in their order; a jump against the reading order is orange.",
+            "help": "Joins the numbered tab stops with lines in their order; a jump against the reading order is drawn orange."
+          },
+          "live": {
+            "label": "Tab order live mode",
+            "description": "Pressing Tab in one view rings the same element in every view, without moving the focus there.",
+            "help": "Pressing Tab in one view rings the same element in every view, without moving the focus there, so you follow the tab order across breakpoints."
+          },
+          "includeIframes": {
+            "label": "Tab order includes iframes",
+            "description": "Walks into same-origin iframes; off, every iframe is one stop (a cross-origin iframe always is).",
+            "help": "Walks into same-origin iframes and numbers their stops; off, every iframe is one stop, as a cross-origin iframe always is."
+          }
+        }
+      },
+      "findings": {
+        "target_size": "Interactive target smaller than the minimum target size ({label}).",
+        "small_text": "Text smaller than the small text limit ({label}).",
+        "text_spacing_clip": "Text is clipped or overflows its box under WCAG 1.4.12 text spacing ({label}).",
+        "unneeded_scrollbar": "Scrollbar shown for content that overflows by at most the tolerance ({label}).",
+        "tab_positive_tabindex": "Focusable element with a positive tabindex ({label}): it comes before the page order.",
+        "tab_invisible_focusable": "Focusable element nobody sees ({label}): Tab reaches it, but it does not show."
+      }
+    }
+  }
+}

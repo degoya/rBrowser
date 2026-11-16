@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "startUrl": "http://127.0.0.1:18765/grid.html",
+  "breakpoints": [
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 },
+    { "id": "laptop", "label": "Laptop", "width": 1280, "height": 800 },
+    { "id": "tablet", "label": "Tablet", "width": 768, "height": 1024, "touch": true },
+    { "id": "tablet-landscape", "label": "Tablet landscape", "width": 1024, "height": 768, "touch": true },
+    { "id": "mobile", "label": "Mobile", "width": 393, "height": 852, "dpr": 3, "touch": true },
+    { "id": "mobile-small", "label": "Mobile small", "width": 360, "height": 640, "dpr": 2, "touch": true }
+  ],
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "gap": 8,
+    "cells": [
+      { "breakpoint": "desktop", "col": 1, "row": 1, "rowSpan": 2 },
+      { "breakpoint": "laptop", "col": 2, "row": 1 },
+      { "breakpoint": "tablet", "col": 3, "row": 1 },
+      { "breakpoint": "tablet-landscape", "col": 4, "row": 1, "zoom": 0.25 },
+      { "breakpoint": "mobile", "col": 2, "row": 2 },
+      { "breakpoint": "mobile-small", "col": 3, "row": 2, "colSpan": 2 }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+# The fixture site of RB-050-05: 19 pages in two sitemaps (one gzip, behind a nested index); /missing answers 404.
+User-agent: *
+Disallow: /private/
+Allow: /private/press$
+
+Sitemap: https://www.example.test/sitemap_index.xml

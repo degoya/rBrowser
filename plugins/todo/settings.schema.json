@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Todo plugin settings",
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "default": ["**/*.todo"],
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 1,
+      "x-scope": ["user", "project"]
+    },
+    "exclude": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "default": ["node_modules", ".git", "target", "dist", "build", "out", ".next", ".nuxt", ".output", ".svelte-kit", "vendor", ".venv", "__pycache__"],
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 2,
+      "x-scope": ["user", "project"]
+    },
+    "timestampFormat": {
+      "type": "string",
+      "enum": ["todoPlus", "fullYear", "date", "fullDate"],
+      "default": "todoPlus",
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 3,
+      "x-scope": ["user", "project"]
+    },
+    "hideDone": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 4,
+      "x-scope": ["user"]
+    },
+    "hideArchive": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 5,
+      "x-scope": ["user"]
+    },
+    "refreshSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300,
+      "default": 5,
+      "x-category": "project",
+      "x-section": "todo",
+      "x-order": 6,
+      "x-scope": ["user"]
+    }
+  }
+}

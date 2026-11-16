@@ -1,0 +1,10 @@
+{
+  "plugin": {
+    "example-analyzer": {
+      "name": "Example analyzer",
+      "reasons": {
+        "view_size": "A view of the grid is {width} pixels wide."
+      }
+    }
+  }
+}

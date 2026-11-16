@@ -1,0 +1,280 @@
+name: CI
+
+# The checks of every push and pull request once the repository is on GitHub (RB-090-04, after
+# rCommander's ci.yml; prepared, inactive until the move, RB-090-12). It runs the same scripts as
+# a workstation: scripts/check.sh --preflight, --rust and --windows, scripts/build-plugins.sh and
+# scripts/package-windows.sh. scripts/check.sh --full stays the local gate; this is the same gate
+# on clean machines, Windows itself included.
+on:
+  # Branches only: a release tag has release.yml.
+  push:
+    branches: ["**"]
+  pull_request:
+  # A re-check of one fix need not wait for the platform it cannot affect:
+  #   gh workflow run ci.yml --ref <branch> -f platforms=windows
+  # macOS (the test build, RB-090-15) runs only when asked for by name - platforms=macos, not
+  # part of `all`, so scripts/public-ci.sh's gates stay what they were - or on a push to a `ci/*`
+  # branch: its runners are the costly ones.
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: The platforms whose jobs run (the preflight always runs)
+        type: choice
+        options: [all, linux, windows, macos]
+        default: all
+
+# Nothing by default; every job names what it needs, which is reading the tree. No job here sees
+# a secret.
+permissions: {}
+
+# A newer push to the same branch makes the running one pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Incremental state is dead weight in a one-off build.
+  CARGO_INCREMENTAL: 0
+  # A runner runs one job: the build lock and the memory gate of scripts/lib/lock.sh are for a
+  # shared workstation.
+  RB_NO_LOCK: 1
+  RB_MIN_FREE_MB: 0
+  # The test profile with JUnit output and one retry (.config/nextest.toml).
+  NEXTEST_PROFILE: ci
+
+# Runner images are named, not `-latest`: a `-latest` label moves under a release without a
+# commit. Actions are pinned to a commit with the release as a comment
+# (scripts/check-actions-pinned.sh); dependabot.yml moves them.
+
+jobs:
+  # What needs no compiler: scripts/check.sh --preflight with shellcheck, gitleaks and actionlint
+  # at their pins, cargo-deny against today's advisories and the npm builds and tests of the
+  # front ends.
+  preflight:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install shellcheck, gitleaks and actionlint
+        run: scripts/ci-tools.sh linters
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-deny@0.20.2
+      # The preflight's `cargo deny --offline check` reads the advisory database fetched here.
+      - name: Fetch the advisory database
+        run: cargo deny fetch
+      - name: scripts/check.sh --preflight
+        env:
+          RB_CHECK_LOGS: ${{ runner.temp }}/check
+        run: scripts/check.sh --preflight
+      - name: Upload the check logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preflight-logs
+          path: ${{ runner.temp }}/check
+          retention-days: 14
+
+  # Clippy (-D warnings) and every test on Linux (scripts/check.sh --rust), then the first-party
+  # plugins built for wasm32 as development packages with their conformance check
+  # (scripts/build-plugins.sh --unsigned; no key on a CI run).
+  linux:
+    needs: preflight
+    if: inputs.platforms != 'windows' && inputs.platforms != 'macos'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    # A hang is cut off rather than left running for six hours.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: linux
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: nextest@0.9.151,wasm-tools@1.261.0
+      - name: scripts/check.sh --rust
+        env:
+          RB_CHECK_LOGS: ${{ runner.temp }}/check
+        run: scripts/check.sh --rust
+      - name: The plugins, unsigned, with their conformance check
+        run: scripts/build-plugins.sh --unsigned
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-linux
+          path: target/nextest/ci/junit.xml
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the check logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-check-logs
+          path: ${{ runner.temp }}/check
+          retention-days: 14
+
+  # The Windows build as the team makes it, from Linux with cargo-xwin: the Windows lint
+  # (scripts/check.sh --windows) and a test package (scripts/package-windows.sh), which also
+  # cross-builds the static musl helper rbrowser-wsl into the package (RB-030-04). The ZIP
+  # stays a week as an artifact of the run.
+  windows-cross:
+    needs: preflight
+    if: inputs.platforms != 'linux' && inputs.platforms != 'macos'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the cross-build packages
+        run: scripts/ci-tools.sh cross
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: windows-cross
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-xwin@0.23.1,wasm-tools@1.261.0
+      - name: scripts/check.sh --windows
+        env:
+          RB_CHECK_LOGS: ${{ runner.temp }}/check
+        run: scripts/check.sh --windows
+      # Into artifacts/plugins/, which exists even while plugins/ has none.
+      - name: The plugins, unsigned
+        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
+      # Builds the front ends it ships - the shell UI, the sync agent build.rs embeds and the
+      # sidecar (`npm ci --ignore-scripts`) - then the app, and packs the ZIP.
+      - name: scripts/package-windows.sh --profile release-test
+        run: scripts/package-windows.sh --profile release-test --plugins artifacts/plugins
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-x64-release-test
+          path: artifacts/windows/*.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload the check logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-cross-check-logs
+          path: ${{ runner.temp }}/check
+          retention-days: 14
+
+  # Clippy and every test natively on Windows with MSVC (scripts/check.sh --rust in Git Bash):
+  # the cfg(windows) code compiled and run where it ships, not only linted.
+  windows:
+    needs: preflight
+    if: inputs.platforms != 'linux' && inputs.platforms != 'macos'
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: windows
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: nextest@0.9.151
+      - name: scripts/check.sh --rust
+        env:
+          RB_CHECK_LOGS: ${{ runner.temp }}/check
+        run: scripts/check.sh --rust
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-windows
+          path: target/nextest/ci/junit.xml
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the check logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-check-logs
+          path: ${{ runner.temp }}/check
+          retention-days: 14
+
+  # The macOS test build (RB-090-15): rBrowser.app for Apple Silicon and for Intel, each built
+  # natively, ad hoc signed and checked (scripts/package-macos.sh: the structure test and
+  # `codesign --verify --deep --strict`), kept a week as a ZIP and a DMG; then the app crate under
+  # clippy on macOS, where its cfg(target_os = "macos") code compiles - after the upload, so a
+  # lint never withholds a bundle. Only on a push to a `ci/*` branch or when asked for:
+  #   gh workflow run ci.yml --ref ci/<name> -f platforms=macos
+  macos:
+    needs: preflight
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.platforms == 'macos')
+      || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/ci/'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            os: macos-15
+          - arch: x86_64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The scripts want bash 4 or later (macOS ships 3.2); CEF's wrapper builds with Ninja.
+      - name: Install bash and ninja
+        run: brew install bash ninja
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: macos-${{ matrix.arch }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-tools@1.261.0
+      - name: The plugins, unsigned
+        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
+      - name: scripts/package-macos.sh --profile release-test
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: scripts/package-macos.sh --profile release-test --arch "${ARCH}" --plugins artifacts/plugins
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-${{ matrix.arch }}-release-test
+          path: |
+            artifacts/macos/*.zip
+            artifacts/macos/*.dmg
+          if-no-files-found: error
+          retention-days: 7
+      - name: Clippy on the app for macOS
+        run: cargo clippy --locked -p rbrowser --all-targets -- -D warnings

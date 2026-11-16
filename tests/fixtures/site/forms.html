@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser forms fixture</title>
+<style>
+  /* RB-020-05: form sync. Every control a `change` sets in the other views, a file input that is
+     skipped, a contenteditable, and two framework sections:
+     - "React": the inputs carry React's value tracker (an own `value`/`checked` property on the
+       element that remembers what a script set; onChange fires only when the element's real
+       value differs from the remembered one - set through the prototype's setter, as the sync
+       agent does). Checkboxes and radios fire onChange from `click`, like React.
+     - "Vue": v-model's listeners - `change` for select, checkbox and radio, `input` for text and
+       range.
+     Every handler call lands in window.__changes ({ id, via, value }), every focus in
+     window.__focus, for the end-to-end run (scripts/e2e-windows.sh --only sync-forms): compare
+     them across the views. The burger opens the menu (`⌘ S N`: only in the active view).
+     The agent's Vitest tests load this page without its script. Served by
+     tests/fixtures/server/post-counter.py. */
+  body { margin: 16px; font: 16px system-ui, sans-serif; }
+  fieldset { display: grid; gap: 8px; max-width: 460px; margin-bottom: 16px; }
+  #menu[hidden] { display: none; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #bio, #rich { min-height: 2em; border: 1px solid #999; padding: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <button id="burger" aria-expanded="false" aria-controls="menu">Menu</button>
+  <nav id="menu" hidden><a href="#a">A</a> <a href="#b">B</a></nav>
+</header>
+<form id="plain" method="post" action="/submit">
+  <fieldset>
+    <legend>Plain</legend>
+    <label>Size
+      <select id="size" name="size">
+        <option value="s">Small</option>
+        <option value="m">Medium</option>
+        <option value="l">Large</option>
+      </select>
+    </label>
+    <label>Toppings
+      <select id="toppings" name="toppings" multiple size="4">
+        <option value="cheese">Cheese</option>
+        <option value="ham">Ham</option>
+        <option value="olives">Olives</option>
+        <option value="basil">Basil</option>
+      </select>
+    </label>
+    <div role="radiogroup" aria-label="Shipping">
+      <label><input type="radio" name="ship" id="ship-std" value="standard" checked> Standard</label>
+      <label><input type="radio" name="ship" id="ship-exp" value="express"> Express</label>
+    </div>
+    <label><input type="checkbox" id="terms" name="terms"> I accept the terms</label>
+    <input type="checkbox" id="newsletter" name="newsletter" class="visually-hidden">
+    <label for="newsletter" id="newsletter-label">Newsletter</label>
+    <label>Volume <input type="range" id="volume" name="volume" min="0" max="100" value="50"></label>
+    <label>Accent <input type="color" id="accent" name="accent" value="#336699"></label>
+    <label>Day <input type="date" id="day" name="day"></label>
+    <label>City <input id="city" name="city" autocomplete="off"></label>
+    <label>Secret <input type="password" id="secret" name="secret" autocomplete="off"></label>
+    <label>Avatar <input type="file" id="avatar" name="avatar"></label>
+    <label for="avatar" id="avatar-label">Choose a picture</label>
+    <div id="bio" contenteditable="true" aria-label="Bio"></div>
+    <div id="rich" contenteditable="true" aria-label="Rich text"><b>bold</b> text</div>
+    <button type="submit">Send</button>
+  </fieldset>
+</form>
+<form id="react" onsubmit="return false">
+  <fieldset>
+    <legend>React</legend>
+    <label>Name <input id="react-name" name="react-name" autocomplete="off"></label>
+    <label>Size
+      <select id="react-size" name="react-size">
+        <option value="s">Small</option>
+        <option value="m">Medium</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="react-agree" name="react-agree"> Agree</label>
+  </fieldset>
+</form>
+<form id="vue" onsubmit="return false">
+  <fieldset>
+    <legend>Vue</legend>
+    <label>Size
+      <select id="vue-size" name="vue-size">
+        <option value="s">Small</option>
+        <option value="m">Medium</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="vue-agree" name="vue-agree"> Agree</label>
+    <label>Level <input type="range" id="vue-level" name="vue-level" min="0" max="10" value="5"></label>
+  </fieldset>
+</form>
+<script>
+  'use strict';
+  window.__changes = [];
+  window.__focus = [];
+  const log = (id, via, value) => window.__changes.push({ id, via, value: String(value) });
+
+  // React's value tracker (react-dom inputValueTracking), reduced to what decides onChange.
+  function track(element) {
+    const field = element.type === 'checkbox' || element.type === 'radio' ? 'checked' : 'value';
+    const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), field);
+    let current = String(element[field]);
+    Object.defineProperty(element, field, {
+      configurable: true,
+      get() { return descriptor.get.call(this); },
+      set(value) { current = String(value); descriptor.set.call(this, value); },
+    });
+    return () => {
+      const next = String(descriptor.get.call(element));
+      if (next === current) return false;
+      current = next;
+      return true;
+    };
+  }
+  for (const element of document.querySelectorAll('#react input, #react select')) {
+    const changed = track(element);
+    const field = element.type === 'checkbox' ? 'checked' : 'value';
+    const types = element.type === 'checkbox' ? ['click'] : element.localName === 'select' ? ['change'] : ['input', 'change'];
+    for (const type of types) {
+      element.addEventListener(type, () => {
+        if (changed()) log(element.id, 'react', element[field]);
+      });
+    }
+  }
+
+  // Vue's v-model listeners.
+  for (const element of document.querySelectorAll('#vue input, #vue select')) {
+    const type = element.type === 'range' ? 'input' : 'change';
+    const field = element.type === 'checkbox' ? 'checked' : 'value';
+    element.addEventListener(type, () => log(element.id, 'vue', element[field]));
+  }
+
+  // The plain controls: every change.
+  document.getElementById('plain').addEventListener('change', (event) => {
+    const element = event.target;
+    const value = element.type === 'checkbox' || element.type === 'radio' ? element.checked
+      : element.multiple ? Array.from(element.selectedOptions, (o) => o.value).join(',')
+      : element.type === 'password' ? `${element.value.length} characters` : element.value;
+    log(element.id, 'change', value);
+  });
+  addEventListener('focusin', (event) => window.__focus.push(event.target.id || event.target.localName));
+
+  const burger = document.getElementById('burger');
+  burger.addEventListener('click', () => {
+    const menu = document.getElementById('menu');
+    menu.hidden = !menu.hidden;
+    burger.setAttribute('aria-expanded', String(!menu.hidden));
+  });
+</script>
+</body>
+</html>

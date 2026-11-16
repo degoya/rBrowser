@@ -1,0 +1,139 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# The spikes (wave 0) are throw-away workspaces of their own; the plugin SDK templates build on
+# their own (scripts/check-sdk-templates.sh, later).
+exclude = ["spikes", "sdk"]
+
+[workspace.package]
+version = "0.7.0"
+authors = ["Alexander Herling / DEGOYA.digital"]
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/degoya/rBrowser"
+homepage = "https://github.com/degoya/rBrowser"
+
+# The dependencies more than one crate uses, at one version each, pinned to the newest release
+# when they were added (scripts/update-deps.sh moves them). A crate that adds a dependency others
+# will share puts it here and takes it with `<name>.workspace = true`; Cargo.lock pins the exact
+# build.
+[workspace.dependencies]
+anyhow = "1.0.104"
+# Async methods on object-safe traits (rb-engine `ViewHost::cdp_send`).
+async-trait = "0.1.92"
+# CEF, the Chromium of the grid (RB-010-04); pinned here for that job, unused by the contracts.
+cef = "156.4.0"
+clap = { version = "4.6.7", features = ["derive"] }
+# The Windows resources of the binary: version info, icon, long-path manifest (crates/rbrowser).
+embed-resource = "3.0.12"
+# Ordered maps whose order is meaning: layout presets in config order (leader L 1-9, rb-config).
+indexmap = { version = "2.14.2", features = ["serde"] }
+# The project watcher (Reload & Files): ReadDirectoryChangesW on Windows, inotify inside WSL,
+# FSEvents on macOS (RB-090-15; without the feature notify 8 does not build there).
+notify = { version = "8.2.2", default-features = false, features = ["macos_fsevent"] }
+# The MCP server (rb-mcp): HTTP on 127.0.0.1 plus stdio forwarding from WSL.
+rmcp = { version = "3.10.0", default-features = false, features = ["macros", "server", "transport-io", "transport-streamable-http-server"] }
+# The JSON Schema of the project config and the settings (rb-config).
+schemars = { version = "1.2.3", features = ["indexmap2"] }
+serde = { version = "1.0.229", features = ["derive"] }
+# `preserve_order`: the config is written back with its key order intact (RB-010-01).
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+# The JSON path of a type error while loading the project config (rb-config validation).
+serde_path_to_error = "0.1.20"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+# Plugin manifests: rb-plugin-host reads `manifest.toml`, the shortcut lint of rb-commands the
+# bundled ones (tests only).
+toml = "1.2.1"
+tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
+tracing = "0.1.44"
+# The rotating log file of rb-diag: its non-blocking writer thread (RB-010-10).
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+# The diagnostics ZIP of rb-diag (RB-010-10) and the `.rbplugin` package (RB-010-03): deflate
+# in pure Rust (zlib-rs), nothing else.
+zip = { version = "9.5.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# The plugin system (rb-plugin-host, RB-010-03; docs/plugins.md). The runtime: rCommander's
+# version and features, the newest release; `cache` keeps compiled plugins on disk between starts,
+# no WASI.
+wasmtime = { version = "50.0.1", default-features = false, features = ["anyhow", "async", "cache", "component-model", "component-model-async", "cranelift", "parallel-compilation", "runtime", "std"] }
+# Package signatures (Ed25519 over the package digest) and the PKCS#8 PEM of a signing key.
+ed25519-dalek = { version = "3.0.0", features = ["pem", "pkcs8"] }
+base64 = "0.23.1"
+sha2 = "0.11.1"
+rand = "0.10.3"
+# The manifest (`manifest.toml`, toml above), its versions and the `project-read` globs.
+semver = "1.0.28"
+globset = "0.4.21"
+# The regex rules of the network interception (RB-070-02), the version the lock holds already.
+regex = "1.13.1"
+# The test components of rb-plugin-host (WebAssembly text made into components, no toolchain): the
+# versions Wasmtime 50 brings (wasmparser and wasm-encoder 0.261), so no second copy enters the lock.
+wat = "~1.263.0"
+wit-component = "0.263.0"
+wit-parser = "0.263.0"
+# The guest side of the first-party plugins (plugins/, wasm32 only) and of the SDK templates.
+wit-bindgen = "0.63.0"
+# Win32 calls without a safe wrapper: the CDP pipe of the CEF app (RB-010-04).
+windows-sys = "0.61.2"
+# The internal one-time WebSocket endpoint of docked DevTools (RB-010-06): the hosted frontend
+# connects to it on 127.0.0.1; server handshake only, no TLS, no client.
+tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
+# Stream and sink combinators for that WebSocket (RB-010-06).
+futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
+# The one-time token of that endpoint, from the OS's random source (RB-010-06).
+getrandom = "0.4.3"
+# The HTTP routes of the MCP server (rb-mcp, RB-030-01): the token guard and `/health` in front of
+# rmcp's Streamable HTTP service; HTTP/1 on tokio, nothing else.
+axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
+# HTTP(S) for `rbrowser init`'s analyser, which reads a page's stylesheets before any window exists
+# (RB-010-13); the version and features download-cef already brings into the lock.
+# ureq 3.5.2 caps a JSON body at 10 MiB; cef-dll-sys reads the CEF builds index (larger) with it,
+# so the Windows lanes failed on 2026-11-13. Held at 3.5.1 until cef-dll-sys moves on.
+ureq = "=3.5.1"
+# CRX3 signature checks of Web Store extensions (RB-080-23): RSA-SHA256 and SHA-256; the
+# version rustls already brings into the lock.
+ring = "0.17.14"
+# PNG decode and encode for the screenshots and their overview image (rb-visual, RB-050-03);
+# pure Rust, no `image` umbrella.
+png = "0.18.1"
+# Dates of the update manifest and the update journal, written as RFC 3339 (RB-090-02).
+chrono = { version = "0.4.45", default-features = false, features = ["now", "serde", "std"] }
+# The https-only check of an update artifact's address (RB-090-02); the version ureq brings.
+url = "2.5.8"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# Every `allow` says why (`reason = "..."`), so a lint switched off is never a mystery.
+allow_attributes_without_reason = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "warn"
+
+# Thin LTO (RB-080-25, owner 2026-11-13): fat LTO alone measured no smaller (rbrowser.dll 47.1 MB
+# either way, the build 9m21s instead of 7m); the 30.0 MB came with `panic = "abort"`, which stays
+# out, because rb-plugin-host (src/recover.rs) and tokio's task isolation are built on a panic
+# that unwinds.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
+# Test packages: optimised like a release, but in parallel code units and without LTO, which is
+# what makes a release build wait on one core. Line tables stay, unstripped, so a panic in a test
+# package names its files and lines (on Windows from rbrowser.pdb, which the test package carries
+# beside the exe). Published releases keep `release`.
+[profile.release-test]
+inherits = "release"
+codegen-units = 16
+lto = false
+debug = "line-tables-only"
+strip = "none"
+
+[profile.dev]
+debug = "line-tables-only"          # backtraces stay, DWARF shrinks a lot
+split-debuginfo = "unpacked"        # deduplicates debug info instead of copying it

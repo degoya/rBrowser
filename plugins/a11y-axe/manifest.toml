@@ -1,0 +1,61 @@
+# The accessibility check (RB-060-06, docs/plugins.md): axe-core (MPL-2.0, bundled, see NOTICE)
+# runs in each view's isolated world for one run and is removed again; its violations become
+# findings, merged across the views by the check runner, and shared with the seo plugin where
+# both find the same (img-alt-missing, link-name-missing, html-lang-missing). axe-core and the
+# runner are embedded in the component (runner/dist/), so the plugin has no page script: nothing
+# is injected into a view until a check runs.
+manifest_version = 1
+id = "a11y-axe"
+name = "Accessibility (axe)"
+version = "0.1.0"
+api_version = "0.1.0"
+# `check.run` answers findings; the command and the MCP tool need the `feature` export.
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "a11y"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Runs axe-core's accessibility rules (WCAG 2.2 AA by default) in every view at once and reports in which breakpoints each problem occurs."
+# Checks > Accessibility (axe) in the page's context menu (RB-080-43).
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# `views` for the views and breakpoints of a run over all of them, `evaluate` to run axe in a
+# view's isolated world, `findings` for the command, which reports into the findings panel.
+[capabilities]
+views = true
+evaluate = true
+findings = true
+
+# axe takes seconds on a large page and a run over every view waits for each; the host time is
+# credited back. Views run in parallel, each call in a store of its own.
+[limits]
+memory_bytes = 134217728
+fuel = 4000000000
+timeout_milliseconds = 60000
+max_concurrent = 8
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `a11y_check`: the findings of every view of `target` (or all), merged across the views.
+[[tools]]
+name = "check"
+description = "plugin.a11y-axe.tools.check"
+input = { type = "object", properties = { tags = { type = "array", maxItems = 32, items = { type = "string", maxLength = 64 } } } }
+
+# plugin.a11y_axe.check: the same run over every view, reported into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.a11y-axe.commands.check"
+shortcut = "Ctrl+Shift+Space K A"
+group = "checks"
+tool = "check"

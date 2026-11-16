@@ -1,0 +1,5 @@
+> The pages the SEO check of rBrowser is tested against, but without the H1 the format starts with.
+
+## Pages
+
+- [Clean page](https://fixture.test/clean/): a page without SEO findings

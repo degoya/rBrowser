@@ -1,0 +1,6 @@
+/* The network panel's styles: panel-ui's (Tailwind and Nuxt UI), its code views and the classes
+   named here. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';
+@source '../../../../web-common/panel-ui/src/code';

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Storage panel settings",
+  "type": "object",
+  "properties": {
+    "pollMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60000,
+      "default": 2000,
+      "x-category": "devtools",
+      "x-section": "storage",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "showHttpOnly": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "storage",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "pinsEnabled": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "storage",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "mcpValues": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "storage",
+      "x-order": 4,
+      "x-scope": ["user"],
+      "x-protected": true
+    }
+  }
+}

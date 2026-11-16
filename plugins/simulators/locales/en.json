@@ -1,0 +1,151 @@
+{
+  "plugin": {
+    "simulators": {
+      "commands": {
+        "pick": "Simulators: Choose a Simulation for the Active View"
+      },
+      "tools": {
+        "set": "Simulates a colour vision deficiency (protanopia, protanomaly, deuteranopia, deuteranomaly, tritanopia, tritanomaly, achromatopsia, achromatomaly), a vision impairment (myopia, cataract, glaucoma, macular-degeneration, low-contrast) or the surroundings (sunlight, dimmed) in the target views; \"none\" removes it. severity (0 to 1) sets the strength where a simulation has one. Without target the active view; without type it answers every view's simulation and the catalogue."
+      },
+      "panels": {
+        "picker": "Simulators"
+      },
+      "errors": {
+        "bad_args": "Simulators got a value it cannot use: {reason}",
+        "no_view": "There is no active view to simulate in. Click into a view and try again."
+      },
+      "groups": {
+        "color": "Colour vision",
+        "vision": "Vision impairments",
+        "environment": "Surroundings"
+      },
+      "types": {
+        "none": {
+          "name": "Off",
+          "description": "The view as it is."
+        },
+        "protanopia": {
+          "name": "Protanopia",
+          "description": "No red cones: reds look dark and close to greens (about 1 % of men)."
+        },
+        "protanomaly": {
+          "name": "Protanomaly",
+          "description": "Weak red cones: reds look duller and closer to greens."
+        },
+        "deuteranopia": {
+          "name": "Deuteranopia",
+          "description": "No green cones: greens and reds are hard to tell apart (about 1 % of men)."
+        },
+        "deuteranomaly": {
+          "name": "Deuteranomaly",
+          "description": "Weak green cones, the most common colour deficiency (about 5 % of men)."
+        },
+        "tritanopia": {
+          "name": "Tritanopia",
+          "description": "No blue cones: blues and greens, yellows and pinks are confused."
+        },
+        "tritanomaly": {
+          "name": "Tritanomaly",
+          "description": "Weak blue cones: blues look greener, yellows paler."
+        },
+        "achromatopsia": {
+          "name": "Achromatopsia",
+          "description": "No colour at all: brightness only."
+        },
+        "achromatomaly": {
+          "name": "Achromatomaly",
+          "description": "Very weak colour vision: colours look washed out."
+        },
+        "myopia": {
+          "name": "Blurred vision (myopia)",
+          "description": "Everything is out of focus; the strength sets how much."
+        },
+        "cataract": {
+          "name": "Cataract",
+          "description": "A clouded, yellowed lens: blurred, low in contrast, with glare."
+        },
+        "glaucoma": {
+          "name": "Glaucoma (tunnel vision)",
+          "description": "The edges of the view are lost; only the centre stays clear."
+        },
+        "macular-degeneration": {
+          "name": "Macular degeneration",
+          "description": "A blurred, dark spot in the centre of the view."
+        },
+        "low-contrast": {
+          "name": "Low contrast sensitivity",
+          "description": "Light and dark lie closer together."
+        },
+        "sunlight": {
+          "name": "Direct sunlight",
+          "description": "A bright, washed-out screen with little contrast."
+        },
+        "dimmed": {
+          "name": "Dimmed screen",
+          "description": "A screen at low brightness."
+        }
+      },
+      "panel": {
+        "title": "Simulators",
+        "view": "Active view: {label}",
+        "no_view": "No active view: click into a view, then choose again.",
+        "strength": "Strength",
+        "strength_value": "{value} %",
+        "strength_hint": "Leave it untouched and Chromium draws the types it knows itself.",
+        "all_views": "Apply to every view",
+        "shift_hint": "Shift+click or Shift+Enter applies the choice to every view.",
+        "views": "Views",
+        "view_row": "{label}: {type} ({mode})",
+        "mode_off": "off",
+        "mode_native": "drawn by Chromium",
+        "mode_script": "drawn by the page script",
+        "applied": "{type} in {label}.",
+        "applied_all": "{type} in every view.",
+        "kept_active": "{type} stays in {label}; removed from the other views.",
+        "refresh": "Read every view's simulation again"
+      },
+      "settings": {
+        "default": {
+          "label": "Simulation of a view without its own",
+          "description": "What every view shows until you choose another simulation for it - usually Off. Ctrl+Shift+Space O I chooses one for the active view.",
+          "help": "The vision simulation every view shows until you choose another for it, usually none. Example: deuteranopia to review colour use. Ctrl+Shift+Space, O, I chooses one for the active view."
+        },
+        "blurPx": {
+          "label": "Blur of blurred vision (px)",
+          "description": "How blurred Blurred vision (myopia) is at full strength, in CSS px (0 to 20). Chromium views draw their own blur unless Prefer Chromium's own emulation is off or a strength is chosen.",
+          "help": "How blurred the blurred-vision simulation is at full strength, in CSS px (0 to 20). Chromium views draw their own blur unless native emulation is off or a strength is chosen."
+        },
+        "preferNative": {
+          "label": "Prefer Chromium's own emulation",
+          "description": "Chromium views render protanopia, deuteranopia, tritanopia, achromatopsia, blurred vision and low contrast themselves when no strength is chosen; off, the plugin's page script draws every simulation.",
+          "help": "Chromium views render protanopia, deuteranopia, tritanopia, achromatopsia, blurred vision and low contrast themselves when no strength is chosen, which is faster; off, the plugin's page script draws every simulation."
+        },
+        "persist": {
+          "label": "Keep simulations after a restart",
+          "description": "Off: every start begins with the default simulation in every view. On: each view keeps its simulation in .rbrowser/out/simulators/ across restarts.",
+          "help": "Each view keeps its simulation in .rbrowser/out/simulators/ across restarts. Off starts every session with the default simulation."
+        },
+        "option": {
+          "default": {
+            "none": "Off",
+            "protanopia": "Protanopia",
+            "protanomaly": "Protanomaly",
+            "deuteranopia": "Deuteranopia",
+            "deuteranomaly": "Deuteranomaly",
+            "tritanopia": "Tritanopia",
+            "tritanomaly": "Tritanomaly",
+            "achromatopsia": "Achromatopsia",
+            "achromatomaly": "Achromatomaly",
+            "myopia": "Blurred vision (myopia)",
+            "cataract": "Cataract",
+            "glaucoma": "Glaucoma (tunnel vision)",
+            "macular-degeneration": "Macular degeneration",
+            "low-contrast": "Low contrast sensitivity",
+            "sunlight": "Direct sunlight",
+            "dimmed": "Dimmed screen"
+          }
+        }
+      }
+    }
+  }
+}

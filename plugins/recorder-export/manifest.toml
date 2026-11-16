@@ -1,0 +1,26 @@
+# The recorder's exporter (RB-050-02, docs/plugins.md): a recording of RB-050-01 as an rBrowser
+# flow (`.rbrowser/flows/<name>.ts` format, RB-040-07) or a Playwright test with one project per
+# breakpoint. The plugin only answers text: the host reads the recording, adds the breakpoints'
+# emulation from the project config and writes the files to `automation.recorderExport.dir`
+# (default `.rbrowser/out/exports/`), so it needs no capability of its own.
+manifest_version = 1
+id = "recorder-export"
+name = "Recorder export"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["export-plugin"]
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Exports a recording as an rBrowser flow or a Playwright test with a project per breakpoint."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# Nothing: the recording comes in the arguments, the host writes the answer.
+[capabilities]

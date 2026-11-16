@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the screenshot editor (RB-080-01): Settings > Capture > Screenshot editor",
+  "type": "object",
+  "properties": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "default": "#e53935",
+      "description": "The colour a new annotation starts with.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "strokeWidth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "default": 4,
+      "description": "The line width of rectangles, arrows, lines and freehand strokes, in image pixels.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "fontSize": {
+      "type": "integer",
+      "minimum": 6,
+      "maximum": 256,
+      "default": 20,
+      "description": "The size of texts and number markers, in image pixels.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "redactBlock": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 128,
+      "default": 12,
+      "description": "The block size of a pixelated or blurred redaction, in image pixels; larger hides more.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 4,
+      "x-scope": ["user", "project", "local"]
+    },
+    "format": {
+      "type": "string",
+      "enum": ["png", "jpeg"],
+      "default": "png",
+      "description": "The format of the edited image.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 5,
+      "x-scope": ["user", "project", "local"]
+    },
+    "jpegQuality": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 100,
+      "default": 85,
+      "description": "The quality of a JPEG export.",
+      "x-category": "capture",
+      "x-section": "screenshot-editor",
+      "x-order": 6,
+      "x-scope": ["user", "project", "local"]
+    }
+  }
+}

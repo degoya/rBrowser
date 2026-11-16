@@ -1,0 +1,91 @@
+# The PWA check (RB-080-08, docs/plugins.md): the web app manifest a page links, its icons, its
+# service worker and Chromium's installability verdict, held to the rules of the group `pwa`. A
+# check for `checks_run` and the findings panel, and a feature for the MCP tool `pwa_check`, the
+# panel (the manifest as a table, the icons, the service worker, the installability errors) and
+# its commands.
+manifest_version = 1
+id = "pwa-check"
+name = "PWA check"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "pwa"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Checks the web app manifest, its icons, the service worker and the installability of the page, with a panel showing the manifest and every icon."
+# Checks > PWA check in the page's context menu (RB-080-43).
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views a call covers; evaluate: the collector src/collect.js in the plugin's isolated
+# world, which only reads (the manifest link, theme-color, apple-touch-icon, the service worker
+# registration and whether the start URL is in the Cache Storage); cdp: Chromium's own verdict,
+# Page.getInstallabilityErrors, nothing that changes the page; http: the manifest, its icons, the
+# start URL and the service worker script, GET only and only from the origin of the page that
+# links them, at most four requests a second; out-write: the last report
+# .rbrowser/out/pwa-check/report.json; findings: the command `check`.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Page"] }
+http = { rate_limit_per_second = 4 }
+out-write = true
+findings = true
+
+# Up to 20 icons at four requests a second (host time is credited back); an icon, a manifest or a
+# service worker script of at most 2 MiB.
+[limits]
+timeout_milliseconds = 60000
+max_response_bytes = 2097152
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `pwa_check`: the manifest, icons, service worker, installability and findings of the pages
+# the views show (each URL once); `budget` holds the answer to that many bytes of JSON (the panel
+# asks for 60 000).
+[[tools]]
+name = "check"
+description = "plugin.pwa-check.tools.check"
+input = { type = "object", properties = { budget = { type = "integer", minimum = 4096, maximum = 4194304 } } }
+
+# MCP `pwa_icon`: one icon of a view's origin as a `data:` URI with its real size and format (the
+# panel's icon grid; at most 46 KiB, the panel's answer limit).
+[[tools]]
+name = "icon"
+description = "plugin.pwa-check.tools.icon"
+input = { type = "object", required = ["url"], properties = { url = { type = "string", minLength = 1, maxLength = 2048 } } }
+
+# `plugin.pwa_check.check`, Ctrl+Shift+Space K M (M for manifest; K P is the SEO parity): the
+# check of every view's page, the findings into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.pwa-check.commands.check"
+shortcut = "Ctrl+Shift+Space K M"
+group = "checks"
+tool = "check"
+
+# `plugin.pwa_check.panel`, Ctrl+Shift+Space P W (W for web app): shows the PWA panel.
+[[commands]]
+id = "panel"
+title = "plugin.pwa-check.commands.panel"
+shortcut = "Ctrl+Shift+Space P W"
+group = "panels"
+mcp_omitted = "ui-only: opens the PWA panel"
+
+# The PWA panel, on Nuxt UI (RB-080-85): panel/dist built from web/src.
+[[panels]]
+id = "pwa"
+title = "plugin.pwa-check.panels.pwa"
+entry = "panel/index.html"
+icon = "smartphone"
+placement = "sidebar"

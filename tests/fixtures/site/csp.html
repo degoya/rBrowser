@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- RB-020-01: a page whose CSP allows only its own scripts. The sync agent, injected over CDP
+     into the isolated world, runs here anyway; the main world sees nothing of it
+     (`typeof window.__rbAgent === "undefined"`, `typeof __rbEmit === "undefined"`). -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+<title>rBrowser CSP fixture</title>
+</head>
+<body>
+<button data-testid="csp-button">Click me</button>
+</body>
+</html>

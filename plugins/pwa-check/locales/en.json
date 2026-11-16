@@ -1,0 +1,199 @@
+{
+  "plugin": {
+    "pwa-check": {
+      "name": "PWA check",
+      "commands": {
+        "check": "Check the PWA of every view",
+        "panel": "Show the PWA panel"
+      },
+      "tools": {
+        "check": "The web app manifest, icons, service worker, offline test and installability of the pages the views show, with findings.",
+        "icon": "One icon of a view's origin as a data: URI with its real size and format."
+      },
+      "panels": {
+        "pwa": "PWA"
+      },
+      "rules": {
+        "manifest": {
+          "missing": "Web app manifest linked",
+          "unreachable": "Manifest loads",
+          "content_type": "Manifest served as JSON",
+          "invalid": "Manifest is valid JSON",
+          "name": "Manifest has a name",
+          "start_url": "Manifest has a start URL",
+          "display": "Manifest opens an app window",
+          "icon_size": "Icons of 192 and 512 px",
+          "recommended": "Recommended manifest members"
+        },
+        "fetch": {
+          "other_origin": "Resources on another origin"
+        },
+        "icons": {
+          "unreachable": "Icon loads",
+          "not_image": "Icon is an image",
+          "size_mismatch": "Icon has its declared size",
+          "type_mismatch": "Icon has its declared type"
+        },
+        "start_url": {
+          "out_of_scope": "Start URL within the scope",
+          "status": "Start URL loads"
+        },
+        "sw": {
+          "insecure": "Secure context",
+          "missing": "Service worker registered",
+          "not_active": "Service worker active",
+          "not_controlling": "Service worker controls the page",
+          "fetch_handler": "Service worker handles fetch"
+        },
+        "offline": {
+          "not_cached": "Start URL cached for offline use"
+        },
+        "install": {
+          "error": "Installable in Chromium"
+        },
+        "meta": {
+          "theme_color": "theme-color meta tag",
+          "apple_touch_icon": "apple-touch-icon for iOS"
+        }
+      },
+      "findings": {
+        "manifest": {
+          "missing": "The page links no web app manifest (<link rel=\"manifest\">), so it cannot be installed.",
+          "unreachable": "The manifest {url} did not load ({status}).",
+          "content_type": "The manifest is served as {type}; serve it as application/manifest+json.",
+          "invalid": "The manifest is no valid JSON object: {error}",
+          "name": "The manifest has neither a name nor a short_name.",
+          "start_url": "The manifest has no usable start_url ({reason}), so the app starts at whatever page was installed.",
+          "display": "The manifest's display is {display}: use standalone, fullscreen or minimal-ui so the app opens in a window of its own.",
+          "icon_size": "The manifest declares no icon of {size}x{size} px.",
+          "recommended": "The manifest has no {field} (recommended)."
+        },
+        "fetch": {
+          "other_origin": "The {what} at {url} lies on another origin than the page and was not checked."
+        },
+        "icons": {
+          "unreachable": "The icon {src} did not load ({status}).",
+          "not_image": "The icon {src} is no PNG, JPEG, GIF, WebP, ICO or SVG image.",
+          "size_mismatch": "The icon {src} is {actual} px, not {declared} as its sizes say.",
+          "type_mismatch": "The icon {src} is {actual}, not {declared} as its type says."
+        },
+        "start_url": {
+          "out_of_scope": "The start URL {url} lies outside the scope {scope}.",
+          "status": "The start URL {url} answers {status}, not 200."
+        },
+        "sw": {
+          "insecure": "The page is no secure context (HTTPS or localhost), so it cannot have a service worker.",
+          "missing": "No service worker is registered for this page.",
+          "not_active": "The service worker is registered but not active ({state}).",
+          "not_controlling": "The service worker is active but does not control this page yet; reload it.",
+          "fetch_handler": "The service worker {script} has no fetch handler, so nothing is served offline."
+        },
+        "offline": {
+          "not_cached": "The service worker's caches do not hold the start URL {url}, so the app will not open offline."
+        },
+        "install": {
+          "error": "Chromium reports the page is not installable: {error} {details}"
+        },
+        "meta": {
+          "theme_color": "The page has no <meta name=\"theme-color\">, so the title bar keeps the browser's colour.",
+          "apple_touch_icon": "The page has no <link rel=\"apple-touch-icon\">, so iOS uses a screenshot as the home screen icon."
+        }
+      },
+      "settings": {
+        "offline": {
+          "enabled": {
+            "label": "Offline test",
+            "description": "With an active service worker, ask its caches whether they hold the start URL, so the app opens offline.",
+            "help": "With an active service worker, asks its caches whether they hold the start URL, so the app opens offline. Off skips the offline test."
+          }
+        },
+        "timeoutMs": {
+          "label": "Time limit of one check",
+          "description": "No further request (icons, start URL, service worker script) once one check has run this long, in milliseconds.",
+          "help": "No further request (icons, start URL, service worker script) once one check has run this long, in milliseconds. Example: 30000."
+        }
+      },
+      "panel": {
+        "refresh": "Check again",
+        "report": "Send to the findings panel",
+        "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
+        "loading": "Checking...",
+        "empty": "No Chromium view shows a web page.",
+        "page": "Page",
+        "views": "Views: {views}",
+        "cut": "The answer was shortened; MCP pwa_check gives all of it.",
+        "skipped": "Not checked in view {view}: {reason}",
+        "yes": "yes",
+        "no": "no",
+        "unknown": "unknown",
+        "sections": {
+          "findings": "Findings",
+          "manifest": "Manifest",
+          "icons": "Icons",
+          "sw": "Service worker",
+          "install": "Installability"
+        },
+        "summary": "{error, plural, one {# error} other {# errors}}, {warning, plural, one {# warning} other {# warnings}}, {info, plural, one {# note} other {# notes}}",
+        "severity": {
+          "error": "Error",
+          "warning": "Warning",
+          "info": "Note"
+        },
+        "noFindings": "No findings: the page meets every rule.",
+        "manifest": {
+          "none": "The page links no manifest.",
+          "url": "URL",
+          "status": "Status",
+          "contentType": "Content type",
+          "error": "Error",
+          "startUrl": "Start URL",
+          "startUrlStatus": "Start URL answers",
+          "scope": "Scope",
+          "member": "Member",
+          "value": "Value"
+        },
+        "icons": {
+          "none": "The manifest lists no icons.",
+          "declared": "Declared: {sizes} {type}",
+          "actual": "Actual: {width}x{height} {format}",
+          "scalable": "Actual: scalable {format}",
+          "purpose": "Purpose: {purpose}",
+          "safeZone": "The circle is the maskable safe zone (80 %).",
+          "state": {
+            "ok": "Loaded",
+            "unreachable": "Did not load",
+            "not_image": "No image",
+            "other_origin": "Other origin, not checked",
+            "skipped": "Not checked"
+          },
+          "tooLarge": "Larger than the panel can show ({bytes, plural, one {# byte} other {# bytes}}).",
+          "noPreview": "No preview"
+        },
+        "sw": {
+          "secure": "Secure context",
+          "registered": "Registered",
+          "active": "Active",
+          "controlled": "Controls the page",
+          "state": "State",
+          "scope": "Scope",
+          "script": "Script",
+          "fetchHandler": "Handles fetch",
+          "offline": "Start URL cached (offline)"
+        },
+        "install": {
+          "none": "Chromium reports no installability error.",
+          "notChecked": "Chromium was not asked: {reason}"
+        },
+        "meta": {
+          "themeColor": "theme-color meta tag",
+          "appleTouchIcon": "apple-touch-icon"
+        },
+        "table": {
+          "field": "Field",
+          "severity": "Severity",
+          "finding": "Finding"
+        }
+      }
+    }
+  }
+}

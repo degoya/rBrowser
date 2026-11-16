@@ -1,0 +1,27 @@
+/* The screenshot editor panel's styles: panel-ui's (Tailwind and Nuxt UI), the classes named here,
+   and the drawing surface, which stays the panel's own: the frame holds the canvas (cropped: only
+   the crop shows) and carries the canvas's focus ring inside its edge, so the crop's clipping
+   never hides it (review of RB-080-63, WCAG 2.4.7). The annotation font is
+   ../../../panel/annotation-font.css (a data URL), loaded by the page. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';
+
+.frame {
+  display: inline-block;
+  vertical-align: top;
+}
+.frame.cropped {
+  overflow: hidden;
+}
+#canvas {
+  display: block;
+  cursor: crosshair;
+}
+#canvas:focus-visible {
+  outline: none;
+}
+.frame:has(#canvas:focus-visible) {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: -2px;
+}

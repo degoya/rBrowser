@@ -1,0 +1,123 @@
+# The colour picker (RB-070-10, docs/plugins.md): the rendered pixel under the cursor (a pipette
+# with an 11 x 11 loupe, DPR-aware), the WCAG contrast of two colours, the page's palette and the
+# characters per line of its text - in every view. The page script draws the pipette, the element
+# choice and the marks; the component reads the pixels over CDP, the palette and the lines through
+# `evaluate`, converts and rates.
+manifest_version = 1
+id = "color-picker"
+name = "Colour picker"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "color"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "A pipette on the rendered pixels, WCAG contrast of two colours, the page's palette and characters per line in every view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views a tool covers and their engines; evaluate: the viewport's scroll offset, the
+# palette (src/palette.js) and the lines (src/measure.js) in the plugin's isolated world; cdp
+# Page: `Page.captureScreenshot`, its only method - `window_image` the view as its window shows
+# it, without a clip, which would make the view draw another picture for a frame (RB-080-64), a
+# small clip of the document where that does not serve; the component keeps only the pixels
+# around the cursor. status: its start, colour and end in the status bar. Nothing is written,
+# nothing leaves the machine.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Page"], window_image = true }
+status = true
+
+# Review C2 of RB-080-64: decoding a window image of up to 8 megapixels (src/pixels.rs
+# MAX_PIXELS) stays well inside four times the default fuel; a trap would not fall back to a clip.
+[limits]
+fuel = 8000000000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `color_sample`: the colour at a viewport point of the view `target` (default: the active
+# view) in every format, with the device pixel it was read from.
+[[tools]]
+name = "sample"
+description = "plugin.color-picker.tools.sample"
+input = { type = "object", required = ["x", "y"], properties = { x = { type = "number", minimum = 0, maximum = 100000 }, y = { type = "number", minimum = 0, maximum = 100000 } } }
+
+# MCP `color_contrast`: the WCAG 2.x ratio and levels of two colours (any CSS colour text).
+[[tools]]
+name = "contrast"
+description = "plugin.color-picker.tools.contrast"
+input = { type = "object", required = ["foreground", "background"], properties = { foreground = { type = "string", minLength = 1, maxLength = 96 }, background = { type = "string", minLength = 1, maxLength = 96 } } }
+
+# MCP `color_palette`: the page's colours grouped and sorted by use; `mark` outlines the elements
+# using the named computed colours in every view (`[]` clears).
+[[tools]]
+name = "palette"
+description = "plugin.color-picker.tools.palette"
+input = { type = "object", properties = { mark = { type = "array", maxItems = 16, items = { type = "string", maxLength = 96 } } } }
+
+# MCP `color_measure_text`: characters per line of the elements `selector` matches (default: the
+# setting `color-picker.textMeasure.selector`) in every view or `target`; `choose` lets a person
+# click the element, `clear` removes the marks.
+[[tools]]
+name = "measure_text"
+description = "plugin.color-picker.tools.measure_text"
+input = { type = "object", properties = { selector = { type = "string", minLength = 1, maxLength = 1024 }, choose = { type = "boolean" }, clear = { type = "boolean" } } }
+
+# The pipette in every view: click takes the colour, Shift+click the background of the contrast;
+# arrows move, Enter takes, Esc ends.
+[[commands]]
+id = "pick"
+title = "plugin.color-picker.commands.pick"
+shortcut = "Ctrl+Shift+Space D I"
+group = "devtools"
+tool = "sample"
+
+# Measures the setting's selector in every view, marks the long lines and shows the panel.
+[[commands]]
+id = "measure_text"
+title = "plugin.color-picker.commands.measure_text"
+shortcut = "Ctrl+Shift+Space D M"
+group = "devtools"
+tool = "measure_text"
+
+[[commands]]
+id = "panel"
+title = "plugin.color-picker.commands.panel"
+shortcut = "Ctrl+Shift+Space P I"
+group = "panels"
+mcp_omitted = "ui-only: the colour picker panel; its data are color_sample, color_contrast, color_palette and color_measure_text"
+
+# The marks (lines, palette uses), the tiles' math the pipette draws its loupe by (RB-080-77), its
+# calibration markers (RB-090-40) and the pipette with the element choice (RB-080-64 split them).
+[[page_scripts]]
+path = "page/marks.js"
+run_at = "document-idle"
+
+[[page_scripts]]
+path = "page/tile.js"
+run_at = "document-idle"
+
+[[page_scripts]]
+path = "page/markers.js"
+run_at = "document-idle"
+
+[[page_scripts]]
+path = "page/picker.js"
+run_at = "document-idle"
+
+[[panels]]
+id = "picker"
+title = "plugin.color-picker.panels.picker"
+entry = "panel/index.html"
+icon = "pipette"
+placement = "sidebar"

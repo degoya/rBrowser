@@ -1,0 +1,4 @@
+# The fixture site's security policy (RFC 9116).
+Contact: mailto:security@fixture.test
+Expires: 2027-06-30T00:00:00Z
+Preferred-Languages: en

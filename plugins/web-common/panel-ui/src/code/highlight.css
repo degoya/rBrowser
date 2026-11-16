@@ -1,0 +1,36 @@
+/* The highlighter's colours in a Nuxt UI panel (RB-080-84): highlight.js's own values, chosen by
+   the app theme (the root's `dark` class, src/theme.ts) instead of the system's scheme alone. */
+:root:not(.dark) {
+  --hl-key: #953800;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-literal: #0550ae;
+  --hl-keyword: #a40e26;
+  --hl-comment: #57606a;
+  --hl-tag: #116329;
+  --hl-attr: #953800;
+  --hl-fn: #6639ba;
+  --hl-meta: #57606a;
+}
+:root.dark {
+  --hl-key: #ffa657;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-literal: #79c0ff;
+  --hl-keyword: #ff7b72;
+  --hl-comment: #a0a8b2;
+  --hl-tag: #7ee787;
+  --hl-attr: #ffa657;
+  --hl-fn: #d2a8ff;
+  --hl-meta: #a0a8b2;
+}
+.hl-key { color: var(--hl-key); }
+.hl-string { color: var(--hl-string); }
+.hl-number { color: var(--hl-number); }
+.hl-literal { color: var(--hl-literal); }
+.hl-keyword { color: var(--hl-keyword); }
+.hl-comment { color: var(--hl-comment); font-style: italic; }
+.hl-tag { color: var(--hl-tag); }
+.hl-attr { color: var(--hl-attr); }
+.hl-fn { color: var(--hl-fn); }
+.hl-meta { color: var(--hl-meta); }

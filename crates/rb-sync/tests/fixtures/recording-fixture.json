@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "name": "fixture-login",
+  "startUrl": "http://127.0.0.1:8000/form.html",
+  "environment": "local",
+  "breakpoints": [
+    {
+      "id": "desktop",
+      "width": 1280,
+      "height": 800,
+      "deviceScaleFactor": 1.0
+    },
+    {
+      "id": "mobile",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 3.0
+    }
+  ],
+  "startedAtMs": 1762800000000,
+  "appVersion": "0.1.0",
+  "steps": [
+    {
+      "id": 1,
+      "action": {
+        "type": "navigate",
+        "url": "http://127.0.0.1:8000/form.html"
+      },
+      "view": "desktop",
+      "atMs": 0
+    },
+    {
+      "id": 2,
+      "action": {
+        "type": "fill",
+        "target": {
+          "selectors": [
+            {
+              "kind": "role",
+              "role": "textbox",
+              "name": "Name"
+            },
+            {
+              "kind": "css",
+              "path": "#name"
+            }
+          ]
+        },
+        "value": "Ada"
+      },
+      "view": "desktop",
+      "atMs": 60
+    },
+    {
+      "id": 3,
+      "action": {
+        "type": "fill",
+        "target": {
+          "selectors": [
+            {
+              "kind": "css",
+              "path": "#password"
+            }
+          ]
+        },
+        "value": "{{secret:password}}",
+        "secret": true
+      },
+      "view": "desktop",
+      "atMs": 240
+    },
+    {
+      "id": 4,
+      "action": {
+        "type": "click",
+        "target": {
+          "selectors": [
+            {
+              "kind": "testid",
+              "testid": "submit"
+            },
+            {
+              "kind": "css",
+              "path": "#order > button"
+            }
+          ]
+        }
+      },
+      "view": "desktop",
+      "atMs": 2000
+    },
+    {
+      "id": 5,
+      "action": {
+        "type": "waitForUrl",
+        "url": "http://127.0.0.1:8000/form.html?posts=1"
+      },
+      "view": "desktop",
+      "atMs": 2300
+    },
+    {
+      "id": 6,
+      "action": {
+        "type": "navigate",
+        "url": "http://127.0.0.1:8000/mobile-menu.html"
+      },
+      "view": "mobile",
+      "atMs": 10000
+    },
+    {
+      "id": 7,
+      "action": {
+        "type": "click",
+        "target": {
+          "selectors": [
+            {
+              "kind": "role",
+              "role": "button",
+              "name": "Menu"
+            },
+            {
+              "kind": "css",
+              "path": "#burger"
+            }
+          ]
+        }
+      },
+      "view": "mobile",
+      "atMs": 11000,
+      "onlyIn": [
+        "mobile"
+      ]
+    },
+    {
+      "id": 8,
+      "action": {
+        "type": "click",
+        "target": {
+          "selectors": [
+            {
+              "kind": "testid",
+              "testid": "nav-about"
+            },
+            {
+              "kind": "css",
+              "path": "#mobile-menu > a"
+            }
+          ]
+        }
+      },
+      "view": "mobile",
+      "atMs": 12000
+    }
+  ]
+}

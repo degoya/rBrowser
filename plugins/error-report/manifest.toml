@@ -1,0 +1,95 @@
+# The error report (RB-080-09, docs/plugins.md): every view's JS exceptions, 404/410 and 5xx
+# resources, mixed content, CSP violations and deprecations as one report, deduplicated over the
+# views - each entry with a dot per view that reported it and "only in views ..." when not every
+# view did - as findings (rule group `errors`), as JSON and HTML in .rbrowser/out/error-report/
+# and in its panel. The host captures (CDP Runtime/Log/Network/Audits per Chromium view) and hands
+# the views' buffers to each call as the argument `$console` (src/feed.rs); no page script.
+manifest_version = 1
+id = "error-report"
+name = "Error Report"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+# `error_report` is no valid prefix (`[a-z][a-z0-9]{1,23}`, no `_`), so the tools are
+# `errorreport_get` and `errorreport_clear`, as `network-panel`'s are `networkpanel_*`.
+mcp_prefix = "errorreport"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Every view's JS exceptions, 404/5xx resources, mixed content, CSP violations and deprecations as one report, deduplicated over the views, with findings."
+# Checks > Error report in the page's context menu (RB-080-43).
+context_menu = ["run"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: labels, breakpoints, engines and page URLs; evaluate: "Report now" reloads the views
+# (location.reload in the plugin's own world) and waits for network idle (src/reload.rs);
+# project-read and out-write: the state `.rbrowser/out/error-report/state.json` and the reports
+# `report.json`, `report.html` (no globs: `.rbrowser/` only); findings: the command `run`.
+# Nothing leaves the machine.
+[capabilities]
+views = true
+evaluate = true
+project-read = true
+out-write = true
+findings = true
+# The host's capture of every view's console, exceptions, requests and issues, as `$console`.
+console-logs = true
+
+# A reload waits for each view's network to go idle, up to 10 s per view.
+[limits]
+timeout_milliseconds = 30000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `errorreport_get`: the report as JSON; `reload: true` reloads the targeted views first.
+[[tools]]
+name = "get"
+description = "plugin.error-report.tools.get"
+input = { type = "object", properties = { reload = { type = "boolean" }, limit = { type = "integer", minimum = 1, maximum = 1000 } } }
+
+# MCP `errorreport_clear`: clears the report.
+[[tools]]
+name = "clear"
+description = "plugin.error-report.tools.clear"
+input = { type = "object" }
+
+# `plugin.error_report.run`, Ctrl+Shift+Space K E: "Report now" - the report written to
+# .rbrowser/out/error-report/, the findings into the findings panel, the panel shown.
+[[commands]]
+id = "run"
+title = "plugin.error-report.commands.run"
+shortcut = "Ctrl+Shift+Space K E"
+group = "checks"
+tool = "get"
+
+# `plugin.error_report.clear`, Ctrl+Shift+Space K Z: clears the report.
+[[commands]]
+id = "clear"
+title = "plugin.error-report.commands.clear"
+shortcut = "Ctrl+Shift+Space K Z"
+group = "checks"
+tool = "clear"
+
+# `plugin.error_report.panel`, Ctrl+Shift+Space P E: shows the error report panel.
+[[commands]]
+id = "panel"
+title = "plugin.error-report.commands.panel"
+shortcut = "Ctrl+Shift+Space P E"
+group = "panels"
+mcp_omitted = "ui-only: opens the error report panel"
+
+[[panels]]
+id = "report"
+title = "plugin.error-report.panels.report"
+entry = "panel/index.html"
+icon = "bug"
+placement = "sidebar"

@@ -1,0 +1,29 @@
+{
+  "name": "rbrowser-sync-agent",
+  "private": true,
+  "version": "0.7.0",
+  "description": "The rBrowser sync agent: injected into every view's isolated world, captures input and resolves selectors (RB-020-01).",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
+    "test": "vitest run",
+    "test:e2e": "node scripts/vitals-e2e.mjs",
+    "test:capture-clean": "node scripts/capture-clean-e2e.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.4",
+    "playwright-core": "1.65.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@vue/devtools-kit": "8.2.1",
+    "react": "19.3.1",
+    "react-devtools-inline": "8.0.0"
+  }
+}

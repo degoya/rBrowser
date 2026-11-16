@@ -1,0 +1,50 @@
+# What the public repository (github.com/degoya/rBrowser) leaves out, read by
+# scripts/export-public.sh (RB-090-12, after rCommander's and rDownloader's lists). One path per
+# line, relative to the repository root; a trailing `/` marks a folder, `#` starts a comment. No
+# absolute path and no `..`.
+#
+# A path listed here that the exported tree does not have is reported, not an error: an older
+# tag may predate it. Nothing public may need what is listed - export-public.sh refuses a public
+# file that links into it, and scripts/tests/export-public.sh holds the list to these entries.
+
+# The developer documentation, as a whole: the roadmap and the German job files, the ADRs and
+# their evidence, the design, the architecture, the security notes and threat model, the
+# release and signing procedures, the performance budget and the contracts. The owner regards it
+# as internal material, as for rCommander and rDownloader. What a user, a contributor or a plugin
+# author needs from it is in the public wiki (scripts/export-public-wiki.sh).
+docs/
+# The plan beside it: like docs/roadmap.md, internal; the public repository and the wiki point
+# at CHANGELOG.md for what changed.
+ROADMAP.md
+
+# The working card for coding agents and their configuration: agents, skills, the Bash guard.
+AGENTS.md
+CLAUDE.md
+.claude/
+# The Bash guard's test reads .claude/hooks/.
+scripts/tests/guard-bash.sh
+
+# The private names the exports refuse: the list names what it guards.
+scripts/public-names.txt
+
+# Build output; ignored by git, listed in case a tag ever carries it.
+artifacts/
+target/
+
+# The maintainer's own workflow: the job files' archive and checkbox tools, the session state
+# and the feature worktrees. scripts/check.sh skips the job layout when archive-jobs.sh is gone.
+scripts/archive-jobs.sh
+scripts/lib/archive-jobs.py
+scripts/lib/archive_jobs_counts.py
+scripts/lib/archive_jobs_index.py
+scripts/lib/archive_jobs_links.py
+scripts/lib/archive_jobs_rows.py
+scripts/lib/archive_jobs_status.py
+scripts/lib/job_boxes.py
+scripts/tests/archive-jobs.sh
+scripts/session-state.sh
+scripts/worktree.sh
+scripts/tests/worktree.sh
+
+# Throw-away spikes, outside the workspace; untracked today, listed in case a tag carries one.
+spikes/

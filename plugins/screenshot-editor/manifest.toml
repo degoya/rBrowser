@@ -1,0 +1,84 @@
+# Screenshot editor (RB-080-01, docs/plugins.md): annotates, redacts and crops a screenshot of
+# `.rbrowser/out/` in a dialog panel and writes `<name>.edited.png` and `<name>.annotations.json`
+# below `.rbrowser/out/screenshot-editor/`, never over the original. Redactions are rendered into
+# the pixels; the export carries no metadata. MCP `shot_annotate` renders without any UI.
+manifest_version = 1
+id = "screenshot-editor"
+name = "Screenshot editor"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "shot"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Annotates, redacts and crops screenshots: rectangles, arrows, lines, freehand, text, numbered markers, highlights, pixelated or blurred redactions and a crop, saved beside the original."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# project-read: the images below `.rbrowser/out/` and the saved annotations (no glob: nothing
+# outside `.rbrowser/`, never `config.local.json`; the component opens `.rbrowser/out/**/*.png`
+# only). out-write: the edited image and its annotations, below `.rbrowser/out/screenshot-editor/`
+# only. No views, no CDP: the editor works on files.
+[capabilities]
+project-read = true
+out-write = true
+
+# A full-page screenshot decodes to up to 100 MB of pixels (25 megapixels), and rendering and
+# encoding it takes longer than the default call.
+[limits]
+memory_bytes = 402653184
+fuel = 40000000000
+timeout_milliseconds = 30000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `shot_annotate`: renders annotations onto an image below `.rbrowser/out/` and writes the
+# result below `.rbrowser/out/screenshot-editor/` (or `out` there); answers the path.
+[[tools]]
+name = "annotate"
+description = "plugin.screenshot-editor.tools.annotate"
+input = { type = "object", required = ["image", "annotations"], properties = { image = { type = "string", maxLength = 512 }, annotations = { type = "array", maxItems = 1000, items = { type = "object", required = ["type"], properties = { type = { type = "string", enum = ["rect", "arrow", "line", "freehand", "text", "marker", "highlight", "redact", "crop"] } } } }, out = { type = "string", maxLength = 512 } } }
+
+# MCP `shot_load`: one chunk (base64) of an image below `.rbrowser/out/`, the first with its size
+# and saved annotations; no `image` is the newest screenshot. A later chunk names the first one's
+# `hash` and comes from the version cut then (`src/cache.rs`). The panel loads its image with it.
+[[tools]]
+name = "load"
+description = "plugin.screenshot-editor.tools.load"
+input = { type = "object", properties = { image = { type = "string", maxLength = 512 }, offset = { type = "integer", minimum = 0 }, hash = { type = "string", maxLength = 16 } } }
+
+# MCP `shot_list`: the PNG files below `.rbrowser/out/` the editor opens, newest screenshots first.
+[[tools]]
+name = "list"
+description = "plugin.screenshot-editor.tools.list"
+input = { type = "object" }
+
+[[commands]]
+id = "open_last"
+title = "plugin.screenshot-editor.commands.open_last"
+shortcut = "Ctrl+Shift+Space C E"
+group = "capture"
+mcp_omitted = "ui-only: opens the screenshot editor panel; editing without UI is shot_annotate"
+
+[[commands]]
+id = "copy"
+title = "plugin.screenshot-editor.commands.copy"
+shortcut = "Ctrl+Shift+Space C K"
+group = "capture"
+mcp_omitted = "ui-only: puts the open editor's image on the system clipboard; the file is shot_annotate's"
+
+[[panels]]
+id = "editor"
+title = "plugin.screenshot-editor.panels.editor"
+entry = "panel/index.html"
+icon = "camera"
+placement = "dialog"

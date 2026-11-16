@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+        "x-options": [
+          "wcag2a", "wcag2aa", "wcag2aaa", "wcag21a", "wcag21aa", "wcag22aa",
+          "best-practice", "section508", "EN-301-549", "TTv5", "ACT", "experimental",
+          "cat.aria", "cat.color", "cat.forms", "cat.keyboard", "cat.language",
+          "cat.name-role-value", "cat.parsing", "cat.semantics", "cat.sensory-and-visual-cues",
+          "cat.structure", "cat.tables", "cat.text-alternatives", "cat.time-and-media"
+        ]
+      },
+      "maxItems": 32,
+      "default": ["wcag22aa"],
+      "x-category": "checks",
+      "x-section": "accessibility",
+      "x-order": 10,
+      "x-scope": ["user", "project", "local"]
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" },
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+      "maxProperties": 256,
+      "default": {},
+      "x-category": "checks",
+      "x-section": "accessibility",
+      "x-order": 11,
+      "x-scope": ["user", "project", "local"]
+    },
+    "include": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 256 },
+      "maxItems": 32,
+      "default": [],
+      "x-category": "checks",
+      "x-section": "accessibility",
+      "x-order": 12,
+      "x-scope": ["user", "project", "local"]
+    },
+    "exclude": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 256 },
+      "maxItems": 32,
+      "default": [],
+      "x-category": "checks",
+      "x-section": "accessibility",
+      "x-order": 13,
+      "x-scope": ["user", "project", "local"]
+    },
+    "reportIncomplete": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "checks",
+      "x-section": "accessibility",
+      "x-order": 14,
+      "x-scope": ["user", "project", "local"]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+use serde_json::json;
+
+use super::*;
+use crate::{CoreToShell, ShellToCore, parse_request};
+
+fn notice(level: NotificationLevel) -> Notification {
+    Notification {
+        level,
+        message_key: "shell.error.request_failed".into(),
+        args: [("code".to_owned(), "404".to_owned())].into(),
+        settings_key: Some("ui.theme".into()),
+    }
+}
+
+#[test]
+fn a_status_message_is_the_notification_numbered_and_stamped() {
+    let message = StatusMessage::new(3, 1_700_000_000_000, notice(NotificationLevel::Error));
+    assert_eq!(message.id, 3);
+    assert_eq!(message.at, 1_700_000_000_000);
+    assert_eq!(message.notification(), notice(NotificationLevel::Error));
+}
+
+#[test]
+fn the_event_and_the_answer_are_tagged_camel_case() {
+    let message = StatusMessage::new(3, 1_700_000_000_000, notice(NotificationLevel::Success));
+    assert_eq!(
+        serde_json::to_value(CoreToShell::StatusMessage(message.clone())).expect("serializes"),
+        json!({
+            "type": "statusMessage",
+            "id": 3,
+            "at": 1_700_000_000_000_u64,
+            "level": "success",
+            "messageKey": "shell.error.request_failed",
+            "args": { "code": "404" },
+            "settingsKey": "ui.theme"
+        })
+    );
+    let answer = CoreToShell::StatusMessages {
+        items: vec![message],
+    };
+    let value = serde_json::to_value(&answer).expect("serializes");
+    assert_eq!(value["type"], "statusMessages");
+    assert_eq!(value["items"][0]["id"], 3);
+}
+
+#[test]
+fn the_shell_asks_for_the_log_and_reports_its_own_messages() {
+    assert_eq!(
+        parse_request(r#"{"type":"getStatusMessages"}"#).expect("parses"),
+        ShellToCore::GetStatusMessages
+    );
+    assert_eq!(
+        parse_request(r#"{"type":"dismissHistory"}"#).expect("parses"),
+        ShellToCore::DismissHistory
+    );
+    let report = parse_request(
+        r#"{"type":"reportStatus","level":"warning","messageKey":"shell.error.no_answer"}"#,
+    )
+    .expect("parses");
+    assert_eq!(
+        report,
+        ShellToCore::ReportStatus(Notification {
+            level: NotificationLevel::Warning,
+            message_key: "shell.error.no_answer".into(),
+            args: std::collections::BTreeMap::new(),
+            settings_key: None,
+        })
+    );
+}

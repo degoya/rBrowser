@@ -1,0 +1,25 @@
+{
+  "name": "rbrowser-plugins-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The npm workspace of the first-party plugins' page scripts, panels and runners (plugins/*/web, plugins/*/runner, plugins/web-common): one lock file, one install, one node_modules (RB-080-25).",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "workspaces": [
+    "*/web",
+    "*/runner",
+    "web-common",
+    "web-common/panel-ui"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces"
+  },
+  "overrides": {
+    "esbuild": "0.28.2",
+    "glob": "14.0.4",
+    "minimatch": "11.0.5"
+  }
+}

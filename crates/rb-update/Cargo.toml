@@ -1,0 +1,50 @@
+[package]
+name = "rb-update"
+description = "rBrowser's self-update, prepared and inactive in phase 1: the signed update manifest per channel, the verified https download, the journalled switch of the program folder with its roll-back, and the rb-pack publishing tool (RB-090-02)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# A leaf on purpose: the app links it only with the Cargo feature `self-update` of `rbrowser`
+# (off in phase 1), and the updater runs it before the new version is known to start, so nothing
+# here pulls in CEF, the config or the plugin host. Adapted from rCommander's `crates/rc-update/`.
+
+[lib]
+path = "src/lib.rs"
+
+# The publishing half: `rb-pack keygen`, `rb-pack build` (the manifest) and `rb-pack verify`, so
+# signing a release does not build the browser.
+[[bin]]
+name = "rb-pack"
+path = "src/pack/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+chrono.workspace = true
+clap.workspace = true
+ed25519-dalek.workspace = true
+rand.workspace = true
+rb-process = { path = "../rb-process" }
+rb-util = { path = "../rb-util" }
+semver.workspace = true
+serde.workspace = true
+# The manifest's payload is signed as the bytes it arrived as (`sign/envelope.rs`).
+serde_json = { workspace = true, features = ["raw_value"] }
+sha2.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+# The update check and the download over https only (`fetch.rs`); blocking, rustls.
+ureq.workspace = true
+url.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+# The portable mode's names, held to the switch's list of what it never moves.
+rb-config = { path = "../rb-config" }
+tempfile.workspace = true
+
+[lints]
+workspace = true

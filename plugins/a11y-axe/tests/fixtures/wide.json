@@ -1,0 +1,45 @@
+{
+  "axeVersion": "4.14.0",
+  "url": "http://localhost:5173/a11y.html",
+  "violations": [
+    {
+      "id": "image-alt",
+      "impact": "critical",
+      "help": "Images must have alternative text",
+      "description": "Ensure <img> elements have alternative text or a role of none or presentation",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/image-alt?application=axeAPI",
+      "tags": ["cat.text-alternatives", "wcag2a", "wcag111", "section508", "ACT"],
+      "nodes": [
+        {
+          "selector": "img",
+          "path": "html > body > main > img",
+          "impact": "critical",
+          "html": "<img src=\"data:image/gif;base64,R0lGODlhAQABAAAAACw=\" width=\"40\" height=\"40\">",
+          "summary": "Fix any of the following:\n  Element does not have an alt attribute"
+        }
+      ],
+      "omitted": 0
+    }
+  ],
+  "incomplete": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/color-contrast?application=axeAPI",
+      "tags": ["cat.color", "wcag2aa", "wcag143"],
+      "nodes": [
+        {
+          "selector": "h1",
+          "path": "html > body > main > h1",
+          "impact": "serious",
+          "html": "<h1>Accessibility fixture</h1>",
+          "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
+        }
+      ],
+      "omitted": 0
+    }
+  ],
+  "truncated": false
+}

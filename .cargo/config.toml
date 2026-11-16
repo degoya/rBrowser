@@ -1,0 +1,13 @@
+# The Windows binary links the C runtime statically, so it runs without the Visual C++
+# redistributable installed. LNK4099 (no PDB for the prebuilt libcmt/libvcruntime objects that
+# xwin ships) is noise in every link and is silenced.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=/IGNORE:4099"]
+
+# rbrowser-wsl, the helper that runs inside WSL (inotify watcher, CDP tunnel), is a static binary
+# so it starts in any distribution without a matching glibc. musl and its start files come with
+# Rust's own target (self-contained) and rust-lld, which ships with the toolchain, links them:
+# no musl-gcc or other C toolchain, from WSL and from Windows alike (scripts/lib/wsl-helper.sh).
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "target-feature=+crt-static"]

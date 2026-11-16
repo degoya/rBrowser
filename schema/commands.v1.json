@@ -1,0 +1,2422 @@
+{
+  "$comment": "Generated from the command registry by `RB_UPDATE_SCHEMA=1 cargo nextest run -p rbrowser commands_file`; do not edit by hand.",
+  "version": 1,
+  "leader": "Ctrl+Shift+Space",
+  "groups": [
+    {
+      "id": "breakpoints",
+      "key": "B",
+      "titleKey": "commands.group.breakpoints"
+    },
+    {
+      "id": "layout",
+      "key": "L",
+      "titleKey": "commands.group.layout"
+    },
+    {
+      "id": "sync",
+      "key": "S",
+      "titleKey": "commands.group.sync"
+    },
+    {
+      "id": "environments",
+      "key": "E",
+      "titleKey": "commands.group.environments"
+    },
+    {
+      "id": "devtools",
+      "key": "D",
+      "titleKey": "commands.group.devtools"
+    },
+    {
+      "id": "overlays",
+      "key": "O",
+      "titleKey": "commands.group.overlays"
+    },
+    {
+      "id": "capture",
+      "key": "C",
+      "titleKey": "commands.group.capture"
+    },
+    {
+      "id": "checks",
+      "key": "K",
+      "titleKey": "commands.group.checks"
+    },
+    {
+      "id": "reload",
+      "key": "R",
+      "titleKey": "commands.group.reload"
+    },
+    {
+      "id": "panels",
+      "key": "P",
+      "titleKey": "commands.group.panels"
+    },
+    {
+      "id": "flows",
+      "key": "F",
+      "titleKey": "commands.group.flows"
+    },
+    {
+      "id": "view",
+      "key": "V",
+      "titleKey": "commands.group.view"
+    },
+    {
+      "id": "plugins",
+      "key": "X",
+      "titleKey": "commands.group.plugins"
+    },
+    {
+      "id": "settings",
+      "key": ",",
+      "titleKey": "commands.group.settings"
+    }
+  ],
+  "commands": [
+    {
+      "id": "breakpoints.analyze",
+      "titleKey": "commands.breakpoints.analyze",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B A"
+      ],
+      "mcp": {
+        "covered": "breakpoints_detect"
+      }
+    },
+    {
+      "id": "breakpoints.append_detected",
+      "titleKey": "commands.breakpoints.append_detected",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B N"
+      ],
+      "mcp": {
+        "covered": "breakpoints_apply"
+      }
+    },
+    {
+      "id": "breakpoints.detected.1",
+      "titleKey": "commands.breakpoints.detected.1",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 1"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.2",
+      "titleKey": "commands.breakpoints.detected.2",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 2"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.3",
+      "titleKey": "commands.breakpoints.detected.3",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 3"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.4",
+      "titleKey": "commands.breakpoints.detected.4",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 4"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.5",
+      "titleKey": "commands.breakpoints.detected.5",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 5"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.6",
+      "titleKey": "commands.breakpoints.detected.6",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 6"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.7",
+      "titleKey": "commands.breakpoints.detected.7",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 7"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.8",
+      "titleKey": "commands.breakpoints.detected.8",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 8"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "breakpoints.detected.9",
+      "titleKey": "commands.breakpoints.detected.9",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B 9"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.next_breakpoint",
+      "titleKey": "commands.view.next_breakpoint",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space ]"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.nudge_width.minus",
+      "titleKey": "commands.view.nudge_width.minus",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space -"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.nudge_width.plus",
+      "titleKey": "commands.view.nudge_width.plus",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space ."
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.prev_breakpoint",
+      "titleKey": "commands.view.prev_breakpoint",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space ["
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.reset_size",
+      "titleKey": "commands.view.reset_size",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space 0"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_engine",
+      "titleKey": "commands.view.set_engine",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B E"
+      ],
+      "mcp": {
+        "covered": "views_set_engine"
+      }
+    },
+    {
+      "id": "canvas.zoom.fit",
+      "titleKey": "commands.canvas.zoom.fit",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L A"
+      ],
+      "mcp": {
+        "covered": "canvas_zoom"
+      }
+    },
+    {
+      "id": "canvas.zoom.in",
+      "titleKey": "commands.canvas.zoom.in",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L Plus"
+      ],
+      "mcp": {
+        "omitted": "ui-only: one step of the canvas zoom; canvas_zoom sets any level"
+      }
+    },
+    {
+      "id": "canvas.zoom.out",
+      "titleKey": "commands.canvas.zoom.out",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L -"
+      ],
+      "mcp": {
+        "omitted": "ui-only: one step of the canvas zoom; canvas_zoom sets any level"
+      }
+    },
+    {
+      "id": "canvas.zoom.reset",
+      "titleKey": "commands.canvas.zoom.reset",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 0"
+      ],
+      "mcp": {
+        "covered": "canvas_zoom"
+      }
+    },
+    {
+      "id": "layout.canvas.place",
+      "titleKey": "commands.layout.canvas.place",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L P"
+      ],
+      "mcp": {
+        "covered": "canvas_place"
+      }
+    },
+    {
+      "id": "layout.center",
+      "titleKey": "commands.layout.center",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L ."
+      ],
+      "mcp": {
+        "omitted": "ui-only: what the area shows of the canvas or strip; canvas_place moves views"
+      }
+    },
+    {
+      "id": "layout.focus_mode",
+      "titleKey": "commands.layout.focus_mode",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L F"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.focus_next",
+      "titleKey": "commands.layout.focus_next",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L ]"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.focus_prev",
+      "titleKey": "commands.layout.focus_prev",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L ["
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.minimap.toggle",
+      "titleKey": "commands.layout.minimap.toggle",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L M"
+      ],
+      "mcp": {
+        "omitted": "display only: the minimap in the toolbar"
+      }
+    },
+    {
+      "id": "layout.mode.canvas",
+      "titleKey": "commands.layout.mode.canvas",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L C"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.mode.grid",
+      "titleKey": "commands.layout.mode.grid",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L G"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.mode.horizontal",
+      "titleKey": "commands.layout.mode.horizontal",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L H"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.mode.split",
+      "titleKey": "commands.layout.mode.split",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L S"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.1",
+      "titleKey": "commands.layout.preset.1",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 1"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.2",
+      "titleKey": "commands.layout.preset.2",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 2"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.3",
+      "titleKey": "commands.layout.preset.3",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 3"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.4",
+      "titleKey": "commands.layout.preset.4",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 4"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.5",
+      "titleKey": "commands.layout.preset.5",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 5"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.6",
+      "titleKey": "commands.layout.preset.6",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 6"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.7",
+      "titleKey": "commands.layout.preset.7",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 7"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.8",
+      "titleKey": "commands.layout.preset.8",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 8"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.preset.9",
+      "titleKey": "commands.layout.preset.9",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L 9"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.save_preset",
+      "titleKey": "commands.layout.save_preset",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L N"
+      ],
+      "mcp": {
+        "covered": "layout_save_preset"
+      }
+    },
+    {
+      "id": "layout.select_preset",
+      "titleKey": "commands.layout.select_preset",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L L"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.split.grow",
+      "titleKey": "commands.layout.split.grow",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L Right"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.split.shrink",
+      "titleKey": "commands.layout.split.shrink",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L Left"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.split.swap",
+      "titleKey": "commands.layout.split.swap",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L W"
+      ],
+      "mcp": {
+        "covered": "layout_set"
+      }
+    },
+    {
+      "id": "layout.zoom_to_fit",
+      "titleKey": "commands.layout.zoom_to_fit",
+      "group": "layout",
+      "defaultBindings": [
+        "Ctrl+Shift+Space L Z"
+      ],
+      "mcp": {
+        "omitted": "ui-only: grid zoom"
+      }
+    },
+    {
+      "id": "bus.toggle",
+      "titleKey": "commands.bus.toggle",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S B"
+      ],
+      "mcp": {
+        "omitted": "settings: MCP sets bus.enabled, pageApi.enabled and pageApi.uaSuffix with the settings tools"
+      }
+    },
+    {
+      "id": "page_api.toggle",
+      "titleKey": "commands.page_api.toggle",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S A"
+      ],
+      "mcp": {
+        "omitted": "settings: MCP sets bus.enabled, pageApi.enabled and pageApi.uaSuffix with the settings tools"
+      }
+    },
+    {
+      "id": "page_api.toggle_ua_suffix",
+      "titleKey": "commands.page_api.toggle_ua_suffix",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S I"
+      ],
+      "mcp": {
+        "omitted": "settings: MCP sets bus.enabled, pageApi.enabled and pageApi.uaSuffix with the settings tools"
+      }
+    },
+    {
+      "id": "portal.disconnect",
+      "titleKey": "commands.portal.disconnect",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S D"
+      ],
+      "mcp": {
+        "covered": "portal_disconnect"
+      }
+    },
+    {
+      "id": "portal.show_qr",
+      "titleKey": "commands.portal.show_qr",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S Q"
+      ],
+      "mcp": {
+        "omitted": "protected: shows the one-time pairing code to a person; portal_devices answers the address"
+      }
+    },
+    {
+      "id": "portal.toggle",
+      "titleKey": "commands.portal.toggle",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S P"
+      ],
+      "mcp": {
+        "omitted": "protected: a LAN listener is a human's decision; MCP cannot start the portal, portal_stop stops it"
+      }
+    },
+    {
+      "id": "sync.resync",
+      "titleKey": "commands.sync.resync",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S R"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.skip_next",
+      "titleKey": "commands.sync.skip_next",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S N"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.toggle",
+      "titleKey": "commands.sync.toggle",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S S"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.toggle_focus",
+      "titleKey": "commands.sync.toggle_focus",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S F"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.toggle_scroll",
+      "titleKey": "commands.sync.toggle_scroll",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S C"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.toggle_view",
+      "titleKey": "commands.sync.toggle_view",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S X"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "sync.toggle_view_navigation",
+      "titleKey": "commands.sync.toggle_view_navigation",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S U"
+      ],
+      "mcp": {
+        "covered": "sync_set"
+      }
+    },
+    {
+      "id": "cookies.copy",
+      "titleKey": "commands.cookies.copy",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E J"
+      ],
+      "mcp": {
+        "covered": "cookies_copy"
+      }
+    },
+    {
+      "id": "env.compare.cancel",
+      "titleKey": "commands.env.compare.cancel",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E X"
+      ],
+      "mcp": {
+        "covered": "env_compare_cancel"
+      }
+    },
+    {
+      "id": "env.compare.live",
+      "titleKey": "commands.env.compare.live",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E C"
+      ],
+      "mcp": {
+        "covered": "env_compare_live"
+      }
+    },
+    {
+      "id": "env.compare.report",
+      "titleKey": "commands.env.compare.report",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E O"
+      ],
+      "mcp": {
+        "covered": "env_compare_result"
+      }
+    },
+    {
+      "id": "env.compare.run",
+      "titleKey": "commands.env.compare.run",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E R"
+      ],
+      "mcp": {
+        "covered": "env_compare"
+      }
+    },
+    {
+      "id": "environments.select",
+      "titleKey": "commands.environments.select",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E E"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.1",
+      "titleKey": "commands.environments.switch.1",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 1"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.2",
+      "titleKey": "commands.environments.switch.2",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 2"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.3",
+      "titleKey": "commands.environments.switch.3",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 3"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.4",
+      "titleKey": "commands.environments.switch.4",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 4"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.5",
+      "titleKey": "commands.environments.switch.5",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 5"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.6",
+      "titleKey": "commands.environments.switch.6",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 6"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.7",
+      "titleKey": "commands.environments.switch.7",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 7"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.8",
+      "titleKey": "commands.environments.switch.8",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 8"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "environments.switch.9",
+      "titleKey": "commands.environments.switch.9",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E 9"
+      ],
+      "mcp": {
+        "covered": "environment_set"
+      }
+    },
+    {
+      "id": "session.assign",
+      "titleKey": "commands.session.assign",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E S"
+      ],
+      "mcp": {
+        "covered": "session_assign"
+      }
+    },
+    {
+      "id": "session.clear",
+      "titleKey": "commands.session.clear",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E K"
+      ],
+      "mcp": {
+        "covered": "session_clear"
+      }
+    },
+    {
+      "id": "debug.resources",
+      "titleKey": "commands.debug.resources",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D R"
+      ],
+      "mcp": {
+        "omitted": "display switch; the data are view_metrics"
+      }
+    },
+    {
+      "id": "debug.vitals",
+      "titleKey": "commands.debug.vitals",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D C"
+      ],
+      "mcp": {
+        "omitted": "display switch; the data are view_metrics"
+      }
+    },
+    {
+      "id": "devtools.dock_cycle",
+      "titleKey": "commands.devtools.dock_cycle",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D W"
+      ],
+      "mcp": {
+        "omitted": "ui-only: dock layout"
+      }
+    },
+    {
+      "id": "devtools.inspect_at",
+      "titleKey": "commands.devtools.inspect_at",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D S"
+      ],
+      "mcp": {
+        "covered": "devtools_inspect_at"
+      }
+    },
+    {
+      "id": "devtools.open",
+      "titleKey": "commands.devtools.open",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D V"
+      ],
+      "mcp": {
+        "covered": "devtools_open"
+      }
+    },
+    {
+      "id": "devtools.toggle",
+      "titleKey": "commands.devtools.toggle",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D D"
+      ],
+      "mcp": {
+        "covered": "devtools_open"
+      }
+    },
+    {
+      "id": "view.force_state.reset",
+      "titleKey": "commands.view.force_state.reset",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D Q"
+      ],
+      "mcp": {
+        "covered": "views_force_state"
+      }
+    },
+    {
+      "id": "view.force_state.set",
+      "titleKey": "commands.view.force_state.set",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D H"
+      ],
+      "mcp": {
+        "covered": "views_force_state"
+      }
+    },
+    {
+      "id": "ui.view_footer.toggle",
+      "titleKey": "commands.ui.view_footer.toggle",
+      "group": "overlays",
+      "defaultBindings": [
+        "Ctrl+Shift+Space O B"
+      ],
+      "mcp": {
+        "omitted": "display switch; settings_set writes ui.viewFooter.visible"
+      }
+    },
+    {
+      "id": "capture.all_viewport",
+      "titleKey": "commands.capture.all_viewport",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C A"
+      ],
+      "mcp": {
+        "covered": "screenshot"
+      }
+    },
+    {
+      "id": "capture.delay_cycle",
+      "titleKey": "commands.capture.delay_cycle",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C D"
+      ],
+      "mcp": {
+        "omitted": "ui-only: UI preset; per MCP as delayMs"
+      }
+    },
+    {
+      "id": "capture.element",
+      "titleKey": "commands.capture.element",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C L"
+      ],
+      "mcp": {
+        "covered": "screenshot"
+      }
+    },
+    {
+      "id": "capture.full_page",
+      "titleKey": "commands.capture.full_page",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C F"
+      ],
+      "mcp": {
+        "covered": "screenshot"
+      }
+    },
+    {
+      "id": "capture.overview",
+      "titleKey": "commands.capture.overview",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C O"
+      ],
+      "mcp": {
+        "covered": "screenshot"
+      }
+    },
+    {
+      "id": "capture.preview_clean",
+      "titleKey": "commands.capture.preview_clean",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C P"
+      ],
+      "mcp": {
+        "omitted": "ui-only: a preview in the active view"
+      }
+    },
+    {
+      "id": "capture.toggle_freeze",
+      "titleKey": "commands.capture.toggle_freeze",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C N"
+      ],
+      "mcp": {
+        "omitted": "ui-only: session toggle; per MCP as hideBanners/freezeAnimations on each capture tool"
+      }
+    },
+    {
+      "id": "capture.toggle_hide_banners",
+      "titleKey": "commands.capture.toggle_hide_banners",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C H"
+      ],
+      "mcp": {
+        "omitted": "ui-only: session toggle; per MCP as hideBanners/freezeAnimations on each capture tool"
+      }
+    },
+    {
+      "id": "capture.video.panel",
+      "titleKey": "commands.capture.video.panel",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C T"
+      ],
+      "mcp": {
+        "omitted": "ui-only: shows the Videos panel; video_list lists the recordings"
+      }
+    },
+    {
+      "id": "capture.video.toggle",
+      "titleKey": "commands.capture.video.toggle",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C V"
+      ],
+      "mcp": {
+        "covered": "record_video"
+      }
+    },
+    {
+      "id": "capture.video.toggle_all",
+      "titleKey": "commands.capture.video.toggle_all",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C W"
+      ],
+      "mcp": {
+        "covered": "record_video"
+      }
+    },
+    {
+      "id": "capture.views",
+      "titleKey": "commands.capture.views",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C S"
+      ],
+      "mcp": {
+        "covered": "screenshot"
+      }
+    },
+    {
+      "id": "sitemap.cancel",
+      "titleKey": "commands.sitemap.cancel",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C X"
+      ],
+      "mcp": {
+        "covered": "sitemap_cancel"
+      }
+    },
+    {
+      "id": "sitemap.capture",
+      "titleKey": "commands.sitemap.capture",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C M"
+      ],
+      "mcp": {
+        "covered": "sitemap_capture"
+      }
+    },
+    {
+      "id": "visual.baseline_update",
+      "titleKey": "commands.visual.baseline_update",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C B"
+      ],
+      "mcp": {
+        "covered": "visual_baseline_update"
+      }
+    },
+    {
+      "id": "visual.compare",
+      "titleKey": "commands.visual.compare",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C R"
+      ],
+      "mcp": {
+        "covered": "visual_compare"
+      }
+    },
+    {
+      "id": "visual.lfs_setup",
+      "titleKey": "commands.visual.lfs_setup",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C G"
+      ],
+      "mcp": {
+        "omitted": "protected: changes the Git configuration; only the user"
+      }
+    },
+    {
+      "id": "checks.cancel",
+      "titleKey": "commands.checks.cancel",
+      "group": "checks",
+      "defaultBindings": [
+        "Ctrl+Shift+Space K Q"
+      ],
+      "mcp": {
+        "covered": "checks_cancel"
+      }
+    },
+    {
+      "id": "checks.run_all",
+      "titleKey": "commands.checks.run_all",
+      "group": "checks",
+      "defaultBindings": [
+        "Ctrl+Shift+Space K K"
+      ],
+      "mcp": {
+        "covered": "checks_run"
+      }
+    },
+    {
+      "id": "engine.firefox.toggle",
+      "titleKey": "commands.engine.firefox.toggle",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R F"
+      ],
+      "mcp": {
+        "covered": "engine_restart"
+      }
+    },
+    {
+      "id": "engine.restart",
+      "titleKey": "commands.engine.restart",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R E"
+      ],
+      "mcp": {
+        "covered": "engine_restart"
+      }
+    },
+    {
+      "id": "reload.all",
+      "titleKey": "commands.reload.all",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R R"
+      ],
+      "mcp": {
+        "covered": "reload"
+      }
+    },
+    {
+      "id": "reload.css_only",
+      "titleKey": "commands.reload.css_only",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R C"
+      ],
+      "mcp": {
+        "covered": "reload"
+      }
+    },
+    {
+      "id": "reload.toggle_pause",
+      "titleKey": "commands.reload.toggle_pause",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R P"
+      ],
+      "mcp": {
+        "omitted": "session toggle: MCP sets reload.mode with settings_set"
+      }
+    },
+    {
+      "id": "sidecar.restart",
+      "titleKey": "commands.sidecar.restart",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R S"
+      ],
+      "mcp": {
+        "omitted": "internal process; it restarts by itself"
+      }
+    },
+    {
+      "id": "wsl.restart_helper",
+      "titleKey": "commands.wsl.restart_helper",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R W"
+      ],
+      "mcp": {
+        "covered": "wsl_info"
+      }
+    },
+    {
+      "id": "bookmarks.add",
+      "titleKey": "commands.bookmarks.add",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P K"
+      ],
+      "mcp": {
+        "covered": "config_set"
+      }
+    },
+    {
+      "id": "bookmarks.make_relative",
+      "titleKey": "commands.bookmarks.make_relative",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P P"
+      ],
+      "mcp": {
+        "covered": "bookmarks_make_relative"
+      }
+    },
+    {
+      "id": "bookmarks.open",
+      "titleKey": "commands.bookmarks.open",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P B"
+      ],
+      "mcp": {
+        "covered": "navigate"
+      }
+    },
+    {
+      "id": "panels.close",
+      "titleKey": "commands.panels.close",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P X"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "panels.dock.bottom",
+      "titleKey": "commands.panels.dock.bottom",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P Down"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "panels.dock.left",
+      "titleKey": "commands.panels.dock.left",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P Left"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "panels.dock.right",
+      "titleKey": "commands.panels.dock.right",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P Right"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "panels.dock.toggle",
+      "titleKey": "commands.panels.dock.toggle",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P Z"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "panels.findings",
+      "titleKey": "commands.panels.findings",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P F"
+      ],
+      "mcp": {
+        "omitted": "ui-only: findings panel; checks_run answers the findings"
+      }
+    },
+    {
+      "id": "panels.sitemap",
+      "titleKey": "commands.panels.sitemap",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P G"
+      ],
+      "mcp": {
+        "covered": "sitemap_status"
+      }
+    },
+    {
+      "id": "panels.undock",
+      "titleKey": "commands.panels.undock",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P Up"
+      ],
+      "mcp": {
+        "covered": "panels_dock"
+      }
+    },
+    {
+      "id": "portal.devices",
+      "titleKey": "commands.portal.devices",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P D"
+      ],
+      "mcp": {
+        "covered": "portal_devices"
+      }
+    },
+    {
+      "id": "status.history",
+      "titleKey": "commands.status.history",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P L"
+      ],
+      "mcp": {
+        "omitted": "display only; status_messages reads the messages"
+      }
+    },
+    {
+      "id": "status.toggle_bar",
+      "titleKey": "commands.status.toggle_bar",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P S"
+      ],
+      "mcp": {
+        "omitted": "display switch; settings_set writes ui.statusBar.visible"
+      }
+    },
+    {
+      "id": "ui.toolbar.overflow.open",
+      "titleKey": "commands.ui.toolbar.overflow.open",
+      "group": "panels",
+      "defaultBindings": [
+        "Ctrl+Shift+Space P T"
+      ],
+      "mcp": {
+        "omitted": "display only; every entry of the menu is a command with its tool"
+      }
+    },
+    {
+      "id": "cdp.copy_snippet",
+      "titleKey": "commands.cdp.copy_snippet",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F C"
+      ],
+      "mcp": {
+        "covered": "cdp_endpoint"
+      }
+    },
+    {
+      "id": "flows.cancel",
+      "titleKey": "commands.flows.cancel",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F X"
+      ],
+      "mcp": {
+        "omitted": "cancelling a running flow is the person's; agents wait for the result"
+      }
+    },
+    {
+      "id": "flows.open_results",
+      "titleKey": "commands.flows.open_results",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F O"
+      ],
+      "mcp": {
+        "omitted": "opens the file manager; flow_run and flow_list answer the results"
+      }
+    },
+    {
+      "id": "flows.rerun_last",
+      "titleKey": "commands.flows.rerun_last",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F L"
+      ],
+      "mcp": {
+        "covered": "flow_run"
+      }
+    },
+    {
+      "id": "flows.run",
+      "titleKey": "commands.flows.run",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F R"
+      ],
+      "mcp": {
+        "covered": "flow_run"
+      }
+    },
+    {
+      "id": "flows.run_all",
+      "titleKey": "commands.flows.run_all",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F A"
+      ],
+      "mcp": {
+        "covered": "flow_run"
+      }
+    },
+    {
+      "id": "recorder.export_flow",
+      "titleKey": "commands.recorder.export_flow",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F W"
+      ],
+      "mcp": {
+        "covered": "recorder_export"
+      }
+    },
+    {
+      "id": "recorder.export_spec",
+      "titleKey": "commands.recorder.export_spec",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F E"
+      ],
+      "mcp": {
+        "covered": "recorder_export"
+      }
+    },
+    {
+      "id": "recorder.pause",
+      "titleKey": "commands.recorder.pause",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F P"
+      ],
+      "mcp": {
+        "covered": "recorder_stop"
+      }
+    },
+    {
+      "id": "recorder.start",
+      "titleKey": "commands.recorder.start",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F S"
+      ],
+      "mcp": {
+        "covered": "recorder_start"
+      }
+    },
+    {
+      "id": "recorder.stop",
+      "titleKey": "commands.recorder.stop",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F T"
+      ],
+      "mcp": {
+        "covered": "recorder_stop"
+      }
+    },
+    {
+      "id": "app.command_palette",
+      "titleKey": "commands.app.command_palette",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V P"
+      ],
+      "mcp": {
+        "omitted": "ui-only: the palette is a shell surface; commands_list lists the commands"
+      }
+    },
+    {
+      "id": "emulation.reset_view",
+      "titleKey": "commands.emulation.reset_view",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V R"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "emulation.set",
+      "titleKey": "commands.emulation.set",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V E"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "emulation.toggle_color_scheme",
+      "titleKey": "commands.emulation.toggle_color_scheme",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V C"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "emulation.toggle_reduced_motion",
+      "titleKey": "commands.emulation.toggle_reduced_motion",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V M"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "engine.webkit.toggle",
+      "titleKey": "commands.engine.webkit.toggle",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V K"
+      ],
+      "mcp": {
+        "covered": "engine_restart"
+      }
+    },
+    {
+      "id": "engines.update",
+      "titleKey": "commands.engines.update",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V U"
+      ],
+      "mcp": {
+        "omitted": "downloads browser binaries from the network; only by the user"
+      }
+    },
+    {
+      "id": "performance.toggle_throttle",
+      "titleKey": "commands.performance.toggle_throttle",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Q"
+      ],
+      "mcp": {
+        "covered": "settings_set"
+      }
+    },
+    {
+      "id": "ui.theme.cycle",
+      "titleKey": "commands.ui.theme.cycle",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V 0"
+      ],
+      "mcp": {
+        "omitted": "app display setting; settings_set writes ui.theme"
+      }
+    },
+    {
+      "id": "ui.theme.set",
+      "titleKey": "commands.ui.theme.set",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V ="
+      ],
+      "mcp": {
+        "omitted": "app display setting; settings_set writes ui.theme"
+      }
+    },
+    {
+      "id": "view.add",
+      "titleKey": "commands.view.add",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Plus"
+      ],
+      "mcp": {
+        "covered": "view_add"
+      }
+    },
+    {
+      "id": "view.add_print",
+      "titleKey": "commands.view.add_print",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Y"
+      ],
+      "mcp": {
+        "covered": "breakpoint_add"
+      }
+    },
+    {
+      "id": "view.add_size",
+      "titleKey": "commands.view.add_size",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V *"
+      ],
+      "mcp": {
+        "covered": "view_add_size"
+      }
+    },
+    {
+      "id": "view.back",
+      "titleKey": "commands.view.back",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V B",
+        "Ctrl+Shift+Space V Left"
+      ],
+      "mcp": {
+        "covered": "back"
+      }
+    },
+    {
+      "id": "view.emulate.cpu",
+      "titleKey": "commands.view.emulate.cpu",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V H"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "view.emulate.geolocation",
+      "titleKey": "commands.view.emulate.geolocation",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V G"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "view.emulate.offline",
+      "titleKey": "commands.view.emulate.offline",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V L"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "view.emulate.timezone",
+      "titleKey": "commands.view.emulate.timezone",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V T"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "view.external.arrange",
+      "titleKey": "commands.view.external.arrange",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V D"
+      ],
+      "mcp": {
+        "omitted": "desktop window layout, no use to an agent"
+      }
+    },
+    {
+      "id": "view.external.raise",
+      "titleKey": "commands.view.external.raise",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V W"
+      ],
+      "mcp": {
+        "omitted": "desktop window layout, no use to an agent"
+      }
+    },
+    {
+      "id": "view.focus_address_bar",
+      "titleKey": "commands.view.focus_address_bar",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V A"
+      ],
+      "mcp": {
+        "omitted": "ui-only"
+      }
+    },
+    {
+      "id": "view.focus_next",
+      "titleKey": "commands.view.focus_next",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V ]"
+      ],
+      "mcp": {
+        "omitted": "ui-only: keyboard focus between views"
+      }
+    },
+    {
+      "id": "view.focus_prev",
+      "titleKey": "commands.view.focus_prev",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V ["
+      ],
+      "mcp": {
+        "omitted": "ui-only: keyboard focus between views"
+      }
+    },
+    {
+      "id": "view.forward",
+      "titleKey": "commands.view.forward",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V F",
+        "Ctrl+Shift+Space V Right"
+      ],
+      "mcp": {
+        "covered": "forward"
+      }
+    },
+    {
+      "id": "view.navigate",
+      "titleKey": "commands.view.navigate",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V N"
+      ],
+      "mcp": {
+        "covered": "navigate"
+      }
+    },
+    {
+      "id": "view.page_zoom.in",
+      "titleKey": "commands.view.page_zoom.in",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Up"
+      ],
+      "mcp": {
+        "covered": "view_page_zoom"
+      }
+    },
+    {
+      "id": "view.page_zoom.out",
+      "titleKey": "commands.view.page_zoom.out",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Down"
+      ],
+      "mcp": {
+        "covered": "view_page_zoom"
+      }
+    },
+    {
+      "id": "view.page_zoom.reset",
+      "titleKey": "commands.view.page_zoom.reset",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Home"
+      ],
+      "mcp": {
+        "covered": "view_page_zoom"
+      }
+    },
+    {
+      "id": "view.pop_in",
+      "titleKey": "commands.view.pop_in",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V V"
+      ],
+      "mcp": {
+        "covered": "view_pop_in"
+      }
+    },
+    {
+      "id": "view.pop_out",
+      "titleKey": "commands.view.pop_out",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V X"
+      ],
+      "mcp": {
+        "covered": "view_pop_out"
+      }
+    },
+    {
+      "id": "view.remove",
+      "titleKey": "commands.view.remove",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V -"
+      ],
+      "mcp": {
+        "covered": "view_remove"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.1",
+      "titleKey": "commands.view.set_breakpoint.1",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+1",
+        "Ctrl+Shift+Space V 1"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.2",
+      "titleKey": "commands.view.set_breakpoint.2",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+2",
+        "Ctrl+Shift+Space V 2"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.3",
+      "titleKey": "commands.view.set_breakpoint.3",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+3",
+        "Ctrl+Shift+Space V 3"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.4",
+      "titleKey": "commands.view.set_breakpoint.4",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+4",
+        "Ctrl+Shift+Space V 4"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.5",
+      "titleKey": "commands.view.set_breakpoint.5",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+5",
+        "Ctrl+Shift+Space V 5"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.6",
+      "titleKey": "commands.view.set_breakpoint.6",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+6",
+        "Ctrl+Shift+Space V 6"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.7",
+      "titleKey": "commands.view.set_breakpoint.7",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+7",
+        "Ctrl+Shift+Space V 7"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.8",
+      "titleKey": "commands.view.set_breakpoint.8",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+8",
+        "Ctrl+Shift+Space V 8"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_breakpoint.9",
+      "titleKey": "commands.view.set_breakpoint.9",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+9",
+        "Ctrl+Shift+Space V 9"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.set_size",
+      "titleKey": "commands.view.set_size",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V S"
+      ],
+      "mcp": {
+        "covered": "view_set_breakpoint"
+      }
+    },
+    {
+      "id": "view.zoom_fit_all",
+      "titleKey": "commands.view.zoom_fit_all",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V Z"
+      ],
+      "mcp": {
+        "omitted": "ui-only: grid zoom"
+      }
+    },
+    {
+      "id": "view.zoom_in",
+      "titleKey": "commands.view.zoom_in",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V I"
+      ],
+      "mcp": {
+        "omitted": "ui-only: grid zoom"
+      }
+    },
+    {
+      "id": "view.zoom_out",
+      "titleKey": "commands.view.zoom_out",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V O"
+      ],
+      "mcp": {
+        "omitted": "ui-only: grid zoom"
+      }
+    },
+    {
+      "id": "extensions.add_recommended",
+      "titleKey": "commands.extensions.add_recommended",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X A"
+      ],
+      "mcp": {
+        "omitted": "protected: loads an extension's code into every view; only the person adds one"
+      }
+    },
+    {
+      "id": "extensions.check_updates",
+      "titleKey": "commands.extensions.check_updates",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X C"
+      ],
+      "mcp": {
+        "omitted": "every update found is a question in the window the person answers; the start checks too (checkUpdatesAtStart)"
+      }
+    },
+    {
+      "id": "extensions.install_web_store",
+      "titleKey": "commands.extensions.install_web_store",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X W"
+      ],
+      "mcp": {
+        "omitted": "protected: installs code into every view on the person's word alone; MCP installs with extension_install, which waits for the person's word in the window"
+      }
+    },
+    {
+      "id": "extensions.load_unpacked",
+      "titleKey": "commands.extensions.load_unpacked",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X O"
+      ],
+      "mcp": {
+        "omitted": "protected: loads an extension's code into every view; only the person adds one"
+      }
+    },
+    {
+      "id": "extensions.manage",
+      "titleKey": "commands.extensions.manage",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X M"
+      ],
+      "mcp": {
+        "omitted": "opens the settings window only; extension_list reads the extensions"
+      }
+    },
+    {
+      "id": "extensions.remove",
+      "titleKey": "commands.extensions.remove",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X X"
+      ],
+      "mcp": {
+        "covered": "extension_remove"
+      }
+    },
+    {
+      "id": "plugins.disable",
+      "titleKey": "commands.plugins.disable",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X D"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "plugins.enable",
+      "titleKey": "commands.plugins.enable",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X E"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "plugins.install",
+      "titleKey": "commands.plugins.install",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X I"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "plugins.list",
+      "titleKey": "commands.plugins.list",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X L"
+      ],
+      "mcp": {
+        "covered": "plugins_list"
+      }
+    },
+    {
+      "id": "plugins.panels",
+      "titleKey": "commands.plugins.panels",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X P"
+      ],
+      "mcp": {
+        "omitted": "ui-only: opens the plugin panels window"
+      }
+    },
+    {
+      "id": "plugins.remove",
+      "titleKey": "commands.plugins.remove",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X R"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "plugins.resume",
+      "titleKey": "commands.plugins.resume",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X U"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "plugins.trust_key",
+      "titleKey": "commands.plugins.trust_key",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X K"
+      ],
+      "mcp": {
+        "omitted": "protected: plugin install/trust"
+      }
+    },
+    {
+      "id": "tools.ffmpeg.install",
+      "titleKey": "commands.tools.ffmpeg.install",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X F"
+      ],
+      "mcp": {
+        "omitted": "protected: downloads a program; only the person, after the consent notice"
+      }
+    },
+    {
+      "id": "tools.ffmpeg.remove",
+      "titleKey": "commands.tools.ffmpeg.remove",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X G"
+      ],
+      "mcp": {
+        "omitted": "protected: deletes a program the person downloaded"
+      }
+    },
+    {
+      "id": "app.about",
+      "titleKey": "commands.app.about",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , A"
+      ],
+      "mcp": {
+        "covered": "app_info"
+      }
+    },
+    {
+      "id": "app.open_link",
+      "titleKey": "commands.app.open_link",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , H"
+      ],
+      "mcp": {
+        "omitted": "protected: an agent opens no browser of the person's; navigate loads a page in the views"
+      }
+    },
+    {
+      "id": "app.reload_config",
+      "titleKey": "commands.app.reload_config",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , R"
+      ],
+      "mcp": {
+        "omitted": "ui-only: the watcher reloads the config; config_get reads it"
+      }
+    },
+    {
+      "id": "cdp.copy_endpoint",
+      "titleKey": "commands.cdp.copy_endpoint",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , E"
+      ],
+      "mcp": {
+        "covered": "cdp_endpoint"
+      }
+    },
+    {
+      "id": "cdp.rotate_token",
+      "titleKey": "commands.cdp.rotate_token",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , O"
+      ],
+      "mcp": {
+        "omitted": "protected: token management via UI"
+      }
+    },
+    {
+      "id": "diagnostics.create",
+      "titleKey": "commands.diagnostics.create",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , D"
+      ],
+      "mcp": {
+        "covered": "diagnostics"
+      }
+    },
+    {
+      "id": "mcp.copy_config",
+      "titleKey": "commands.mcp.copy_config",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , C"
+      ],
+      "mcp": {
+        "omitted": "ui-only: a line for the person's agent configuration"
+      }
+    },
+    {
+      "id": "mcp.toggle",
+      "titleKey": "commands.mcp.toggle",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , M"
+      ],
+      "mcp": {
+        "omitted": "protected: MCP cannot switch itself"
+      }
+    },
+    {
+      "id": "project.open_recent",
+      "titleKey": "commands.project.open_recent",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , P"
+      ],
+      "mcp": {
+        "covered": "project_open"
+      }
+    },
+    {
+      "id": "settings.open",
+      "titleKey": "commands.settings.open",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , ,"
+      ],
+      "mcp": {
+        "omitted": "ui-only"
+      }
+    },
+    {
+      "id": "settings.open_plugins",
+      "titleKey": "commands.settings.open_plugins",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , X"
+      ],
+      "mcp": {
+        "covered": "plugins_list"
+      }
+    },
+    {
+      "id": "shortcuts.edit",
+      "titleKey": "commands.shortcuts.edit",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , K"
+      ],
+      "mcp": {
+        "covered": "settings_get"
+      }
+    },
+    {
+      "id": "trust.grant",
+      "titleKey": "commands.trust.grant",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , G"
+      ],
+      "mcp": {
+        "omitted": "protected: trust only via UI"
+      }
+    },
+    {
+      "id": "trust.revoke",
+      "titleKey": "commands.trust.revoke",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , V"
+      ],
+      "mcp": {
+        "omitted": "protected: trust only via UI"
+      }
+    },
+    {
+      "id": "trust.show",
+      "titleKey": "commands.trust.show",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , T"
+      ],
+      "mcp": {
+        "omitted": "protected: trust only via UI"
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fonts fixture</title>
+<!-- The acceptance page of the Fonts plugin (RB-070-13, plugins/fonts): Inter from this server
+     (WOFF2, two weights, the 400 preloaded), Roboto from Google's servers (the privacy finding),
+     a TrueType face, an unused face, a face without font-display, an ASCII-only subset the
+     umlauts fall back from, text under 12 px, an input under 16 px, a tight paragraph and an h1
+     that keeps its size on every breakpoint. legacy-serif.ttf and unused-display.woff2 are not
+     shipped: the findings read the declarations (the TrueType text renders in Georgia). The Inter
+     files are OFL-1.1 (LICENSE-Inter.txt). broken.html is the page whose Inter cannot load. -->
+<link rel="preload" href="inter-400.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Inter"; src: url(inter-400.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url(inter-600.woff2) format("woff2"); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Roboto"; src: url(https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Legacy Serif"; src: url(legacy-serif.ttf) format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Unused Display"; src: url(unused-display.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter ASCII"; src: url(inter-400.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0000-007F; }
+body { font-family: Inter, Arial, sans-serif; font-size: 16px; line-height: 1.5; margin: 0 16px; }
+h1 { font-size: 32px; font-weight: 600; line-height: 1.2; }
+h2 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.semi { font-weight: 600; }
+.lead { font-family: Roboto, Arial, sans-serif; }
+.legacy { font-family: "Legacy Serif", Georgia, serif; }
+.subset { font-family: "Inter ASCII", Arial, sans-serif; }
+.fineprint { font-size: 11px; }
+.tight { line-height: 1; }
+input { font-family: inherit; font-size: 14px; }
+@media (min-width: 900px) { h2 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<header>
+<h1>Fonts fixture</h1>
+</header>
+<main>
+<p class="lead">Roboto from Google's servers: a privacy finding until fonts.gstatic.com is allowed.</p>
+<h2>Inter in two weights</h2>
+<p>Regular Inter text with <span class="semi">a semi-bold part</span> beside it.</p>
+<p class="legacy">Legacy text set in a TrueType file.</p>
+<p class="subset">Größe, Übergänge und Äpfel: the umlauts come from the fallback font.</p>
+<p class="tight">A long paragraph with a line height of one, so its lines nearly touch each other when it wraps on a narrow screen.</p>
+<p class="fineprint">Fine print at 11 px.</p>
+<form>
+<label for="q">Search</label>
+<input id="q" type="search" value="Inter at 14 px">
+</form>
+</main>
+</body>
+</html>

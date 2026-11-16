@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "overlays plugin settings",
+  "type": "object",
+  "properties": {
+    "restoreOnStart": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "overlays",
+      "x-order": 1,
+      "x-scope": ["user", "project"]
+    },
+    "overflow": {
+      "type": "object",
+      "properties": {
+        "mutationThrottleMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 5000,
+          "default": 250,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 2,
+          "x-scope": ["user", "project"]
+        },
+        "show100vw": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 3,
+          "x-scope": ["user", "project"]
+        }
+      }
+    },
+    "outlines": {
+      "type": "object",
+      "properties": {
+        "containersOnly": {
+          "type": "boolean",
+          "default": false,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 4,
+          "x-scope": ["user", "project"]
+        }
+      }
+    },
+    "colors": {
+      "type": "object",
+      "properties": {
+        "overflow": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#f5b800",
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 5,
+          "x-scope": ["user"]
+        },
+        "cause": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#e5262b",
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 6,
+          "x-scope": ["user"]
+        },
+        "vw100": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#1f6feb",
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 7,
+          "x-scope": ["user"]
+        },
+        "highlight": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#c026d3",
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 8,
+          "x-scope": ["user"]
+        }
+      }
+    },
+    "targetSizePx": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 96,
+      "default": 24,
+      "x-category": "devtools",
+      "x-section": "overlays",
+      "x-order": 9,
+      "x-scope": ["user", "project"]
+    },
+    "smallTextPx": {
+      "type": "integer",
+      "minimum": 6,
+      "maximum": 32,
+      "default": 12,
+      "x-category": "devtools",
+      "x-section": "overlays",
+      "x-order": 10,
+      "x-scope": ["user", "project"]
+    },
+    "scrollbarTolerancePx": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 4,
+      "x-category": "devtools",
+      "x-section": "overlays",
+      "x-order": 11,
+      "x-scope": ["user", "project"]
+    },
+    "chaos": {
+      "type": "object",
+      "properties": {
+        "factor": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10,
+          "default": 2.0,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 12,
+          "x-scope": ["user", "project"]
+        }
+      }
+    },
+    "cssOff": {
+      "type": "object",
+      "properties": {
+        "includeInline": {
+          "type": "boolean",
+          "default": false,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 13,
+          "x-scope": ["user", "project"]
+        }
+      }
+    },
+    "reportFindings": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "overlays",
+      "x-order": 14,
+      "x-scope": ["user", "project"]
+    },
+    "tabOrder": {
+      "type": "object",
+      "properties": {
+        "showLines": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 15,
+          "x-scope": ["user", "project"]
+        },
+        "live": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 16,
+          "x-scope": ["user", "project"]
+        },
+        "includeIframes": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 17,
+          "x-scope": ["user", "project"]
+        }
+      }
+    }
+  }
+}

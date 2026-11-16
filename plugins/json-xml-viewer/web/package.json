@@ -1,0 +1,23 @@
+{
+  "name": "rbrowser-plugin-json-xml-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The page script of rBrowser's JSON/XML viewer plugin (RB-070-05): a JSON or XML document as a collapsible, searchable tree, built into ../page/viewer.js.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.4",
+    "playwright-core": "1.65.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}

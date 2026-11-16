@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser form fixture</title>
+<style>
+  /* RB-020-02 and RB-020-03 (K4, keys, text):
+     - The POST form submits to /submit, which counts the posts (GET /count). With leader-only
+       submit (sync.leaderOnlySubmit, the default) one submit in the leader is one post, however
+       many views there are; the other views follow by URL to /form.html?posts=<n> (K4).
+     - The search form is a GET: Enter in its field submits; the views follow the leader's
+       /search?q=... navigation.
+     - Typed text shows in the echo below each field, so "Gruesse @ Euro" typed on a German
+       keyboard with AltGr (the umlauts, the sharp s, @ and the euro sign) can be compared
+       across the views; the password field's echo shows the length only.
+     - Every keydown lands in window.__keys (key, code, isTrusted), every input in
+       window.__inputs (inputType, isTrusted), for the end-to-end run.
+     Served by tests/fixtures/server/post-counter.py. */
+  body { margin: 16px; font: 16px system-ui, sans-serif; }
+  form { display: grid; gap: 8px; max-width: 420px; margin-bottom: 24px; }
+  output { font: 14px ui-monospace, monospace; color: #555; }
+</style>
+</head>
+<body>
+<h1>Form</h1>
+<p>Posts so far: <span id="posts">?</span></p>
+<form id="order" method="post" action="/submit">
+  <label>Name <input name="name" id="name" autocomplete="off"></label>
+  <output id="name-echo"></output>
+  <label>Password <input name="password" id="password" type="password" autocomplete="off"></label>
+  <output id="password-echo"></output>
+  <label>Notes <textarea name="notes" id="notes" rows="3"></textarea></label>
+  <button type="submit" data-testid="submit">Send</button>
+</form>
+<form id="search" method="get" action="/search" role="search">
+  <label>Search <input name="q" id="q" type="search" autocomplete="off"></label>
+</form>
+<script>
+  'use strict';
+  window.__keys = [];
+  window.__inputs = [];
+  const echo = (id, text) => { document.getElementById(id).textContent = text; };
+  document.getElementById('name').addEventListener('input', (event) => echo('name-echo', event.target.value));
+  document.getElementById('password').addEventListener('input', (event) =>
+    echo('password-echo', `${event.target.value.length} characters`));
+  addEventListener('keydown', (event) => {
+    window.__keys.push({ key: event.key, code: event.code, trusted: event.isTrusted });
+  }, true);
+  addEventListener('input', (event) => {
+    window.__inputs.push({ inputType: event.inputType, trusted: event.isTrusted });
+  }, true);
+  fetch('/count').then((reply) => reply.json()).then((count) => {
+    document.getElementById('posts').textContent = String(count.posts);
+  }).catch(() => {});
+</script>
+</body>
+</html>

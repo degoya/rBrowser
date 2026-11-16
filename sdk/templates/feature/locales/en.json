@@ -1,0 +1,23 @@
+{
+  "plugin": {
+    "example-feature": {
+      "commands": {
+        "count_views": "Count the views"
+      },
+      "name": "Example feature",
+      "panel": {
+        "count": "{n, plural, one {The grid has # view.} other {The grid has # views.}}",
+        "empty": "The grid has no views.",
+        "loading": "Counting the views...",
+        "refresh": "Count again",
+        "width": "{width} px"
+      },
+      "panels": {
+        "main": "Example feature"
+      },
+      "tools": {
+        "count_views": "Counts the views of the grid and their widths."
+      }
+    }
+  }
+}

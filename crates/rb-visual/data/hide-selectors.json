@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "rbrowser",
+      "name": "rBrowser's own collection: the element ids and classes the consent managers and chat widgets document or ship, gathered by hand",
+      "licence": "GPL-3.0-or-later"
+    }
+  ],
+  "groups": [
+    {
+      "id": "onetrust",
+      "name": "OneTrust",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#onetrust-banner-sdk", "#onetrust-consent-sdk", "#onetrust-pc-sdk", ".onetrust-pc-dark-filter"]
+    },
+    {
+      "id": "cookiebot",
+      "name": "Cookiebot",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#CybotCookiebotDialog", "#CybotCookiebotDialogBodyUnderlay"]
+    },
+    {
+      "id": "usercentrics",
+      "name": "Usercentrics",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#usercentrics-root", "#usercentrics-cmp-ui"]
+    },
+    {
+      "id": "didomi",
+      "name": "Didomi",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#didomi-host", "#didomi-notice", "#didomi-popup"]
+    },
+    {
+      "id": "borlabs",
+      "name": "Borlabs Cookie",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#BorlabsCookieBox", "#BorlabsCookieWidget"]
+    },
+    {
+      "id": "klaro",
+      "name": "Klaro",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#klaro .cookie-notice", "#klaro .cookie-modal"]
+    },
+    {
+      "id": "cookieyes",
+      "name": "CookieYes and GDPR Cookie Consent",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": [".cky-consent-container", ".cky-overlay", ".cky-btn-revisit-wrapper", "#cookie-law-info-bar", ".cli-modal-backdrop"]
+    },
+    {
+      "id": "complianz",
+      "name": "Complianz",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#cmplz-cookiebanner-container", ".cmplz-cookiebanner", "#cmplz-manage-consent"]
+    },
+    {
+      "id": "quantcast",
+      "name": "Quantcast Choice",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#qc-cmp2-container"]
+    },
+    {
+      "id": "trustarc",
+      "name": "TrustArc",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#truste-consent-track", ".truste_box_overlay", "#consent_blackbar"]
+    },
+    {
+      "id": "osano",
+      "name": "Osano and Cookie Consent",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": [".osano-cm-window", ".cc-window", ".cc-revoke", "[aria-label='cookieconsent']", "#cc-main"]
+    },
+    {
+      "id": "consentmanager",
+      "name": "consentmanager",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#cmpbox", "#cmpbox2"]
+    },
+    {
+      "id": "sourcepoint",
+      "name": "Sourcepoint",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["[id^='sp_message_container_']"]
+    },
+    {
+      "id": "iubenda",
+      "name": "iubenda",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": ["#iubenda-cs-banner"]
+    },
+    {
+      "id": "generic-consent",
+      "name": "Common hand-made banners",
+      "kind": "consent",
+      "source": "rbrowser",
+      "selectors": [".cookie-banner", "#cookie-banner"]
+    },
+    {
+      "id": "intercom",
+      "name": "Intercom",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#intercom-container", ".intercom-lightweight-app", "#intercom-frame"]
+    },
+    {
+      "id": "drift",
+      "name": "Drift",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#drift-widget-container", "#drift-frame-controller", "#drift-frame-chat"]
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot chat",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#hubspot-messages-iframe-container"]
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk Web Widget",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["iframe#launcher", "iframe#webWidget"]
+    },
+    {
+      "id": "crisp",
+      "name": "Crisp",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": [".crisp-client"]
+    },
+    {
+      "id": "livechat",
+      "name": "LiveChat",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#chat-widget-container"]
+    },
+    {
+      "id": "tidio",
+      "name": "Tidio",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#tidio-chat"]
+    },
+    {
+      "id": "freshchat",
+      "name": "Freshchat",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#fc_frame"]
+    },
+    {
+      "id": "olark",
+      "name": "Olark",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#olark-wrapper"]
+    },
+    {
+      "id": "facebook-chat",
+      "name": "Facebook customer chat",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": [".fb_dialog", ".fb-customerchat"]
+    },
+    {
+      "id": "smartsupp",
+      "name": "Smartsupp",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["#chat-application"]
+    },
+    {
+      "id": "jivochat",
+      "name": "JivoChat",
+      "kind": "chat",
+      "source": "rbrowser",
+      "selectors": ["jdiv"]
+    }
+  ]
+}

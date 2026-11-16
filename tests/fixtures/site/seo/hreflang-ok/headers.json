@@ -1,0 +1,12 @@
+{
+  "en/": {
+    "link": "<https://fixture.test/hreflang-ok/en/>; rel=\"alternate\"; hreflang=\"en\", <https://fixture.test/hreflang-ok/de/>; rel=\"alternate\"; hreflang=\"de\", <https://fixture.test/hreflang-ok/fr/>; rel=\"alternate\"; hreflang=\"fr\", <https://fixture.test/hreflang-ok/en/>; rel=\"alternate\"; hreflang=\"x-default\"",
+    "content-language": "en"
+  },
+  "de/": {
+    "content-language": "de"
+  },
+  "fr/": {
+    "content-language": "fr"
+  }
+}

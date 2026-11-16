@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vue DevTools</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body class="vue">
+    <header>
+      <h1 id="title"></h1>
+      <p id="status" role="status"></p>
+      <nav id="tabs" class="tabs" role="tablist"></nav>
+      <div class="bar">
+        <input id="filter" type="search" autocomplete="off" />
+        <button id="refresh" type="button"></button>
+      </div>
+    </header>
+    <main>
+      <section class="tree-pane">
+        <h2 id="pane-title"></h2>
+        <ul id="tree" role="tree"></ul>
+      </section>
+      <section class="state-pane">
+        <h2 id="state-title"></h2>
+        <div id="state"></div>
+      </section>
+    </main>
+    <script src="dist/vue.js"></script>
+  </body>
+</html>

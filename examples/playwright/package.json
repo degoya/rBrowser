@@ -1,0 +1,17 @@
+{
+  "name": "rbrowser-playwright-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Playwright's connectOverCDP against rBrowser's CDP proxy: connect, then one step per view (RB-040-06).",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "start": "node connect.ts"
+  },
+  "dependencies": {
+    "playwright-core": "1.65.0"
+  }
+}

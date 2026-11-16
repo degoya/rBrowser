@@ -1,0 +1,23 @@
+[package]
+name = "rb-plugin-types"
+description = "The vocabulary rBrowser's plugins share with the host: failures, capabilities, kinds, records, findings, path rules"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# JSON schemas of the findings model (`schema/findings.v1.json`); the host switches it on, a
+# plugin's component does not need it.
+schema = ["dep:schemars"]
+
+# Builds for wasm32-unknown-unknown as well: a plugin's native logic uses these types.
+[dependencies]
+schemars = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

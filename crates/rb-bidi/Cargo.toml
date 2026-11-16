@@ -1,0 +1,48 @@
+[package]
+name = "rb-bidi"
+description = "A lean WebDriver BiDi client, the installed Firefox's launcher and profile, and the Firefox engine behind rb-engine's trait (RB-040-02)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# `rb_bidi::testing` (the fake Firefox) for other crates' tests; never in a shipped build.
+test-support = []
+
+[dependencies]
+async-trait.workspace = true
+futures-util.workspace = true
+rb-config = { path = "../rb-config" }
+rb-engine = { path = "../rb-engine" }
+rb-process = { path = "../rb-process" }
+rb-sync = { path = "../rb-sync" }
+rb-util = { path = "../rb-util" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+# The client side over a TCP stream of our own (`client_async`): only the loopback endpoint
+# Firefox printed is ever dialled.
+tokio-tungstenite.workspace = true
+tracing.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# `App Paths\firefox.exe` in the registry (the launcher's second place to look); the job object
+# that ends Firefox with the app (`launcher::job`).
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+# The engine conformance for the Firefox engine's tests (RB-040-01).
+rb-engine = { path = "../rb-engine", features = ["test-support"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true

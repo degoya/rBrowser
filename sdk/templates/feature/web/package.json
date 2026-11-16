@@ -1,0 +1,30 @@
+{
+  "name": "rbrowser-plugin-feature-example-panel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The example feature plugin's panel: Vue and Nuxt UI with rBrowser's panel-ui (web-common/), built by Vite into ../panel/dist.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@iconify/vue": "5.0.5",
+    "@nuxt/ui": "4.12.2",
+    "tailwindcss": "4.3.5",
+    "vue": "3.5.45"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "1.2.155",
+    "@types/node": "26.6.6",
+    "@vitejs/plugin-vue": "6.0.11",
+    "happy-dom": "21.0.4",
+    "typescript": "7.0.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

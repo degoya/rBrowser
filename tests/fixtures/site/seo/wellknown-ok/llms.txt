@@ -1,0 +1,14 @@
+# SEO fixture site
+
+> The pages the SEO check of rBrowser is tested against.
+
+The site holds one folder per fixture.
+
+## Pages
+
+- [Clean page](https://fixture.test/clean/): a page without SEO findings
+- [Well-known fixture](/wellknown-ok/)
+
+## Optional
+
+- [Robots](https://fixture.test/robots.txt): what crawlers may load

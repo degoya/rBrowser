@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser outline fixture</title>
+<style>
+  /* RB-070-03: the outline plugin's acceptance page.
+     - The main navigation ("Docs", "Pricing") is a bar in wide views and sits in a closed burger
+       menu below 768 px: the outline marks it "only visible on desktop".
+     - The headings jump from h2 to h4 ("Details"): outline.heading-skip.
+     - "Old page" links to missing.html, which the fixture server answers 404: outline.link-broken.
+     - The "Nickname" field has no label: outline.form-label-missing (axe's `label` shares it).
+     - Three [data-cms-block] elements for the custom selector, one only in wide views.
+     Served by any static server from tests/fixtures/site/ (/outline/). */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  header { display: flex; gap: 16px; align-items: center; padding: 12px 16px; }
+  #burger { display: none; }
+  #mobile-menu { display: none; }
+  #mobile-menu.open { display: block; }
+  .wide-only { display: block; }
+  @media (max-width: 767px) {
+    #main-nav { display: none; }
+    #burger { display: inline-block; }
+    .wide-only { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a href="/outline/index.html" id="home">Outline fixture</a>
+  <nav id="main-nav" aria-label="Main">
+    <a href="/outline/docs.html">Docs</a>
+    <a href="/outline/pricing.html">Pricing</a>
+  </nav>
+  <button type="button" id="burger" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+  <nav id="mobile-menu" aria-label="Mobile">
+    <a href="/outline/docs.html">Docs</a>
+  </nav>
+</header>
+<main>
+  <h1>Outline fixture</h1>
+  <section aria-label="Intro" data-cms-block="intro">
+    <h2>Introduction</h2>
+    <p>Text with an <a href="/outline/missing.html">Old page</a> and an
+      <a href="https://example.com/" target="_blank">external link</a>.</p>
+    <h4>Details</h4>
+    <p><img src="/outline/photo.png" alt="A harbour at dusk" width="320" height="200">
+       <img src="/outline/chart.png" width="320" height="200">
+       <img src="/outline/divider.png" alt="" width="320" height="2"></p>
+    <a href="/outline/gallery.html"><img src="/outline/thumb.png" width="64" height="64"></a>
+  </section>
+  <section aria-label="Contact" data-cms-block="contact">
+    <h2>Contact</h2>
+    <form aria-label="Contact form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <input id="nickname" name="nickname" type="text">
+      <input name="phone" type="tel" aria-label="Phone" autocomplete="tel">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+  <div class="wide-only" data-cms-block="promo"><h2>Promotion</h2></div>
+</main>
+<footer>
+  <p>Footer</p>
+</footer>
+<script>
+  document.getElementById('burger').addEventListener('click', () => {
+    const menu = document.getElementById('mobile-menu');
+    const open = menu.classList.toggle('open');
+    document.getElementById('burger').setAttribute('aria-expanded', String(open));
+  });
+</script>
+</body>
+</html>

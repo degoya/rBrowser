@@ -1,0 +1,14 @@
+[package]
+name = "rb-util"
+description = "The small helpers every crate and plugin writes once: lower-case hex, a poison-tolerant mutex lock, the origin and host of a URL, the JSON pointer escape (RB-080-28)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# `std` only, so a plugin's component (wasm32-unknown-unknown) takes it as the app does.
+[dependencies]
+
+[lints]
+workspace = true

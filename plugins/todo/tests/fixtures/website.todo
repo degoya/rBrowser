@@ -1,0 +1,20 @@
+Website:
+  ☐ Write the *landing* page @high @est(2h)
+  ✔ Pick the colours @done(26-11-14 09:30)
+  ✘ Use a carousel @cancelled(26-11-12 18:00)
+  Design: @critical
+    ☐ Icons for the `nav` bar @today
+      A note on the icons, _without_ a symbol.
+    - Old-style box
+    [ ] Markdown box
+    [x] Markdown done @done(26-11-15 10:00)
+    [-] Markdown cancelled
+    + Plus done
+    x Lower-case cancelled
+    ☐ Tagged @started(26-11-16 08:00) @owner(alex)
+
+Notes for later, a comment line.
+☐ A task without a project
+
+Archive:
+  ✔ Ship the beta @done(26-10-01 12:00) @project(Website)

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peek fixture (RB-060-04)</title>
+<style>
+  /* A web font that is never found: Chromium falls back, and the rendered font shows it. */
+  @font-face { font-family: "MissingWebFont"; src: url("fonts/missing-web-font.woff2") format("woff2"); }
+  body { margin: 0; padding: 24px; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+  .btn { margin: 4px 8px; padding: 6px 12px; border: 1px solid #777; background: transparent;
+         color: #777; font: inherit; }
+  .large { font-size: 24px; color: #777; }
+  .bold-14pt { font-size: 18.6667px; font-weight: 700; color: #777; }
+  .gradient { background: linear-gradient(90deg, #000, #fff); color: #fff; padding: 8px; }
+  .translucent { background: rgba(0, 0, 0, 0.5); padding: 8px; }
+  .missing-font { font-family: "MissingWebFont", Arial, sans-serif; }
+  .oklch { color: oklch(0.5 0 0); }
+  .responsive-mobile { display: none; }
+  @media (max-width: 600px) {
+    .responsive-mobile { display: inline-block; }
+    .responsive-desktop { display: none; }
+  }
+</style>
+</head>
+<body>
+  <h1>Peek</h1>
+  <p>Hold Alt over an element. Each pair below has a known WCAG contrast.</p>
+  <!-- #777 on #fff: 4.48:1, AA for large text only. -->
+  <button id="send" class="btn btn-primary" type="button">Send</button>
+  <!-- The same grey at 24px is large text: AA. -->
+  <p id="large" class="large">Large grey text</p>
+  <!-- 14pt bold is large text too. -->
+  <p id="bold" class="bold-14pt">Bold 14pt grey text</p>
+  <!-- #000 on #fff: 21:1, AAA. -->
+  <p id="black">Black on white</p>
+  <!-- A gradient behind the text: the background is uncertain. -->
+  <p id="gradient" class="gradient">Text over a gradient</p>
+  <!-- Translucent black over white: the background resolves to #808080. -->
+  <div class="translucent"><span id="over-translucent" style="color:#fff">White over half black</span></div>
+  <!-- The web font is missing: the rendered font is the fallback. -->
+  <p id="missing-font" class="missing-font">Rendered with the fallback font</p>
+  <!-- A colour outside sRGB notation: the page script converts it. -->
+  <p id="oklch" class="oklch">oklch grey</p>
+  <!-- Responsive twins: the other views outline the one they show. -->
+  <a id="nav-desktop" class="responsive-desktop" href="#desktop">Navigation</a>
+  <a id="nav-mobile" class="responsive-mobile" href="#mobile">Navigation</a>
+  <p><a id="link" href="#clicked">A link: without the modifier its click reaches the page</a></p>
+  <!-- AltGr typing (German layout: AltGr+Q is @) must stay untouched. -->
+  <label>Type with AltGr <input id="altgr" type="text"></label>
+  <script>
+    document.getElementById('link').addEventListener('click', () => {
+      document.body.dataset.linkClicked = String(Number(document.body.dataset.linkClicked || 0) + 1);
+    });
+  </script>
+</body>
+</html>

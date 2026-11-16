@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser SPA fixture</title>
+<style>
+  /* RB-020-06: a single-page app with a history router and a counter that only a full reload
+     resets. Serve this folder with a fallback to this page (`npx vite` with a rewrite, or any
+     SPA server) and open /spa.html: a route change in the active view must reach every view
+     without a reload - the counter keeps its value. The acceptance itself uses a real Vue
+     Router app on a Vite dev server (the job file). */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  nav a { margin-right: 12px; }
+  .nav-mobile { display: none; }
+  @media (max-width: 699px) {
+    .nav-desktop { display: none; }
+    .nav-mobile { display: block; }
+  }
+</style>
+</head>
+<body>
+<nav class="nav-desktop" aria-label="Main">
+  <a href="/spa.html" data-route>Home</a>
+  <a href="/spa.html/about" data-route data-testid="about">About</a>
+  <a href="/spa.html/contact" data-route>Contact</a>
+</nav>
+<nav class="nav-mobile" aria-label="Main (mobile)">
+  <!-- The narrow layout's own menu: when input sync does not reach it, navigation sync moves
+       the route through the history API. -->
+  <a href="/spa.html/about" data-route>About</a>
+</nav>
+<main>
+  <h1 id="route"></h1>
+  <p>Loaded <output id="counter">0</output> seconds ago without a reload.</p>
+</main>
+<script>
+  (function () {
+    var counter = 0;
+    setInterval(function () {
+      counter += 1;
+      document.getElementById('counter').textContent = String(counter);
+    }, 1000);
+    function render() {
+      document.getElementById('route').textContent = location.pathname + location.hash;
+    }
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest && event.target.closest('a[data-route]');
+      if (!link) return;
+      event.preventDefault();
+      history.pushState(null, '', link.getAttribute('href'));
+      render();
+    });
+    window.addEventListener('popstate', render);
+    render();
+  })();
+</script>
+</body>
+</html>

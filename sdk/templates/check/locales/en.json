@@ -1,0 +1,15 @@
+{
+  "plugin": {
+    "example-check": {
+      "findings": {
+        "lang_missing": "The document does not name its language (lang on <html>).",
+        "title_missing": "The page has no title."
+      },
+      "name": "Example check",
+      "rules": {
+        "lang_missing": "Document language",
+        "title_missing": "Page title"
+      }
+    }
+  }
+}

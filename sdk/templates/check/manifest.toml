@@ -1,0 +1,29 @@
+# The manifest of an rBrowser check plugin (docs/plugins.md, "The manifest").
+manifest_version = 1
+# Your plugin's identity: lower-case words joined by `-`. Keep it across versions.
+id = "example-check"
+name = "Example check"
+version = "0.1.0"
+# The contract in `wit/` this plugin is built against.
+api_version = "0.1.0"
+kinds = ["check-plugin"]
+# Name your key as you like; `rb-plugin-pack keygen` makes the pair. Keep the private half out of
+# version control.
+key_id = "example-check-release-v1"
+public_key = "REPLACE_WITH_YOUR_BASE64_ED25519_PUBLIC_KEY"
+description = "Finds pages without a title or a document language."
+
+[metadata]
+author = "Your name"
+license = "MIT"
+# The first rBrowser release this plugin runs on; scripts/set-version.sh keeps the template's at the
+# release the SDK comes with.
+min_app_version = "0.7.0"
+
+[locales]
+en = "locales/en.json"
+
+# What the plugin may do: nothing is granted implicitly, nothing can be asked for at run time.
+[capabilities]
+views = true
+evaluate = true

@@ -1,0 +1,8 @@
+{
+  "en/": {
+    "link": "<https://fixture.test/hreflang-broken/en/>; rel=\"alternate\"; hreflang=\"en\", <https://fixture.test/hreflang-broken/uk/>; rel=\"alternate\"; hreflang=\"en-UK\", <https://fixture.test/hreflang-broken/fr/>; rel=\"alternate\"; hreflang=\"de\", <https://fixture.test/hreflang-broken/de/>; rel=\"alternate\"; hreflang=\"fr\""
+  },
+  "de/": {
+    "content-language": "de"
+  }
+}

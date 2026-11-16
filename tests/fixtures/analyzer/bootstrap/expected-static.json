@@ -1,0 +1,6 @@
+{
+  "framework": "bootstrap",
+  "detected": [[576, "min", "sm", "scss/custom.scss: sm"], [768, "min", "md", "scss/custom.scss: md"], [992, "min", "lg", "scss/custom.scss: lg"], [1200, "min", "xl", "scss/custom.scss: xl"], [1400, "min", "xxl", "scss/custom.scss: xxl"]],
+  "sources": [["scss/custom.scss", 5]],
+  "all": [["mobile", 375, 667], ["sm", 576, 1024], ["md", 768, 1024], ["lg", 992, 1323], ["xl", 1200, 750], ["xxl", 1400, 875], ["desktop", 1440, 900]]
+}

@@ -1,0 +1,17 @@
+a11y-axe - rBrowser's accessibility check plugin
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+The plugin's component embeds the following third-party software, unchanged:
+
+axe-core 4.14.0
+  https://github.com/dequelabs/axe-core
+  Copyright (c) 2015 - 2026 Deque Systems, Inc.
+  Licence: Mozilla Public License, version 2.0 (MPL-2.0) - the full text is
+  runner/dist/axe-core.LICENSE and https://mozilla.org/MPL/2.0/. The Source Code Form
+  is the npm package axe-core@4.14.0 (runner/package.json pins it) and the
+  repository above at tag v4.14.0.
+  axe-core contains components under their own licences (MIT, BSD, Apache-2.0,
+  W3C and others), listed with their texts in runner/dist/axe-core.LICENSE-3RD-PARTY.txt.
+  Files: runner/dist/axe.min.js, embedded in component.wasm

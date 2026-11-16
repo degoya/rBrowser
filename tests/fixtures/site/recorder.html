@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser recorder fixture</title>
+<style>
+  /* RB-050-02 (K12): the page the recording tests/e2e/recorder/login.export.json was made on.
+     Every step kind of the recorder has a target here: a test id, a role and name, a text, a
+     CSS path; a password field (its value is a {{secret:password}} placeholder); a select, a
+     checkbox, a double-click counter, a hover tooltip, a scrollable box. The burger exists only
+     below 700 px (the `onlyIn: ["mobile"]` steps). Sign in checks the fields and goes to
+     recorder-welcome.html - the password never leaves the page.
+     tests/e2e/recorder/run.sh serves this folder and runs the exported spec in every project. */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: #223; color: #fff; }
+  header a, header button { color: #fff; }
+  #burger { display: none; }
+  #mobile-menu { padding: 12px 16px; }
+  @media (max-width: 699px) { #burger { display: inline-block; } }
+  main { padding: 16px; max-width: 480px; }
+  form { display: grid; gap: 12px; }
+  .help { position: relative; }
+  .help .tip { display: none; position: absolute; left: 0; top: 100%; background: #ffd; color: #000; padding: 4px;
+              pointer-events: none; }
+  .help:hover .tip { display: block; }
+  #terms { height: 80px; overflow: auto; border: 1px solid #999; padding: 4px; }
+  #terms p { margin: 0 0 40px; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Fixture shop</strong>
+  <button type="button" id="burger" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+</header>
+<nav id="mobile-menu" aria-label="Main (mobile)" hidden>
+  <a href="#about">About</a>
+</nav>
+<main>
+  <h1>Sign in</h1>
+  <form id="login" novalidate>
+    <label>Email <input data-testid="email" id="email" name="email" type="email" autocomplete="off"></label>
+    <label>Password <input id="password" name="password" type="password" autocomplete="off"></label>
+    <label>Plan
+      <select id="plan" name="plan">
+        <option value="free">Free</option>
+        <option value="pro">Pro</option>
+        <option value="team">Team</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="remember" name="remember"> Remember me</label>
+    <span class="help" data-testid="help">Why do we ask?<span class="tip">We never share your email.</span></span>
+    <button type="button" data-testid="counter" id="counter">Double-click me</button>
+    <div id="terms" tabindex="0"><p>Terms, part one.</p><p>Part two.</p><p>Part three.</p><p>The end.</p></div>
+    <p id="error" role="alert" hidden>Enter your email and password.</p>
+    <button type="submit" data-testid="sign-in">Sign in</button>
+  </form>
+</main>
+<script>
+  'use strict';
+  const burger = document.getElementById('burger');
+  const menu = document.getElementById('mobile-menu');
+  const toggle = (open) => {
+    menu.hidden = !open;
+    burger.setAttribute('aria-expanded', String(open));
+  };
+  burger.addEventListener('click', () => toggle(menu.hidden));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') toggle(false);
+  });
+  const counter = document.getElementById('counter');
+  counter.addEventListener('dblclick', () => { counter.textContent = 'Double-clicked'; });
+  document.getElementById('login').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    if (!email || !password) {
+      document.getElementById('error').hidden = false;
+      return;
+    }
+    sessionStorage.setItem('fixture.email', email);
+    const plan = document.getElementById('plan').value;
+    location.href = 'recorder-welcome.html?plan=' + encodeURIComponent(plan);
+  });
+</script>
+</body>
+</html>

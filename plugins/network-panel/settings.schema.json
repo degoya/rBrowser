@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Network panel plugin settings",
+  "type": "object",
+  "properties": {
+    "mocksEnabled": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "network",
+      "x-section": "mocks",
+      "x-order": 1,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "mocksDir": {
+      "type": "string",
+      "pattern": "^\\.rbrowser/[A-Za-z0-9._/-]{1,200}$",
+      "default": ".rbrowser/mocks",
+      "x-input": "folder",
+      "x-category": "network",
+      "x-section": "mocks",
+      "x-order": 2,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "harBodies": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "network",
+      "x-section": "mocks",
+      "x-order": 3,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "block": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      },
+      "maxItems": 64,
+      "uniqueItems": true,
+      "default": [],
+      "x-category": "network",
+      "x-section": "blocking",
+      "x-order": 1,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "cacheDisabled": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "network",
+      "x-section": "cache",
+      "x-order": 1,
+      "x-scope": [
+        "user"
+      ]
+    },
+    "breakpoints": {
+      "type": "object",
+      "properties": {
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600000,
+          "default": 30000,
+          "x-category": "network",
+          "x-section": "mocks",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
+        }
+      }
+    },
+    "allowComposeFromMcp": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "network",
+      "x-section": "mocks",
+      "x-order": 5,
+      "x-scope": [
+        "user"
+      ],
+      "x-protected": true
+    },
+    "mapLocalRoots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024,
+        "x-input": "folder"
+      },
+      "maxItems": 32,
+      "uniqueItems": true,
+      "default": [],
+      "x-category": "network",
+      "x-section": "mocks",
+      "x-order": 6,
+      "x-scope": [
+        "user"
+      ],
+      "x-protected": true
+    },
+    "rewrite": {
+      "type": "object",
+      "properties": {
+        "maxBodyBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 4194304,
+          "x-category": "network",
+          "x-section": "mocks",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ]
+        }
+      }
+    }
+  }
+}

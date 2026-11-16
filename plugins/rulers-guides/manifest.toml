@@ -1,0 +1,74 @@
+# Rulers and guides (RB-060-05, docs/plugins.md): rulers at the edges of every view, guides dragged
+# out of them, a column overlay per breakpoint and a baseline grid - the same in every view. The
+# page script draws (a closed shadow root, pointer events only on the rulers); the component holds
+# the model and posts every change to all views and the panel.
+manifest_version = 1
+id = "rulers-guides"
+name = "Rulers and guides"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "rulers"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Rulers, guides, a column overlay per breakpoint and a baseline grid, the same in every view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: each view's breakpoint, for its column setup. project-read: the person's overrides,
+# `.rbrowser/out/rulers-guides/state.json` (no glob: nothing outside `.rbrowser/`, never
+# `config.local.json`). out-write: writing that file, below `.rbrowser/out/rulers-guides/` only.
+[capabilities]
+views = true
+project-read = true
+out-write = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `rulers_set`: guides, column setups per breakpoint, the baseline grid and what is shown;
+# answers the state. No argument answers it unchanged.
+[[tools]]
+name = "set"
+description = "plugin.rulers-guides.tools.set"
+input = { type = "object", properties = { guides = { type = "array", maxItems = 200, items = { type = "object", required = ["axis", "value"], properties = { axis = { type = "string", enum = ["x", "y"] }, unit = { type = "string", enum = ["px", "px-right", "percent"] }, value = { type = "number", minimum = 0 } } } }, columns = { type = "object" }, baseline = { type = "object", properties = { lineHeight = { type = "number", minimum = 2, maximum = 1000 }, offset = { type = "number", minimum = 0 } } }, visible = { anyOf = [{ type = "boolean" }, { type = "object", properties = { rulers = { type = "boolean" }, columns = { type = "boolean" }, baseline = { type = "boolean" } } }] }, reset = { type = "boolean" } } }
+
+[[commands]]
+id = "toggle"
+title = "plugin.rulers-guides.commands.toggle"
+shortcut = "Ctrl+Shift+Space O R"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "grid"
+title = "plugin.rulers-guides.commands.grid"
+shortcut = "Ctrl+Shift+Space O G"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "columns"
+title = "plugin.rulers-guides.commands.columns"
+shortcut = "Ctrl+Shift+Space O C"
+group = "overlays"
+tool = "set"
+
+[[page_scripts]]
+path = "page/rulers.js"
+run_at = "document-end"
+
+[[panels]]
+id = "guides"
+title = "plugin.rulers-guides.panels.guides"
+entry = "panel/index.html"
+icon = "ruler"
+placement = "dialog"

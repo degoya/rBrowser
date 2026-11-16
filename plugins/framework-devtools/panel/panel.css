@@ -1,0 +1,186 @@
+/* The Framework DevTools panels (RB-080-24): the Vue component tree and the frame around the
+   React DevTools frontend, in the panels window's light or dark scheme. */
+:root {
+  color-scheme: light dark;
+  --fg: #1f2430;
+  --bg: #ffffff;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+  --selected: #dbeafe;
+  --tag: #eef2ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e5e7eb;
+    --bg: #1f2430;
+    --muted: #9ca3af;
+    --line: #374151;
+    --accent: #60a5fa;
+    --selected: #1e3a5f;
+    --tag: #2d3748;
+  }
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  font: 12px system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+header {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+#status {
+  margin: 4px 0;
+  color: var(--muted);
+}
+#status[data-status='connected'] {
+  color: var(--accent);
+}
+.bar {
+  display: flex;
+  gap: 6px;
+}
+.bar input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+}
+.bar button,
+.toggle {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.tree-pane,
+.state-pane {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 6px 8px;
+}
+.tree-pane {
+  border-right: 1px solid var(--line);
+}
+#tree {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+#tree li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  white-space: nowrap;
+  cursor: default;
+  border-radius: 3px;
+}
+#tree li:hover {
+  background: var(--tag);
+}
+#tree li[aria-selected='true'] {
+  background: var(--selected);
+}
+.toggle {
+  width: 14px;
+  padding: 0;
+  border: 0;
+  font-size: 10px;
+}
+.tag {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--tag);
+  color: var(--muted);
+  font-size: 10px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+}
+.key {
+  flex: 0 0 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--accent);
+}
+.value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty {
+  color: var(--muted);
+}
+.state-pane h3 {
+  margin: 6px 0 2px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+.tabs button {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.tabs button[aria-selected='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#tree li[data-log='warning'] .label {
+  color: #b45309;
+}
+#tree li[data-log='error'] .label {
+  color: #dc2626;
+}
+/* The React DevTools frontend fills the rest of the panel. */
+body.react #status {
+  padding: 4px 8px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+#root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+#root > * {
+  flex: 1;
+  min-height: 0;
+}

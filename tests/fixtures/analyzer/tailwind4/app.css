@@ -1,0 +1,44 @@
+/*! tailwindcss v4.1.11 | MIT License | https://tailwindcss.com */
+@layer properties;
+@layer theme, base, components, utilities;
+@layer theme {
+  :root, :host {
+    --font-sans: ui-sans-serif, system-ui, sans-serif;
+    --breakpoint-sm: 40rem;
+    --breakpoint-md: 48rem;
+    --breakpoint-lg: 64rem;
+    --breakpoint-xl: 80rem;
+    --breakpoint-2xl: 96rem;
+    --container-7xl: 80rem;
+  }
+}
+@layer base {
+  *, ::after, ::before { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; }
+}
+@layer utilities {
+  .container {
+    width: 100%;
+    @media (width >= 40rem) { max-width: 40rem; }
+    @media (width >= 48rem) { max-width: 48rem; }
+    @media (width >= 64rem) { max-width: 64rem; }
+    @media (width >= 80rem) { max-width: 80rem; }
+    @media (width >= 96rem) { max-width: 96rem; }
+  }
+  .flex { display: flex; }
+  .max-md\:hidden {
+    @media (width < 48rem) { display: none; }
+  }
+  .sm\:flex {
+    @media (width >= 40rem) { display: flex; }
+  }
+  .lg\:px-8 {
+    @media (width >= 64rem) { padding-inline: calc(var(--spacing) * 8); }
+  }
+  .dark\:bg-gray-900 {
+    @media (prefers-color-scheme: dark) { background-color: var(--color-gray-900); }
+  }
+  .\@container { container-type: inline-size; }
+  .\@md\:flex {
+    @container (width >= 28rem) { display: flex; }
+  }
+}

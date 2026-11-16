@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coverage fixture</title>
+<!-- The acceptance page of the Coverage plugin (RB-080-07, plugins/coverage): site.css has a
+     rule inside @media (min-width: 1024px) that only views at least 1024 px wide use (the
+     finding "used only at ..." names exactly those breakpoints); unused.css is 20 KiB that no
+     element matches (the unused-file warning, 100 % unused); app.js has a function only the
+     button runs (interaction mode: "ran nowhere" until the click, "ran" after it) and one that
+     never runs. -->
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="unused.css">
+<style>
+.inline-used { font-weight: 600; }
+.inline-unused { font-style: italic; }
+</style>
+</head>
+<body>
+<header class="inline-used"><h1>Coverage fixture</h1></header>
+<main class="layout">
+  <p class="lead">Every breakpoint loads the same files; only the wide ones use the grid rule.</p>
+  <button type="button" id="count">Count clicks</button>
+  <output id="clicks">0</output>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

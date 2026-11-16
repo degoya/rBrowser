@@ -1,0 +1,176 @@
+// The plugin contract of rBrowser (RB-010-03): `rbrowser:plugin@0.1.0`.
+// SPDX-License-Identifier: MIT
+//
+// Copied and adapted from rCommander's `crates/rc-plugin-api/wit/rcommander.wit` (itself from
+// rDownloader's): one world per plugin kind, a `failure` record with a stable code and no English
+// text, deny-by-default imports. `docs/plugins.md` describes every interface; the SDK templates
+// carry this file byte for byte (scripts/check-sdk-templates.sh).
+//
+// Every world may import the same interfaces; the host lets a component import only `host`,
+// `types`, `settings` (when the manifest declares a settings schema) and one interface per
+// capability its manifest grants. A component importing anything else is refused at install and
+// at load. A component that does not call an interface does not import it.
+//
+// What moves the version: a new world, interface or function is additive and raises the minor
+// version; a new record field or variant case breaks a component built before it. No
+// compatibility promise before the plugin contract 1.0. Before 1.0 an additive interface keeps
+// the version (`project-write`, RB-110-13): a component that does not import it links as before,
+// and a host without it refuses one that does by the import's name.
+
+package rbrowser:plugin@0.1.0;
+
+interface types {
+  enum failure-kind { not-found, access-denied, not-supported, bad-data, cancelled, io, limit, other }
+  // `code` is an i18n key: `plugins.error.*` from the host, `plugin.<id>.*` from a plugin.
+  record failure { kind: failure-kind, code: option<string>, params: list<tuple<string, string>> }
+  type view-id = u32;
+  enum severity { info, warning, error }
+  // `rule` a rule id of the plugin's `describe`; `message` an i18n key of its locales; `view`
+  // none for the run's view; `path` the element's full path from the root, which the stable id
+  // is made of (`selector` alone when none); `data` free details as JSON text.
+  record finding { rule: string, severity: severity, message: string,
+                   params: list<tuple<string, string>>, view: option<view-id>,
+                   url: option<string>, selector: option<string>, path: option<string>,
+                   data: option<string> }
+}
+
+interface host {       // always
+  // Capped per call (the log budget), cut and with control characters spelled out.
+  log: func(level: string, message: string);
+  now-unix-seconds: func() -> u64;
+  // How far a long call is (`done` of `total` steps); the findings panel shows it.
+  report-progress: func(done: u32, total: u32);
+}
+
+interface settings {   // when the manifest declares a settings schema
+  // The effective value of the plugin's own key `key`, as JSON text; none for an undeclared key.
+  get: func(key: string) -> option<string>;
+}
+
+interface views {      // capability `views`
+  use types.{view-id};
+  record view-info { id: view-id, label: string, breakpoint: string, engine: string,
+                     width: u32, height: u32, dpr: f32, url: string, title: string }
+  %list: func() -> list<view-info>;
+  active: func() -> option<view-id>;
+}
+
+interface evaluate {   // capability `evaluate`
+  use types.{failure, view-id};
+  // Runs `script` in the isolated world of `view`; the result as JSON text.
+  evaluate: func(view: view-id, script: string) -> result<string, failure>;
+}
+
+interface cdp {        // capability `cdp`: only the domains the manifest lists
+  use types.{failure, view-id};
+  // `params` and the answer are JSON text.
+  send: func(view: view-id, method: string, params: string) -> result<string, failure>;
+}
+
+interface http {       // capability `http`: http and https only, rate-limited
+  use types.{failure};
+  record http-response { status: u16, headers: list<tuple<string, string>>, body: list<u8> }
+  // A redirect is answered, never followed.
+  fetch: func(method: string, url: string, headers: list<tuple<string, string>>,
+              body: list<u8>) -> result<http-response, failure>;
+}
+
+interface project {    // capability `project-read`: `.rbrowser/` and the manifest's globs
+  use types.{failure};
+  // `path` relative to the project root, `/`-separated; never `..`, never absolute. `dir` empty
+  // lists the root.
+  read: func(path: string) -> result<list<u8>, failure>;
+  %list: func(dir: string) -> result<list<string>, failure>;
+}
+
+interface project-write {  // capability `project-write`: the manifest's write globs, trusted only
+  use types.{failure};
+  // Replaces the project file `path` (as `project.read` names it, matching a write glob, never
+  // in `.git/` or `.rbrowser/`) with `bytes`, atomically. `expected` is what the plugin read last,
+  // none for a file that must not exist yet: when the disk holds anything else, nothing is
+  // written and the failure is `plugins.error.write_conflict` - read again, never overwrite.
+  write: func(path: string, bytes: list<u8>, expected: option<list<u8>>) -> result<_, failure>;
+}
+
+interface out {        // capability `out-write`: only `.rbrowser/out/<plugin-id>/`
+  use types.{failure};
+  // `path` relative to the plugin's out folder; never `..`, never absolute.
+  write: func(path: string, bytes: list<u8>) -> result<_, failure>;
+}
+
+interface findings {   // capability `findings`
+  use types.{failure, finding};
+  report: func(items: list<finding>) -> result<_, failure>;
+}
+
+interface sidecar {    // capability `sidecar`
+  use types.{failure};
+  // `params` and the answer are JSON text.
+  call: func(method: string, params: string) -> result<string, failure>;
+}
+
+interface feature {
+  use types.{failure};
+  // Called once after the plugin is loaded.
+  activate: func() -> result<_, failure>;
+  // A command of the manifest (`[[commands]] id`); arguments and answer JSON text.
+  run-command: func(command: string, args: string) -> result<string, failure>;
+  // An MCP tool of the manifest (`[[tools]] name`, without the prefix).
+  call-tool: func(tool: string, args: string) -> result<string, failure>;
+}
+
+interface check {
+  use types.{failure, finding, severity, view-id};
+  // `title` an i18n key; `severity` the usual one (`checks.rules` overrides it); `shared-id` the
+  // id rules of other plugins finding the same share (`img-alt-missing`): their findings at the
+  // same element become one; `help-url` a page explaining the rule.
+  record rule-info { id: string, title: string, severity: severity,
+                     shared-id: option<string>, help-url: option<string> }
+  // `view` none to leave the views to the plugin; `rules` the ids of `describe` to run (the
+  // person may have switched some off); `args` JSON text.
+  record check-context { view: option<view-id>, url: option<string>, rules: list<string>,
+                         args: string }
+  describe: func() -> list<rule-info>;
+  run: func(ctx: check-context) -> result<list<finding>, failure>;
+}
+
+interface analyzer {
+  use types.{failure};
+  // `pointer` a JSON Pointer into `.rbrowser/config.json`, `value` JSON text, `reason` an i18n key.
+  record proposal { pointer: string, value: string, reason: string,
+                    params: list<tuple<string, string>> }
+  analyze: func(args: string) -> result<list<proposal>, failure>;
+}
+
+interface exporter {
+  use types.{failure};
+  record export-format { id: string, title: string, extension: string }
+  record export-output { file-name: string, text: string }
+  formats: func() -> list<export-format>;
+  // `recording` is the recorder's JSON.
+  render: func(format: string, recording: string) -> result<export-output, failure>;
+}
+
+world feature-plugin {
+  import host; import settings; import views; import evaluate; import cdp; import http;
+  import project; import project-write; import out; import findings; import sidecar;
+  export feature;
+}
+
+world check-plugin {
+  import host; import settings; import views; import evaluate; import cdp; import http;
+  import project; import project-write; import out; import findings; import sidecar;
+  export check;
+}
+
+world analyzer-plugin {
+  import host; import settings; import views; import evaluate; import cdp; import http;
+  import project; import project-write; import out; import findings; import sidecar;
+  export analyzer;
+}
+
+world export-plugin {
+  import host; import settings; import views; import evaluate; import cdp; import http;
+  import project; import project-write; import out; import findings; import sidecar;
+  export exporter;
+}

@@ -1,0 +1,70 @@
+# The form autofill (RB-070-11, docs/plugins.md): fills the forms of every view at once with
+# plausible valid values - or deliberately invalid ones, one strategy per run or mixed - from one
+# seed, so every view gets the same data, matched to each view's locale. Never submits, never
+# touches a file input; passwords are always generated.
+manifest_version = 1
+id = "form-autofill"
+name = "Form autofill"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "autofill"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Fills the forms of every view with valid or deliberately invalid test data from one seed, matched to each view's locale; never submits."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: which views to fill (Chromium ones; Firefox and WebKit are reported unsupported);
+# evaluate: the page script src/page.js in the plugin's isolated world - it reads the fields and
+# sets the values, nothing else. No page script injected into every document, no CDP.
+[capabilities]
+views = true
+evaluate = true
+
+# Two scripts per view, up to eight views; host time is credited back.
+[limits]
+timeout_milliseconds = 30000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `autofill_fill`: fills the targeted views and answers per view and field the kind, the value
+# set, whether the field accepts it and how an invalid run broke it; per view the page's forms (a
+# selector and a name each), per field its form and whether it is required.
+[[tools]]
+name = "fill"
+description = "plugin.form-autofill.tools.fill"
+input = { type = "object", required = ["mode"], properties = { mode = { type = "string", enum = ["valid", "invalid"] }, selector = { type = "string", minLength = 1, maxLength = 1024 }, profile = { type = "string", minLength = 1, maxLength = 80 }, seed = { type = "integer", minimum = 0, maximum = 4294967295 }, strategy = { type = "string", enum = ["mixed", "empty", "format", "bounds", "length", "chars"] } } }
+
+# `plugin.form_autofill.fill_valid`, Ctrl+Shift+Space D F: every view's forms with valid values.
+[[commands]]
+id = "fill_valid"
+title = "plugin.form-autofill.commands.fill_valid"
+shortcut = "Ctrl+Shift+Space D F"
+group = "devtools"
+tool = "fill"
+
+# `plugin.form_autofill.fill_invalid`, Ctrl+Shift+Space D N (the job's `D W` is the core's
+# devtools.dock_cycle): every view's forms with invalid values by `form-autofill.invalidStrategy`.
+[[commands]]
+id = "fill_invalid"
+title = "plugin.form-autofill.commands.fill_invalid"
+shortcut = "Ctrl+Shift+Space D N"
+group = "devtools"
+tool = "fill"
+
+[[panels]]
+id = "autofill"
+title = "plugin.form-autofill.panels.autofill"
+entry = "panel/index.html"
+icon = "text-cursor-input"
+placement = "sidebar"

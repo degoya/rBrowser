@@ -1,0 +1,22 @@
+{
+  "name": "rbrowser-plugin-outline",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The collector and the panel of rBrowser's Outline plugin (RB-070-03): the collector built by esbuild into ../src/collect.js, the panel on Nuxt UI (RB-080-85) built by Vite into ../panel/dist.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs && vite build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.4",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}

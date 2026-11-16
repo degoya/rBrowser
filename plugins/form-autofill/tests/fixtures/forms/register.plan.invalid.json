@@ -1,0 +1,303 @@
+{
+  "locale": "en-US",
+  "mode": "invalid",
+  "seed": 42,
+  "fields": [
+    {
+      "key": "input:radio:salutation",
+      "kind": "choice",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "radio",
+        "value": null,
+        "index": 0,
+        "sig": "input|radio|salutation|"
+      }
+    },
+    {
+      "key": "input:text:firstName",
+      "kind": "givenName",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 3,
+        "sig": "input|text|firstName|firstName"
+      }
+    },
+    {
+      "key": "input:text:lastName",
+      "kind": "familyName",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 4,
+        "sig": "input|text|lastName|lastName"
+      }
+    },
+    {
+      "key": "input:email:email",
+      "kind": "email",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 5,
+        "sig": "input|email|email|email"
+      }
+    },
+    {
+      "key": "input:text:username",
+      "kind": "username",
+      "skip": "",
+      "violation": "pattern",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "!",
+          "-!-",
+          "😀",
+          "a",
+          "A",
+          "0",
+          "a b"
+        ],
+        "goal": "invalid",
+        "index": 6,
+        "sig": "input|text|username|username"
+      }
+    },
+    {
+      "key": "input:password:password",
+      "kind": "password",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 7,
+        "sig": "input|password|password|password"
+      }
+    },
+    {
+      "key": "input:date:birthday",
+      "kind": "birthday",
+      "skip": "",
+      "violation": "bounds",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "2008-01-02"
+        ],
+        "goal": "invalid",
+        "index": 8,
+        "sig": "input|date|birthday|birthday"
+      }
+    },
+    {
+      "key": "input:number:age",
+      "kind": "number",
+      "skip": "",
+      "violation": "bounds",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "17"
+        ],
+        "goal": "invalid",
+        "index": 9,
+        "sig": "input|number|age|age"
+      }
+    },
+    {
+      "key": "input:text:street",
+      "kind": "street",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 10,
+        "sig": "input|text|street|street"
+      }
+    },
+    {
+      "key": "input:text:zip",
+      "kind": "postalCode",
+      "skip": "",
+      "violation": "pattern",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "!",
+          "-!-",
+          "😀",
+          "a",
+          "A",
+          "0",
+          "a b"
+        ],
+        "goal": "invalid",
+        "index": 11,
+        "sig": "input|text|zip|zip"
+      }
+    },
+    {
+      "key": "input:text:city",
+      "kind": "city",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          ""
+        ],
+        "goal": "invalid",
+        "index": 12,
+        "sig": "input|text|city|city"
+      }
+    },
+    {
+      "key": "select:select:country",
+      "kind": "country",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "select",
+        "values": [],
+        "goal": "invalid",
+        "index": 13,
+        "sig": "select|select|country|country"
+      }
+    },
+    {
+      "key": "input:tel:phone",
+      "kind": "phone",
+      "skip": "",
+      "violation": "pattern",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "!",
+          "-!-",
+          "😀",
+          "a",
+          "A",
+          "0",
+          "a b"
+        ],
+        "goal": "invalid",
+        "index": 14,
+        "sig": "input|tel|phone|phone"
+      }
+    },
+    {
+      "key": "input:url:website",
+      "kind": "url",
+      "skip": "",
+      "violation": "format",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "not a url",
+          "example"
+        ],
+        "goal": "invalid",
+        "index": 15,
+        "sig": "input|url|website|website"
+      }
+    },
+    {
+      "key": "textarea:textarea:comment",
+      "kind": "longText",
+      "skip": "",
+      "violation": "length",
+      "profile": false,
+      "action": {
+        "op": "text",
+        "candidates": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "goal": "any",
+        "index": 16,
+        "sig": "textarea|textarea|comment|comment"
+      }
+    },
+    {
+      "key": "input:file:avatar",
+      "kind": "text",
+      "skip": "file",
+      "violation": null,
+      "profile": false,
+      "action": null
+    },
+    {
+      "key": "input:text:promo",
+      "kind": "text",
+      "skip": "hidden",
+      "violation": null,
+      "profile": false,
+      "action": null
+    },
+    {
+      "key": "input:checkbox:newsletter",
+      "kind": "checkbox",
+      "skip": "",
+      "violation": null,
+      "profile": false,
+      "action": {
+        "op": "check",
+        "checked": false,
+        "index": 19,
+        "sig": "input|checkbox|newsletter|newsletter"
+      }
+    },
+    {
+      "key": "input:checkbox:terms",
+      "kind": "checkbox",
+      "skip": "",
+      "violation": "empty",
+      "profile": false,
+      "action": {
+        "op": "check",
+        "checked": false,
+        "index": 20,
+        "sig": "input|checkbox|terms|terms"
+      }
+    }
+  ]
+}

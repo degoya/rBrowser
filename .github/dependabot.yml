@@ -1,0 +1,74 @@
+# Update proposals once the repository is on GitHub (RB-090-04, after rCommander's and
+# rDownloader's dependabot.yml; inactive until the move, RB-090-12). Few, grouped pull requests
+# on a weekly schedule rather than one per dependency: one for everything semver-compatible, one
+# for the major versions, which are work of their own, and one bundling what security updates
+# open (switched on in the repository's settings, not here). Every update still has to pass
+# scripts/check.sh; the pins of tools live in scripts/lib/tool-versions.sh and move with
+# scripts/update-deps.sh, not here.
+version: 2
+updates:
+  # The workflows' and the composite actions' pins (scripts/check-actions-pinned.sh). sdk/ci/ is
+  # not read: its pins move by hand to the commits used here.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # The whole workspace from its root; the plugins are workspace members.
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    # Held by hand in Cargo.toml: ureq 3.5.2 caps a JSON body at 10 MiB and cef-dll-sys reads the
+    # CEF builds index (larger) with it; free again once cef-dll-sys moves on.
+    ignore:
+      - dependency-name: "ureq"
+    groups:
+      cargo-compatible:
+        update-types: [minor, patch]
+      cargo-major:
+        update-types: [major]
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # Every npm package of the tree: the shell UI, the sync agent, the sidecar, the plugins'
+  # npm workspace (its root /plugins holds the one lock file; the members under it are listed
+  # so that none is missed), the Playwright example and the recorder export's K12 run
+  # (scripts/tests/github-workflows.sh fails when a package.json is not covered), and the SDK's
+  # feature template panel, whose pins scripts/check-sdk-templates.sh holds to panel-ui's (an update
+  # moves both).
+  - package-ecosystem: npm
+    directories:
+      - "/ui"
+      - "/agent"
+      - "/sidecar"
+      - "/plugins"
+      - "/plugins/*"
+      - "/examples/playwright"
+      - "/tests/e2e/recorder"
+      - "/sdk/templates/feature/web"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    # The Node types follow the Node major of .nvmrc, which ships in the package; a newer major
+    # would offer APIs the runtime does not have.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (the native compiler) has no `lib/tsc` and vue-tsc's Volar wants `<7`; the
+      # shell and the panels type-check with vue-tsc, so the major waits for vue-tsc.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-compatible:
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]

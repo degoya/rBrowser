@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://www.example.test/</loc>
+    <lastmod>2026-10-01</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.example.test/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.example.test/de/"/>
+  </url>
+  <url>
+    <loc>https://www.example.test/about</loc>
+    <lastmod>2026-09-15</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/contact</loc>
+    <lastmod>2025-12-01</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/pricing</loc>
+    <lastmod>2026-10-20</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/team</loc>
+    <lastmod>2024-05-05</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/shop/</loc>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/shop/shoe-1</loc>
+    <lastmod>2026-10-03</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/shop/shoe-2</loc>
+    <lastmod>2026-10-04</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/shop/shoe-3</loc>
+    <lastmod>2026-10-05</lastmod>
+  </url>
+  <url>
+    <loc>https://www.example.test/de/</loc>
+    <lastmod>2026-10-01</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.example.test/de/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.example.test/"/>
+  </url>
+  <url>
+    <loc>https://www.example.test/de/ueber-uns</loc>
+    <lastmod>2026-09-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.example.test/de/ueber-uns"/>
+  </url>
+  <url>
+    <loc>https://www.example.test/missing</loc>
+  </url>
+</urlset>

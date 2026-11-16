@@ -1,0 +1,83 @@
+# Framework DevTools (RB-080-24, docs/plugins.md): the Vue and React DevTools as panels of
+# rBrowser, for the active view. The backends (react-devtools-inline, @vue/devtools-kit) are
+# main-world scripts the core registers (settings DevTools & Debugging > Framework DevTools);
+# this plugin's page script relays their DOM-event channel to the panels over the plugin bridge,
+# and the panels run the React DevTools frontend and a Vue component tree. No port, no socket.
+manifest_version = 1
+id = "framework-devtools"
+name = "Framework DevTools"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "fwdevtools"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Vue and React DevTools as panels for the active view: components, props and state, Pinia stores, the router and the timeline for Vue, the React profiler; the backends ride in the page without an open port."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# Settings > DevTools & Debugging > Framework DevTools: the Vue panel's Timeline tab.
+[settings]
+schema = "settings.schema.json"
+
+# views: the active view the panels follow. Nothing else: the page script relays DOM events of
+# the view's own document; the component routes messages and opens the panels.
+[capabilities]
+views = true
+
+# The view the panels follow.
+[[tools]]
+name = "active_view"
+description = "plugin.framework-devtools.tools.active_view"
+input = { type = "object" }
+
+# A panel's message for a view's DevTools backend (a bridge or RPC message of the framework's own
+# protocol), posted to that view's page script. Over MCP only while mcp.allowEvaluate is on: the
+# backends inspect and change the page's component state.
+[[tools]]
+name = "send"
+description = "plugin.framework-devtools.tools.send"
+evaluates_input = true
+input = { type = "object", required = ["view", "framework", "envelope"], properties = { view = { type = "integer", minimum = 0 }, framework = { type = "string", enum = ["vue", "react"] }, envelope = { type = "object" } } }
+
+[[commands]]
+id = "vue"
+title = "plugin.framework-devtools.commands.vue"
+shortcut = "Ctrl+Shift+Space D U"
+group = "devtools"
+mcp_omitted = "ui-only: opens the Vue DevTools panel; agents read the page with snapshot and evaluate"
+
+[[commands]]
+id = "react"
+title = "plugin.framework-devtools.commands.react"
+shortcut = "Ctrl+Shift+Space D A"
+group = "devtools"
+mcp_omitted = "ui-only: opens the React DevTools panel; agents read the page with snapshot and evaluate"
+
+# Built from web/ (npm run build). document-start: the relay listens before the page's scripts
+# and the backends speak.
+[[page_scripts]]
+path = "page/bridge.js"
+run_at = "document-start"
+
+[[panels]]
+id = "vue"
+title = "plugin.framework-devtools.panels.vue"
+entry = "panel/vue.html"
+icon = "component"
+placement = "sidebar"
+
+[[panels]]
+id = "react"
+title = "plugin.framework-devtools.panels.react"
+entry = "panel/react.html"
+icon = "atom"
+placement = "sidebar"

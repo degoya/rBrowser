@@ -1,0 +1,75 @@
+{
+  "plugin": {
+    "peek": {
+      "name": "Peek",
+      "commands": {
+        "toggle": "Peek: switch the hover inspector on or off"
+      },
+      "tools": {
+        "inspect": "Inspects one element as the Peek tooltip shows it: tag, id, classes, size (CSS and device pixels), colours and WCAG contrast with its level, declared and rendered font, box model, role and accessible name. Give a CSS selector or a viewport point x/y (CSS pixels); without a target every view is inspected."
+      },
+      "settings": {
+        "enabled": {
+          "label": "Peek inspector",
+          "description": "Holding the modifier over an element shows its size, colours and contrast, font, box model, role and name.",
+          "help": "Holding the modifier key over an element shows its size, colours and contrast, font, box model, role and name in a small panel. Off switches the inspector off."
+        },
+        "modifier": {
+          "label": "Modifier key",
+          "description": "The key held while hovering: Alt, Ctrl or Shift. Ctrl+Alt is AltGr on many layouts and is not offered. Takes effect in pages loaded after the change.",
+          "help": "The key held while hovering to peek: Alt, Ctrl or Shift. Ctrl+Alt is AltGr on many layouts and is not offered. Applies to pages loaded after the change."
+        },
+        "syncHighlight": {
+          "label": "Outline in every view",
+          "description": "The inspected element is outlined in the other views too, where it exists.",
+          "help": "The inspected element is outlined in the other views too, where it exists, so you compare it across breakpoints. Off outlines it in one view."
+        },
+        "showBoxModel": {
+          "label": "Show the box model",
+          "description": "Draws the element's margin, border, padding and content in colour.",
+          "help": "Draws the element's margin, border, padding and content in colour while peeking. Off shows the numbers only."
+        },
+        "option": {
+          "modifier": {
+            "alt": "Alt",
+            "ctrl": "Ctrl",
+            "shift": "Shift"
+          }
+        }
+      },
+      "tooltip": {
+        "size": "Size",
+        "device": "{width} × {height} device px",
+        "colors": "Colours",
+        "contrast": "Contrast",
+        "uncertain": "background uncertain (image or gradient)",
+        "font": "Font",
+        "rendered": "Rendered",
+        "notAvailable": "n/a",
+        "box": "Box",
+        "margin": "Margin",
+        "border": "Border",
+        "padding": "Padding",
+        "content": "Content",
+        "role": "Role",
+        "name": "Name",
+        "none": "none",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyFailed": "Copy failed",
+        "locked": "Locked - Esc or a click elsewhere releases it",
+        "pending": "…",
+        "lineHeight": "Line height",
+        "letterSpacing": "Letter spacing",
+        "fallback": "{declared} is not rendered (fallback)",
+        "glyphs": "Some characters from {fonts}"
+      },
+      "level": {
+        "aaa": "AAA",
+        "aa": "AA",
+        "aa_large": "AA large",
+        "fail": "Fail"
+      }
+    }
+  }
+}

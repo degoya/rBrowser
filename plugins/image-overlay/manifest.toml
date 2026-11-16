@@ -1,0 +1,85 @@
+# Image overlay (RB-070-09, docs/plugins.md): each view's design image from `.rbrowser/designs/`
+# over the page - opacity, blend modes, invert, offset, a split view - with one set of settings
+# for every view. The page script draws (closed shadow roots of `rbrowser-image-overlay`
+# elements, pointer events only on the split handle) and fetches its design from the component
+# in chunks; the component chooses and checks the design and holds the state.
+manifest_version = 1
+id = "image-overlay"
+name = "Image overlay"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+# One word: `<prefix>_<tool>` must split in one way, so not `image_overlay`.
+mcp_prefix = "imageoverlay"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Lays each view's design image over the page, with opacity, blend modes, offset and a split view, the same in every view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: each view's breakpoint, width and pixel ratio, to choose its design. project-read: the
+# designs in `.rbrowser/designs/` and `.rbrowser/out/image-overlay/state.json` (no glob: nothing
+# outside `.rbrowser/`, never `config.local.json`; designs are no trust-protected folder).
+# out-write: that state file, the designs' chunks (`chunks/<hash>/`, cut once per version) and
+# the panel's previews (`thumbs/<hash>.png`, RB-080-74), below `.rbrowser/out/image-overlay/` only.
+[capabilities]
+views = true
+project-read = true
+out-write = true
+# status: the line "Choose a PNG, JPEG or WebP image in the file dialog" of `add_design` (RB-080-64 S1).
+status = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `imageoverlay_set`: shows or hides the design, opacity, blend, invert, anchor, offset, split
+# and the design per breakpoint, for every view; answers the state and each view's design. No
+# argument answers it unchanged.
+[[tools]]
+name = "set"
+description = "plugin.image-overlay.tools.set"
+input = { type = "object", properties = { enabled = { type = "boolean" }, opacity = { type = "number", minimum = 0, maximum = 100 }, blend = { type = "string", enum = ["normal", "difference", "multiply", "screen", "overlay", "exclusion"] }, invert = { type = "boolean" }, anchor = { type = "string", enum = ["document", "viewport"] }, offset = { type = "object", additionalProperties = false, properties = { x = { type = "number", minimum = -100000, maximum = 100000 }, y = { type = "number", minimum = -100000, maximum = 100000 } } }, split = { anyOf = [{ type = "boolean" }, { type = "number", minimum = 0, maximum = 100 }] }, designs = { type = "object", maxProperties = 64, additionalProperties = { anyOf = [{ type = "string", maxLength = 255 }, { type = "null" }] } }, reset = { type = "boolean" } } }
+
+# MCP `imageoverlay_designs` (RB-080-74): the designs in `.rbrowser/designs/` with their sizes or
+# why one is unusable, and whether one can be added; with `path`, `hash` and `chunk`, a chunk of a
+# design's bytes; with `thumb` (and `data`), the panel's kept preview of a design version.
+[[tools]]
+name = "designs"
+description = "plugin.image-overlay.tools.designs"
+input = { type = "object", properties = { path = { type = "string", maxLength = 255 }, hash = { type = "string", pattern = "^[0-9a-f]{16}$" }, chunk = { type = "integer", minimum = 0, maximum = 256 }, thumb = { type = "string", pattern = "^[0-9a-f]{16}$" }, data = { type = "string", maxLength = 43692 } } }
+
+[[commands]]
+id = "toggle"
+title = "plugin.image-overlay.commands.toggle"
+shortcut = "Ctrl+Shift+Space O D"
+group = "overlays"
+tool = "set"
+
+# RB-080-74: the native file dialog, then the chosen image is copied into `.rbrowser/designs/`
+# and shown for the active view's breakpoint - by the application (a `host` post), only in a
+# trusted workspace. N: a new design.
+[[commands]]
+id = "add_design"
+title = "plugin.image-overlay.commands.add_design"
+shortcut = "Ctrl+Shift+Space O N"
+group = "overlays"
+mcp_omitted = "ui-only: opens the native file dialog; a design already in .rbrowser/designs/ is listed with imageoverlay_designs and chosen with imageoverlay_set"
+
+[[page_scripts]]
+path = "page/image-overlay.js"
+run_at = "document-end"
+
+[[panels]]
+id = "designs"
+title = "plugin.image-overlay.panels.designs"
+entry = "panel/index.html"
+icon = "image"
+placement = "sidebar"

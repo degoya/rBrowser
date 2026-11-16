@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- RB-080-09: one case per category of the error report. Serve it with server.py (the 500 and,
+     with --tls, the mixed content need it); over plain http the mixed-content case reports
+     nothing, so the report holds five entries there and six over https. -->
+<meta http-equiv="Content-Security-Policy" content="img-src 'self' data:">
+<link rel="icon" href="data:,">
+<title>Error report fixture</title>
+</head>
+<body>
+<h1>Error report fixture</h1>
+<!-- 404: a missing image of the page's own origin. -->
+<img src="missing.png" alt="missing image" width="40" height="40">
+<!-- CSP: an image the policy (img-src 'self') refuses before any request. -->
+<img src="https://csp-blocked.invalid/pixel.png" alt="blocked image" width="40" height="40">
+<!-- 500: server.py answers boom.js with 500. -->
+<script src="boom.js"></script>
+<script>
+  // Mixed content (blocked): an http script from the https page.
+  if (location.protocol === 'https:') {
+    const mixed = document.createElement('script');
+    mixed.src = 'http://' + location.host + '/errors/mixed.js';
+    document.head.append(mixed);
+  }
+  // Deprecation: a synchronous XMLHttpRequest on the main thread.
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', 'index.html', false);
+  xhr.send();
+  // JS exception: uncaught, in every view alike.
+  setTimeout(() => { throw new Error('error-report fixture: boom'); }, 0);
+</script>
+</body>
+</html>

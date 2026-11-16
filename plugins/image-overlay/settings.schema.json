@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "image-overlay settings",
+  "type": "object",
+  "properties": {
+    "designs": {
+      "type": "object",
+      "default": {},
+      "maxProperties": 64,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 255,
+        "pattern": "^(\\.rbrowser/)?designs/.+\\.([Pp][Nn][Gg]|[Jj][Pp][Ee]?[Gg]|[Ww][Ee][Bb][Pp])$"
+      },
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 10,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "opacity": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 50,
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 20,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "blend": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "difference",
+        "multiply",
+        "screen",
+        "overlay",
+        "exclusion"
+      ],
+      "default": "normal",
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 30,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "invert": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 40,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "anchor": {
+      "type": "string",
+      "enum": [
+        "document",
+        "viewport"
+      ],
+      "default": "document",
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 50,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "autoScaleDpr": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "image-overlay",
+      "x-order": 60,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    }
+  }
+}

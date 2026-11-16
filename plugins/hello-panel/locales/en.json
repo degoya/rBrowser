@@ -1,0 +1,26 @@
+{
+  "plugin": {
+    "hello-panel": {
+      "commands": {
+        "say_hello": "Say hello in every view"
+      },
+      "name": "Hello panel",
+      "panel": {
+        "columns": {
+          "page": "Page",
+          "view": "View"
+        },
+        "empty": "No page has said hello yet.",
+        "greet": "Greet every view",
+        "greeted": "Greeted: {name}",
+        "pages": "{n, plural, one {# page said hello} other {# pages said hello}}"
+      },
+      "panels": {
+        "main": "Hello"
+      },
+      "tools": {
+        "greet": "Greets the views: shows a badge with the greeting in each page and tells the panel. Optional name (at most 64 characters)."
+      }
+    }
+  }
+}

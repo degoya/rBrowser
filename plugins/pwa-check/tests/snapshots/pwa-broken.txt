@@ -1,0 +1,8 @@
+info manifest.recommended pwa:manifest/maskable field=maskable
+error start_url.out_of_scope pwa:manifest/start_url url=http://localhost:8080/elsewhere/ scope=http://localhost:8080/pwa-broken/
+error start_url.status pwa:manifest/start_url url=http://localhost:8080/elsewhere/ status=404
+error manifest.icon_size pwa:manifest/icons/512px size=512
+error icons.unreachable pwa:manifest/icons/1 src=icons/icon-96.png status=404
+error sw.missing pwa:service-worker
+info meta.theme_color pwa:head/theme-color
+info meta.apple_touch_icon pwa:head/apple-touch-icon

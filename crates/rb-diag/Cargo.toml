@@ -1,0 +1,26 @@
+[package]
+name = "rb-diag"
+description = "Logging, redaction, crash-dump wiring, the diagnostics ZIP and the CEF age check (RB-010-10)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+rb-commands = { path = "../rb-commands" }
+rb-process = { path = "../rb-process" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

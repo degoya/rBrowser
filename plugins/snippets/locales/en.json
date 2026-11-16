@@ -1,0 +1,108 @@
+{
+  "plugin": {
+    "snippets": {
+      "commands": {
+        "panel": "Show the snippets",
+        "run_last": "Run the last snippet again"
+      },
+      "errors": {
+        "ambiguous": "More than one source has a snippet named \"{name}\"; say which one (user, project or local).",
+        "bad_args": "The snippets plugin got arguments it cannot read: {reason}",
+        "budget": "Not run: the run in all views took too long, so this view was left out.",
+        "code_too_long": "The snippet is longer than {limit} characters.",
+        "duplicate_name": "Another snippet of this source has the same name; only the first one runs.",
+        "empty": "The snippet has no code.",
+        "frame": "The view's page has no frame to run the snippet in yet.",
+        "header": "The snippet's header has a value that does not read: @{tag}.",
+        "invalid_snippet": "The snippet \"{name}\" cannot run; the list says why.",
+        "library_full": "The saved snippets are full ({limit}); delete one first.",
+        "no_active_view": "No view is active; run the snippet in all views instead.",
+        "no_last": "No snippet has run yet.",
+        "no_project": "No project is open, so nothing can be saved; keep the snippet in Settings > DevTools & Debugging > Snippets instead.",
+        "not_found": "There is no snippet \"{name}\".",
+        "project_untrusted": "There is no snippet \"{name}\" you can run: the project's snippets load only once you trust this workspace.",
+        "save_failed": "The snippet could not be saved.",
+        "save_untrusted": "Snippets are saved in the project folder, which needs workspace trust; trust the workspace, or keep the snippet in Settings > DevTools & Debugging > Snippets.",
+        "unknown_view": "There is no such view any more."
+      },
+      "name": "Snippets",
+      "panel": {
+        "activeView": "Active view",
+        "allViews": "All views",
+        "code": "Code",
+        "codeHint": "JavaScript, the body of an async function: return a value to see it, await works. A header such as // @world main sets the world, target and timeout. Ctrl+Enter runs it.",
+        "confirmDelete": "Delete the saved snippet \"{name}\"? Your own and the project's snippets stay.",
+        "delete": "Delete",
+        "empty": "No snippets yet. Write one below and save it, or add one in Settings > DevTools & Debugging > Snippets.",
+        "failed": "Failed",
+        "filter": "Find a snippet",
+        "invalid": "Cannot run: {reason}",
+        "keep": "Keep",
+        "list": "Snippets",
+        "localUntrusted": "Saved snippets need workspace trust.",
+        "modified": "Changed: runs as written, not saved",
+        "name": "Name",
+        "new": "New",
+        "noProject": "No project is open: only your own snippets are listed.",
+        "ok": "Done",
+        "plainLarge": "Shown in one colour: larger than 200 KiB.",
+        "projectDisabled": "The project's snippets are switched off in the settings.",
+        "projectUntrusted": "The project's snippets (.rbrowser/snippets) are not loaded until you trust this workspace.",
+        "results": "Recent runs",
+        "run": "Run",
+        "running": "Running in {count, plural, one {# view} other {# views}}...",
+        "save": "Save",
+        "saved": "Saved \"{name}\".",
+        "source": {
+          "local": "Saved",
+          "project": "Project",
+          "user": "Yours"
+        },
+        "stack": "Stack trace",
+        "target": "Run in",
+        "timedOut": "timed out",
+        "viewList": "Views: {views}",
+        "world": {
+          "isolated": "isolated world",
+          "main": "page world"
+        }
+      },
+      "panels": {
+        "snippets": "Snippets"
+      },
+      "settings": {
+        "defaultTimeoutMs": {
+          "description": "How long a snippet may run in one view, in milliseconds (100 to 9000), unless its header says @timeoutMs. Past it the snippet is stopped and the view stays usable.",
+          "help": "How long a snippet may run in one view, in milliseconds (100 to 9000), unless its header says @timeoutMs; past it the snippet is stopped and the view stays usable.",
+          "label": "Default timeout"
+        },
+        "defaultWorld": {
+          "description": "Where a snippet runs unless its header says @world: the isolated world (the page's DOM, not its globals; the page cannot see the snippet) or the page's own world (its globals and frameworks).",
+          "help": "Where a snippet runs unless its header says @world: isolated sees the page's DOM but not its globals and stays invisible to the page; main sees the page's globals and frameworks.",
+          "label": "Default world"
+        },
+        "library": {
+          "description": "Your own snippets for every project, each a name and its code; they run in any workspace. Not writable over MCP.",
+          "help": "Your own snippets for every project, each a name and its code; they run in any workspace. Example: name Outline images, code document.querySelectorAll('img').forEach(...). Not writable over MCP.",
+          "label": "Your snippets"
+        },
+        "projectEnabled": {
+          "description": "Lists and runs the project's snippets from .rbrowser/snippets - only in a workspace you trust.",
+          "help": "Lists and runs the project's snippets from .rbrowser/snippets, only in a workspace you trust. Off shows your own library only.",
+          "label": "Project snippets"
+        },
+        "option": {
+          "defaultWorld": {
+            "isolated": "Isolated world",
+            "main": "Page world"
+          }
+        }
+      },
+      "tools": {
+        "list": "The snippets: the user's own, the project's (.rbrowser/snippets, only in a trusted workspace) and the saved ones, with name, source, description, world, target and timeout; withCode: true adds the code. Also the views and whether the project's snippets were loaded.",
+        "run": "Runs a snippet in the targeted views - a stored one by name (and source when two share it) or the given code - and answers one result per distinct value with the views that gave it; errors with their stack, timeouts marked. Only while evaluate over MCP is allowed in the settings.",
+        "save": "Saves code as a snippet of the project's checkout (.rbrowser/out/snippets), or deletes one with delete: true; only in a trusted workspace and while evaluate over MCP is allowed."
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+[package]
+name = "rb-plugin-host"
+description = "rBrowser's WebAssembly plugin host: Wasmtime engine, limits, compile cache, manifest, packages and signatures, capabilities, contributions, the check runner"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# `test_support`: test components built from WebAssembly text, signed packages of them and a
+# scripted service backend, for the tests of the crates above (rbrowser, rb-mcp). Switched on only
+# from dev-dependencies.
+test-support = ["dep:wat", "dep:wit-component", "dep:wit-parser"]
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+ed25519-dalek.workspace = true
+globset.workspace = true
+rand.workspace = true
+rb-commands = { path = "../rb-commands" }
+# The folders workspace trust hashes: read by no plugin before a person trusts the project.
+rb-config = { path = "../rb-config" }
+rb-i18n = { path = "../rb-i18n" }
+rb-plugin-api = { path = "../rb-plugin-api" }
+rb-plugin-types = { path = "../rb-plugin-types", features = ["schema"] }
+# The compile cache's folder, the user's alone (RB-090-21).
+rb-process = { path = "../rb-process" }
+rb-settings = { path = "../rb-settings" }
+rb-util = { path = "../rb-util" }
+schemars.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
+wasmtime.workspace = true
+wat = { workspace = true, optional = true }
+wit-component = { workspace = true, optional = true }
+wit-parser = { workspace = true, optional = true }
+zip.workspace = true
+
+[dev-dependencies]
+rb-plugin-api = { path = "../rb-plugin-api", features = ["test-support"] }
+tempfile.workspace = true
+# The paused clock of the check runner's progress tests (RB-080-89).
+tokio = { workspace = true, features = ["test-util"] }
+# The test components are WebAssembly text made into components the way `wasm-tools component
+# new` does, so the tests need no WebAssembly toolchain and no prebuilt binary.
+wat.workspace = true
+wit-component.workspace = true
+wit-parser.workspace = true
+
+[lints]
+workspace = true

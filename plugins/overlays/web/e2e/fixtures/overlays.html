@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overlays fixture (RB-070-07)</title>
+    <style>
+      body { margin: 0; font: 16px/1.2 sans-serif; color: rgb(17, 17, 17); }
+      main { width: 600px; padding: 16px; }
+      .layered { position: relative; z-index: 5; }
+      .faded { opacity: 0.5; }
+      .scrolly { height: 80px; overflow-y: scroll; border: 1px solid #999; }
+      .card { width: 200px; height: 40px; overflow: hidden; font-size: 14px; line-height: 1.2; }
+      .row { display: flex; padding: 8px 0; }
+      .row button { width: 20px; height: 20px; padding: 0; border: 1px solid #333; flex: none; }
+      .tight button + button { margin-left: 2px; }
+      .spaced button + button { margin-left: 24px; }
+      .fine { font-size: 10px; }
+      .menu a { color: rgb(0, 0, 255); }
+      .menu a:hover { color: rgb(255, 0, 0); }
+      .field { height: 32px; }
+      .field:focus { outline: none; }
+      .hero { width: 120px; height: 60px; display: block; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="layered"><p>Layered section</p></section>
+      <div class="faded">Faded text</div>
+      <div class="scrolly"><p>Fits without scrolling.</p></div>
+      <div class="card">Two short lines of text that fit the card at first.</div>
+      <div class="row tight"><button aria-label="one">1</button><button aria-label="two">2</button></div>
+      <div class="row spaced"><button aria-label="three">3</button><button aria-label="four">4</button></div>
+      <p class="fine">Fine print below twelve pixels.</p>
+      <nav class="menu"><a href="#home">Home</a> <a href="#about">About</a></nav>
+      <input class="field" type="text" aria-label="Name" />
+      <img class="hero" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%23c00'/%3E%3C/svg%3E" />
+    </main>
+  </body>
+</html>
