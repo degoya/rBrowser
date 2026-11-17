@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://fixture.test/hreflang-broken/en/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fixture.test/hreflang-broken/en/"/>
+    <xhtml:link rel="alternate" hreflang="en-UK" href="https://fixture.test/hreflang-broken/uk/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://fixture.test/hreflang-broken/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://fixture.test/hreflang-broken/fr/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://fixture.test/hreflang-broken/es/"/>
+  </url>
+</urlset>

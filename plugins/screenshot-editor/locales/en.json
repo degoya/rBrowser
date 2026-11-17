@@ -1,0 +1,158 @@
+{
+  "plugin": {
+    "screenshot-editor": {
+      "name": "Screenshot editor",
+      "commands": {
+        "open_last": "Edit last screenshot",
+        "copy": "Copy edited screenshot to the clipboard"
+      },
+      "tools": {
+        "annotate": "Renders annotations (rect, arrow, line, freehand, text, marker, highlight, redact with mode pixelate|blur|black, crop) onto a PNG below .rbrowser/out/ and writes the edited image and its annotations below .rbrowser/out/screenshot-editor/ (or at `out` there). Redactions are rendered into the pixels; the export has no metadata. Answers the path.",
+        "load": "One chunk (base64, from `offset`) of a PNG below .rbrowser/out/. The first answer also gives its width, height, saved annotations and `hash`; when they leave no room its `data` is empty and `next` is 0, and saved annotations larger than one answer stay out (`annotations_too_large`). Pass that `hash` with every later call. Without `image` the newest screenshot.",
+        "list": "The PNG files below .rbrowser/out/ the screenshot editor opens, the newest screenshots first."
+      },
+      "panels": {
+        "editor": "Screenshot editor"
+      },
+      "settings": {
+        "color": {
+          "label": "Annotation colour",
+          "description": "The colour a new annotation starts with.",
+          "help": "The colour a new annotation starts with, as #rrggbb. Example: #e53935 for red."
+        },
+        "strokeWidth": {
+          "label": "Line width",
+          "description": "The line width of rectangles, arrows, lines and freehand strokes, in image pixels.",
+          "help": "The line width of rectangles, arrows, lines and freehand strokes, in image pixels. Example: 4."
+        },
+        "fontSize": {
+          "label": "Text size",
+          "description": "The size of texts and number markers, in image pixels.",
+          "help": "The size of texts and number markers, in image pixels. Example: 20."
+        },
+        "redactBlock": {
+          "label": "Redaction block size",
+          "description": "The block size of a pixelated or blurred redaction, in image pixels; larger hides more.",
+          "help": "The block size of a pixelated or blurred redaction, in image pixels; larger hides more. Example: 12."
+        },
+        "format": {
+          "label": "Export format",
+          "description": "PNG or JPEG for the edited image.",
+          "help": "The file format of the edited image: png is lossless, jpeg is smaller."
+        },
+        "jpegQuality": {
+          "label": "JPEG quality",
+          "description": "The quality of a JPEG export, 10 to 100.",
+          "help": "The quality of a JPEG export, 10 to 100; higher gives larger files. Example: 85."
+        },
+        "option": {
+          "format": {
+            "png": "PNG",
+            "jpeg": "JPEG"
+          }
+        }
+      },
+      "errors": {
+        "bad_args": "The arguments do not fit.",
+        "bad_annotation": "An annotation does not fit: a value is missing, out of range, or there is more than one crop.",
+        "path_outside": "The screenshot editor opens PNG files below .rbrowser/out/ only and writes below .rbrowser/out/screenshot-editor/ only.",
+        "not_png": "The file is no readable PNG image.",
+        "out_extension": "The target must be a file name ending in .png, .jpg or .jpeg.",
+        "image_too_large": "The image is too large for the editor: at most 16384 pixels a side and 25 megapixels.",
+        "encode_failed": "The edited image could not be encoded.",
+        "output_too_large": "The edited image is larger than the 8 MiB a plugin may write, even compressed harder. Crop it or export it as JPEG.",
+        "no_screenshot": "There is no screenshot in .rbrowser/out/screenshots/ yet."
+      },
+      "panel": {
+        "file": "Image",
+        "open": "Open",
+        "refresh": "Refresh list",
+        "no_images": "No PNG files in .rbrowser/out/ yet. Take a screenshot with Ctrl+Shift+Space C S.",
+        "tools": "Tools",
+        "tool": {
+          "rect": "Rectangle",
+          "arrow": "Arrow",
+          "line": "Line",
+          "freehand": "Freehand",
+          "text": "Text",
+          "marker": "Number",
+          "highlight": "Highlight",
+          "redact": "Redact",
+          "crop": "Crop"
+        },
+        "tool_chosen": "Tool: {name}.",
+        "color": "Colour",
+        "stroke": "Line width",
+        "size": "Text size",
+        "fill": "Filled rectangle",
+        "mode": "Redaction",
+        "mode_pixelate": "Pixelate",
+        "mode_blur": "Blur",
+        "mode_black": "Black bar",
+        "block": "Block size",
+        "undo": "Undo",
+        "redo": "Redo",
+        "zoom_in": "Zoom in",
+        "zoom_out": "Zoom out",
+        "zoom_fit": "Fit",
+        "zoom": "{percent} %",
+        "revert": "Discard changes",
+        "copy": "Copy to clipboard",
+        "save": "Save",
+        "text": "Text",
+        "text_ok": "Add text",
+        "text_cancel": "Cancel",
+        "canvas": "Screenshot {image} with {count, plural, one {# annotation} other {# annotations}}",
+        "canvas_empty": "No screenshot open",
+        "canvas_help": "Drag on the image to draw. By keyboard: the arrow keys move the cursor (Shift: 10 px), Enter sets a point and Enter again the second, Escape cancels. Tools: R, A, L, F, T, M, H, B, C; the chosen tool's options stand beside the tools. Crop: drag a frame, adjust it by its handles, Enter applies it, Escape cancels, Ctrl+Z takes it back. Ctrl+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+C copy, + and - zoom, 0 fits, Escape discards unsaved changes.",
+        "annotations": "Annotations",
+        "annotations_none": "No annotations yet.",
+        "remove_named": "Remove annotation {index}: {name}",
+        "loading": "Loading {image}...",
+        "loaded": "{image}: {width} x {height} px.",
+        "changed": "The file changed while it was loading; open it again.",
+        "saved": "Saved to {path}.",
+        "copied": "The edited image is on the clipboard.",
+        "copy_failed": "The clipboard did not take the image ({error}). Save it and copy the file instead.",
+        "failed": "Failed: {error}",
+        "second_point": "Move to the second point and press Enter.",
+        "discard_confirm": "There are unsaved changes. Press Open again to discard them.",
+        "reverted": "Changes discarded.",
+        "too_large": "Too many annotations for one save; remove some freehand strokes.",
+        "no_image": "Open an image first.",
+        "added": "{name} added.",
+        "group_file": "Image file",
+        "group_history": "History",
+        "group_output": "Result",
+        "group_zoom": "Zoom",
+        "options_for": "{name} options",
+        "crop": "Crop",
+        "crop_hint": "Drag a frame on the image and adjust it by its handles; Enter applies, Escape cancels.",
+        "crop_draft": "Adjust the frame by its handles; Enter applies the crop, Escape cancels.",
+        "crop_size": "{width} x {height} px",
+        "crop_apply": "Apply crop",
+        "crop_cancel": "Cancel",
+        "crop_remove": "Remove crop",
+        "crop_applied": "Cropped to {width} x {height} px. Ctrl+Z takes it back; the original file stays as it is.",
+        "crop_cancelled": "Crop cancelled.",
+        "crop_removed": "Crop removed.",
+        "annotations_too_large": "The saved annotations of this image are larger than the editor takes (64 KiB) and were left out; saving here replaces them.",
+        "host_error": {
+          "too_large": "The data was larger than one panel message may carry (64 KiB).",
+          "timed_out": "The plugin did not answer in time.",
+          "busy": "The plugin is still answering earlier requests; try again."
+        },
+        "colors": {
+          "red": "Red",
+          "orange": "Orange",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple",
+          "black": "Black",
+          "white": "White"
+        }
+      }
+    }
+  }
+}

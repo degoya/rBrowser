@@ -1,0 +1,12 @@
+/* Used in every view. */
+body { margin: 0; font-family: system-ui, sans-serif; }
+.layout { padding: 1rem; }
+.lead { color: #333; }
+
+/* Used only in views at least 1024 px wide. */
+@media (min-width: 1024px) {
+  .layout { display: grid; grid-template-columns: 2fr 1fr; }
+}
+
+/* Used nowhere. */
+.never-matches { outline: 2px dashed red; }

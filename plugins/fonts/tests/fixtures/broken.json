@@ -1,0 +1,78 @@
+{
+  "url": "http://localhost:8080/fonts/broken.html",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "faces": [
+    {
+      "family": "Inter",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "",
+      "status": "error",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/missing-inter.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    }
+  ],
+  "sheets": [],
+  "preloads": [],
+  "resources": [],
+  "usages": [
+    {
+      "stack": "Inter, Arial, sans-serif",
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal",
+      "count": 2,
+      "aboveFold": true,
+      "sizes": [
+        16
+      ],
+      "samples": [
+        {
+          "selector": "html > body > h1",
+          "path": "html > body > h1",
+          "text": "Inter is missing",
+          "nonAscii": ""
+        }
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "role": "h1",
+      "count": 1,
+      "min": 16,
+      "max": 16,
+      "first": {
+        "selector": "html > body > h1",
+        "path": "html > body > h1"
+      }
+    },
+    {
+      "role": "p",
+      "count": 1,
+      "min": 16,
+      "max": 16,
+      "first": {
+        "selector": "html > body > p",
+        "path": "html > body > p"
+      }
+    }
+  ],
+  "smallText": [],
+  "smallInputs": [],
+  "tightLines": [],
+  "elements": 2,
+  "truncated": false
+}

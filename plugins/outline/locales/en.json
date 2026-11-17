@@ -1,0 +1,146 @@
+{
+  "plugin": {
+    "outline": {
+      "commands": {
+        "check": "Check the outline of every view",
+        "panel": "Show the outline"
+      },
+      "findings": {
+        "content-outside-landmarks": "Content outside every landmark: \"{text}\".",
+        "focus-order-jump": "The focus jumps back from {from} to {to}, against the visible order.",
+        "form-label-missing": "The form field {name} has no label.",
+        "h1-missing": "The page has no h1 heading.",
+        "heading-differs": "The heading \"{text}\" shows in {shown} but not in {view}.",
+        "heading-empty": "This {level} heading is empty.",
+        "heading-first-not-h1": "The first heading is an {level}, \"{text}\"; the h1 comes later.",
+        "heading-image-no-alt": "This {level} heading holds only an image without an alt attribute.",
+        "heading-skip": "The headings jump from {from} to {to} at \"{text}\".",
+        "heading-too-long": "This heading is {length, plural, one {# character} other {# characters}} long, more than {max}: \"{text}\".",
+        "img-alt-missing": "The image {src} has no alt attribute.",
+        "landmark-banner-multiple": "The page has {count} banner landmarks.",
+        "landmark-banner-nested": "This banner lies inside a {outer} landmark.",
+        "landmark-contentinfo-multiple": "The page has {count} contentinfo landmarks.",
+        "landmark-contentinfo-nested": "This contentinfo lies inside a {outer} landmark.",
+        "landmark-differs": "The landmark {text} shows in {shown} but not in {view}.",
+        "landmark-main-missing": "The page has no main landmark.",
+        "landmark-main-multiple": "The page has {count} main landmarks.",
+        "landmark-unique": "{count} {role} landmarks are not told apart by their names; give each its own.",
+        "link-broken": "The link to {url} is broken ({status}).",
+        "link-empty": "The link to {href} has no text.",
+        "multiple-h1": "The page has {count} h1 headings; another one is \"{text}\"."
+      },
+      "name": "Outline",
+      "panel": {
+        "altMissing": "(alt missing)",
+        "axView": "View",
+        "blankUnsafe": "target=_blank without noopener",
+        "checkLinks": "Check links",
+        "checked": "Checked {done} of {total, plural, one {# link} other {# links}}.",
+        "clear": "Clear marks",
+        "cut": "Showing the first entries only; MCP outline_get lists them all.",
+        "dot": "{view}: {state}",
+        "empty": "Nothing in this section.",
+        "external": "external",
+        "findings": "{count, plural, one {# finding} other {# findings}} in this section.",
+        "hiddenEverywhere": "hidden in every view",
+        "invalidSelector": "the selector is not valid",
+        "link": {
+          "broken": "broken ({status})",
+          "denied": "not checked: a private address",
+          "failed": "broken (no answer)",
+          "ok": "ok ({status})",
+          "redirect-error": "broken redirect",
+          "skipped": "not checked",
+          "unchecked": "not checked in time"
+        },
+        "loading": "Reading the views...",
+        "marked": "Marked in {count} of {views, plural, one {# view} other {# views}}.",
+        "noLabel": "(no label)",
+        "noOutline": "No outline from {views} (Chromium views only).",
+        "noProblems": "No problems in this section.",
+        "noText": "(no text)",
+        "only": "only {views}",
+        "onlyProblems": "Only problems",
+        "pageFindings": "Findings about the whole page",
+        "refresh": "Refresh",
+        "state": {
+          "hidden": "hidden",
+          "missing": "missing",
+          "visible": "visible"
+        },
+        "stop": "Stop",
+        "tabs": {
+          "axtree": "A11y tree",
+          "custom": "Custom",
+          "focus": "Focus",
+          "forms": "Forms",
+          "headings": "Headings",
+          "images": "Images",
+          "landmarks": "Landmarks",
+          "links": "Links"
+        }
+      },
+      "panels": {
+        "outline": "Outline"
+      },
+      "rules": {
+        "content-outside-landmarks": "Content outside every landmark",
+        "focus-order-jump": "Focus order jumps against the visible order",
+        "form-label-missing": "Form field without a label",
+        "h1-missing": "No h1 heading",
+        "heading-differs": "Heading missing at this breakpoint",
+        "heading-empty": "Empty heading",
+        "heading-first-not-h1": "First heading is no h1",
+        "heading-image-no-alt": "Heading of an image without alt",
+        "heading-skip": "Heading level skipped",
+        "heading-too-long": "Very long heading",
+        "img-alt-missing": "Image without an alt attribute",
+        "landmark-banner-multiple": "More than one banner",
+        "landmark-banner-nested": "Banner inside another landmark",
+        "landmark-contentinfo-multiple": "More than one contentinfo",
+        "landmark-contentinfo-nested": "Contentinfo inside another landmark",
+        "landmark-differs": "Landmark missing at this breakpoint",
+        "landmark-main-missing": "No main landmark",
+        "landmark-main-multiple": "More than one main landmark",
+        "landmark-unique": "Landmarks not told apart by a name",
+        "link-broken": "Broken link",
+        "link-empty": "Link without text",
+        "multiple-h1": "More than one h1"
+      },
+      "settings": {
+        "customSelectors": {
+          "description": "Your own selectors, such as [data-cms-block]: the outline lists their matches in every view.",
+          "help": "Your own selectors the outline lists in every view, with a label. Example: label CMS block, selector [data-cms-block].",
+          "label": "Custom selectors"
+        },
+        "headingMaxLength": {
+          "description": "A heading longer than this many characters is a finding (20 to 1000).",
+          "help": "A heading longer than this many characters is reported as very long; the rule itself is switched in Checks > Findings. Example: 120.",
+          "label": "Longest heading"
+        },
+        "linkCheck": {
+          "enabled": {
+            "description": "Request the links of the current page to find broken ones.",
+            "help": "Requests the links of the current page to find broken ones and shows them in the outline. Off lists the links without checking them.",
+            "label": "Check links"
+          },
+          "rps": {
+            "description": "At most this many link requests a second (1 to 4).",
+            "help": "At most this many link requests per second (1 to 4), so a link check does not hammer the server.",
+            "label": "Link requests a second"
+          },
+          "timeoutMs": {
+            "description": "No further link is requested once one check has run this long, in milliseconds.",
+            "help": "No further link is requested once one check has run this long, in milliseconds; the rest stay unchecked. Example: 30000.",
+            "label": "Link check time limit"
+          }
+        }
+      },
+      "tools": {
+        "check_links": "Checks the links of the current page in the views for broken ones (HEAD, then GET; redirects followed; at most outline.linkCheck.rps requests a second). urls narrows the check to some of the page's links; a URL the page does not link is not requested.",
+        "get": "The outline of the views: headings, landmarks, links, images, forms, focus order, accessibility tree (Chromium) and custom selectors. shape merged (default) gives one row per entry with a cell per view and `only` naming the views it is visible in; shape views gives each view's own lists. sections picks the sections; findings are included with severity, element and view - every rule but the link check, those over the breakpoints (heading-differs, landmark-differs) among them. findingsOnly answers the views and findings without the lists.",
+        "mark": "Marks an outline entry in the views and scrolls it into view: targets lists per view a selector or an accessibility backendNodeId; clear removes every mark."
+      }
+    }
+  }
+}

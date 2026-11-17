@@ -1,0 +1,65 @@
+{
+  "plugin": {
+    "framework-devtools": {
+      "name": "Framework DevTools",
+      "commands": {
+        "vue": "Vue DevTools: open the panel for the active view",
+        "react": "React DevTools: open the panel for the active view"
+      },
+      "tools": {
+        "active_view": "The view the Framework DevTools panels follow: the active view's id, or null without one.",
+        "send": "Sends a message of the Vue or React DevTools protocol to a view's DevTools backend (the panels' channel; over MCP only while mcp.allowEvaluate is on)."
+      },
+      "panels": {
+        "vue": "Vue DevTools",
+        "react": "React DevTools"
+      },
+      "panel": {
+        "view": "View {view}",
+        "noView": "No active view. Click a view's header to make it active.",
+        "waiting": "Waiting for {framework} in view {view}. The panel connects as soon as the page runs it.",
+        "noHook": "rBrowser's {framework} DevTools hook is not in this document yet. Reload the view once; the hook is registered for its next document.",
+        "late": "The page loaded {framework} before rBrowser's hook was in place. Reload the view once.",
+        "vueProd": "This Vue build exposes no components: a production build talks to DevTools only when it is built with __VUE_PROD_DEVTOOLS__.",
+        "off": "{framework} DevTools are off in Settings > DevTools & Debugging > Framework DevTools.",
+        "connected": "Connected to {framework} {version} in view {view}.",
+        "filter": "Filter components",
+        "components": "Components",
+        "state": "State",
+        "noSelection": "Select a component to see its props and state.",
+        "empty": "No components yet.",
+        "refresh": "Refresh",
+        "scrollTo": "Scroll to component",
+        "apps": "App",
+        "router": "Router",
+        "route": "Current route: {path}",
+        "timeline": "Timeline",
+        "clear": "Clear",
+        "noNodes": "Nothing here yet.",
+        "noNodeSelection": "Select an entry to see its state.",
+        "noRoute": "No router in this app, or no route yet.",
+        "noEvents": "No events yet. Mouse, keyboard, component, Pinia and router events are recorded while this tab is open.",
+        "noEvent": "Select an event to see its data.",
+        "sections": {
+          "current": "Current route",
+          "params": "Params",
+          "query": "Query",
+          "matched": "Matched",
+          "route": "Route",
+          "meta": "Meta",
+          "event": "Event",
+          "data": "Data"
+        }
+      },
+      "settings": {
+        "vue": {
+          "timeline": {
+            "label": "Vue timeline",
+            "description": "The Vue DevTools panel's Timeline tab: mouse, keyboard, component, Pinia and router events, recorded while the tab is open.",
+            "help": "Shows the Timeline tab in the Vue DevTools panel. While the tab is open, the page's Vue DevTools kit records mouse, keyboard, component, Pinia and router events for it; closing the tab stops the recording. Off hides the tab and records nothing."
+          }
+        }
+      }
+    }
+  }
+}

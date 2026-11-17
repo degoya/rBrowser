@@ -1,0 +1,145 @@
+{
+  "plugin": {
+    "coverage": {
+      "commands": {
+        "export": "Export the coverage",
+        "run_load": "Measure CSS and JS coverage on page load",
+        "start": "Start measuring CSS and JS coverage",
+        "stop": "Stop measuring CSS and JS coverage"
+      },
+      "errors": {
+        "none": "No coverage measured yet: run Measure page load or Start first.",
+        "not-running": "No coverage measurement is running.",
+        "running": "A coverage measurement is running already."
+      },
+      "findings": {
+        "function-unused": "The function {name} in {file} (at {offset}) ran in no view during the session.",
+        "rule-partial": "{selector} in {file} is used only at {breakpoints}, not at {unused}.",
+        "unused-file": "{file} is {percent} % unused in every view ({total} bytes): split it or load it only where it is needed."
+      },
+      "name": "Coverage",
+      "panel": {
+        "anonymous": "(anonymous)",
+        "back": "Previous part",
+        "caption": "Unused bytes per file, the least of any breakpoint, largest first",
+        "close": "Close",
+        "collapse": "Hide the values per breakpoint",
+        "detail": "Rules and source",
+        "executedIn": "ran at: {breakpoints}",
+        "expand": "Show the values per breakpoint",
+        "export": "Export",
+        "exported": "Written: {files}",
+        "failedView": "{name} (measurement failed: {error})",
+        "file": "File",
+        "filter": {
+          "all": "All ({count})",
+          "css": "CSS ({count})",
+          "js": "JS ({count})"
+        },
+        "functions": "Functions",
+        "idle": "No coverage measured yet.",
+        "inline": "inline",
+        "kind": {
+          "css": "CSS",
+          "js": "JS"
+        },
+        "kindName": {
+          "css": "Style sheet",
+          "js": "Script"
+        },
+        "legendUnused": "used in no view",
+        "legendUsed": "used",
+        "measuring": "Reloading every view and measuring...",
+        "mode": {
+          "interaction": "Interaction",
+          "load": "Page load"
+        },
+        "more": "Next part",
+        "neverRan": "ran nowhere",
+        "noMatch": "No file matches the filter.",
+        "noSource": "The source of a script is not shown; its functions are listed.",
+        "notMeasured": "Not measured: {views}.",
+        "perView": "Per breakpoint",
+        "refresh": "Refresh",
+        "rules": "Rules",
+        "runLoad": "Measure page load",
+        "running": "Measuring - interact in the views, then stop.",
+        "search": "Filter files by address",
+        "source": "Source",
+        "span": "{from}-{to} %",
+        "spanTitle": "The breakpoints differ: {from} % to {to} % unused. The value is the least, what every breakpoint leaves unused.",
+        "start": "Start measuring",
+        "stop": "Stop measuring",
+        "summary": "{mode} measurement, {views, plural, one {# breakpoint} other {# breakpoints}} measured, {files, plural, one {# file} other {# files}}: per file the bytes unused in every breakpoint that loads it.",
+        "total": "Total",
+        "totalValue": "{size} of {total} unused ({percent} %)",
+        "truncated": "Showing the first files only; MCP coverage_get lists them all.",
+        "unavailableView": "{name} ({engine})",
+        "unused": "Unused",
+        "unusedEverywhere": "used nowhere",
+        "unusedValue": "{size} ({percent} %)",
+        "usedIn": "used at: {breakpoints}",
+        "viaScript": "Style sheet, delivered as a script module (a dev server such as Vite)",
+        "viewValue": "{size} of {total} unused ({percent} %)",
+        "window": "Characters {from} to {to} of {total}"
+      },
+      "panels": {
+        "coverage": "Coverage"
+      },
+      "rules": {
+        "function-unused": "JavaScript function never run",
+        "rule-partial": "CSS rule used only at some breakpoints",
+        "unused-file": "File mostly unused in every view"
+      },
+      "settings": {
+        "defaultMode": {
+          "description": "What coverage_get measures without a mode: load reloads every view and measures, interaction reads the running session.",
+          "help": "What coverage_get measures without a mode: load reloads every view and measures the fresh load, interaction reads what the running session has used so far.",
+          "label": "Default mode"
+        },
+        "idleMs": {
+          "description": "A reloaded page counts as loaded once no new request came for this many milliseconds.",
+          "help": "A reloaded page counts as loaded once no new request came for this many milliseconds; then the measurement stops. Raise it for pages that load in waves.",
+          "label": "Network idle time"
+        },
+        "ignore": {
+          "description": "Files left out: URL patterns where * stands for any characters, such as */vendor/* or *.min.js.",
+          "help": "Files left out of the report, as URL patterns where * stands for any characters. Example: */vendor/*, *.min.js.",
+          "label": "Ignored files"
+        },
+        "loadTimeoutSeconds": {
+          "description": "How long a view may take to load again before its measurement fails.",
+          "help": "How long a view may take to reload before its measurement fails, in seconds. Raise it for heavy pages.",
+          "label": "Load timeout"
+        },
+        "minBytes": {
+          "description": "A file smaller than this, in bytes (UTF-16 units, as DevTools counts), gets no unused-file warning.",
+          "help": "A file smaller than this, in bytes, gets no unused-file warning, so tiny helpers do not clutter the report. Example: 10240 for 10 KiB.",
+          "label": "Smallest file reported"
+        },
+        "thirdParty": {
+          "description": "Measure files from other origins than the page's (CDNs, analytics).",
+          "help": "Also measures files from other origins than the page's, such as CDNs and analytics. Off reports the site's own files only.",
+          "label": "Third-party files"
+        },
+        "unusedPercent": {
+          "description": "A file with more than this share unused, in percent, in every view that loads it is reported.",
+          "help": "A file with more than this share unused, in percent, in every view that loads it is reported. Example: 50. Lower it to find more candidates for splitting.",
+          "label": "Unused share reported"
+        },
+        "option": {
+          "defaultMode": {
+            "load": "Page load",
+            "interaction": "Interaction"
+          }
+        }
+      },
+      "tools": {
+        "file": "One file of the last measurement in detail, a window of up to 16000 characters at a time: per view its used ranges; for a style sheet its text and rules with the views using each; for a script its functions with the views that ran each.",
+        "get": "Unused CSS and JavaScript per view and file: total, used and unused units (UTF-16, as DevTools counts) of every style sheet and script. mode load reloads every view and measures once the network is idle; delta reads what the running interaction session used so far; last returns the last measurement. Includes the coverage findings.",
+        "start": "Starts CSS rule usage tracking and precise JavaScript coverage in the views (Chromium only) for an interaction session; stop it with coverage_stop.",
+        "stop": "Ends the interaction session in every view (tracking stopped), keeps its result as the last measurement and returns it with the findings."
+      }
+    }
+  }
+}

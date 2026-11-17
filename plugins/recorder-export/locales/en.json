@@ -1,0 +1,18 @@
+{
+  "plugin": {
+    "recorder-export": {
+      "errors": {
+        "bad_recording": "This is not a recording the exporter can read: {reason}",
+        "step": "Step {step} cannot be exported: {reason}",
+        "too_large": "The exported file would be larger than 8 MiB.",
+        "version": "Recordings of format version {version} cannot be exported; this exporter reads version 1."
+      },
+      "formats": {
+        "flow": "rBrowser flow (TypeScript)",
+        "playwright-config": "Playwright config with a project per breakpoint",
+        "spec": "Playwright test (.spec.ts)"
+      },
+      "name": "Recorder export"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+/* The rulers-guides panel's styles: panel-ui's (Tailwind and Nuxt UI) and the classes named here. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';

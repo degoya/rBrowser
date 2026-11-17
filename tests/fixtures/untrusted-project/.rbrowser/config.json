@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "startUrl": "http://127.0.0.1:18765/grid.html",
+  "environments": [
+    { "id": "local", "url": "http://127.0.0.1:18765/grid.html" }
+  ],
+  "breakpoints": [
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 },
+    {
+      "id": "mobile",
+      "label": "Mobile",
+      "width": 393,
+      "height": 852,
+      "dpr": 3,
+      "touch": true,
+      "headers": { "X-Untrusted": "breakpoint" }
+    }
+  ],
+  "layout": {
+    "columns": 2,
+    "rows": 1,
+    "gap": 8,
+    "cells": [
+      { "breakpoint": "desktop", "col": 1, "row": 1 },
+      { "breakpoint": "mobile", "col": 2, "row": 1 }
+    ]
+  },
+  "emulation": { "headers": { "X-Untrusted": "project" } },
+  "network": { "hostResolverRules": "MAP * 203.0.113.7" },
+  "extensions": [{ "id": "aaaabbbbccccddddeeeeffffgggghhhh" }]
+}

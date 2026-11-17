@@ -1,0 +1,6 @@
+view 1 rule-partial info http://localhost:8080/coverage/site.css#212-270 [selector=.layout; file=http://localhost:8080/coverage/site.css; breakpoints=desktop, laptop; unused=tablet, mobile]
+view 1 unused-file warning http://localhost:8080/coverage/unused.css [file=http://localhost:8080/coverage/unused.css; kind=css; total=20488; percent=100]
+view 2 rule-partial info http://localhost:8080/coverage/site.css#212-270 [selector=.layout; file=http://localhost:8080/coverage/site.css; breakpoints=desktop, laptop; unused=tablet, mobile]
+view 2 unused-file warning http://localhost:8080/coverage/unused.css [file=http://localhost:8080/coverage/unused.css; kind=css; total=20488; percent=100]
+view 3 unused-file warning http://localhost:8080/coverage/unused.css [file=http://localhost:8080/coverage/unused.css; kind=css; total=20488; percent=100]
+view 4 unused-file warning http://localhost:8080/coverage/unused.css [file=http://localhost:8080/coverage/unused.css; kind=css; total=20488; percent=100]

@@ -1,0 +1,6 @@
+{
+  "framework": "tailwind",
+  "detected": [[640, "min", "sm", "src/app.css: sm"], [768, "min", "md", "src/app.css: md"], [1024, "min", "lg", "src/app.css: lg"], [1280, "min", "xl", "src/app.css: xl"], [1536, "min", "2xl", "src/app.css: 2xl"]],
+  "sources": [["src/app.css", 5]],
+  "all": [["mobile", 375, 667], ["sm", 640, 1138], ["md", 768, 1024], ["lg", 1024, 640], ["xl", 1280, 800], ["2xl", 1536, 960], ["desktop", 1920, 1200]]
+}

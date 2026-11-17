@@ -1,0 +1,5 @@
+/* The panel's styles: panel-ui's (Tailwind and Nuxt UI, compiled at build time) and the classes
+   named in this folder. */
+@import '../../web-common/panel-ui/src/style.css';
+
+@source '.';

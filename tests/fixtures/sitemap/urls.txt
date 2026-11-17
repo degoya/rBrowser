@@ -1,0 +1,7 @@
+# A URL list (RB-050-05): one URL a line.
+https://www.example.test/
+https://www.example.test/about
+
+not a url
+ftp://www.example.test/file
+https://www.example.test/contact

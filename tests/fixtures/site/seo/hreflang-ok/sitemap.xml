@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://fixture.test/hreflang-ok/en/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fixture.test/hreflang-ok/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://fixture.test/hreflang-ok/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://fixture.test/hreflang-ok/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fixture.test/hreflang-ok/en/"/>
+  </url>
+  <url>
+    <loc>https://fixture.test/hreflang-ok/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fixture.test/hreflang-ok/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://fixture.test/hreflang-ok/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://fixture.test/hreflang-ok/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fixture.test/hreflang-ok/en/"/>
+  </url>
+  <url>
+    <loc>https://fixture.test/hreflang-ok/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://fixture.test/hreflang-ok/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://fixture.test/hreflang-ok/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://fixture.test/hreflang-ok/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fixture.test/hreflang-ok/en/"/>
+  </url>
+</urlset>

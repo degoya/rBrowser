@@ -1,0 +1,127 @@
+{
+  "plugin": {
+    "image-overlay": {
+      "commands": {
+        "toggle": "Image Overlay: Show or Hide",
+        "add_design": "Image Overlay: Add Design…"
+      },
+      "tools": {
+        "set": "Shows or hides each view's design image from .rbrowser/designs/ over the page and sets opacity, blend mode, invert, anchor, offset, split view and the design per breakpoint - one setting for every view, each view showing its own design. Answers the state and each view's design. Without arguments it answers the state unchanged.",
+        "designs": "Lists the design images in .rbrowser/designs/ with their size in px, file size and export scale (or why one is unusable), and whether a design can be added (an open project in a trusted workspace). With path, hash and chunk it answers that chunk of a design's bytes as base64; with thumb (a design's hash) the small preview the panel kept, and with thumb and data (a PNG of at most 256 px a side, base64) it keeps one. Designs are added by a person with the Add design command; choose one per breakpoint with imageoverlay_set."
+      },
+      "panels": {
+        "designs": "Image overlay"
+      },
+      "errors": {
+        "bad_args": "Image overlay got a value it cannot use: {reason}",
+        "path_outside": "The design {path} is refused: designs must lie in .rbrowser/designs/.",
+        "bad_type": "The design {path} is no PNG, JPEG or WebP image.",
+        "too_large": "The design {path} is larger than 8 MiB.",
+        "too_many_pixels": "The design {path} is too large: at most 16384 px a side and 16 megapixels.",
+        "not_found": "The design {path} does not exist.",
+        "unreadable": "The design {path} could not be read ({reason}).",
+        "changed": "The design {path} changed while it was loading; it loads again."
+      },
+      "panel": {
+        "show": "Show the design",
+        "appearance": "Appearance",
+        "opacity": "Opacity",
+        "percent": "{value} %",
+        "blend": "Blend mode",
+        "blend_normal": "Normal",
+        "blend_difference": "Difference",
+        "blend_multiply": "Multiply",
+        "blend_screen": "Screen",
+        "blend_overlay": "Overlay",
+        "blend_exclusion": "Exclusion",
+        "invert": "Invert",
+        "anchor": "Position",
+        "anchor_document": "Pinned to the page (scrolls with it)",
+        "anchor_viewport": "Fixed in the view",
+        "offset": "Offset",
+        "offset_x": "X (px)",
+        "offset_y": "Y (px)",
+        "nudge": "Move with the arrow keys",
+        "nudge_hint": "Focus here and press the arrow keys: 1 px, with Shift 10 px.",
+        "offset_reset": "Reset offset",
+        "split": "Split view",
+        "split_on": "Split: design left, page right",
+        "split_position": "Split position",
+        "designs": "Design per breakpoint",
+        "add_design": "Add design…",
+        "add_untrusted": "Adding a design needs an open project in a trusted workspace: the image is copied into the project's .rbrowser/designs/ folder.",
+        "library": "Designs in .rbrowser/designs/",
+        "library_more": "{count, plural, one {Only the first design is listed.} other {Only the first # designs are listed.}}",
+        "option_design": "{name} ({width} x {height} px)",
+        "option_unusable": "{name} (unusable)",
+        "option_missing": "{name} (missing)",
+        "preview": "Preview of {name}",
+        "drop_unsupported": "Dropping a file here does not add it: use Add design…, which opens the file dialog.",
+        "adding": "Choose the image in the file dialog.",
+        "designs_empty": "No views open.",
+        "designs_none": "No designs yet. Add a PNG, JPEG or WebP export of your design; it is copied into .rbrowser/designs/ so the team shares it.",
+        "breakpoint_free": "Free size",
+        "design_for": "Design for {breakpoint}",
+        "design_auto": "Nearest width (automatic)",
+        "design_shown": "{path}, {width} x {height} px, scale {scale}x",
+        "design_missing": "No design",
+        "view_row": "{label}",
+        "reset": "Reset to the shared settings",
+        "reset_hint": "Drops your own choices; the project's settings apply again.",
+        "saved": "Saved.",
+        "not_saved": "Applied to the open views; not saved, as no project is open.",
+        "failed": "Not applied: {error}",
+        "size": "{width} x {height} px"
+      },
+      "settings": {
+        "designs": {
+          "label": "Design per breakpoint",
+          "description": "A design image per breakpoint id, as a path below .rbrowser/designs/ (designs/mobile.png). A breakpoint without an entry shows the design nearest to its width: the width in the file name (home-1440.png), else the image's width. Paths outside .rbrowser/designs/ are refused.",
+          "help": "A design image per breakpoint id, as a path below .rbrowser/designs/. Example: mobile to designs/mobile.png. A breakpoint without an entry gets the design nearest to its width, read from the file name (home-1440.png) or the image."
+        },
+        "opacity": {
+          "label": "Opacity (%)",
+          "description": "How opaque the design is over the page, 0 to 100.",
+          "help": "How opaque the design is over the page, in percent; 50 shows both, 100 covers the page. Example: 30 for a faint guide."
+        },
+        "blend": {
+          "label": "Blend mode",
+          "description": "How the design mixes with the page: normal, or difference (identical pixels turn black), multiply, screen, overlay, exclusion.",
+          "help": "How the design mixes with the page: normal lays it over, difference turns identical pixels black (a perfect match goes dark), multiply, screen, overlay and exclusion for other comparisons."
+        },
+        "invert": {
+          "label": "Invert the design",
+          "description": "Shows the design's colours inverted.",
+          "help": "Shows the design's colours inverted, useful with the difference blend to spot small offsets."
+        },
+        "anchor": {
+          "label": "Position",
+          "description": "document: the design is pinned to the page and scrolls with it. viewport: it stays fixed in the view.",
+          "help": "document pins the design to the page so it scrolls with it; viewport keeps it fixed in the view for sticky headers."
+        },
+        "autoScaleDpr": {
+          "label": "Scale @2x and @3x exports",
+          "description": "Shows an export named name@2x.png or name@3x.png at its CSS size (the image's pixels over the scale), and prefers the export matching a view's pixel ratio. Off: every design shows at one image pixel per CSS px.",
+          "help": "Shows an export named name@2x.png or name@3x.png at its CSS size and prefers the one matching a view's pixel ratio. Off shows every design at one image pixel per CSS px."
+        },
+        "option": {
+          "blend": {
+            "normal": "Normal",
+            "difference": "Difference",
+            "multiply": "Multiply",
+            "screen": "Screen",
+            "overlay": "Overlay",
+            "exclusion": "Exclusion"
+          },
+          "anchor": {
+            "document": "Pinned to the page (scrolls with it)",
+            "viewport": "Fixed in the view"
+          }
+        }
+      },
+      "status": {
+        "choose_design": "Choose a PNG, JPEG or WebP image in the file dialog; it is copied into .rbrowser/designs/."
+      }
+    }
+  }
+}

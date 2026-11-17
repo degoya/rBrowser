@@ -1,0 +1,155 @@
+# SPDX-License-Identifier: MIT
+# Publish a signed rBrowser plugin repository on GitHub Pages (RB-091-01, after rDownloader's
+# sdk/ci/repository.yml).
+#
+# Copy it to `.github/workflows/repository.yml` of the repository that publishes your packages.
+# It collects the signed `.rbplugin` files, builds and signs `rbrowser-plugin-index.json` over
+# them and publishes both to GitHub Pages. People add the repository in rBrowser under
+# Settings > Plugins > Catalog with the index address
+# (`https://<owner>.github.io/<repository>/rbrowser-plugin-index.json`) and your repository's
+# public key. Settings > Pages > Source has to be "GitHub Actions".
+#
+# Keys: the repository key signs the index (secret REPOSITORY_SIGNING_KEY, the PKCS#8 PEM that
+# `rb-plugin-pack keygen` writes; give people the public key it prints). The packages stay
+# signed with their authors' keys; the index lists a package only when it verifies under one of
+# TRUSTED_KEYS. A repository delivers and vouches for nothing: rBrowser verifies every package
+# again and shows its capabilities and its publisher's key before the install.
+#
+# An index expires (VALID_DAYS) and rBrowser refuses an expired one, so the workflow also runs
+# once a month and signs again whatever is there, with a higher sequence. GitHub switches
+# scheduled workflows off in a public repository without activity for 60 days; switch it back on
+# when GitHub mails you about it.
+#
+# The actions are pinned to commits with their release as a comment, as rBrowser's own
+# workflows are (scripts/check-actions-pinned.sh).
+name: repository
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+  schedule:
+    - cron: "23 5 1 * *"
+  workflow_dispatch:
+
+env:
+  # The rBrowser release whose `rb-plugin-pack index` runs here (scripts/set-version.sh keeps it
+  # at the release the SDK comes with).
+  RBROWSER_VERSION: 0.9.0-beta.1
+  # The commit of that release in github.com/degoya/rBrowser (`git ls-remote` its tag): the
+  # packer is built from it, so a moved tag cannot change what runs with your key.
+  RBROWSER_REV: REPLACE_WITH_THE_40_CHARACTER_COMMIT_OF_THE_RELEASE
+  # The Rust release rBrowser is built with (its rust-toolchain.toml).
+  RUST_TOOLCHAIN: 1.100.0
+  # The key id the index's signature names; rBrowser knows your repository by its public key.
+  KEY_ID: example-repository-v1
+  # The plugin authors' keys a listed package must verify under, one `<key_id>=<base64>` per
+  # line (the manifest's key_id and public_key).
+  TRUSTED_KEYS: |
+    example-plugin-v1=REPLACE_WITH_THE_PLUGIN_PUBLIC_KEY_BASE64
+  # Where the packages come from: `releases` (every `.rbplugin` of a published, non-prerelease
+  # GitHub release of this repository) or `folder` (`packages/`).
+  PACKAGE_SOURCE: releases
+  # Days until the index expires, 1 to 366.
+  VALID_DAYS: 90
+
+# One deployment at a time; a queued one waits rather than cancelling a running one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Built from rBrowser's tagged source before any step reads the key.
+      # Built from one commit of rBrowser's source, never a tag that can move, with a pinned
+      # toolchain (security review RB-091-01, L4), before any step reads a key.
+      - name: Install rb-plugin-pack
+        run: |
+          if [[ ! "${RBROWSER_REV}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::set RBROWSER_REV to the 40-character commit of rBrowser's v${RBROWSER_VERSION} release"
+            exit 1
+          fi
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal
+          cargo "+${RUST_TOOLCHAIN}" install --locked --git https://github.com/degoya/rBrowser \
+            --rev "${RBROWSER_REV}" rb-plugin-host --bin rb-plugin-pack
+      - name: Collect the signed packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p site
+          case "${PACKAGE_SOURCE}" in
+            releases)
+              gh release list --limit 1000 --exclude-drafts --exclude-pre-releases \
+                  --json tagName --jq '.[].tagName' |
+                while read -r tag; do
+                  count=$(gh release view "${tag}" --json assets \
+                    --jq '[.assets[].name | select(endswith(".rbplugin"))] | length')
+                  if (( count > 0 )); then
+                    gh release download "${tag}" --pattern '*.rbplugin' --dir site --skip-existing
+                  fi
+                done
+              ;;
+            folder)
+              cp packages/*.rbplugin site/
+              ;;
+            *)
+              echo "::error::PACKAGE_SOURCE is ${PACKAGE_SOURCE}, not releases or folder"
+              exit 1
+              ;;
+          esac
+          ls -l site
+      - name: Build and sign the index
+        env:
+          REPOSITORY_SIGNING_KEY: ${{ secrets.REPOSITORY_SIGNING_KEY }}
+        run: |
+          if [[ -z "${REPOSITORY_SIGNING_KEY}" ]]; then
+            echo "::error::the secret REPOSITORY_SIGNING_KEY is not set"
+            exit 1
+          fi
+          key="${RUNNER_TEMP}/repository-signing.pem"
+          trap 'rm -f "${key}"' EXIT
+          (umask 077 && printf '%s\n' "${REPOSITORY_SIGNING_KEY}" > "${key}")
+          trust=()
+          while IFS= read -r line; do
+            [[ -n "${line}" ]] && trust+=(--trust "${line}")
+          done <<< "${TRUSTED_KEYS}"
+          # Package addresses stay relative: the packages sit beside the index. The sequence is
+          # the time of signing, so it only ever rises.
+          rb-plugin-pack index site \
+            --out site/rbrowser-plugin-index.json \
+            --key "${key}" --key-id "${KEY_ID}" \
+            --sequence "$(date +%s)" --validity-days "${VALID_DAYS}" \
+            "${trust[@]}"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

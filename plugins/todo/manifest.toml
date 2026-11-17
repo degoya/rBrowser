@@ -1,0 +1,92 @@
+# Todo (RB-110-13, docs/plugins.md): the project's `.todo` files in the Todo+ format
+# (`fabiospampinato.vscode-todo-plus`) as checklists - check, add, edit, delete, move and archive
+# tasks in the panel or over MCP, the file kept byte for byte where nothing changed, so the same
+# file is kept in VS Code and here. Files are written only in a trusted workspace and only over
+# the bytes read: a file saved elsewhere meanwhile is read again, never overwritten.
+manifest_version = 1
+id = "todo"
+name = "Todo"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "todo"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "The project's .todo files (Todo+ format) as checklists: check, add, edit and archive tasks without leaving the browser."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# project-read: finding and reading the todo files (`project.list` from the root) and the
+# `.gitignore` files, whose ignored folders the search skips (RB-110-16); project-write: writing
+# the todo files back - only these files, only in a trusted workspace, only over the bytes read.
+# Nothing else: no views, no network, no out folder.
+[capabilities]
+project-read = { globs = ["**/*.todo", "**/.gitignore"] }
+project-write = { globs = ["**/*.todo"] }
+
+# Walking a large project's folders for its todo files takes more than the default 10 s.
+[limits]
+timeout_milliseconds = 20000
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "list"
+description = "plugin.todo.tools.list"
+input = { type = "object", properties = { file = { type = "string", minLength = 6, maxLength = 1024 }, files = { type = "array", maxItems = 200, items = { type = "string", minLength = 6, maxLength = 1024 } }, from = { type = "integer", minimum = 0 }, rev = { type = "string", maxLength = 16 }, query = { type = "string", maxLength = 200 } } }
+
+[[tools]]
+name = "add"
+description = "plugin.todo.tools.add"
+input = { type = "object", required = ["text"], properties = { file = { type = "string", minLength = 6, maxLength = 1024 }, text = { type = "string", minLength = 1, maxLength = 1000 }, project = { type = "string", minLength = 1, maxLength = 200 }, under = { type = "integer", minimum = 1 }, rev = { type = "string", maxLength = 16 } } }
+
+[[tools]]
+name = "toggle"
+description = "plugin.todo.tools.toggle"
+input = { type = "object", required = ["file", "line"], properties = { file = { type = "string", minLength = 6, maxLength = 1024 }, line = { type = "integer", minimum = 1 }, state = { type = "string", enum = ["open", "done", "cancelled"] }, rev = { type = "string", maxLength = 16 }, utcOffset = { type = "integer", minimum = -840, maximum = 840 } } }
+
+[[tools]]
+name = "edit"
+description = "plugin.todo.tools.edit"
+input = { type = "object", required = ["file", "line", "action"], properties = { file = { type = "string", minLength = 6, maxLength = 1024 }, line = { type = "integer", minimum = 1 }, action = { type = "string", enum = ["text", "delete", "up", "down"] }, text = { type = "string", minLength = 1, maxLength = 1000 }, rev = { type = "string", maxLength = 16 } } }
+
+[[tools]]
+name = "archive"
+description = "plugin.todo.tools.archive"
+input = { type = "object", properties = { file = { type = "string", minLength = 6, maxLength = 1024 }, rev = { type = "string", maxLength = 16 } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.todo.commands.panel"
+shortcut = "Ctrl+Shift+Space X T"
+group = "plugins"
+mcp_omitted = "ui-only: opens the todo panel; todo_list reads the files"
+
+[[commands]]
+id = "new"
+title = "plugin.todo.commands.new"
+shortcut = "Ctrl+Shift+Space X N"
+group = "plugins"
+mcp_omitted = "ui-only: opens the todo panel at a new task; todo_add adds one"
+
+[[commands]]
+id = "archive"
+title = "plugin.todo.commands.archive"
+shortcut = "Ctrl+Shift+Space X V"
+group = "plugins"
+tool = "archive"
+
+[[panels]]
+id = "todo"
+title = "plugin.todo.panels.todo"
+entry = "panel/index.html"
+icon = "list-todo"
+placement = "sidebar"

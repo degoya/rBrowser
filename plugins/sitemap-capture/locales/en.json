@@ -1,0 +1,56 @@
+{
+  "plugin": {
+    "sitemap-capture": {
+      "errors": {
+        "bad_args": "Sitemap capture got arguments it cannot read: {reason}",
+        "bad_date": "{pattern} is no date; write it as YYYY-MM-DD.",
+        "bad_pattern": "The pattern {pattern} cannot be used.",
+        "bad_rewrite": "{pattern} is no http or https origin to rewrite the URLs to.",
+        "bad_url": "{url} is no http or https URL.",
+        "encoding": "The sitemap is not UTF-8.",
+        "fetch": "The sitemap could not be fetched.",
+        "gzip": "The gzip sitemap is broken.",
+        "http_status": "The server answered HTTP {status}.",
+        "not_a_sitemap": "The file is no sitemap, sitemap index or URL list.",
+        "private_address": "The sitemap is on this machine or the local network while the site is not, and is not read.",
+        "redirect_invalid": "The redirect names no usable URL.",
+        "redirect_loop": "Too many redirects.",
+        "redirect_origin": "The redirect leads to another host or port and is not followed.",
+        "redirect_scheme": "The redirect leaves http for https or the other way round and is not followed.",
+        "too_deep": "The sitemap indexes are nested deeper than allowed.",
+        "too_large": "The sitemap is larger than allowed.",
+        "too_many_patterns": "Too many include or exclude patterns.",
+        "xml": "The sitemap is no well-formed XML (or has a DTD)."
+      },
+      "gallery": {
+        "title": "Sitemap capture",
+        "summary": "{pages} pages in {breakpoints} breakpoints",
+        "breakpoints": "Breakpoints",
+        "all_breakpoints": "All",
+        "status": "Status",
+        "all_status": "All",
+        "status_ok": "OK",
+        "status_problems": "Problems",
+        "page": "Page",
+        "shot_alt": "{url} at {breakpoint}",
+        "pending": "Not captured yet",
+        "failed": "Failed: {error}",
+        "errors": "Errors",
+        "no_errors": "No errors.",
+        "kind_http": "HTTP {status}",
+        "kind_failed": "Failed",
+        "kind_redirect": "Redirect",
+        "redirected_to": "to {url}",
+        "close": "Close",
+        "previous": "Previous",
+        "next": "Next",
+        "compare": "{status} {percent} %"
+      },
+      "name": "Sitemap capture",
+      "tools": {
+        "discover": "Finds a site's sitemaps (robots.txt, sitemap.xml, indexes, gzip) or reads a given sitemap, file or URL list, and answers the pages a capture would take after the patterns, languages, lastmod, sampling and the environment rewrite. Captures nothing.",
+        "gallery": "Renders the HTML gallery of a sitemap capture run from its run.json. Writes nothing."
+      }
+    }
+  }
+}

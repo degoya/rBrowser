@@ -1,0 +1,40 @@
+{
+    "##": "rBrowser in the Scoop bucket @BUCKET@ (RB-090-13). Rendered from packaging/scoop/rbrowser.json.in in @REPOSITORY@ by scripts/package-managers.sh and replaced by the release workflow with every release: change the template, not this file. No persist: settings and profiles live in the user's %APPDATA%\\rBrowser and %LOCALAPPDATA%\\rBrowser, not beside the program. post_install writes the install-kind marker that rb-update reads, so the app leaves updating to Scoop.",
+    "version": "@VERSION@",
+    "description": "Development browser that shows every breakpoint of a site at once",
+    "homepage": "https://github.com/@REPOSITORY@",
+    "license": "GPL-3.0-or-later",
+    "architecture": {
+        "64bit": {
+            "url": "@BASE_URL@/rbrowser-@VERSION@-windows-x64.zip",
+            "hash": "@SHA256_WINDOWS_X64@",
+            "extract_dir": "rbrowser-@VERSION@-windows-x64"
+        }
+    },
+    "bin": "rbrowser.com",
+    "shortcuts": [
+        [
+            "rbrowser.exe",
+            "rBrowser"
+        ]
+    ],
+    "post_install": [
+        "Set-Content -LiteralPath \"$dir\\install-kind\" -Value 'scoop' -Encoding ascii"
+    ],
+    "notes": "rBrowser installed through Scoop does not replace itself: update it with `scoop update rbrowser`.",
+    "checkver": {
+        "github": "https://github.com/@REPOSITORY@"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/@REPOSITORY@/releases/download/v$version/rbrowser-$version-windows-x64.zip",
+                "extract_dir": "rbrowser-$version-windows-x64"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/SHA256SUMS",
+            "regex": "$sha256\\s+(?:\\./)?$basename"
+        }
+    }
+}

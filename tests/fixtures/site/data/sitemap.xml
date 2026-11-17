@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://shop.example.test/</loc>
+    <lastmod>2026-11-01</lastmod>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://shop.example.test/de/"/>
+  </url>
+  <url>
+    <loc>https://shop.example.test/products</loc>
+    <lastmod>2026-10-20</lastmod>
+  </url>
+  <url>
+    <loc>https://shop.example.test/contact</loc>
+  </url>
+</urlset>

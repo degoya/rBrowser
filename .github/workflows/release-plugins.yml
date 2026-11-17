@@ -1,0 +1,100 @@
+name: Release plugins
+
+# The official plugin catalogue (RB-091-01, after rDownloader's release-plugins.yml): the
+# first-party plugins that are not bundled (`CATALOG-ONLY`, scripts/catalogue-plugins.sh) built,
+# signed with the plugin release key rbrowser-plugin-v1 and listed in
+# `rbrowser-plugin-index.json`, signed with the same key - its public half is the root the app
+# already verifies the bundled packages with (`crates/rb-plugin-host/src/sign/roots.rs`), so the
+# catalogue needs no key of its own. Called by release.yml once the release flow publishes it
+# (RB-090-12): the packages and the index become assets of the version's release, and the app
+# reads `releases/download/plugin-index/rbrowser-plugin-index.json` - the index is the asset of the
+# fixed release `plugin-index`, replaced by each run. Prepared and inactive until then.
+#
+# The key is written to a file only this job's runner sees, its variable unset at once, never
+# echoed, and removed after the step; everything is built before the step that reads it, which
+# runs no cargo (scripts/lib/check_workflows.py).
+on:
+  workflow_call:
+    secrets:
+      RBROWSER_PLUGIN_SIGNING_KEY: {required: true}
+
+# Nothing by default; the job reads the tree only, the caller publishes the artifacts.
+permissions: {}
+
+# A re-run of a tag waits for the running one.
+concurrency:
+  group: release-plugins-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # A runner runs one job: the build lock and the memory gate of scripts/lib/lock.sh are for a
+  # shared workstation.
+  RB_NO_LOCK: 1
+  RB_MIN_FREE_MB: 0
+  # Days until the index expires; a release a quarter keeps it fresh (the app refuses an
+  # expired index).
+  INDEX_VALID_DAYS: 120
+
+jobs:
+  catalogue:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-tools@1.261.0
+      # Everything compiled without the key: the components and rb-plugin-pack. The step that holds
+      # the key runs no cargo and no build script (security review RB-091-01, M3).
+      - name: Build the plugins and the packer
+        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
+      # Only the catalogue-only plugins: a bundled plugin is never listed (coordinator,
+      # 2026-11-16; scripts/catalogue-plugins.sh, scripts/tests/catalogue-plugins.sh).
+      - name: Sign the catalogue's plugins and its index
+        env:
+          RBROWSER_PLUGIN_SIGNING_KEY: ${{ secrets.RBROWSER_PLUGIN_SIGNING_KEY }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ -z "${RBROWSER_PLUGIN_SIGNING_KEY}" ]]; then
+            echo "::error::RBROWSER_PLUGIN_SIGNING_KEY is not set; the catalogue lists signed plugins only"
+            exit 1
+          fi
+          key="${RUNNER_TEMP}/plugin-signing.pem"
+          trap 'rm -f "${key}"' EXIT
+          (umask 077 && printf '%s\n' "${RBROWSER_PLUGIN_SIGNING_KEY}" > "${key}")
+          # The key is in the file only from here on: no command below sees it in its environment.
+          unset RBROWSER_PLUGIN_SIGNING_KEY
+          pack=target/release/rb-plugin-pack
+          # shellcheck source=/dev/null
+          source scripts/lib/plugin-stage.sh
+          mkdir -p artifacts/catalogue/packages
+          while IFS= read -r id; do
+            [[ -n "${id}" ]] || continue
+            version="$(sed -n 's/^version = "\(.*\)"$/\1/p' "plugins/${id}/manifest.toml" | head -n 1)"
+            members="$(rb_plugin_pack_dir plugins "${id}" "target/plugins/stage/${id}")"
+            "${pack}" package "${members}" --component "target/plugins/${id}.wasm" \
+              --out "artifacts/catalogue/packages/${id}-${version}.rbplugin" --key "${key}"
+          done < <(scripts/catalogue-plugins.sh)
+          # Every package verifies under the compiled-in root before it is listed, which also
+          # catches a secret that is not the release key. The sequence is the time of signing:
+          # it only ever rises, so an older index served again is refused as a replay.
+          "${pack}" index artifacts/catalogue/packages \
+            --out artifacts/catalogue/rbrowser-plugin-index.json \
+            --key "${key}" --key-id rbrowser-plugin-v1 \
+            --sequence "$(date +%s)" --validity-days "${INDEX_VALID_DAYS}" \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: catalogue
+          path: artifacts/catalogue/
+          if-no-files-found: error
+          retention-days: 3

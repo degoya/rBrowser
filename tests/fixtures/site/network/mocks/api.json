@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "id": "user-500",
+      "match": { "urlPattern": "*/api/user.json", "method": "GET" },
+      "mock": {
+        "status": 500,
+        "headers": { "content-type": "application/json" },
+        "body": { "error": "down" },
+        "delayMs": 800
+      }
+    },
+    { "id": "no-tracking", "match": { "urlPattern": "*/tracking.js" }, "block": true },
+    {
+      "id": "fixture-header",
+      "match": { "urlPattern": "*/api/*", "resourceType": "Fetch" },
+      "rewrite": { "headers": { "x-fixture": "rewritten" } }
+    }
+  ]
+}

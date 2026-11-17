@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "startUrl": "http://127.0.0.1:18766/scroll.html",
+  "breakpoints": [
+    { "id": "desktop-xl", "label": "Desktop XL", "width": 1920, "height": 1080 },
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 },
+    { "id": "laptop", "label": "Laptop", "width": 1280, "height": 800 },
+    { "id": "tablet-landscape", "label": "Tablet landscape", "width": 1024, "height": 768, "touch": true },
+    { "id": "tablet", "label": "Tablet", "width": 768, "height": 1024, "touch": true },
+    { "id": "mobile-large", "label": "Mobile large", "width": 430, "height": 932, "dpr": 3, "touch": true },
+    { "id": "mobile", "label": "Mobile", "width": 393, "height": 852, "dpr": 3, "touch": true },
+    { "id": "mobile-small", "label": "Mobile small", "width": 360, "height": 640, "dpr": 2, "touch": true }
+  ],
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "gap": 8,
+    "cells": [
+      { "breakpoint": "desktop-xl", "col": 1, "row": 1 },
+      { "breakpoint": "desktop", "col": 2, "row": 1 },
+      { "breakpoint": "laptop", "col": 3, "row": 1 },
+      { "breakpoint": "tablet-landscape", "col": 4, "row": 1 },
+      { "breakpoint": "tablet", "col": 1, "row": 2 },
+      { "breakpoint": "mobile-large", "col": 2, "row": 2 },
+      { "breakpoint": "mobile", "col": 3, "row": 2 },
+      { "breakpoint": "mobile-small", "col": 4, "row": 2 }
+    ]
+  }
+}

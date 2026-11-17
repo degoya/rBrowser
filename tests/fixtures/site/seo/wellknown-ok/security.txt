@@ -1,0 +1,12 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+# The fixture site's security policy (RFC 9116), signed.
+Contact: mailto:security@fixture.test
+Contact: https://fixture.test/security
+Expires: 2027-06-30T00:00:00.000Z
+Preferred-Languages: en, de
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEfixturefixturefixturefixturefixture=
+-----END PGP SIGNATURE-----

@@ -1,0 +1,59 @@
+# Peek (RB-060-04, docs/plugins.md): the Alt+hover inspector. Holding the modifier over an element
+# shows tag, id, classes, size, colours and WCAG contrast, font, box model and accessibility role
+# and name in a tooltip, and outlines the same element in the other views. The page script reads
+# the page; the component rates the contrast and asks Chromium over CDP for the rendered fonts and
+# the computed role and name.
+manifest_version = 1
+id = "peek"
+name = "Peek"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "peek"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Hold Alt over an element to see its size, colours and contrast, font, box model, role and name; the same element is outlined in every view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views `peek_inspect` covers with `target: "all"`; evaluate: the page's part of
+# `peek_inspect` (the collector in the isolated world); cdp: the element found by selector or
+# point (DOM, the document named by Accessibility.getFullAXTree's root), its rendered fonts
+# (CSS.getPlatformFontsForNode) and its role and name (Accessibility.getPartialAXTree); no domain
+# is switched on. Nothing is written, nothing leaves the machine.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["DOM", "CSS", "Accessibility"] }
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `peek_inspect`: the tooltip's data as JSON, for a selector or a viewport point, in the view
+# `target` or every view.
+[[tools]]
+name = "inspect"
+description = "plugin.peek.tools.inspect"
+input = { type = "object", properties = { selector = { type = "string", minLength = 1, maxLength = 1024 }, x = { type = "number", minimum = 0, maximum = 100000 }, y = { type = "number", minimum = 0, maximum = 100000 } } }
+
+# Switches the inspector on or off in every view's current document; `peek.enabled` is where a
+# new document starts.
+[[commands]]
+id = "toggle"
+title = "plugin.peek.commands.toggle"
+shortcut = "Ctrl+Shift+Space D P"
+group = "devtools"
+mcp_omitted = "ui-only: switches the hover inspector; its data come through peek_inspect"
+
+# Built from web/ (npm run build); listens from the start, draws only while the modifier is held.
+[[page_scripts]]
+path = "page/peek.js"
+run_at = "document-start"

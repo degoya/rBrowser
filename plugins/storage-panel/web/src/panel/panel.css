@@ -1,0 +1,7 @@
+/* The storage panel's styles: panel-ui's (Tailwind and Nuxt UI), its code view's colours and the
+   classes named here. Differing, missing and unread cells are tinted with the theme's tokens and
+   named in words as well. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';
+@source '../../../../web-common/panel-ui/src/code';

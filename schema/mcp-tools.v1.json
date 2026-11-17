@@ -1,0 +1,4803 @@
+{
+  "$comment": "Generated from rb-mcp's tool definitions by `RB_UPDATE_SCHEMA=1 cargo nextest run -p rb-mcp mcp_tools_file`; do not edit by hand.",
+  "version": 1,
+  "tools": [
+    {
+      "name": "app_info",
+      "area": "app",
+      "description": "rBrowser's version, commit, build time and platform, the engine versions (CEF/Chromium, Firefox, WebKit, Node), the API versions and the data and log folders - the facts of Settings > About, without the licence texts.",
+      "target": "none",
+      "actsOn": "the app",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "back",
+      "area": "views",
+      "description": "Go back in the history of the targeted views and answer their final URLs. A view without history stays where it is. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id, or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "bookmarks_list",
+      "area": "bookmarks",
+      "description": "List the project's bookmarks: for each id, label, group and shortcut if any, relative (true: it stores a path such as /shop/cart?x=1#top and follows the environment; false: an absolute URL, the same everywhere), its path when relative, and url - where it leads in the environment in effect (absent for a path with no environment or start URL to lie under). Also environment (the one in effect), base (the URL paths are put after) and followEnvironment (the setting bookmarks.followEnvironment: new bookmarks of a page under an environment are stored as paths). A read only; acts on no view. Open one with navigate and its url.",
+      "target": "none",
+      "actsOn": "the project's bookmarks",
+      "withoutCommand": "a read: the project's bookmarks, each with relative and the URL it leads to now",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "bookmarks_make_relative",
+      "area": "bookmarks",
+      "description": "Turn every bookmark with an absolute URL that lies under the project's environments into a path, so it follows the environment from then on (https://staging.example.com/shop/cart becomes /shop/cart). Only a URL whose path leads to the same page under every environment that names its host is converted; a foreign host, or environments with different base paths on that host, keep the URL. Edits only bookmarks[] of config.json and config.local.json (both written or neither), reads the config again and tells the person the number in the status bar. Answers converted (how many), ids, and invalid (bookmarks the config check refuses, left as they are) when there are any. Takes no arguments; acts on no view.",
+      "target": "none",
+      "actsOn": "the project config",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "breakpoint_add",
+      "area": "config",
+      "description": "Add a breakpoint to the project config: breakpoint as in breakpoints[] (id, width, height, label, device, emulation, ...; request headers are refused). Checked before it is written; the grid follows.",
+      "target": "none",
+      "actsOn": "the project config",
+      "guard": {
+        "note": "Request headers are guarded by workspace trust and refused with code config_key_protected."
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ConfigScope": {
+            "description": "Which project file `config_set` and the breakpoint tools write.",
+            "oneOf": [
+              {
+                "description": "`.rbrowser/config.json`, checked in.",
+                "type": "string",
+                "const": "project"
+              },
+              {
+                "description": "`.rbrowser/config.local.json`, this machine only.",
+                "type": "string",
+                "const": "local"
+              }
+            ]
+          }
+        },
+        "required": [
+          "breakpoint"
+        ],
+        "type": "object",
+        "properties": {
+          "breakpoint": {
+            "description": "The breakpoint as in `breakpoints[]`: `id`, `width`, `height`, `label`, `device`,\n`emulation`, ... (no `headers`).",
+            "type": "object",
+            "additionalProperties": true
+          },
+          "scope": {
+            "description": "`project` (default) or `local`.",
+            "$ref": "#/$defs/ConfigScope",
+            "default": "project"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "breakpoint_remove",
+      "area": "config",
+      "description": "Remove a breakpoint from the project config by id, with every reference to it in both project files (layout cells, hidden views, split and canvas fields, a preset's focus, envCompare.breakpoints). Checked before it is written; the answer counts the references removed.",
+      "target": "none",
+      "actsOn": "the project config",
+      "withoutCommand": "edits the project config as the settings window does; no command removes a breakpoint",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ConfigScope": {
+            "description": "Which project file `config_set` and the breakpoint tools write.",
+            "oneOf": [
+              {
+                "description": "`.rbrowser/config.json`, checked in.",
+                "type": "string",
+                "const": "project"
+              },
+              {
+                "description": "`.rbrowser/config.local.json`, this machine only.",
+                "type": "string",
+                "const": "local"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The breakpoint's id.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "`project` (default) or `local`.",
+            "$ref": "#/$defs/ConfigScope",
+            "default": "project"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "breakpoint_update",
+      "area": "config",
+      "description": "Change a breakpoint of the project config: id, fields to merge (null removes a field; request headers are refused). Checked before it is written.",
+      "target": "none",
+      "actsOn": "the project config",
+      "guard": {
+        "note": "Request headers are guarded by workspace trust and refused with code config_key_protected."
+      },
+      "withoutCommand": "edits the project config as the settings window does; no command changes a breakpoint",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ConfigScope": {
+            "description": "Which project file `config_set` and the breakpoint tools write.",
+            "oneOf": [
+              {
+                "description": "`.rbrowser/config.json`, checked in.",
+                "type": "string",
+                "const": "project"
+              },
+              {
+                "description": "`.rbrowser/config.local.json`, this machine only.",
+                "type": "string",
+                "const": "local"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The breakpoint's id.",
+            "type": "string"
+          },
+          "fields": {
+            "description": "The fields to change; objects merge, `null` removes a field.",
+            "type": "object",
+            "additionalProperties": true
+          },
+          "scope": {
+            "description": "`project` (default) or `local`.",
+            "$ref": "#/$defs/ConfigScope",
+            "default": "project"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "breakpoints_apply",
+      "area": "layout",
+      "description": "Write proposed breakpoints into .rbrowser/config.json: proposalId (default the last), selected ids (default every new one), replace instead of add.",
+      "target": "none",
+      "actsOn": "the project config",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "proposalId": {
+            "description": "The proposal of a `breakpoints_detect` call; the last one when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "selected": {
+            "description": "The proposed breakpoint ids to write; every new one when empty.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "replace": {
+            "description": "Replace the config's breakpoints instead of adding to them.",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "breakpoints_detect",
+      "area": "layout",
+      "description": "Find the breakpoints a site's CSS uses (media queries, container queries) and propose views for them; writes nothing. urls: the pages (default the start URL), mode: all, simplified or edges. The answer carries a proposalId for breakpoints_apply.",
+      "target": "none",
+      "actsOn": "the site's stylesheets",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "urls": {
+            "description": "The pages to read; the project's start URL when empty.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "mode": {
+            "description": "`all` (a view per breakpoint), `simplified` (five groups) or `edges` (a view at every\nedge +/- 1 px); the project's mode when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "bus_send",
+      "area": "sync",
+      "description": "Send a message on the page API's message bus (window.__rbrowser.bus) to the pages of `target` (\"all\" (default), a view id or a breakpoint id): their bus.on(type) handlers get `payload` with from: null. `type` is 1 to 64 of A-Z a-z 0-9 _ . : / -; `payload` any JSON value up to bus.maxPayloadBytes. Answers the views whose page took it (delivered) and the ones that did not (skipped): a page with the bus or the page API off, or without the sync agent.",
+      "target": "all",
+      "withoutCommand": "puts a message on the page API's bus from outside; no command sends one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "type": {
+            "description": "The message type: 1 to 64 of A-Z a-z 0-9 _ . : / -.",
+            "type": "string"
+          },
+          "payload": {
+            "description": "Any JSON value, up to `bus.maxPayloadBytes`; `null` when left out.",
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "canvas_place",
+      "area": "layout",
+      "description": "Canvas layout: move one view (target: a view id or breakpoint id, default the active view) to x/y on the canvas in DIP, optionally with its zoom (0.1 to 1). The place snaps to the preset's grid and to neighbouring views' edges and is written into the current canvas preset, else into the top-level layout's `layout.modes.canvas`; the answer has the snapped x/y and whether the view is in sight.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "The view: a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "x": {
+            "description": "The view's left edge on the canvas, in canvas DIP (snapped).",
+            "type": "number",
+            "format": "double"
+          },
+          "y": {
+            "description": "The view's top edge on the canvas, in canvas DIP (snapped; its label sits above).",
+            "type": "number",
+            "format": "double"
+          },
+          "zoom": {
+            "description": "The view's zoom, 0.1 to 1; unchanged when absent.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "canvas_zoom",
+      "area": "layout",
+      "description": "Canvas layout: zoom the canvas. level is the active view's page zoom - 1 shows its page at its real size (100 %), 0.5 at half, at most 2 (the largest view stays at 200 % at most) - or \"fit\" for every view in sight; 100 % when absent. The active view stays in the middle of the area. Answers { level }, the level set. Fails outside the canvas layout.",
+      "target": "none",
+      "actsOn": "the canvas camera",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "CanvasZoomLevel": {
+            "description": "`canvas_zoom`: a page zoom (`1` = 100 %) or `\"fit\"`.",
+            "anyOf": [
+              {
+                "description": "The active view's page zoom: 1 for 100 %, up to 2.",
+                "type": "number",
+                "format": "double"
+              },
+              {
+                "description": "`\"fit\"`: every view in sight.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "level": {
+            "description": "The page zoom of the active view (1 = 100 %, 0.5 = 50 %, at most 2), or `\"fit\"` for\nevery view in sight; 100 % when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/CanvasZoomLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "cdp_endpoint",
+      "area": "cdp",
+      "description": "The CDP endpoint for Playwright connectOverCDP(url, { headers }) and other CDP clients: url with its Authorization header, urlWithToken for clients without headers, the browser webSocketDebuggerUrl, with target also the page socket of that view, and wsl: the URL from WSL (Windows' own in mirrored mode, a tunnel into the distribution in NAT mode). Only the grid's views are targets. rBrowser owns each view's size: setViewportSize has no effect. Off unless a person switched the proxy on (cdp.enabled, code cdp.disabled) and allowed page JavaScript over MCP (mcp.allowEvaluate, code evaluate_disabled): the endpoint is full control of the page.",
+      "target": "one",
+      "guard": {
+        "note": "Off until a person switches on the setting cdp.enabled (code cdp.disabled) and mcp.allowEvaluate (code evaluate_disabled): the endpoint is full control of the page.",
+        "setting": "cdp.enabled"
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view (id or breakpoint id): its page socket is added.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "checks_cancel",
+      "area": "capture",
+      "description": "Cancel the check run in progress (checks_run, the findings panel's Run checks): jobs not started are skipped, running ones are dropped; the findings of the jobs that finished stay and are the run's answer, with cancelled: true. Answers cancelled: false when no run is in progress. Acts on no view.",
+      "target": "none",
+      "actsOn": "the check run in progress",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "checks_run",
+      "area": "capture",
+      "description": "Run every enabled check plugin (SEO, accessibility, console, ...) over the views of `target` (\"all\" (default), a view id or a breakpoint id) and answer the merged findings - deduplicated across views and plugins, each with a stable id - a summary per severity and plugin, and how each plugin x view job ended (jobs: done with its count, failed with its code, skipped with the reason). `plugins` limits the run to those plugin ids, `url` checks that page instead of the views' own. checks_cancel stops a run in progress (cancelled: true). The run is also written to .rbrowser/out/checks/.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "plugins": {
+            "description": "Only these check plugins (ids); every enabled one when absent.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "description": "The page to check, http(s); each view's own when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "click",
+      "area": "sync",
+      "description": "Click an element (CSS `selector`) as real input in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): `button` left (default), middle or right, `clickCount` 1 to 3, `modifiers` (Alt, Control, Meta, Shift). Touch views get a tap. Answers per view done, notFound, notVisible or a failure.",
+      "target": "all",
+      "withoutCommand": "replays a click into the views over CDP; no command clicks an element",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "ClickButton": {
+            "description": "A mouse button.",
+            "oneOf": [
+              {
+                "description": "Primary.",
+                "type": "string",
+                "const": "left"
+              },
+              {
+                "description": "Wheel.",
+                "type": "string",
+                "const": "middle"
+              },
+              {
+                "description": "Secondary.",
+                "type": "string",
+                "const": "right"
+              }
+            ]
+          },
+          "Modifier": {
+            "description": "A modifier key.",
+            "oneOf": [
+              {
+                "description": "Alt.",
+                "type": "string",
+                "const": "Alt"
+              },
+              {
+                "description": "Control.",
+                "type": "string",
+                "const": "Control"
+              },
+              {
+                "description": "Meta (the Windows key).",
+                "type": "string",
+                "const": "Meta"
+              },
+              {
+                "description": "Shift.",
+                "type": "string",
+                "const": "Shift"
+              }
+            ]
+          }
+        },
+        "required": [
+          "selector"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "selector": {
+            "description": "The element, a CSS selector.",
+            "type": "string"
+          },
+          "button": {
+            "description": "`left` (default), `middle` or `right`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ClickButton"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clickCount": {
+            "description": "1 (default) to 3.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "modifiers": {
+            "description": "Held during the click.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Modifier"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "config_get",
+      "area": "project",
+      "description": "Read the effective project config (.rbrowser/config.json merged with config.local.json), secrets masked; key picks one dotted key (breakpoints, layout.gap).",
+      "target": "none",
+      "actsOn": "the project config",
+      "withoutCommand": "a read: the effective project config",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "description": "A dotted key (`layout.gap`); everything when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "config_set",
+      "area": "config",
+      "description": "Change one key of the project config (.rbrowser/config.json, or config.local.json with scope local): key dotted, value (null removes). The result is checked as the settings window checks it. Keys guarded by workspace trust (headers, network, plugins, extensions) are refused with code config_key_protected.",
+      "target": "none",
+      "actsOn": "the project config",
+      "guard": {
+        "note": "Keys guarded by workspace trust (headers, network, plugins, extensions) are refused with code config_key_protected."
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ConfigScope": {
+            "description": "Which project file `config_set` and the breakpoint tools write.",
+            "oneOf": [
+              {
+                "description": "`.rbrowser/config.json`, checked in.",
+                "type": "string",
+                "const": "project"
+              },
+              {
+                "description": "`.rbrowser/config.local.json`, this machine only.",
+                "type": "string",
+                "const": "local"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "The dotted key (`layout.gap`, `startUrl`, `emulation.locale`).",
+            "type": "string"
+          },
+          "value": {
+            "description": "The new value; `null` removes the key."
+          },
+          "scope": {
+            "description": "`project` (default, `.rbrowser/config.json`) or `local` (`config.local.json`).",
+            "$ref": "#/$defs/ConfigScope",
+            "default": "project"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "console_logs",
+      "area": "logs",
+      "description": "The console messages of the targeted views since the MCP server started (or the last clear): level, source, text, url, line, time (ms since epoch); newest last. level filters, limit caps per view (default 100), clear empties the buffer. Buffer size: setting mcp.consoleLogLimit.",
+      "target": "all",
+      "withoutCommand": "a read: the console buffer of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "description": "The most entries per view, the newest (default 100).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0,
+            "default": null
+          },
+          "level": {
+            "description": "`console_logs`: only this level (`error`, `warning`, `log`, ...).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "failedOnly": {
+            "description": "`network_requests`: only failed requests and HTTP errors (status 400 and up).",
+            "type": "boolean",
+            "default": false
+          },
+          "clear": {
+            "description": "Empty the buffers after reading.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "cookies_copy",
+      "area": "cookies",
+      "description": "Copy the cookies of a Chromium session into the Firefox and WebKit views of that session, so a login in the grid holds there too (each view loads its page again unless engines.cookies.reload is off). source: a session id or a view id (default: each view's own session); target: \"all\" (default), a view id or a breakpoint id; domains: only these sites (default: engines.cookies.domainFilter). Answers per view the cookies copied, refused and skipped with their reasons - never a cookie value; without a Firefox or WebKit view it says so in `message`.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "SourceArg": {
+            "description": "Where the cookies come from.",
+            "anyOf": [
+              {
+                "description": "A view id: that view's session.",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "A session id: `default` or one of the project's `sessions`.",
+                "type": "string"
+              }
+            ]
+          },
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "source": {
+            "description": "The session to copy from: a session id or a view id (its session). Absent: each Firefox\nor WebKit view gets the cookies of its own session.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SourceArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "target": {
+            "description": "`\"all\"` (every Firefox and WebKit view, the default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "domains": {
+            "description": "Only the cookies of these sites (host names, a parent domain's cookies included);\nabsent: the setting `engines.cookies.domainFilter`.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "devtools_inspect_at",
+      "area": "devtools",
+      "description": "Open DevTools for one view (target: a view id or breakpoint id, default the active view; mode as the setting) and select the element at the point x, y - CSS px of the page, from the viewport's top-left corner - in the Elements panel, like the page's context menu entry Inspect element. rBrowser's own overlays there (rulers, guides, plugin layers) are passed over: the element is the page's. Always opens DevTools when they are closed or with another view: the setting devtools.openOnInspect holds back only the menu entry and the shortcut. Answers the view, the DevTools mode, the element's backendNodeId and selected (false in a DevTools window, which takes no selection).",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view (id or breakpoint id); the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "x": {
+            "description": "The point's x, in CSS px of the view's page from its top-left corner.",
+            "type": "number",
+            "format": "double"
+          },
+          "y": {
+            "description": "The point's y, in CSS px of the view's page from its top-left corner.",
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "devtools_open",
+      "area": "app",
+      "description": "Open DevTools for one view (target: a view id or breakpoint id, default the active view); mode docked-bottom, docked-right or window (default the setting).",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view (id or breakpoint id); the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "mode": {
+            "description": "`docked-bottom`, `docked-right` or `window`; the setting's mode when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "diagnostics",
+      "area": "app",
+      "description": "Write the diagnostics ZIP (logs, crash dumps, versions, the masked config) into the diagnostics folder and answer its path. Nothing is sent anywhere.",
+      "target": "none",
+      "actsOn": "the app",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "out": {
+            "description": "A file name ending in `.zip` inside the diagnostics folder; a fresh name when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "emulation_set",
+      "area": "layout",
+      "description": "Change the emulation of the targeted views live (\"all\", a view id or a breakpoint id; default the active view): fields as in a breakpoint's emulation. Answers the views changed and whether a reload is needed.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "fields": {
+            "description": "The emulation fields to set (a breakpoint's `emulation` in the config: colorScheme,\nreducedMotion, userAgent, locale, timezone, network, ...); absent fields stay.",
+            "type": "object",
+            "additionalProperties": true,
+            "default": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "engine_restart",
+      "area": "engines",
+      "description": "Restart an external engine's views (engine: \"firefox\" or \"webkit\"): every view of that engine, or those of `target` (\"all\" (default), a view id or a breakpoint id). Each view opens again with its last URL. Fails with a readable message when no view of that engine is open or the engine is not available. Answers the restarted view ids.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ExternalEngine": {
+            "description": "The engines that run in windows of their own; Chromium runs the grid and restarts only with\nrBrowser.",
+            "oneOf": [
+              {
+                "description": "Firefox over WebDriver BiDi.",
+                "type": "string",
+                "const": "firefox"
+              },
+              {
+                "description": "WebKit through Playwright in the sidecar.",
+                "type": "string",
+                "const": "webkit"
+              }
+            ]
+          },
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "engine"
+        ],
+        "type": "object",
+        "properties": {
+          "engine": {
+            "description": "`firefox` or `webkit`.",
+            "$ref": "#/$defs/ExternalEngine"
+          },
+          "target": {
+            "description": "`\"all\"` (every view of the engine, the default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "engines_list",
+      "area": "engines",
+      "description": "List the installed Firefox editions rBrowser can drive: for each its path, kind (release, esr, developer, nightly) and version, in the order rBrowser searches (the registry's App Paths and uninstall entries, then the editions' folders under Program Files and the local app data); the first is what an empty engines.firefox.path starts. Also the configured path and, when it names no file any more, missing: true. A read only; acts on no view and starts nothing.",
+      "target": "none",
+      "actsOn": "the installed Firefox editions",
+      "withoutCommand": "a read: the installed Firefox editions; the path is the person's setting",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "env_compare",
+      "area": "env_compare",
+      "description": "Compare the same pages in two or more environments (local, staging, prod) pixel by pixel. target (\"all\" or views; the active view's page when absent) picks the breakpoints and the page; optional environments (ids, at least two), paths (/about or a URL under an environment; a foreign host is refused), breakpoints, fullPage, threshold (0 to 1). Each path is captured in every environment and breakpoint in hidden render views (the grid stays usable) and every environment pair is diffed. Answers at once with runId, the folder .rbrowser/out/env-compare/<runId>/ (PNGs, diff images, report.json, report.html) and the shots and diffs; follow it with env_compare_result. One run at a time. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after).",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id: the views whose breakpoints (and the first one's\npage) are compared; the active view's page and the setting envCompare.breakpoints when\nabsent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "environments": {
+            "description": "Environment ids (at least two); envCompare.environments, else every environment, when\nabsent.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "paths": {
+            "description": "Paths (`/about`) or URLs under an environment; the target view's page when absent.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "breakpoints": {
+            "description": "Breakpoint ids; over the target views' breakpoints.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fullPage": {
+            "description": "Capture the whole page (over envCompare.fullPage).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "threshold": {
+            "description": "The colour tolerance, 0 to 1 (over envCompare.threshold and visual.threshold).",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "hideBanners": {
+            "description": "Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "freezeAnimations": {
+            "description": "Freeze animations and videos; the setting capture.freezeAnimations when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "env_compare_cancel",
+      "area": "env_compare",
+      "description": "Cancel a running environment comparison (runId; the running one when absent). The shots taken stay, report.json and report.html are written for what was compared, and the run's state becomes cancelled. Answers the runId and whether it was still running.",
+      "target": "none",
+      "actsOn": "an environment comparison run",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "description": "The run (`env_compare` answers it); the latest (for a cancel: the running one) when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "env_compare_live",
+      "area": "env_compare",
+      "description": "Show one view's breakpoint once per environment side by side (target: one view; the active view when absent), each on the page the view shows under its own environment, synced: a click on an internal link moves every view to the same path under its own host, a link to another host is not rewritten. Optional environments (ids), enabled (false returns to the grid before; toggles when absent). Answers whether it shows and each view's environment and URL.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view (a view id, or a breakpoint id shown once) whose breakpoint and page are\ncompared; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "environments": {
+            "description": "Environment ids; envCompare.environments, else every environment, when absent.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "description": "true shows the comparison, false leaves it; toggles when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "env_compare_result",
+      "area": "env_compare",
+      "description": "The state of an environment comparison (runId; the latest when absent): running or finished, the shots taken and failed, the pairs that differ, the folder and report.html once written, and per path, environment pair and breakpoint the status (same, differs, sizeMismatch, failed, pending), the share of differing pixels in percent and the diff image.",
+      "target": "none",
+      "actsOn": "an environment comparison run",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "description": "The run (`env_compare` answers it); the latest (for a cancel: the running one) when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "environment_set",
+      "area": "layout",
+      "description": "Switch to an environment of the config (its base URL in every view).",
+      "target": "none",
+      "actsOn": "the project's environments",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "An environment id of the config.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "errors",
+      "area": "logs",
+      "description": "The uncaught exceptions of the targeted views: text, url, line, column, time; newest last. limit caps per view (default 100), clear empties the buffer. Buffer size: setting mcp.errorLimit.",
+      "target": "all",
+      "withoutCommand": "a read: the error buffer of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "description": "The most entries per view, the newest (default 100).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0,
+            "default": null
+          },
+          "level": {
+            "description": "`console_logs`: only this level (`error`, `warning`, `log`, ...).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "failedOnly": {
+            "description": "`network_requests`: only failed requests and HTTP errors (status 400 and up).",
+            "type": "boolean",
+            "default": false
+          },
+          "clear": {
+            "description": "Empty the buffers after reading.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "evaluate",
+      "area": "page",
+      "description": "Run a JavaScript expression in the page of the targeted views (main world) and answer each view's value (by value; promises awaited). Off by default: a person switches it on with the setting mcp.allowEvaluate; while off the answer is an error with code evaluate_disabled and settingsKey. Answers are masked and cut at mcp.maxAnswerBytes. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "guard": {
+        "note": "Off until a person switches on the setting mcp.allowEvaluate; while off it answers code evaluate_disabled.",
+        "setting": "mcp.allowEvaluate"
+      },
+      "withoutCommand": "runs page JavaScript over CDP; no command runs a script",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "expression"
+        ],
+        "type": "object",
+        "properties": {
+          "expression": {
+            "description": "A JavaScript expression, run in the page's main world.",
+            "type": "string"
+          },
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "awaitPromise": {
+            "description": "Wait for a promise the expression returns (default true).",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          },
+          "timeoutMs": {
+            "description": "How long it may run, in milliseconds (default 10000, at most 60000).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "extension_install",
+      "area": "extensions",
+      "description": "Install an extension from the Chrome Web Store (id: the extension id or its store page URL). rBrowser downloads it from Google's update server, checks its CRX3 signatures (the developer's key is the id, the Web Store's key the publisher) and then asks the person in its window; only their Install unpacks it, and it loads into every Chromium view at the next start (restartNeeded true). Declined or not answered within ten minutes: code extensions.declined. Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off, settingsKey). No tool grants the confirmation.",
+      "target": "none",
+      "actsOn": "the Chrome extensions of the instance",
+      "guard": {
+        "note": "Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off); on, nothing is unpacked before the person confirms the install in rBrowser's window (declined: code extensions.declined).",
+        "setting": "engines.chromium.extensions.allowWebStore"
+      },
+      "withoutCommand": "downloads and checks a Web Store extension, then waits for the person's word in the window; the person's own command extensions.install_web_store asks nothing",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The extension id (32 letters a to p) or its Chrome Web Store page URL.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "extension_list",
+      "area": "extensions",
+      "description": "The Chrome extensions of the Chromium views: enabled (engines.chromium.extensions.enabled), each unpacked folder of the person's list and each extension installed from the Chrome Web Store (source webStore) with its name, version, id, whether this start loaded it or why it is refused, restartNeeded when the set changed since the start, webStore (engines.chromium.extensions.allowWebStore), and a trusted project's recommendations (folders inside the project; a Web Store entry with installable true can be installed with extension_install). A read: no tool loads or removes an unpacked folder - that is the person's command in rBrowser (Extensions: load an unpacked extension, Ctrl+Shift+Space X O); a Web Store extension is removed with extension_remove after the person's word.",
+      "target": "none",
+      "actsOn": "the Chrome extensions of the instance",
+      "withoutCommand": "a read: the Chrome extensions; adding one is the person's command, never MCP's",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "extension_remove",
+      "area": "extensions",
+      "description": "Remove an extension installed from the Chrome Web Store (id: the extension id or its store page URL). rBrowser names it in its window and deletes its folder under the local store (every version, the pointer, staging leftovers) only on the person's Remove; what this start loaded stays loaded until the next start (restartNeeded true then). Not installed from the store: code extensions.not_installed; declined or not answered within ten minutes: code extensions.declined. Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off, settingsKey). Unpacked folders are never removed. No tool grants the confirmation.",
+      "target": "none",
+      "actsOn": "the Chrome extensions of the instance",
+      "guard": {
+        "note": "Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off); on, nothing is deleted before the person confirms the removal in rBrowser's window (declined: code extensions.declined).",
+        "setting": "engines.chromium.extensions.allowWebStore"
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The extension id (32 letters a to p) or its Chrome Web Store page URL.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "flow_list",
+      "area": "flows",
+      "description": "The project's flows (.rbrowser/flows/*.ts: Playwright scripts with page, view, expect, env and step injected) with their description and views, whether the workspace is trusted (flows run only then; trust is a person's decision in rBrowser), the run going on with each view's status, and the last run's result file.",
+      "target": "none",
+      "actsOn": "the project's flows",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "type": "object"
+      }
+    },
+    {
+      "name": "flow_run",
+      "area": "flows",
+      "description": "Runs a flow in every chosen view at once and answers per view passed, failed, skipped (Firefox and WebKit views, with the reason) or timedOut, with duration, steps, the error with its step and line, and a screenshot file on failure - the same result.json the shell and `rbrowser flow run` show. Refused with flows.untrusted until a person trusts the workspace; one run at a time (flows.busy), none while a recording takes steps (flows.recording).",
+      "target": "all",
+      "guard": {
+        "note": "A flow is project code: it runs only in a workspace a person trusted, otherwise it answers code flows.untrusted; no tool grants trust."
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The flow's name, as `flow_list` gives it (its file name without `.ts`).",
+            "type": "string"
+          },
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; when absent, the views the flow names in its\n`// @views` comment, else all.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "wait": {
+            "description": "Wait for the result (the default); `false` answers the `runId` at once and the result\nlands in `.rbrowser/out/flows/<runId>/result.json` (`flow_list` shows the run going on).",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "forward",
+      "area": "views",
+      "description": "Go forward in the history of the targeted views and answer their final URLs. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id, or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "hover",
+      "area": "sync",
+      "description": "Move the mouse onto an element (CSS `selector`) in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent), so :hover styles and hover menus open. Answers per view.",
+      "target": "all",
+      "withoutCommand": "replays the mouse onto an element over CDP; no command hovers an element",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "selector"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "selector": {
+            "description": "The element, a CSS selector.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "layout_save_preset",
+      "area": "layout",
+      "description": "Save the layout shown now as a named layout preset and select it: the mode with its fields - the canvas with every view's place (not the camera), the split's ratio and sides, the strip's height, the grid in effect, focus mode's breakpoint. file is local (config.local.json, the default unless the user setting layoutModes.savePresetTo says project) or project (config.json, shared with the team); a preset of that id in that file is replaced. Answers { id, file, mode }.",
+      "target": "none",
+      "actsOn": "the project config",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The preset's name: 1 to 40 letters, digits, spaces, `-`, `_` or `.` (trimmed). A preset\nof that name in the same file is replaced.",
+            "type": "string"
+          },
+          "file": {
+            "description": "`local` (`config.local.json`, personal) or `project` (`config.json`, shared with the\nteam); the user setting `layoutModes.savePresetTo` when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layout_set",
+      "area": "layout",
+      "description": "Change the layout: preset selects a layout preset of the config; focusMode true shows one breakpoint large (focus names it), false the grid again; mode switches the current preset to grid, focus, horizontal (height, gap), split (orientation, ratio, primary, secondary) or canvas (snap) - the fields are written into the current preset when it has that mode, else into the top-level layout's `layout.modes`.",
+      "target": "none",
+      "actsOn": "the grid",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "preset": {
+            "description": "A layout preset id of the config.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "focusMode": {
+            "description": "Focus mode on (one breakpoint large) or off (the grid).",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          },
+          "focus": {
+            "description": "The breakpoint focus mode shows.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "mode": {
+            "description": "The layout mode: `grid`, `focus`, `horizontal`, `split` or `canvas` (RB-080-04); the\nfields below set the mode's parameters (and are written into its preset).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "height": {
+            "description": "Horizontal: the views' height, `\"fit\"` or DIP.",
+            "default": null
+          },
+          "gap": {
+            "description": "Horizontal: the gap between the views in DIP.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "orientation": {
+            "description": "Split: `vertical` (primary left) or `horizontal` (primary on top).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "ratio": {
+            "description": "Split: the primary side's share, 0.1 to 0.9.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "primary": {
+            "description": "Split: the breakpoints of the primary side.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "default": null
+          },
+          "secondary": {
+            "description": "Split: the breakpoints of the other side.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "default": null
+          },
+          "snap": {
+            "description": "Canvas: the snap grid in DIP (0 for none).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "navigate",
+      "area": "views",
+      "description": "Load a URL (http or https, or a file: URL of a file inside the open project; other schemes are refused) in the targeted views and wait for the loads to finish (setting mcp.navigationTimeoutMs). Answers settled, per view reached its final URL after redirects, skipped (views of \"all\" whose navigation is decoupled) and failed. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "The address, http(s) or a file inside the open project (no other scheme, no link);\n`example.test` becomes `https://example.test/`.",
+            "type": "string"
+          },
+          "target": {
+            "description": "`\"all\"` (default), a view id, or a breakpoint id (every view showing it).",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "network_abort",
+      "area": "network_debug",
+      "description": "Fail a held request (id from network_breakpoints) as aborted; allViews: the same request held in every other view too.",
+      "target": "none",
+      "actsOn": "one held request of the HTTP debugger, by id",
+      "withoutCommand": "fails a held request over CDP; no command aborts one by id",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The held request.",
+            "type": "string"
+          },
+          "allViews": {
+            "description": "The same request held in every view too.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "network_breakpoints",
+      "area": "network_debug",
+      "description": "The HTTP debugger's breakpoints over every Chromium view: action list (default) answers the breakpoints, their switch (enabled) and the requests held right now - each with id, view, stage (request: method, URL, headers and body editable; response: status, headers and body), masked, the body only while mcp.allowEvaluate is on (bodyWithheld otherwise) - and timeoutMs, after which a held request goes on unchanged. action add (urlPattern as glob or regex, method, resourceType, stage, views), remove (id) and enable (id, enabled) change them; a breakpoint holds the matching request of every view it covers until network_continue or network_abort, or the timeout.",
+      "target": "none",
+      "actsOn": "the HTTP debugger's breakpoints over every view (views names them)",
+      "withoutCommand": "the HTTP debugger's breakpoints and held requests (RB-080-37); the person's command networkpanel_breakpoints_toggle switches them, adding one is the panel's form",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "BreakpointAction": {
+            "description": "What `network_breakpoints` does.",
+            "oneOf": [
+              {
+                "description": "The breakpoints and the held requests.",
+                "type": "string",
+                "const": "list"
+              },
+              {
+                "description": "Add one (`urlPattern` required).",
+                "type": "string",
+                "const": "add"
+              },
+              {
+                "description": "Remove one (`id` required).",
+                "type": "string",
+                "const": "remove"
+              },
+              {
+                "description": "Switch one on or off (`id` and `enabled` required).",
+                "type": "string",
+                "const": "enable"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "`list` (default), `add`, `remove` or `enable`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/BreakpointAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "description": "The breakpoint's id (remove, enable; optional for add).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "urlPattern": {
+            "description": "The URL glob (`*` any characters, `?` one), or a regular expression with `regex`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "regex": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "method": {
+            "description": "`GET`, `POST`, ...; any when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resourceType": {
+            "description": "CDP's resource type (`XHR`, `Fetch`, `Document`, ...); any when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stage": {
+            "description": "`request` (default) or `response`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "views": {
+            "description": "Only these views (ids); every view when absent.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "enabled": {
+            "description": "For `enable`; also the starting state of `add` (on by default).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "network_compose",
+      "area": "network_debug",
+      "description": "Send a request of your own (method, url, headers, body) from rBrowser's core - with the cookies, user agent and extra headers of view when given - times in a row (1 to 10, one after another), and answer each result: status, headers, body (cut at 256 KiB), timeMs; a redirect is answered (location), never followed. Off by default: a person switches it on with network-panel.allowComposeFromMcp, because it sends with the person's cookies; while off the answer is an error with code compose_disabled and settingsKey. Answers are masked.",
+      "target": "none",
+      "actsOn": "the core's HTTP client (view names the context)",
+      "guard": {
+        "note": "Off until a person switches on the protected setting network-panel.allowComposeFromMcp (code compose_disabled): it sends with the cookies of the person's views.",
+        "setting": "network-panel.allowComposeFromMcp"
+      },
+      "withoutCommand": "sends a request of the caller's own from the core; no command composes one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "RequestParams": {
+            "description": "A request to send.",
+            "type": "object",
+            "properties": {
+              "method": {
+                "description": "`GET` when absent.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "description": "An `http(s)` URL.",
+                "type": "string"
+              },
+              "headers": {
+                "description": "`[[name, value], ...]`.",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "body": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bodyBase64": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ]
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "type": "object",
+        "properties": {
+          "request": {
+            "$ref": "#/$defs/RequestParams"
+          },
+          "view": {
+            "description": "The view whose cookies, user agent and headers the request takes; none when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "times": {
+            "description": "How often to send, 1 to 10.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "network_continue",
+      "area": "network_debug",
+      "description": "Let a held request go on (id from network_breakpoints). allViews: the same request held in every other view too. edits (method, url, headers as [[name, value]], body or bodyBase64, status at the response stage) only while mcp.allowEvaluate is on - an edited request or response is content the page gets; a masked value sent back means as it was. Answers how many requests went on and how many stay held.",
+      "target": "none",
+      "actsOn": "one held request of the HTTP debugger, by id",
+      "guard": {
+        "note": "Edits (method, URL, headers, body, status) only while mcp.allowEvaluate is on (code evaluate_disabled); a plain continue always.",
+        "setting": "mcp.allowEvaluate"
+      },
+      "withoutCommand": "lets a held request go on over CDP; no command continues one by id",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "EditsParams": {
+            "description": "The edits of a continue or a repeat.",
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "headers": {
+                "description": "The whole header list, `[[name, value], ...]`; a masked value (`***`) means as it was.",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "body": {
+                "description": "The body as text (`bodyBase64` for bytes).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bodyBase64": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "description": "The response's status (response stage).",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint16",
+                "minimum": 0,
+                "maximum": 65535
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The held request (`network_breakpoints` lists them).",
+            "type": "string"
+          },
+          "allViews": {
+            "description": "The same request held in every view too.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "edits": {
+            "description": "What changes before it goes on; only while `mcp.allowEvaluate` is on.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/EditsParams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "network_repeat",
+      "area": "network_debug",
+      "description": "Send a captured request again (view and requestId from network_requests or networkpanel_list) from that view's context, with edits (method, url, headers, body), times in a row (1 to 10), and answer each result as network_compose does. Off by default (network-panel.allowComposeFromMcp, code compose_disabled). Answers are masked.",
+      "target": "none",
+      "actsOn": "the core's HTTP client (view names the captured request)",
+      "guard": {
+        "note": "As network_compose (code compose_disabled).",
+        "setting": "network-panel.allowComposeFromMcp"
+      },
+      "withoutCommand": "sends a captured request again from the core; no command repeats one by id",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "EditsParams": {
+            "description": "The edits of a continue or a repeat.",
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "headers": {
+                "description": "The whole header list, `[[name, value], ...]`; a masked value (`***`) means as it was.",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "body": {
+                "description": "The body as text (`bodyBase64` for bytes).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bodyBase64": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "description": "The response's status (response stage).",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint16",
+                "minimum": 0,
+                "maximum": 65535
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "view",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "view": {
+            "description": "The view that saw the request.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "requestId": {
+            "description": "Its request id (`network_requests`, `networkpanel_list`).",
+            "type": "string"
+          },
+          "edits": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/EditsParams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "times": {
+            "description": "How often to send, 1 to 10.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "network_requests",
+      "area": "logs",
+      "description": "The network requests of the targeted views: url, method, resourceType, status, mimeType, fromCache, size, time, durationMs, failed - never headers or bodies; newest last. failedOnly keeps failures and HTTP errors, limit caps per view (default 100), clear empties the buffer. Buffer size: setting mcp.networkRequestLimit.",
+      "target": "all",
+      "withoutCommand": "a read: the network buffer of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "description": "The most entries per view, the newest (default 100).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0,
+            "default": null
+          },
+          "level": {
+            "description": "`console_logs`: only this level (`error`, `warning`, `log`, ...).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "failedOnly": {
+            "description": "`network_requests`: only failed requests and HTTP errors (status 400 and up).",
+            "type": "boolean",
+            "default": false
+          },
+          "clear": {
+            "description": "Empty the buffers after reading.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "panels_dock",
+      "area": "panels",
+      "description": "Place the plugin panels (Network, Console, Storage, Findings of plugins and the others): position left, right or bottom docks them in the main window, where the views make room (never covered), floating puts them in a window of their own, closed closes them - folded to the icon rail beside the views, or hidden, as the setting panels.closeTo says - and hidden hides them (no rail). Docking sets the settings panels.dock (the default position) and, with size (DIP, 120 to 4000; the views keep at least a quarter of the area), panels.dockSize for that side. collapsed true folds the dock to its icon rail so the views get the room, false opens it, absent keeps it as it is; kept in panels.dockState (open, rail or hidden). Optional plugin and panel pick the panel shown. Answers position and, docked, the size and collapsed (true: the rail); hidden answers state hidden. Acts on the window, on no view.",
+      "target": "none",
+      "actsOn": "the window's plugin panels",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "PanelPosition": {
+            "description": "Where the panels go.",
+            "oneOf": [
+              {
+                "description": "Docked left of the views.",
+                "type": "string",
+                "const": "left"
+              },
+              {
+                "description": "Docked right of the views.",
+                "type": "string",
+                "const": "right"
+              },
+              {
+                "description": "Docked below the views.",
+                "type": "string",
+                "const": "bottom"
+              },
+              {
+                "description": "In a window of their own.",
+                "type": "string",
+                "const": "floating"
+              },
+              {
+                "description": "Closed: folded to the icon rail, or hidden, as the setting `panels.closeTo` says.",
+                "type": "string",
+                "const": "closed"
+              },
+              {
+                "description": "Hidden: no rail, no window, until a panel is opened again.",
+                "type": "string",
+                "const": "hidden"
+              }
+            ]
+          }
+        },
+        "required": [
+          "position"
+        ],
+        "type": "object",
+        "properties": {
+          "position": {
+            "description": "`left`, `right` or `bottom` docks the panels there; `floating` puts them in a window of\ntheir own; `closed` closes them (to the icon rail, or hidden, as `panels.closeTo` says);\n`hidden` hides them.",
+            "$ref": "#/$defs/PanelPosition"
+          },
+          "size": {
+            "description": "The dock's width (left, right) or height (bottom) in DIP, 120 to 4000, kept for that side;\nthe side's kept size when absent. Only with a docked position.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "collapsed": {
+            "description": "`true` folds the dock to a strip (the header below the views, the icon column beside\nthem) so the views get the room, `false` opens it at its size; kept in\n`panels.dockState`. Absent: the fold stays as it is. Only with a docked position.",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          },
+          "plugin": {
+            "description": "The plugin whose panel to show, with `panel`.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "panel": {
+            "description": "The panel to show, with `plugin`.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "plugins_catalog_list",
+      "area": "plugins",
+      "description": "List the plugin catalogue: the repositories (the official one and the ones the person added) with their state, every plugin they offer with each origin, version, capabilities, publisher and whether it runs on this rBrowser, the updates of the plugins installed from it, and the installed plugins. refresh fetches the signed indexes again first. Installing a plugin or adding a repository is a person's decision in rBrowser, never over MCP.",
+      "target": "none",
+      "actsOn": "the plugin catalogue",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "refresh": {
+            "description": "Fetch every configured repository's signed index again first (network); default false,\nthe indexes rBrowser holds.",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "plugins_list",
+      "area": "app",
+      "description": "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings. Installing, enabling or trusting a plugin is a person's decision in rBrowser, never over MCP.",
+      "target": "none",
+      "actsOn": "the plugins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "portal_devices",
+      "area": "portal",
+      "description": "The portal's state: whether it may run (portal.enabled) and runs, its address, and the paired devices. MCP cannot start the portal: a person starts it in rBrowser (Ctrl+Shift+Space S P), and pairs a device with the one-time QR code that never reaches MCP. Each device has id, name (user agent), ip, pairedAtMs, lastSeenMs, connected, and the counts replayed, failed and skipped (events a script on the device cannot replay: hover, keys, pointer, wheel, submit, and anything holding a password).",
+      "target": "none",
+      "actsOn": "the portal's paired devices",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "type": "object"
+      }
+    },
+    {
+      "name": "portal_disconnect",
+      "area": "portal",
+      "description": "Disconnect a paired device (device: its id from portal_devices) or, without device, every device: the device's session is revoked at once, its connection closes and its next request gets 403. Answers how many were disconnected.",
+      "target": "none",
+      "actsOn": "the portal's paired devices",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "The device's id from `portal_devices`; every device when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "portal_stop",
+      "area": "portal",
+      "description": "Stop the portal: it stops listening and every device's connection ends. Paired devices must pair again after the next start.",
+      "target": "none",
+      "actsOn": "the portal's LAN listener",
+      "withoutCommand": "stops the portal; portal.toggle starts it too, which no tool may (a LAN listener is a human's decision)",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "type": "object"
+      }
+    },
+    {
+      "name": "press_key",
+      "area": "sync",
+      "description": "Press a key in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): `key` is a key name (Enter, Tab, Escape, Backspace, Delete, ArrowUp/Down/Left/Right, Home, End, PageUp, PageDown, F1-F24, \" \") or one letter or digit, `modifiers` Alt, Control, Meta, Shift. Enter runs the default action (a form submit). Text goes through `type`. Answers per view.",
+      "target": "all",
+      "withoutCommand": "replays a key into the views over CDP; no command presses a key in a page",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "Modifier": {
+            "description": "A modifier key.",
+            "oneOf": [
+              {
+                "description": "Alt.",
+                "type": "string",
+                "const": "Alt"
+              },
+              {
+                "description": "Control.",
+                "type": "string",
+                "const": "Control"
+              },
+              {
+                "description": "Meta (the Windows key).",
+                "type": "string",
+                "const": "Meta"
+              },
+              {
+                "description": "Shift.",
+                "type": "string",
+                "const": "Shift"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "key": {
+            "description": "The key's name (Enter, Tab, Escape, ArrowDown, F5, ...) or one letter or digit.",
+            "type": "string"
+          },
+          "modifiers": {
+            "description": "Held during the key.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Modifier"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "project_info",
+      "area": "project",
+      "description": "The open project: root, config file and whether the workspace is trusted (read only; trust is decided by a person in rBrowser, never over MCP).",
+      "target": "none",
+      "actsOn": "the project",
+      "withoutCommand": "a read: the open project",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "project_open",
+      "area": "project",
+      "description": "Open a recent project in rBrowser (its own window): path names one of the recent projects, index its place in the list; without either the most recent other project.",
+      "target": "none",
+      "actsOn": "the recent projects",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "A recent project's folder (`settings_get` key `recentProjects`).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "index": {
+            "description": "The index in the recent projects.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "record_video",
+      "area": "video",
+      "description": "Record views as video files (Chromium views; Firefox and WebKit are not recorded). action start: target \"all\" (default), a view id or a breakpoint id - all start and stop together, one WebM file per view in .rbrowser/out/video/<date-time>/<breakpoint>.webm (VP9, VP8 where the ffmpeg has no VP9) at the viewport times the DPR (bounded), capture.video.fps frames per second, the encoders below the views' priority; answers the views, the folder, the codec and maxDurationSec, after which the recording stops by itself. action stop: stops and answers each file's path, frames, seconds and dropped (frames the encoder did not take in time, left out - the page never waits), or its error. action status: whether a recording runs, the ffmpeg in use and the last result. rBrowser needs ffmpeg: without it start answers video.ffmpeg_missing - the LGPL download is the person's decision in rBrowser, never MCP's.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "VideoAction": {
+            "description": "What `record_video` does.",
+            "oneOf": [
+              {
+                "description": "Start recording the target's views.",
+                "type": "string",
+                "const": "start"
+              },
+              {
+                "description": "Stop and answer the files.",
+                "type": "string",
+                "const": "stop"
+              },
+              {
+                "description": "The recording, the ffmpeg in use and the last result.",
+                "type": "string",
+                "const": "status"
+              }
+            ]
+          },
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "`start`, `stop` or `status`.",
+            "$ref": "#/$defs/VideoAction"
+          },
+          "target": {
+            "description": "For `start`: `\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "recorder_export",
+      "area": "recorder",
+      "description": "Export a stored recording as an rBrowser flow (format \"flow\", <name>.ts with page, view and expect injected), as a Playwright test (\"spec\", <name>.spec.ts plus playwright.config.ts with one project per breakpoint) or both (\"both\", the default). recordingId names the recording (recorder_stop answers it); the last saved one when absent. name renames the export. The files go into a new folder of automation.recorderExport.dir (default .rbrowser/out/exports/<name>/); nothing is overwritten. Secrets stay placeholders: the code reads process.env.RB_SECRET_<NAME>, and the answer is masked like the log. Answers the folder and each file's path and content.",
+      "target": "none",
+      "actsOn": "the stored recordings",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "ExportFormat": {
+            "description": "What `recorder_export` writes.",
+            "oneOf": [
+              {
+                "description": "The rBrowser flow.",
+                "type": "string",
+                "const": "flow"
+              },
+              {
+                "description": "The Playwright test (and its config, per `automation.recorderExport.includeConfig`).",
+                "type": "string",
+                "const": "spec"
+              },
+              {
+                "description": "Both.",
+                "type": "string",
+                "const": "both"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "recordingId": {
+            "description": "The recording (`recorder_stop` answers its name); the last saved one when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "format": {
+            "description": "`flow`, `spec` or `both` (the default).",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ExportFormat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "description": "The export's name (`[A-Za-z0-9_-]`, at most 64 characters); the recording's when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "recorder_play",
+      "area": "recorder",
+      "description": "Play a stored recording back in every chosen view at once, without exporting it: the recording becomes the same flow recorder_export writes (format \"flow\") and runs through the flows runner, held in memory - nothing is written to the flows folder. recordingId names the recording (recorder_stop answers it); the last saved one when absent. pace \"recorded\" waits the pause before each step as recorded (at most 10 s), \"fast\" runs them back to back; automation.recorder.playbackPace when absent. Answers per view passed, failed, skipped (Firefox and WebKit views, with the reason) or timedOut, with duration, steps, the error with its step and line, and a screenshot file on failure - the result.json of a flow run. Refused with flows.untrusted until a person trusts the workspace; one run at a time (flows.busy), none while a recording takes steps (flows.recording).",
+      "target": "all",
+      "guard": {
+        "note": "As flow_run: the recording plays as a flow, only in a workspace a person trusted, otherwise it answers code flows.untrusted; no tool grants trust."
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "PlaybackPace": {
+            "description": "How `recorder_play` paces the steps (`automation.recorder.playbackPace`).",
+            "oneOf": [
+              {
+                "description": "Back to back, each step waiting only for its element.",
+                "type": "string",
+                "const": "fast"
+              },
+              {
+                "description": "The pause before each step as recorded, at most 10 s.",
+                "type": "string",
+                "const": "recorded"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "recordingId": {
+            "description": "The recording (`recorder_stop` answers its name); the last saved one when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; when absent, the views of the breakpoints the\nrecording was made in, else all.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "pace": {
+            "description": "`fast` or `recorded`; `automation.recorder.playbackPace` when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PlaybackPace"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "wait": {
+            "description": "Wait for the result (the default); `false` answers the `runId` at once and the result\nlands in `.rbrowser/out/flows/<runId>/result.json` (`flow_list` shows the run going on).",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "recorder_start",
+      "area": "recorder",
+      "description": "Start recording one view's interactions (clicks, typing, keys, form changes, navigations) as a cleaned flow, or resume a paused recording. `target`: one view (a view id or a breakpoint id shown once) that becomes the active view first; the active view when absent. `name` ([A-Za-z0-9_-], at most 64 characters) names the file; a timestamped name when absent. Password fields and the configured secret fields are recorded as {{secret:<name>}}, never in clear. Refused while a flow runs (recorder.flow_running): its navigations would become steps. Answers the recorder's state, the name and the step count.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view to record from (a view id or a breakpoint id shown once): it becomes the active\nview first. The active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "name": {
+            "description": "The recording's name (`[A-Za-z0-9_-]`, at most 64 characters); a timestamped one when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "recorder_stop",
+      "area": "recorder",
+      "description": "Stop the recording and write it to the project's recordings folder (automation.recorder.dir, default .rbrowser/out/recordings/<name>.json); an existing file is never overwritten - the next free <name>-<n> is taken. With pause: true the recording only pauses, or resumes when paused. Answers the state, the name (the recordingId of recorder_export), the step count and, after a stop, the file relative to the project root.",
+      "target": "none",
+      "actsOn": "the window's recorder",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "pause": {
+            "description": "Pause (or resume) instead of stopping.",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "reload",
+      "area": "views",
+      "description": "Reload the targeted views. mode \"full\" (default) reloads the pages (ignoreCache bypasses the cache) and answers their final URLs once loaded; target \"all\" reaches every view. mode \"css\" swaps every stylesheet in place without a reload, so JS state, scroll position and form values stay, and answers what happened per view. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "ReloadMode": {
+            "description": "How `reload` reloads.",
+            "oneOf": [
+              {
+                "description": "The pages (`reload.all`).",
+                "type": "string",
+                "const": "full"
+              },
+              {
+                "description": "The stylesheets in place, no reload (`reload.css_only`, RB-030-05).",
+                "type": "string",
+                "const": "css"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id, or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "ignoreCache": {
+            "description": "Bypass the cache (a full reload).",
+            "type": "boolean",
+            "default": false
+          },
+          "mode": {
+            "description": "`full` (default) reloads the pages; `css` swaps every stylesheet in place, so JS state,\nscroll position and form values stay.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ReloadMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "screenshot",
+      "area": "capture",
+      "description": "Capture views as PNG: the viewport at the breakpoint's size, the full page, or one element (CSS selector, or `at` {x, y} in CSS px of the page for the element under that point, one view; with padding), from the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent). overview: one image of all views side by side with label and size, views out of sight included. delayMs waits first (at most 60000). save (default true) writes the files under the project's screenshot folder and answers their paths; save false answers the PNGs as base64 instead, all views together at most mcp.maxAnswerBytes (error answer_too_large otherwise). hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after).",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "CaptureMode": {
+            "description": "What `screenshot` captures of each view.",
+            "oneOf": [
+              {
+                "description": "The viewport at the breakpoint's size.",
+                "type": "string",
+                "const": "viewport"
+              },
+              {
+                "description": "The whole page.",
+                "type": "string",
+                "const": "fullPage"
+              },
+              {
+                "description": "One element (`selector`).",
+                "type": "string",
+                "const": "element"
+              }
+            ]
+          },
+          "PointParam": {
+            "description": "A point of a view's page in CSS px.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              "y": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "mode": {
+            "description": "`viewport` (default), `fullPage` or `element`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/CaptureMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selector": {
+            "description": "The element's CSS selector (mode `element`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "padding": {
+            "description": "CSS px around the element; the setting `capture.elementPadding` when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "overview": {
+            "description": "One overview image of the views side by side instead of a file each.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "delayMs": {
+            "description": "Wait this long first, at most 60000 ms.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint64",
+            "minimum": 0
+          },
+          "save": {
+            "description": "Write the files (default) and answer their paths, or answer the PNGs as base64.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "hideBanners": {
+            "description": "Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "freezeAnimations": {
+            "description": "Freeze animations and videos; the setting capture.freezeAnimations when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "at": {
+            "description": "The element at this point instead of a selector (mode `element`, one view): CSS px of\nthe page from the viewport's top-left corner (RB-080-43).",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PointParam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "scroll",
+      "area": "sync",
+      "description": "Scroll the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent) the way scroll sync does, so every view shows the same content: `to` \"top\" or \"bottom\", `element` (CSS selector) brought to the top edge, or `percentY` / `percentX` (0 to 100) of the scroll range; the other axis goes to its start. `container` (CSS selector) scrolls that element instead of the page. Answers per view done, notFound, notVisible or a failure.",
+      "target": "all",
+      "withoutCommand": "scrolls the views as scroll sync does; no command scrolls a page",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "ScrollEdge": {
+            "description": "An end of the scroll range.",
+            "oneOf": [
+              {
+                "description": "The start.",
+                "type": "string",
+                "const": "top"
+              },
+              {
+                "description": "The end.",
+                "type": "string",
+                "const": "bottom"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "container": {
+            "description": "The scroll container (CSS selector); the page when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "description": "`top` or `bottom`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ScrollEdge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "element": {
+            "description": "The element to bring to the top edge (CSS selector).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "percentX": {
+            "description": "Horizontal share of the scroll range, 0 to 100.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "percentY": {
+            "description": "Vertical share of the scroll range, 0 to 100.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        }
+      }
+    },
+    {
+      "name": "session_assign",
+      "area": "capture",
+      "description": "Move views into a session (\"default\" or one of the project's `sessions`): each view is created anew in the session's own cookie and storage context and loads its current URL again. target: \"all\", a view id or a breakpoint id; the active view when absent. Answers the views moved (from, view).",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "session": {
+            "description": "The session: `default` or one of the project's `sessions`.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "session_clear",
+      "area": "capture",
+      "description": "Clear a session's data: every cookie of the session, and the storage (local and session storage, IndexedDB, cache storage, service workers) of every origin its views show; the session's views reload. Other sessions keep theirs.",
+      "target": "none",
+      "actsOn": "a session's cookies and storage",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "session"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "session": {
+            "description": "The session whose cookies and storage go.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "settings_get",
+      "area": "project",
+      "description": "Read the settings in the settings window's structure: categories, sections and keys in its order, each key with type, value, origin (default, user, project, local), default, label, description, scopes, whether MCP may write it and its deep link rbrowser://settings/<key>; secrets masked. key picks one; category, section and query (every word in the label, key or description) narrow the structure.",
+      "target": "none",
+      "actsOn": "the settings",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "description": "One dotted key (`sync.scroll`, `shortcuts.bindings`); the whole structure when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "category": {
+            "description": "A category id (`general`, `sync`, `automation`, `shortcuts`, ...).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "section": {
+            "description": "A section id (`mcp`), inside `category` when both are given.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "query": {
+            "description": "A search as in the settings window: every word in a key's label, key or description.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "settings_set",
+      "area": "project",
+      "description": "Change a setting as a person would in Settings: key, value (null resets) and scope user (default), project or local; answers the new value, its origin and the deep link. Shortcuts: key shortcuts.bindings.<commandId> with a list of bindings (null restores the default), refused when reserved or taken. Protected keys (MCP, trust, plugins, the sandbox, paths of programs, the network keys, request headers, breakpoints - use the breakpoint tools -, extensions, the screenshot folder, recent projects, the log level) and whatever config_set refuses are refused with code settings.rejected.protected. Every change is logged and shown in rBrowser.",
+      "target": "none",
+      "actsOn": "the settings",
+      "guard": {
+        "note": "Protected keys (MCP, trust, plugins, the sandbox, paths of programs) are refused with code settings.rejected.protected; only a person changes them."
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "SettingScope": {
+            "description": "Where `settings_set` writes.",
+            "oneOf": [
+              {
+                "description": "The user's settings file.",
+                "type": "string",
+                "const": "user"
+              },
+              {
+                "description": "`.rbrowser/config.json`, checked in.",
+                "type": "string",
+                "const": "project"
+              },
+              {
+                "description": "`.rbrowser/config.local.json`, this machine only.",
+                "type": "string",
+                "const": "local"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "The dotted key.",
+            "type": "string"
+          },
+          "value": {
+            "description": "The new value; `null` resets the key to its default."
+          },
+          "scope": {
+            "description": "`user` (default), `project` (`.rbrowser/config.json`) or `local`\n(`.rbrowser/config.local.json`).",
+            "$ref": "#/$defs/SettingScope",
+            "default": "user"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "sitemap_cancel",
+      "area": "sitemap",
+      "description": "Cancel a running sitemap capture (runId; the running one when absent). What was captured stays and run.json is written; sitemap_capture with resume: runId takes the rest without capturing a page twice. Answers the runId and whether it was still running.",
+      "target": "none",
+      "actsOn": "a sitemap capture run",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "description": "The run (`sitemap_capture` answers it); the latest (for cancel: the running) one when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "sitemap_capture",
+      "area": "sitemap",
+      "description": "Capture every page of a sitemap in every breakpoint, in hidden render views with each breakpoint's emulation, without blocking the grid. url: a site (robots.txt and sitemap.xml are found), a sitemap or sitemap index (gzip too), or a project-relative .xml, .xml.gz or .txt URL list; the project's startUrl when absent; bookmarks: true takes the project bookmarks. Optional: breakpoints (ids), env (an environment id: URLs move to its origin), max, include/exclude (globs or re:regex), compare (against the visual-regression baselines), resume (a runId: done shots stay, failed ones are retried, nothing is captured twice), session. Answers once the pages are found - the capture goes on in the background - with runId, the folder .rbrowser/out/sitemap-capture/<runId>/ (PNGs, run.json, index.html gallery) and the shots pending; follow it with sitemap_status. One run at a time. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after).",
+      "target": "none",
+      "actsOn": "hidden render views of its own, per breakpoint",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "description": "A site (its robots.txt and sitemap.xml are found), a sitemap or sitemap index URL (gzip\ntoo), or a project-relative .xml, .xml.gz or .txt file; the project's startUrl when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bookmarks": {
+            "description": "Take the project bookmarks instead of a sitemap.",
+            "type": "boolean"
+          },
+          "breakpoints": {
+            "description": "Breakpoint ids; every Chromium breakpoint when absent.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "description": "An environment id: the sitemap's URLs move to its origin, the path kept.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max": {
+            "description": "At most this many pages; the setting sitemap.maxPages when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0
+          },
+          "include": {
+            "description": "Only pages matching one of these globs over the path (or `re:<regex>`).",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude": {
+            "description": "Leave out pages matching one of these patterns.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "compare": {
+            "description": "Compare each shot with its visual-regression baseline.",
+            "type": "boolean"
+          },
+          "resume": {
+            "description": "A runId to continue: what is done stays, failed shots are tried again.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "session": {
+            "description": "The session (cookies, storage) every page is captured in; each breakpoint's own when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hideBanners": {
+            "description": "Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "freezeAnimations": {
+            "description": "Freeze animations and videos; the setting capture.freezeAnimations when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "sitemap_status",
+      "area": "sitemap",
+      "description": "The state of a sitemap capture (runId; the latest when absent): running, cancelled or finished; pages, breakpoints, total, done, failed, pending and the estimated seconds left; the folder and the gallery once written; the pages with an HTTP error, a redirect or a failed shot.",
+      "target": "none",
+      "actsOn": "a sitemap capture run",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "description": "The run (`sitemap_capture` answers it); the latest (for cancel: the running) one when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "snapshot",
+      "area": "page",
+      "description": "The accessibility tree of the targeted views (CDP Accessibility.getFullAXTree), trimmed to the nodes that matter: id, parent, role, name, value. maxNodes caps each view (default 1000); answers are cut at mcp.maxAnswerBytes. target: \"all\" (default), a view id or a breakpoint id.",
+      "target": "all",
+      "withoutCommand": "a read: the accessibility tree of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "maxNodes": {
+            "description": "The most nodes per view (default 1000).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint",
+            "minimum": 0,
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "status_messages",
+      "area": "status",
+      "description": "Read the status bar's last messages - what rBrowser told the person: errors, warnings, info and success notices of the app, its commands, plugins and checks - newest first. Each with id, at (ms since the Unix epoch), level (info, warning, error, success), messageKey, the English text and the settingsKey it is about, if any; kept says how many the history holds (ui.statusBar.historySize). Optional: limit (1 to 1000, default 50), level. A read only; acts on no view.",
+      "target": "none",
+      "actsOn": "the window's message history",
+      "withoutCommand": "a read: the status bar's message history",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "StatusLevel": {
+            "description": "A message's level.",
+            "oneOf": [
+              {
+                "description": "Information.",
+                "type": "string",
+                "const": "info"
+              },
+              {
+                "description": "Something to look at.",
+                "type": "string",
+                "const": "warning"
+              },
+              {
+                "description": "Something failed.",
+                "type": "string",
+                "const": "error"
+              },
+              {
+                "description": "Something finished well.",
+                "type": "string",
+                "const": "success"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "limit": {
+            "description": "At most this many messages, 1 to 1000; 50 when absent.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0
+          },
+          "level": {
+            "description": "Only messages of this level.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/StatusLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "sync_set",
+      "area": "sync",
+      "description": "Switch the synchronisation between the views: action \"set\" (default) with `enabled` turns sync on or off as a whole (target \"all\"), one kind of it (`feature`: navigation, scroll, click, input, keyboard, hover) or one view (target a view id: out of sync while off; with feature \"navigation\" only its navigation, which then neither leads nor follows); action \"resync\" has a desynced view (or every one, target \"all\") load the active view's URL; action \"skipNextClick\" leaves the next click unsynced. `scrollMode` (\"anchor\" or \"wheel\") switches how scroll sync moves the views until the project's settings change. Answers the sync state: the switches, the excluded and the desynced views with the reason and the selector that failed.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "SyncAction": {
+            "description": "What `sync_set` does.",
+            "oneOf": [
+              {
+                "description": "Switch sync, a kind of it or a view on or off (`enabled`).",
+                "type": "string",
+                "const": "set"
+              },
+              {
+                "description": "The target view(s) load the active view's URL; their desync badge goes.",
+                "type": "string",
+                "const": "resync"
+              },
+              {
+                "description": "Do not sync the next click.",
+                "type": "string",
+                "const": "skipNextClick"
+              }
+            ]
+          },
+          "SyncFeature": {
+            "description": "The kind of sync `sync_set` switches.",
+            "oneOf": [
+              {
+                "description": "Sync as a whole.",
+                "type": "string",
+                "const": "all"
+              },
+              {
+                "description": "Navigation.",
+                "type": "string",
+                "const": "navigation"
+              },
+              {
+                "description": "Scrolling.",
+                "type": "string",
+                "const": "scroll"
+              },
+              {
+                "description": "Clicks.",
+                "type": "string",
+                "const": "click"
+              },
+              {
+                "description": "Text input.",
+                "type": "string",
+                "const": "input"
+              },
+              {
+                "description": "Keyboard.",
+                "type": "string",
+                "const": "keyboard"
+              },
+              {
+                "description": "Hover.",
+                "type": "string",
+                "const": "hover"
+              }
+            ]
+          },
+          "ScrollMode": {
+            "description": "How scroll sync moves the views.",
+            "oneOf": [
+              {
+                "description": "The same content at the same edge (an anchor element).",
+                "type": "string",
+                "const": "anchor"
+              },
+              {
+                "description": "Real wheel events, for pages that take over scrolling.",
+                "type": "string",
+                "const": "wheel"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default: sync as a whole or one kind of it), a view id or a breakpoint id (that\nview in or out of sync, or its navigation with `feature: \"navigation\"`).",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "action": {
+            "description": "`set` (default), `resync` or `skipNextClick`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SyncAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feature": {
+            "description": "`set`: the kind to switch; sync as a whole when absent or `all`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SyncFeature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "description": "`set`: on or off.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "scrollMode": {
+            "description": "How scroll sync moves the views from now on; with it `set` needs no `enabled`.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ScrollMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "type",
+      "area": "sync",
+      "description": "Type `text` as real input in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): into the element of `selector` after a click on it, else into the focused element. Works with every keyboard layout. Answers per view; the text never appears in the answer.",
+      "target": "all",
+      "withoutCommand": "replays typed text into the views over CDP; no command types text",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "selector": {
+            "description": "The field, clicked first; the focused element when absent.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "What to type.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "video_list",
+      "area": "video",
+      "description": "The video recordings of the open project (record_video, the Videos panel), newest first: project (false without an open project), folder (.rbrowser/out/video), running (the recording being written, if any), autoplay (capture.video.autoplay) and per recording its id (the folder name <date-time>), path and files - each with name, breakpoint, bytes and path (a WebM per view; an MP4 beside it is the person's export to share, or an old recording) - mp4Export (whether this platform can export MP4) and conversions (the person's MP4 exports and WebM conversions waiting or running, with percent). A read: no tool deletes a recording; the person does in the Videos panel, and capture.video.keepRecordings and capture.video.keepDays delete old ones after each recording.",
+      "target": "none",
+      "actsOn": "the project's recorded videos",
+      "withoutCommand": "a read: the recorded videos; capture.video.panel shows them to the person",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "view_add",
+      "area": "views",
+      "description": "Open the view of a hidden breakpoint again (breakpoint: its id, or \"all\" for every hidden one): the breakpoint leaves layout.hidden of config.local.json, the config is read again and the view opens in the layout in effect - in canvas mode at x/y (canvas DIP) when given, else after the others. Answers added (the breakpoints opened), hidden (the ones still hidden) and changed.",
+      "target": "none",
+      "actsOn": "the hidden selection of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "breakpoint"
+        ],
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "breakpoint": {
+            "description": "A hidden breakpoint id, or `\"all\"` for every hidden one.",
+            "type": "string"
+          },
+          "x": {
+            "description": "Canvas: where the view goes, in canvas DIP (both or neither); elsewhere ignored.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "y": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "view_add_size",
+      "area": "views",
+      "description": "Add a view of a new size or of a device preset: pass width and height (dpr optional), or device (a device preset id: its size, pixel ratio, user agent and touch apply). A breakpoint (name, else size-<width>x<height> or an id made from the device id) is written into config.local.json, the config is read again and the view opens - an explicit layout.cells grid gets a column for it. A breakpoint of that id that exists with the same size or device is opened instead; one with another size or device is refused - choose another name. Answers what is open in the end: breakpoint, width, height, added (false when it existed), changed (false when its view was open already) and hidden; for a device breakpoint also device and dpr.",
+      "target": "none",
+      "actsOn": "the project config and the hidden selection of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "width": {
+            "description": "Width in CSS px, 1 to 16384; with `height`, unless `device` is given.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "height": {
+            "description": "Height in CSS px, 1 to 16384.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "device": {
+            "description": "A device preset's id (`devices_list`) instead of `width` and `height`: the view gets\nthe preset's size, pixel ratio, user agent and touch.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "name": {
+            "description": "The breakpoint's id (letters, digits, `-`, `_`, `.`); `size-<width>x<height>` or the\ndevice's id when absent.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "dpr": {
+            "description": "A device pixel ratio, above 0 and at most 10; not with `device`.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "x": {
+            "description": "Canvas: where the view goes, in canvas DIP (both or neither).",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "y": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "view_metrics",
+      "area": "metrics",
+      "description": "Read the Web Vitals and resources of the targeted views (target: \"all\" (default), a view id or a breakpoint id). Per view: vitals lcp, cls, inp, fcp and ttfb, each with value (ms; CLS unitless), rating (\"good\", \"needs-improvement\" or \"poor\" by web.dev's thresholds, overridable in vitals.thresholds) and the element behind it (lcp element, cls sources, inp target as CSS paths); resources cpuPercent (the page's main-thread share), memoryMb (its JS heap), cpuWarn and ramWarn (resources.cpuWarnPercent, resources.ramWarnMb); throttle (visible, hidden or cpuLimited); segment and soft (a soft navigation measures only CLS and INP). A missing value is {na, reason}: pending (not measured yet, e.g. INP before an interaction), unsupported or engine (the engine cannot give it; Firefox and WebKit views have no resources), soft, or off with the settingsKey that switched it off.",
+      "target": "all",
+      "withoutCommand": "a read: the Web Vitals and resources of the views",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "view_page_zoom",
+      "area": "views",
+      "description": "Zoom the page inside the targeted views as Chrome's Ctrl+Plus, Ctrl+Minus and Ctrl+0 do (Chromium's page zoom, not the grid's zoom of a cell). A zoomed page lays out at another CSS width than its breakpoint's, so breakpoints apply differently; the view's label strip shows the level. level: a factor (1 = 100 %, 0.25 to 5), \"in\" or \"out\" for one of Chromium's steps (25 % to 500 %); 100 % when absent. With the user setting views.pageZoom.sync every view takes the level; Chromium keeps a zoom per site, so views of one session on the same host zoom together. Chromium views zoom; a Firefox view zooms its Chromium stand-in in the grid only - Firefox's own window keeps the zoom its own keys and wheel give it; WebKit views do not zoom. target: \"all\", a view id or a breakpoint id; default the active view. Answers views: [{ view, level, percent }].",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "PageZoomLevel": {
+            "description": "`view_page_zoom`: a factor (`1` = 100 %) or a step.",
+            "anyOf": [
+              {
+                "description": "The factor: 1 for 100 %, 0.25 to 5.",
+                "type": "number",
+                "format": "double"
+              },
+              {
+                "description": "`\"in\"` or `\"out\"`: one of Chromium's steps.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "level": {
+            "description": "The factor (1 = 100 %, 0.25 to 5) or `\"in\"` / `\"out\"` for one of Chromium's steps;\n100 % when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PageZoomLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "view_pop_in",
+      "area": "views",
+      "description": "Take one view (target: a view id or breakpoint id, default the active view) out of its own window back into its grid cell at the cell's zoom; the window closes. Answers view, detached and changed (false when it was in the grid).",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view: a view id or a breakpoint id shown once; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "view_pop_out",
+      "area": "views",
+      "description": "Pop one view (target: a view id or breakpoint id, default the active view) out of the grid into a window of its own at its real size: zoom 1, the breakpoint's width in CSS px, still synced, same view id, session and emulation. A window larger than the screen follows the setting popOut.fitToScreen. A view out already comes to the front. Answers view, detached and changed.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view: a view id or a breakpoint id shown once; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "view_remove",
+      "area": "views",
+      "description": "Remove one view (target: a view id or breakpoint id, default the active view) from every layout mode: its breakpoint goes into layout.hidden of config.local.json and the view closes (a window of its own included). The last view stays and the call is refused. Answers removed (the breakpoint), view, hidden and changed (false when it was hidden already). The breakpoint stays in the config; view_add opens it again.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view: a view id or a breakpoint id shown once; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "view_set_breakpoint",
+      "area": "layout",
+      "description": "Set one view (target: a view id or breakpoint id, default the active view) to a breakpoint or device preset, or to a free width/height/dpr; newView opens a new view instead.",
+      "target": "one",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "One view (id or breakpoint id); the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "breakpoint": {
+            "description": "A breakpoint or device preset id.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "width": {
+            "description": "A free width in CSS px (instead of a breakpoint).",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "height": {
+            "description": "A free height in CSS px.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "dpr": {
+            "description": "A free device pixel ratio.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "newView": {
+            "description": "Open a new view with it instead.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "views_force_state",
+      "area": "views",
+      "description": "Force CSS pseudo-class states on a page element so it stays styled as hovered, focused or active while nothing touches it - e.g. keep a CSS hover menu (li:hover > ul) open in every view to measure or screenshot it. Chromium's CSS.forcePseudoState: hover, active and focus-within reach every ancestor too, as a real hover does; menus that open only through JavaScript (mouseenter) do not react. The element: a point (x, y in CSS px of the page's viewport, in `view`; rBrowser's own overlays are passed over) - the same element is found in the other targeted views by the sync's selectors - or a CSS selector, matched in each view. states: hover, active, focus, focus-visible, focus-within, visited, target; default [\"hover\"], [] takes the element's back. clear: true takes the element's states back, or without point and selector every forced state of the target (default then every view). States stay until cleared or the page navigates; the status bar says while states are forced. Only Chromium views. target: \"all\", a view id or a breakpoint id; default the active view. Answers views: [{ view, states } | { view, missing: true } | { view, error }] and forced: the views with forced states.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id: the views to force in; the active view when\nabsent (every view for a `clear` without an element).",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "states": {
+            "description": "The states the element gets, replacing what it had: `hover`, `active`, `focus`,\n`focus-visible`, `focus-within`, `visited`, `target` (with or without the colon);\n`[\"hover\"]` when absent, `[]` takes the element's states back.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "default": null
+          },
+          "selector": {
+            "description": "A CSS selector: its first match in each targeted view.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "x": {
+            "description": "The point's x in CSS px of the page's viewport (with `y`), in `view`.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "y": {
+            "description": "The point's y in CSS px of the page's viewport (with `x`), in `view`.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "view": {
+            "description": "The view the point is in; the same element is found in the other targeted views. The\ntarget's view when it is one, else the active view.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0,
+            "default": null
+          },
+          "clear": {
+            "description": "`true`: take states back - the element's, or with neither point nor selector every\nforced state of the target.",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "views_list",
+      "area": "views",
+      "description": "List the views of the grid in grid order: id (the `target` of every view tool), label, breakpoint (null after a free size), cellBreakpoint, engine, width, height, dpr, scale, url, title, loading, session and cell; desync (null while the view is in sync, else the reason, the event and the selector that failed), syncNavigation (whether the view follows the active view's navigation), detached (the view is in a window of its own, view_pop_out), range (the widths the view stands for among the breakpoints of the config, as its breakpoint bar shows them: from - 0 for the smallest breakpoint - and to, null for the largest), external (a Firefox or WebKit view in a window of its own) with its status, externalWindow (open while that window runs or is starting, closed when the person closed it, it crashed or could not start; engine_restart opens it again) and embedded (true while that window sits in its grid cell, setting engines.external.embed; false while it is a window of its own); frameworks (what the page runs of Vue and React while their Framework DevTools are not off: per framework version, hook - rBrowser's DevTools hook is in the document - and devtools - the framework talks to it; {} when none).",
+      "target": "none",
+      "actsOn": "the grid",
+      "withoutCommand": "a read: the views of the grid",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "views_set_engine",
+      "area": "views",
+      "description": "Set the engine of the targeted views (target: \"all\", a view id or a breakpoint id; default the active view) to chromium, firefox or webkit. The engine is written as breakpoints[].engine of each view's breakpoint into file local (config.local.json, the default) or project (config.json, shared with the team), the config is read again and the view follows - Firefox and WebKit in external windows. An engine that cannot run (Firefox not found, WebKit not installed) is refused with the reason. Answers per view { view, breakpoint, engine, file, changed } - changed is false when a config.local.json entry of the breakpoint shadows a project write - or { view, failed } for a view without a breakpoint of the config; target all is one write and one reload.",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          },
+          "EngineArg": {
+            "description": "The engines `views_set_engine` takes.",
+            "oneOf": [
+              {
+                "description": "CEF, in the grid.",
+                "type": "string",
+                "const": "chromium"
+              },
+              {
+                "description": "The installed Firefox, in an external window.",
+                "type": "string",
+                "const": "firefox"
+              },
+              {
+                "description": "Playwright's WebKit, in an external window.",
+                "type": "string",
+                "const": "webkit"
+              }
+            ]
+          }
+        },
+        "required": [
+          "engine"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"`, a view id or a breakpoint id; the active view when absent.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "engine": {
+            "description": "`chromium`, `firefox` or `webkit`.",
+            "$ref": "#/$defs/EngineArg"
+          },
+          "file": {
+            "description": "`local` (`config.local.json`, personal, the default) or `project` (`config.json`,\nshared with the team).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "visual_baseline_update",
+      "area": "visual",
+      "description": "Capture views (target \"all\" (default), a view id or a breakpoint id) and store them as the new baselines in .rbrowser/baselines/<page>/<breakpoint>.png with meta.json (machine, DPI, engine and version, viewport, date), replacing the ones before. Answers the files written and whether Git LFS tracks the baselines; setting up Git LFS is the person's command in rBrowser. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after).",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "hideBanners": {
+            "description": "Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "freezeAnimations": {
+            "description": "Freeze animations and videos; the setting capture.freezeAnimations when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "visual_compare",
+      "area": "visual",
+      "description": "Compare views with their baselines in .rbrowser/baselines/<page>/<breakpoint>.png (target \"all\" (default), a view id or a breakpoint id): each view is captured, diffed pixel by pixel with anti-aliasing tolerance and answered as ok, differs (share of differing pixels, bounding boxes, diff image path), new (no baseline), sizeMismatch or failed, with the metadata fields that make a comparison unreliable (another machine, DPI or engine version). threshold (0 to 1) overrides visual.threshold. The findings also go to the findings panel; regressions counts differs and sizeMismatch. One run at a time. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after).",
+      "target": "all",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "writeOnly": true
+          },
+          "threshold": {
+            "description": "The colour tolerance, 0 to 1; the setting `visual.threshold` when absent.",
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "hideBanners": {
+            "description": "Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "freezeAnimations": {
+            "description": "Freeze animations and videos; the setting capture.freezeAnimations when absent.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "wsl_info",
+      "area": "app",
+      "description": "WSL: the installed distributions, the one in use, its networking mode (mirrored or NAT) and whether 127.0.0.1 inside it reaches rBrowser, and the helper's state. action restart restarts the helper first.",
+      "target": "none",
+      "actsOn": "WSL",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "description": "`info` (default) or `restart` (the helper, then the report).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      }
+    }
+  ],
+  "pending": []
+}

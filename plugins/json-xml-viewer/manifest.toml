@@ -1,0 +1,47 @@
+# JSON/XML viewer (RB-070-05, docs/plugins.md): a JSON or XML document opened in a view - an API
+# response, a sitemap.xml, a feed - as a collapsible, searchable tree with a switch to its raw and
+# formatted text. The page script does the work in the view's isolated world (detection,
+# parsing, the virtual tree, JSONPath/XPath filters, copying); large documents never cross the
+# bridge. The component hands it the settings and serves the command.
+manifest_version = 1
+id = "json-xml-viewer"
+name = "JSON/XML viewer"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "jsonview"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Shows JSON and XML documents as a collapsible, searchable tree with JSONPath and XPath filters, copy value and path, and a switch to the raw text."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the active view, which `toggle_raw` switches. Nothing else: the page script reads the
+# document already loaded - no network, no CDP, nothing written.
+[capabilities]
+views = true
+
+[settings]
+schema = "settings.schema.json"
+
+# Switches the active view (or every view with {"target": "all"}) between tree and raw text.
+[[commands]]
+id = "toggle_raw"
+title = "plugin.json-xml-viewer.commands.toggle_raw"
+shortcut = "Ctrl+Shift+Space V J"
+group = "view"
+mcp_omitted = "display only: agents read responses through network_requests"
+
+# Built from web/ (npm run build). document-end: Chromium's XML tree viewer has moved the
+# document's nodes by then.
+[[page_scripts]]
+path = "page/viewer.js"
+run_at = "document-end"

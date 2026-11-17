@@ -1,0 +1,109 @@
+# Fonts (RB-070-13, docs/plugins.md): the fonts of every view - families, faces, sources (Google
+# Fonts, Adobe Fonts, the page's own server, installed), formats, file sizes and where each is
+# used - what Chromium really drew against what the page declares, the font sizes across the
+# breakpoints, and findings on privacy, performance and readability for `checks_run`. A click in
+# the panel marks where a family is used in every view.
+manifest_version = 1
+id = "fonts"
+name = "Fonts"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "fonts"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "The fonts of every view: sources, formats, sizes, where each is used, what is really rendered, the sizes across breakpoints, and privacy, performance and readability findings."
+# Checks > Fonts in the page's context menu (RB-090-63): the check, as its shortcut runs it.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views a call covers; evaluate: the page part src/page.js in the plugin's isolated
+# world - it reads the @font-face rules, document.fonts, Resource Timing's font files and the
+# computed fonts of the text, and draws the marks in an `rbrowser-fonts` element; cdp: the fonts
+# Chromium drew (CSS.getPlatformFontsForNode) for elements found by selector (DOM.querySelector on
+# the document the accessibility tree's root names, DOM.pushNodesByBackendIdsToFrontend; DOM
+# .getDocument only when nobody requested the document) - no domain is switched on; out-write:
+# the export `.rbrowser/out/fonts/fonts.json` and `fonts.csv`; findings: the command `check`.
+# Nothing leaves the machine.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Accessibility", "DOM", "CSS"] }
+out-write = true
+findings = true
+
+# Up to 40 elements per view whose rendered fonts are read (two CDP calls each).
+[limits]
+memory_bytes = 134217728
+fuel = 20000000000
+timeout_milliseconds = 60000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `fonts_list`: the inventory over the views - families with source, formats, faces (status
+# per view, file, size, preload), use per view and what Chromium drew; the font sizes of the text
+# roles per view with jumps and the fluid-typography verdict; the font files; the findings.
+[[tools]]
+name = "list"
+description = "plugin.fonts.tools.list"
+input = { type = "object", properties = { rendered = { type = "boolean" }, budget = { type = "integer", minimum = 4096, maximum = 4194304 } } }
+
+# MCP `fonts_check`: the findings of the views with a count per rule.
+[[tools]]
+name = "check"
+description = "plugin.fonts.tools.check"
+input = { type = "object", properties = { rendered = { type = "boolean" } } }
+
+# MCP `fonts_mark`: outlines the text set in a family (and weight, style) in the views, or clears.
+[[tools]]
+name = "mark"
+description = "plugin.fonts.tools.mark"
+input = { type = "object", properties = { family = { type = "string", minLength = 1, maxLength = 200 }, weight = { type = "integer", minimum = 1, maximum = 1000 }, style = { type = "string", enum = ["normal", "italic", "oblique"] }, clear = { type = "boolean" } } }
+
+# MCP `fonts_export`: the inventory written to .rbrowser/out/fonts/fonts.json and fonts.csv.
+[[tools]]
+name = "export"
+description = "plugin.fonts.tools.export"
+input = { type = "object", properties = { rendered = { type = "boolean" } } }
+
+# MCP `fonts_preview`: one part (40 KiB) of a font file a view loaded, as base64, for the panel's
+# preview (RB-080-83): read again in the view (`fetch` from the browser's cache), only a file the
+# page itself loaded and none above `previewMaxKb`; otherwise the reason.
+[[tools]]
+name = "preview"
+description = "plugin.fonts.tools.preview"
+input = { type = "object", required = ["view", "src"], properties = { view = { type = "integer", minimum = 1 }, src = { type = "string", minLength = 8, maxLength = 2048 }, offset = { type = "integer", minimum = 0 } } }
+
+# `plugin.fonts.panel`, Ctrl+Shift+Space P Y: shows the Fonts panel.
+[[commands]]
+id = "panel"
+title = "plugin.fonts.commands.panel"
+shortcut = "Ctrl+Shift+Space P Y"
+group = "panels"
+mcp_omitted = "ui-only: opens the Fonts panel (panel visibility)"
+
+# `plugin.fonts.check`, Ctrl+Shift+Space K F: every view's fonts checked, the findings into the
+# findings panel.
+[[commands]]
+id = "check"
+title = "plugin.fonts.commands.check"
+shortcut = "Ctrl+Shift+Space K F"
+group = "checks"
+tool = "check"
+
+[[panels]]
+id = "fonts"
+title = "plugin.fonts.panels.fonts"
+entry = "panel/index.html"
+icon = "type"
+placement = "sidebar"

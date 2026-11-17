@@ -1,0 +1,2 @@
+@import url("wide.css") screen;
+@media (min-width: 900px) { main { display: grid; } }

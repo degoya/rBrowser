@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Console fixture</title>
+  </head>
+  <body>
+    <h1>Console fixture</h1>
+    <p>The shared console's fixture (RB-060-02): every view logs the same warning, the views below
+      600 px throw an uncaught error, and <code>?fetch=1</code> requests a file that is missing.</p>
+    <script>
+      // The viewport width differs per view; the console groups the warning all the same.
+      console.warn('console fixture: deprecated layout API (viewport ' + window.innerWidth + ')');
+      if (new URLSearchParams(location.search).has('fetch')) {
+        fetch('/console-fixture-missing.json').catch(() => {});
+      }
+      if (window.innerWidth < 600) throw new Error('console fixture: layout failed at ' + window.innerWidth + ' px');
+    </script>
+  </body>
+</html>

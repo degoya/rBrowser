@@ -1,0 +1,56 @@
+{
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether a JSON or XML document opened in a view is shown as a tree. Takes effect in documents loaded after the change.",
+      "x-category": "devtools",
+      "x-section": "json-viewer",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "maxBytes": {
+      "type": "integer",
+      "minimum": 65536,
+      "maximum": 268435456,
+      "default": 20971520,
+      "description": "The largest document shown as a tree, in bytes; a larger one stays plain text with a notice.",
+      "x-category": "devtools",
+      "x-section": "json-viewer",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "defaultView": {
+      "type": "string",
+      "enum": ["tree", "raw"],
+      "default": "tree",
+      "description": "Whether a document opens as a tree or as its raw text.",
+      "x-category": "devtools",
+      "x-section": "json-viewer",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "expandDepth": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16,
+      "default": 2,
+      "description": "How many levels of the tree are open when a document opens; a large document opens fewer (at most 5000 rows below the top).",
+      "x-category": "devtools",
+      "x-section": "json-viewer",
+      "x-order": 4,
+      "x-scope": ["user"]
+    },
+    "theme": {
+      "type": "string",
+      "enum": ["auto", "light", "dark"],
+      "default": "auto",
+      "description": "The viewer's colours; auto follows the view's prefers-color-scheme.",
+      "x-category": "devtools",
+      "x-section": "json-viewer",
+      "x-order": 5,
+      "x-scope": ["user"]
+    }
+  }
+}

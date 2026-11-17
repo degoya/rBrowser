@@ -1,0 +1,399 @@
+name: Release
+
+# A version tag builds, packages and publishes rBrowser (RB-090-04, after rCommander's
+# release.yml; prepared, inactive until the move to GitHub, RB-090-12): the bundled plugins
+# signed with the release key, the Windows package built natively with them
+# (scripts/package-windows.sh), SHA256SUMS over the assets and its keyless Sigstore signature, and
+# the GitHub release, whose text is the version's section of CHANGELOG.md. Two steps stay off
+# until the owner sets their repository variable to `true` (docs/release.md): code signing of the
+# Windows binaries after the build, in a step that compiles nothing (RB_CODESIGN, RB-090-03,
+# RB-110-06) and the signed update manifests
+# (RB_SELF_UPDATE, RB-090-02, RB-110-05). After the release, the package channels follow it
+# (RB-090-13, RB-110-04): the Scoop bucket, winget, the Homebrew tap and the apt and dnf
+# repository, each only with its secret set. The only workflow that reads a secret.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# Nothing by default; `publish` names what it writes.
+permissions: {}
+
+# A re-run of a tag waits for the running one instead of racing it to the release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # A runner runs one job: the build lock and the memory gate of scripts/lib/lock.sh are for a
+  # shared workstation.
+  RB_NO_LOCK: 1
+  RB_MIN_FREE_MB: 0
+
+# No Rust cache: a tag's run reads only its own caches and the default branch's, and none holds a
+# release build.
+
+jobs:
+  # The bundled plugins, signed with the release key rbrowser-plugin-v1 (docs/plugins.md). The key
+  # is written to a file only this job's runner sees, never echoed, and removed after the step.
+  plugins:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The tag is the workspace version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/set-version.sh "${REF_NAME#v}" --check
+      - uses: ./.github/actions/setup-rust
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-tools@1.261.0
+      # Compiled without the key first: cargo runs the build scripts and proc macros of every
+      # dependency here, and none of them may find the signing key. The signed run below finds
+      # everything built and compiles nothing.
+      - name: Build the bundled plugins
+        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
+      - name: Sign the bundled plugins
+        env:
+          RBROWSER_PLUGIN_SIGNING_KEY: ${{ secrets.RBROWSER_PLUGIN_SIGNING_KEY }}
+        run: |
+          if [[ -z "${RBROWSER_PLUGIN_SIGNING_KEY}" ]]; then
+            echo "::error::RBROWSER_PLUGIN_SIGNING_KEY is not set; a release ships signed plugins only"
+            exit 1
+          fi
+          key="${RUNNER_TEMP}/plugin-signing.pem"
+          trap 'rm -f "${key}"' EXIT
+          (umask 077 && printf '%s\n' "${RBROWSER_PLUGIN_SIGNING_KEY}" > "${key}")
+          RB_PLUGIN_SIGNING_KEY="${key}" scripts/build-plugins.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: plugins
+          path: artifacts/plugins/*.rbplugin
+          if-no-files-found: error
+          retention-days: 3
+
+  # The Windows package, built natively with MSVC from the signed plugins above (downloaded into
+  # the ignored artifacts/plugins/, so the tree stays clean and VERSION.txt names the tag's
+  # commit). The MSI joins with `--msi` once RB-090-01 delivers it.
+  windows:
+    needs: plugins
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plugins
+          path: artifacts/plugins
+      # Builds the front ends it ships (ui/, agent/, sidecar/, `npm ci --ignore-scripts`) and the
+      # app, and packs the ZIP. No certificate is on the runner yet: a build runs the build scripts
+      # of every dependency (scripts/lib/check_workflows.py holds that order).
+      - name: scripts/package-windows.sh
+        run: scripts/package-windows.sh --plugins artifacts/plugins
+      # Off until the owner sets the variable RB_CODESIGN to `true` (RB-090-03, RB-110-06). A step
+      # that compiles nothing: the certificate is written to a file only this runner sees, the
+      # binaries in the ZIP are signed with signtool (SHA-256, RFC 3161 timestamp from
+      # RB_SIGN_TIMESTAMP_URL, DigiCert's when unset), each signature verified, and the ZIP packed
+      # again (scripts/sign-windows.sh); the files are removed when the step ends. Any failure
+      # fails the release rather than publish an unsigned package as signed.
+      - name: Sign the package
+        if: vars.RB_CODESIGN == 'true'
+        env:
+          RB_SIGN_PFX_BASE64: ${{ secrets.RB_SIGN_PFX_BASE64 }}
+          RB_SIGN_PFX_PASSWORD: ${{ secrets.RB_SIGN_PFX_PASSWORD }}
+          RB_SIGN_TIMESTAMP_URL: ${{ vars.RB_SIGN_TIMESTAMP_URL }}
+        run: |
+          if [[ -z "${RB_SIGN_PFX_BASE64}" || -z "${RB_SIGN_PFX_PASSWORD}" ]]; then
+            echo "::error::RB_CODESIGN is true, but RB_SIGN_PFX_BASE64 or RB_SIGN_PFX_PASSWORD is not set"
+            exit 1
+          fi
+          pfx="${RUNNER_TEMP}/codesign.pfx"
+          pass="${RUNNER_TEMP}/codesign.pass"
+          trap 'rm -f "${pfx}" "${pass}"' EXIT
+          (umask 077 && base64 -d <<< "${RB_SIGN_PFX_BASE64}" > "${pfx}" \
+            && printf '%s' "${RB_SIGN_PFX_PASSWORD}" > "${pass}")
+          RB_SIGN_PFX="${pfx}" RB_SIGN_PFX_PASSWORD_FILE="${pass}" \
+            RB_SIGN_TIMESTAMP_URL="${RB_SIGN_TIMESTAMP_URL}" \
+            scripts/sign-windows.sh artifacts/windows/rbrowser-*-windows-x64.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-windows-x64
+          path: |
+            artifacts/windows/*.zip
+            artifacts/windows/*.msi
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: [plugins, windows]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      # The GitHub release.
+      contents: write
+      # The keyless Sigstore signature of SHA256SUMS.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-windows-x64
+          path: release-assets
+      - name: Generate SHA-256 checksums
+        run: scripts/release-assets.sh sums release-assets
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - name: Sign the checksums with Sigstore
+        working-directory: release-assets
+        run: cosign sign-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json --yes
+      # Off until the owner sets the variable RB_SELF_UPDATE to `true` (RB-090-02, RB-110-05).
+      # rb-pack is built here, before any step reads the key: no build script runs while the key
+      # is on the runner.
+      - name: Build rb-pack
+        if: vars.RB_SELF_UPDATE == 'true'
+        run: cargo build --release --locked -p rb-update --bin rb-pack
+      # The signed update manifest of this release's channel, from the ZIP above; signed itself
+      # and therefore not in SHA256SUMS. The key is written to a file only this runner sees, and
+      # scripts/sign-update.sh runs the rb-pack built above (RB_PACK), compiling nothing.
+      - name: Sign the update manifest
+        if: vars.RB_SELF_UPDATE == 'true'
+        env:
+          RBROWSER_UPDATE_SIGNING_KEY: ${{ secrets.RBROWSER_UPDATE_SIGNING_KEY }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ -z "${RBROWSER_UPDATE_SIGNING_KEY}" ]]; then
+            echo "::error::RB_SELF_UPDATE is true, but RBROWSER_UPDATE_SIGNING_KEY is not set"
+            exit 1
+          fi
+          key="${RUNNER_TEMP}/update-signing.key"
+          trap 'rm -f "${key}"' EXIT
+          (umask 077 && printf '%s\n' "${RBROWSER_UPDATE_SIGNING_KEY}" > "${key}")
+          channel=stable
+          [[ "${REF_NAME}" != *-* ]] || channel=beta
+          mkdir -p artifacts/windows
+          cp release-assets/*.zip artifacts/windows/
+          RB_PACK=target/release/rb-pack RB_UPDATE_SIGNING_KEY="${key}" \
+            scripts/sign-update.sh "${channel}"
+          cp artifacts/update/rbrowser-update-*.json release-assets/
+      - name: Write the release text
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-assets.sh notes "${REF_NAME#v}" > "${RUNNER_TEMP}/release-notes.md"
+      # A vX.Y.Z-beta.N tag is a pre-release: GitHub's `latest` stays on the newest plain release.
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          body_path: ${{ runner.temp }}/release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release-assets/*
+
+  # The package channels (RB-090-13, RB-110-04), after the release is published: each job moves
+  # its channel to this release, and only for the newest plain vX.Y.Z tag
+  # (scripts/release-channels.sh gate),
+  # so a re-run of an older tag or a pre-release moves nothing back. The release is out by then, so
+  # nothing here may fail it - a failed channel shows as a failed job of the run. Each job gets the
+  # secret it reads and nothing else, and nothing prints one; a job whose secret is not set ends
+  # with a notice. The Homebrew tap and the apt and dnf repository wait for the macOS and Linux
+  # packages (RB-110-01, RB-110-02): until a release carries them, their jobs end with a notice.
+  #
+  # The tap and the bucket are pushed with a write deploy key of their own repository,
+  # <owner>/homebrew-rbrowser and <owner>/scoop-rbrowser (HOMEBREW_TAP_DEPLOY_KEY,
+  # SCOOP_BUCKET_DEPLOY_KEY); actions/checkout clones with it and leaves the SSH remote for the
+  # push.
+  homebrew:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide whether the tap moves
+        id: gate
+        env:
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh gate tap
+      - name: Render the cask and the formula
+        if: steps.gate.outputs.move == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh render
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.gate.outputs.move == 'true'
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-rbrowser
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: tap
+      - name: Push the cask and the formula to the tap
+        if: steps.gate.outputs.move == 'true'
+        env:
+          CHECKOUT: tap
+          RENDERED: rendered/homebrew
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh push
+
+  scoop:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide whether the bucket moves
+        id: gate
+        env:
+          SCOOP_BUCKET_DEPLOY_KEY: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh gate bucket
+      - name: Render the manifest
+        if: steps.gate.outputs.move == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh render
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.gate.outputs.move == 'true'
+        with:
+          repository: ${{ github.repository_owner }}/scoop-rbrowser
+          ssh-key: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
+          path: bucket
+      - name: Push the manifest to the bucket
+        if: steps.gate.outputs.move == 'true'
+        env:
+          CHECKOUT: bucket
+          RENDERED: rendered/scoop
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh push
+
+  # The winget manifests as a pull request to microsoft/winget-pkgs, opened by komac (pinned with
+  # its checksum) from the fork <account>/winget-pkgs of the token in WINGET_TOKEN (a classic token
+  # with public_repo, or a fine-grained one with write access to the fork); the token reaches
+  # komac and gh through the environment only. Microsoft's validation and review follow; the
+  # account's open pull requests for an older version are then closed as superseded.
+  winget:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide whether winget gets this release
+        id: gate
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh gate winget
+      - name: Render the manifests
+        if: steps.gate.outputs.move == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-channels.sh render
+      - name: Submit the manifests to winget-pkgs
+        id: winget
+        if: steps.gate.outputs.move == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          KOMAC_CREATED_WITH: rBrowser release workflow
+          KOMAC_CREATED_WITH_URL: https://github.com/${{ github.repository }}/blob/main/.github/workflows/release.yml
+        run: scripts/release-channels.sh winget
+      - name: Close the superseded winget pull requests
+        if: ${{ !cancelled() && steps.winget.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/winget-supersede.sh "${REF_NAME#v}" "${RUNNER_TEMP}/komac.log"
+
+  # The release's .deb and .rpm into <owner>/rbrowser-packages, the GitHub Pages repository of the
+  # apt and dnf repository (scripts/release-repositories.sh): filed, the newest two versions per
+  # package and architecture kept, the rpms and both indexes signed with the key rbrowser-packages
+  # (PACKAGES_GPG_KEY; PACKAGES_GPG_PASSPHRASE optional; only the key whose public half is
+  # packaging/repository/rbrowser-packages.asc signs), pushed with that repository's write deploy
+  # key (PACKAGES_DEPLOY_KEY). The repository variable PACKAGES_BASE_URL may name another address
+  # than its Pages site.
+  apt-dnf:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Decide whether the repository moves
+        id: gate
+        env:
+          PACKAGES_DEPLOY_KEY: ${{ secrets.PACKAGES_DEPLOY_KEY }}
+          PACKAGES_GPG_KEY: ${{ secrets.PACKAGES_GPG_KEY }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-repositories.sh gate
+      - name: Download the release's deb and rpm packages
+        id: download
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-repositories.sh download
+      # Bounded per request and per attempt, so a stalled mirror costs minutes, not the job.
+      - name: Install the repository tools
+        if: steps.download.outputs.found == 'true'
+        run: |
+          apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          timeout 180 sudo apt-get "${apt_opts[@]}" update -qq
+          timeout 300 sudo apt-get "${apt_opts[@]}" install -y --no-install-recommends apt-utils rpm createrepo-c
+      - name: Clone the packages repository
+        if: steps.download.outputs.found == 'true'
+        env:
+          PACKAGES_DEPLOY_KEY: ${{ secrets.PACKAGES_DEPLOY_KEY }}
+          OWNER: ${{ github.repository_owner }}
+        run: scripts/release-repositories.sh clone
+      - name: Update and sign the repository
+        if: steps.download.outputs.found == 'true'
+        env:
+          PACKAGES_GPG_KEY: ${{ secrets.PACKAGES_GPG_KEY }}
+          PACKAGES_GPG_PASSPHRASE: ${{ secrets.PACKAGES_GPG_PASSPHRASE }}
+          PACKAGES_BASE_URL: ${{ vars.PACKAGES_BASE_URL }}
+          OWNER: ${{ github.repository_owner }}
+        run: scripts/release-repositories.sh sign
+      - name: Push the repository
+        if: steps.download.outputs.found == 'true'
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-repositories.sh push

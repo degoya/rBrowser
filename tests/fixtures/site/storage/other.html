@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storage fixture</title>
+    <!-- RB-070-01: the first script of the page. It logs what it finds, before anything else of
+         the page runs; a pinned featureFlag must already be set here. -->
+    <script>
+      console.log('storage fixture: featureFlag=' + localStorage.getItem('featureFlag'));
+      document.documentElement.dataset.featureFlag = String(localStorage.getItem('featureFlag'));
+    </script>
+  </head>
+  <body>
+    <h1>Storage fixture, another page</h1>
+    <p>featureFlag at the first script: <output id="flag"></output></p>
+    <p>
+      <button id="consent" type="button">Accept cookies (consent=yes)</button>
+      <button id="flag-off" type="button">Page sets featureFlag=off</button>
+      <a href="index.html">Back to the first page</a>
+    </p>
+    <script>
+      document.getElementById('flag').textContent = document.documentElement.dataset.featureFlag;
+      document.getElementById('consent').addEventListener('click', () => {
+        document.cookie = 'consent=yes; path=/; SameSite=Lax';
+      });
+      document.getElementById('flag-off').addEventListener('click', () => {
+        localStorage.setItem('featureFlag', 'off');
+      });
+      sessionStorage.setItem('visits', String(Number(sessionStorage.getItem('visits') ?? 0) + 1));
+    </script>
+  </body>
+</html>

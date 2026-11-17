@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the Coverage plugin (RB-080-07): Settings > Checks > Coverage",
+  "type": "object",
+  "properties": {
+    "minBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 104857600,
+      "default": 10240,
+      "description": "A file smaller than this, in bytes (UTF-16 units, as DevTools counts), gets no unused-file warning.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 1,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "unusedPercent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 50,
+      "description": "A file with more than this share unused, in percent, in every view that loads it is reported.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 2,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "defaultMode": {
+      "type": "string",
+      "enum": [
+        "load",
+        "interaction"
+      ],
+      "default": "load",
+      "description": "What coverage_get measures without a mode: load reloads every view and measures, interaction reads the running session.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 3,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "thirdParty": {
+      "type": "boolean",
+      "default": true,
+      "description": "Measure files from other origins than the page's (CDNs, analytics).",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 4,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "ignore": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      },
+      "default": [],
+      "description": "Files left out: URL patterns where * stands for any characters, such as */vendor/* or *.min.js.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 5,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "idleMs": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 10000,
+      "default": 500,
+      "description": "A reloaded page counts as loaded once no new request came for this many milliseconds.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 6,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    },
+    "loadTimeoutSeconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 120,
+      "default": 30,
+      "description": "How long a view may take to load again before its measurement fails.",
+      "x-category": "checks",
+      "x-section": "coverage",
+      "x-order": 7,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
+    }
+  }
+}

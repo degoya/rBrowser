@@ -1,0 +1,15 @@
+# Where the public tree may still match one of the private names of scripts/public-names.txt
+# (RB-090-12), read by scripts/lib/public-names.py and held by scripts/tests/export-public.sh.
+# What stays is a made-up placeholder: a Windows profile of nobody in a WSL path.
+#
+# One entry per line: <path or glob> | <regular expression found in the line> | <reason>. What
+# the expression finds is cut from the line before the private names are looked for again, so a
+# placeholder never carries a real name beside it. An entry whose glob starts with `wiki/`
+# applies to the handbook's pages (scripts/export-public-wiki.sh); an entry of the repository
+# that no line needs any more fails the test. An expression spells a name with a character class
+# (`User[s]`) so that this list does not match itself.
+
+# The WSL path translation, with a made-up user.
+crates/rb-wsl/src/path_tests.rs | /mnt/c/User[s]/Me\b | a made-up user of the translation's cases
+# The MCP registration line, with a made-up user's profile.
+crates/rbrowser/src/mcp/mod_tests.rs | /mnt/c/User[s]/me/ | a made-up user's profile in a WSL path

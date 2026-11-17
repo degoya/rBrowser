@@ -1,0 +1,113 @@
+# Lighthouse per breakpoint (RB-060-07, docs/plugins.md): the Node sidecar runs Lighthouse for
+# each Chromium breakpoint with its emulation (size, device pixel ratio, mobile, user agent), in a
+# headless browser of its own - never in a visible view, so the grid neither navigates nor
+# waits. The component builds each run's settings, saves the HTML and JSON reports under
+# `.rbrowser/out/lighthouse/<run>/`, and turns the failed audits into findings with the
+# breakpoints they failed in. Firefox and WebKit breakpoints are skipped with the reason.
+manifest_version = 1
+id = "lighthouse"
+name = "Lighthouse"
+version = "0.1.0"
+api_version = "0.1.0"
+# `check.run` answers findings (`checks_run`); the command and the MCP tools need `feature`.
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "lighthouse"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Runs Lighthouse for every Chromium breakpoint with its own emulation, saves the reports in the project and reports failed audits as findings per breakpoint."
+# Checks > Lighthouse in the page's context menu (RB-080-43).
+context_menu = ["run"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the breakpoints, sizes and URLs; project-read: `.rbrowser/config.json`
+# (`checks.lighthouse.categories`, the breakpoints' touch, mobile and user agent) and the plugin's
+# own `.rbrowser/out/lighthouse/` - `latest.json`, the run folders and their `run.json`, an older
+# run's LHR for the comparison (no globs); out-write: the reports and run summaries; findings: the command's findings run; sidecar: exactly the `lighthouse.*` methods of
+# sidecar/src/modules/lighthouse/.
+[capabilities]
+views = true
+project-read = true
+out-write = true
+findings = true
+sidecar = { methods = ["lighthouse.start", "lighthouse.poll", "lighthouse.report", "lighthouse.release", "lighthouse.cancel", "lighthouse.status"] }
+
+# A run over several breakpoints takes minutes: each breakpoint is one Lighthouse run of 10 to
+# 60 s, polled every few seconds (host time is credited back; the call's wall clock is three
+# times the timeout). The LHR of a large page is several MiB of JSON. Four stores at once let
+# the panel ask for the status and cancel while a run goes on.
+[limits]
+memory_bytes = 268435456
+fuel = 20000000000
+timeout_milliseconds = 300000
+max_concurrent = 4
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `lighthouse_run`: Lighthouse for the breakpoints of `target` (or all), one after another.
+[[tools]]
+name = "run"
+description = "plugin.lighthouse.tools.run"
+input = { type = "object", properties = { breakpoints = { type = "array", maxItems = 32, items = { type = "string", minLength = 1, maxLength = 64 } }, categories = { type = "array", maxItems = 4, items = { type = "string", enum = ["performance", "accessibility", "best-practices", "seo"] } }, url = { type = "string", minLength = 1, maxLength = 8192 } } }
+
+# MCP `lighthouse_status`: the run going on and the last run's scores.
+[[tools]]
+name = "status"
+description = "plugin.lighthouse.tools.status"
+input = { type = "object" }
+
+# MCP `lighthouse_cancel`: ends the running Lighthouse run and the queued ones.
+[[tools]]
+name = "cancel"
+description = "plugin.lighthouse.tools.cancel"
+input = { type = "object" }
+
+# MCP `lighthouse_reports` (RB-091-02): the runs on disk (`list`), a report in rBrowser's report
+# window (`open`: the newest run and the active view's breakpoint unless named) and two runs of
+# one breakpoint side by side (`compare`: scores and metrics). Deleting is not offered here.
+[[tools]]
+name = "reports"
+description = "plugin.lighthouse.tools.reports"
+input = { type = "object", properties = { action = { type = "string", enum = ["list", "open", "compare"] }, run = { type = "string", pattern = "^[0-9]{8}-[0-9]{6}$" }, breakpoint = { type = "string", minLength = 1, maxLength = 64 }, runs = { type = "array", minItems = 2, maxItems = 2, items = { type = "string", pattern = "^[0-9]{8}-[0-9]{6}$" } } } }
+
+# plugin.lighthouse.run: the same run over every breakpoint, its findings into the findings panel.
+[[commands]]
+id = "run"
+title = "plugin.lighthouse.commands.run"
+shortcut = "Ctrl+Shift+Space K L"
+group = "checks"
+tool = "run"
+
+# plugin.lighthouse.open_report: the newest run's report of the active view's breakpoint in the
+# report window (RB-091-02).
+[[commands]]
+id = "open_report"
+title = "plugin.lighthouse.commands.open_report"
+shortcut = "Ctrl+Shift+Space K R"
+group = "checks"
+tool = "reports"
+
+# plugin.lighthouse.delete_run: deletes the run `run` (the panel's history asks first); without
+# one it opens the panel.
+[[commands]]
+id = "delete_run"
+title = "plugin.lighthouse.commands.delete_run"
+shortcut = "Ctrl+Shift+Space K D"
+group = "checks"
+mcp_omitted = "protected: deletes report runs; a person's choice in the Lighthouse panel's history"
+
+[[panels]]
+id = "lighthouse"
+title = "plugin.lighthouse.panels.lighthouse"
+entry = "panel/index.html"
+icon = "gauge"
+placement = "sidebar"

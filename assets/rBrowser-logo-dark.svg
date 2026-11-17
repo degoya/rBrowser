@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">rBrowser Logo – dark version</title>
+  <desc id="desc">A browser window containing a stylized globe in a rounded square, followed by the word rBrowser on a dark background.</desc>
+
+  <rect width="1100" height="360" rx="36" fill="#0F172A"/>
+  <g id="browser-symbol">
+    <rect x="40" y="40" width="280" height="280" rx="54" fill="#111D33" stroke="#2DD4BF" stroke-width="10"/>
+
+    <rect x="76" y="82" width="208" height="196" rx="24" fill="#0F172A" stroke="#2DD4BF" stroke-width="12"/>
+    <path d="M76 132H284" fill="none" stroke="#2DD4BF" stroke-width="12"/>
+    <circle cx="100" cy="107" r="6" fill="#D8FFFA"/>
+    <circle cx="124" cy="107" r="6" fill="#D8FFFA"/>
+    <circle cx="148" cy="107" r="6" fill="#D8FFFA"/>
+    <path d="M174 107H254" fill="none" stroke="#D8FFFA" stroke-width="8" stroke-linecap="round"/>
+
+    <circle cx="180" cy="205" r="50" fill="none" stroke="#D8FFFA" stroke-width="10"/>
+    <path d="M180 155C156 175 156 235 180 255M180 155C204 175 204 235 180 255M132 205H228"
+          fill="none" stroke="#D8FFFA" stroke-width="9" stroke-linecap="round"/>
+  </g>
+
+  <text x="382" y="226" fill="#F8FAFC" font-family="Inter, Avenir Next, Segoe UI, Arial, sans-serif" font-size="138" font-weight="750" letter-spacing="-4">
+    <tspan fill="#2DD4BF">r</tspan><tspan>Browser</tspan>
+  </text>
+</svg>

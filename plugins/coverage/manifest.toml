@@ -1,0 +1,125 @@
+# Coverage (RB-080-07, docs/plugins.md): unused CSS and JavaScript per breakpoint. CSS rule usage
+# tracking and V8's precise coverage run in every Chromium view at once - after a reload of every
+# view ("page load") or from `start` to `stop` while the person interacts - and the views are
+# compared: a file mostly unused in every view, a rule only some breakpoints use, a function no
+# view ran. Firefox and WebKit views are marked unavailable.
+manifest_version = 1
+id = "coverage"
+name = "Coverage"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "coverage"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Unused CSS and JavaScript per breakpoint: CSS rule usage and V8 precise coverage in every Chromium view at once, per file and rule, with findings on files unused everywhere, rules only some breakpoints use and functions no view ran."
+# Checks > Coverage in the page's context menu (RB-080-43): the load coverage of the clicked view.
+context_menu = ["run_load"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views a run covers; evaluate: in the plugin's isolated world, the style sheets the
+# document lists, `location.reload()` and the wait for the reloaded page (no page script);
+# cdp: DOM.enable, CSS.enable and the rule usage (CSS.startRuleUsageTracking,
+# stopRuleUsageTracking, takeCoverageDelta, getStyleSheetText), V8's precise coverage
+# (Profiler.enable, startPreciseCoverage, takePreciseCoverage, stopPreciseCoverage), the main
+# frame (Page.getFrameTree) and a linked sheet's text (Page.getResourceContent) - no Debugger,
+# tracking never left running after a run; project-read and out-write: the session, the last
+# measurement, the sheets' text and the export in `.rbrowser/out/coverage/`; findings: the
+# commands' findings. Nothing leaves the machine.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["DOM", "CSS", "Profiler", "Page"] }
+project-read = true
+out-write = true
+findings = true
+
+# A load run reloads every view and waits for each (coverage.loadTimeoutSeconds, at most 120 s);
+# host time is credited back. Four stores at once let the panel read the last measurement while
+# a run goes on.
+[limits]
+memory_bytes = 268435456
+fuel = 20000000000
+timeout_milliseconds = 300000
+max_concurrent = 4
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `coverage_get`: per view and file total, used and unused units - `load` reloads every view
+# and measures, `delta` reads what the running interaction session used so far, `last` the last
+# measurement; without `mode` the setting coverage.defaultMode decides.
+[[tools]]
+name = "get"
+description = "plugin.coverage.tools.get"
+input = { type = "object", properties = { mode = { type = "string", enum = ["load", "delta", "last"] } } }
+
+# MCP `coverage_start`: starts tracking in the views (an interaction session).
+[[tools]]
+name = "start"
+description = "plugin.coverage.tools.start"
+input = { type = "object" }
+
+# MCP `coverage_stop`: ends the interaction session in every view and keeps its result.
+[[tools]]
+name = "stop"
+description = "plugin.coverage.tools.stop"
+input = { type = "object" }
+
+# MCP `coverage_file`: one file of the last measurement in detail, a window at a time: per view
+# its used ranges, a sheet's text and rules with the views using each, a script's functions.
+[[tools]]
+name = "file"
+description = "plugin.coverage.tools.file"
+input = { type = "object", required = ["url"], properties = { url = { type = "string", minLength = 1, maxLength = 8192 }, kind = { type = "string", enum = ["css", "js"] }, offset = { type = "integer", minimum = 0 }, length = { type = "integer", minimum = 1, maximum = 16000 } } }
+
+# `plugin.coverage.run_load`, Ctrl+Shift+Space K C: every view reloaded and measured, the findings
+# into the findings panel, the panel shown.
+[[commands]]
+id = "run_load"
+title = "plugin.coverage.commands.run_load"
+shortcut = "Ctrl+Shift+Space K C"
+group = "checks"
+tool = "get"
+
+# `plugin.coverage.start`, Ctrl+Shift+Space K I: tracking starts in every view.
+[[commands]]
+id = "start"
+title = "plugin.coverage.commands.start"
+shortcut = "Ctrl+Shift+Space K I"
+group = "checks"
+tool = "start"
+
+# `plugin.coverage.stop`, Ctrl+Shift+Space K X: tracking ends, the findings into the findings
+# panel.
+[[commands]]
+id = "stop"
+title = "plugin.coverage.commands.stop"
+shortcut = "Ctrl+Shift+Space K X"
+group = "checks"
+tool = "stop"
+
+# `plugin.coverage.export`, Ctrl+Shift+Space K J: the last measurement into
+# .rbrowser/out/coverage/coverage.json and coverage.csv.
+[[commands]]
+id = "export"
+title = "plugin.coverage.commands.export"
+shortcut = "Ctrl+Shift+Space K J"
+group = "checks"
+mcp_omitted = "file export; the data comes from coverage_get"
+
+[[panels]]
+id = "coverage"
+title = "plugin.coverage.panels.coverage"
+entry = "panel/index.html"
+icon = "chart-pie"
+placement = "sidebar"

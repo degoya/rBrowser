@@ -1,0 +1,25 @@
+[package]
+name = "rb-sync"
+description = "The sync agent's event protocol (RB-020-01), the SyncHub, the leader logic and the desync state (RB-020-02)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+async-trait.workspace = true
+rb-engine = { path = "../rb-engine" }
+rb-util = { path = "../rb-util" }
+schemars.workspace = true
+serde.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

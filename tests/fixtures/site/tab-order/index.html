@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tab order fixture</title>
+    <!--
+      The tab order overlay's fixture (RB-070-12, plugins/overlays). Every stop carries data-t.
+      - "promo" has tabindex 3: it comes first and is warned about.
+      - Below 700 px the menu is closed: moved out to the left with a transform, so its two links
+        are focusable but unseen (warned in the mobile view, not in the desktop one), and the
+        menu button shows; at 700 px and up the button is display:none and the menu inline.
+      - In .row "second" comes before "first" through CSS order: tabbing from "first" to
+        "second" jumps back to the left.
+      - x-card has an open (declarative) shadow root: "inner", then the slotted link "slotted".
+      - Not in the order: a disabled button, tabindex -1, an inert section, visibility:hidden.
+      - "ghost" has opacity 0 (focusable but unseen in every view).
+      - The same-origin iframe holds "framed".
+    -->
+    <style>
+      body { margin: 0; font: 16px/1.4 system-ui, sans-serif; }
+      header { display: flex; gap: 16px; align-items: center; padding: 8px 16px; }
+      .menu { display: flex; gap: 16px; }
+      .menu-toggle { display: none; }
+      main { padding: 16px; }
+      .row { display: flex; gap: 24px; margin: 16px 0; }
+      .row .second { order: -1; }
+      button, input, a { font: inherit; }
+      iframe { display: block; width: 300px; height: 80px; border: 1px solid #999; }
+      @media (max-width: 699px) {
+        .menu-toggle { display: inline-block; }
+        .menu { position: fixed; left: 0; top: 0; width: 240px; height: 100vh; flex-direction: column; background: #fff; transform: translateX(-100%); }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button data-t="menu-toggle" class="menu-toggle" type="button">Menu</button>
+      <nav class="menu">
+        <a data-t="nav-home" href="#home">Home</a>
+        <a data-t="nav-shop" href="#shop">Shop</a>
+      </nav>
+    </header>
+    <main>
+      <a data-t="promo" href="#promo" tabindex="3">Promo</a>
+      <div class="row">
+        <a data-t="first" class="first" href="#first">First</a>
+        <a data-t="second" class="second" href="#second">Second</a>
+      </div>
+      <x-card>
+        <template shadowrootmode="open">
+          <p>Card <button data-t="inner" type="button">Inner</button></p>
+          <slot name="action"></slot>
+        </template>
+        <a data-t="slotted" slot="action" href="#slotted">Slotted</a>
+      </x-card>
+      <p>
+        <button data-t="disabled" type="button" disabled>Disabled</button>
+        <span data-t="minus" tabindex="-1">Minus</span>
+        <a data-t="hidden" href="#hidden" style="visibility: hidden">Hidden</a>
+      </p>
+      <section inert><a data-t="inert" href="#inert">Inert</a></section>
+      <button data-t="ghost" type="button" style="opacity: 0">Ghost</button>
+      <p><input data-t="name" type="text" aria-label="Name" /></p>
+      <iframe title="Framed" srcdoc="<button data-t='framed' type='button'>Framed</button>"></iframe>
+    </main>
+  </body>
+</html>

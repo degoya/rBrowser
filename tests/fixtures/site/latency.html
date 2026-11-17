@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser replay latency fixture</title>
+<style>
+  /* RB-020-03, K1: a grid of 20 x 20 px targets. Every click (or tap) is logged with its time
+     (ms since the epoch, sub-millisecond), isTrusted and pointerType - in the list below and
+     in window.__replayLog, which an end-to-end run reads per view over CDP
+     (Runtime.evaluate "JSON.stringify(__replayLog)") and compares with the leader's capture
+     times: p50/p95 of target time minus leader time over 100 clicks. At scale 0.33 the
+     targets are under 7 DIP wide: a click that misses lands on the grid, logged as a miss.
+     Served by tests/fixtures/server/post-counter.py. */
+  body { margin: 16px; font: 14px system-ui, sans-serif; }
+  #grid { display: grid; grid-template-columns: repeat(10, 20px); gap: 12px; padding: 12px;
+          background: #eee; width: max-content; }
+  #grid button { width: 20px; height: 20px; padding: 0; border: 0; background: #36c; }
+  #grid button.hit { background: #3a3; }
+  #log { font: 12px ui-monospace, monospace; max-height: 40vh; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>Replay latency</h1>
+<p>Click the targets in the active view; each view logs when the click arrived.</p>
+<div id="grid" aria-label="Targets"></div>
+<p><span id="hits">0</span> hits, <span id="misses">0</span> misses</p>
+<ol id="log"></ol>
+<script>
+  'use strict';
+  window.__replayLog = [];
+  const grid = document.getElementById('grid');
+  for (let i = 1; i <= 100; i += 1) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.testid = `t${i}`;
+    button.setAttribute('aria-label', `Target ${i}`);
+    grid.append(button);
+  }
+  const count = (id) => {
+    const node = document.getElementById(id);
+    node.textContent = String(Number(node.textContent) + 1);
+  };
+  let pointerType = '';
+  addEventListener('pointerdown', (event) => { pointerType = event.pointerType; }, true);
+  grid.addEventListener('click', (event) => {
+    const at = performance.timeOrigin + performance.now();
+    const target = event.target.closest('button');
+    const entry = {
+      target: target ? target.dataset.testid : null,
+      at,
+      trusted: event.isTrusted,
+      pointerType,
+      detail: event.detail,
+    };
+    window.__replayLog.push(entry);
+    if (target) {
+      target.classList.add('hit');
+      count('hits');
+    } else {
+      count('misses');
+    }
+    const line = document.createElement('li');
+    line.textContent = `${entry.target ?? 'miss'} ${at.toFixed(1)} trusted=${entry.trusted} ${pointerType}`;
+    document.getElementById('log').prepend(line);
+  });
+</script>
+</body>
+</html>

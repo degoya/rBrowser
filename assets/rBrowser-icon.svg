@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">rBrowser App Icon</title>
+  <desc id="desc">A browser window containing a stylized globe in a rounded dark square.</desc>
+
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="#0F172A" stroke="#2DD4BF" stroke-width="16"/>
+
+  <rect x="88" y="92" width="336" height="328" rx="44" fill="#111D33" stroke="#2DD4BF" stroke-width="20"/>
+  <path d="M88 170H424" fill="none" stroke="#2DD4BF" stroke-width="20"/>
+  <circle cx="126" cy="132" r="10" fill="#D8FFFA"/>
+  <circle cx="162" cy="132" r="10" fill="#D8FFFA"/>
+  <circle cx="198" cy="132" r="10" fill="#D8FFFA"/>
+  <path d="M252 132H382" fill="none" stroke="#D8FFFA" stroke-width="14" stroke-linecap="round"/>
+
+  <circle cx="256" cy="294" r="88" fill="none" stroke="#D8FFFA" stroke-width="18"/>
+  <path d="M256 206C214 242 214 346 256 382M256 206C298 242 298 346 256 382M172 294H340"
+        fill="none" stroke="#D8FFFA" stroke-width="16" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,333 @@
+{
+  "url": "http://localhost:8080/fonts/index.html",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "faces": [
+    {
+      "family": "Inter",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "",
+      "status": "loaded",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/inter-400.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    },
+    {
+      "family": "Inter",
+      "weight": "600",
+      "style": "normal",
+      "display": "auto",
+      "unicodeRange": "",
+      "status": "loaded",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/inter-600.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    },
+    {
+      "family": "Roboto",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "",
+      "status": "loaded",
+      "src": [
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    },
+    {
+      "family": "Legacy Serif",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "",
+      "status": "error",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/legacy-serif.ttf",
+          "format": "truetype",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    },
+    {
+      "family": "Unused Display",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "",
+      "status": "unloaded",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/unused-display.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    },
+    {
+      "family": "Inter ASCII",
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "unicodeRange": "U+0000-007F",
+      "status": "loaded",
+      "src": [
+        {
+          "url": "http://localhost:8080/fonts/inter-400.woff2",
+          "format": "woff2",
+          "local": false
+        }
+      ],
+      "sheet": "inline",
+      "readable": true,
+      "variable": false
+    }
+  ],
+  "sheets": [],
+  "preloads": [
+    "http://localhost:8080/fonts/inter-400.woff2"
+  ],
+  "resources": [
+    {
+      "url": "http://localhost:8080/fonts/inter-400.woff2",
+      "size": 17156,
+      "decoded": 17156
+    },
+    {
+      "url": "http://localhost:8080/fonts/inter-600.woff2",
+      "size": 18096,
+      "decoded": 18096
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2",
+      "size": 15744,
+      "decoded": 15744
+    }
+  ],
+  "usages": [
+    {
+      "stack": "Inter, Arial, sans-serif",
+      "family": "Inter",
+      "weight": 600,
+      "style": "normal",
+      "count": 3,
+      "aboveFold": true,
+      "sizes": [
+        32,
+        28,
+        16
+      ],
+      "samples": [
+        {
+          "selector": "html > body > header > h1",
+          "path": "html > body > header > h1",
+          "text": "Fonts fixture",
+          "nonAscii": ""
+        }
+      ]
+    },
+    {
+      "stack": "Roboto, Arial, sans-serif",
+      "family": "Roboto",
+      "weight": 400,
+      "style": "normal",
+      "count": 1,
+      "aboveFold": false,
+      "sizes": [
+        16
+      ],
+      "samples": [
+        {
+          "selector": "html > body > main > p.lead",
+          "path": "html > body > main > p:nth-of-type(1)",
+          "text": "Roboto from Google's servers: a privacy finding until fonts.gstatic.com is allow",
+          "nonAscii": ""
+        }
+      ]
+    },
+    {
+      "stack": "Inter, Arial, sans-serif",
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal",
+      "count": 5,
+      "aboveFold": false,
+      "sizes": [
+        16,
+        11,
+        14
+      ],
+      "samples": [
+        {
+          "selector": "html > body > main > p:nth-of-type(2)",
+          "path": "html > body > main > p:nth-of-type(2)",
+          "text": "Regular Inter text with beside it.",
+          "nonAscii": ""
+        }
+      ]
+    },
+    {
+      "stack": "\"Legacy Serif\", Georgia, serif",
+      "family": "Legacy Serif",
+      "weight": 400,
+      "style": "normal",
+      "count": 1,
+      "aboveFold": false,
+      "sizes": [
+        16
+      ],
+      "samples": [
+        {
+          "selector": "html > body > main > p.legacy",
+          "path": "html > body > main > p:nth-of-type(3)",
+          "text": "Legacy text set in a TrueType file.",
+          "nonAscii": ""
+        }
+      ]
+    },
+    {
+      "stack": "\"Inter ASCII\", Arial, sans-serif",
+      "family": "Inter ASCII",
+      "weight": 400,
+      "style": "normal",
+      "count": 1,
+      "aboveFold": false,
+      "sizes": [
+        16
+      ],
+      "samples": [
+        {
+          "selector": "html > body > main > p.subset",
+          "path": "html > body > main > p:nth-of-type(4)",
+          "text": "Gr\u00f6\u00dfe, \u00dcberg\u00e4nge und \u00c4pfel: the umlauts come from the fallback font.",
+          "nonAscii": "\u00f6\u00df\u00dc\u00e4\u00c4"
+        }
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "role": "h1",
+      "count": 1,
+      "min": 32,
+      "max": 32,
+      "first": {
+        "selector": "html > body > header > h1",
+        "path": "html > body > header > h1"
+      }
+    },
+    {
+      "role": "p",
+      "count": 6,
+      "min": 11,
+      "max": 16,
+      "first": {
+        "selector": "html > body > main > p.lead",
+        "path": "html > body > main > p:nth-of-type(1)"
+      }
+    },
+    {
+      "role": "h2",
+      "count": 1,
+      "min": 28,
+      "max": 28,
+      "first": {
+        "selector": "html > body > main > h2",
+        "path": "html > body > main > h2"
+      }
+    },
+    {
+      "role": "text",
+      "count": 1,
+      "min": 16,
+      "max": 16,
+      "first": {
+        "selector": "html > body > main > p:nth-of-type(2) > span",
+        "path": "html > body > main > p:nth-of-type(2) > span"
+      }
+    },
+    {
+      "role": "label",
+      "count": 1,
+      "min": 16,
+      "max": 16,
+      "first": {
+        "selector": "html > body > main > form > label",
+        "path": "html > body > main > form > label"
+      }
+    },
+    {
+      "role": "input",
+      "count": 1,
+      "min": 14,
+      "max": 14,
+      "first": {
+        "selector": "#q",
+        "path": "html > body > main > form > input"
+      }
+    }
+  ],
+  "smallText": [
+    {
+      "selector": "html > body > main > p.fineprint",
+      "path": "html > body > main > p:nth-of-type(6)",
+      "tag": "p",
+      "size": 11,
+      "lineHeight": 1.5,
+      "text": "Fine print at 11 px."
+    }
+  ],
+  "smallInputs": [
+    {
+      "selector": "#q",
+      "path": "html > body > main > form > input",
+      "tag": "input",
+      "size": 14,
+      "lineHeight": 1.5,
+      "text": ""
+    }
+  ],
+  "tightLines": [
+    {
+      "selector": "html > body > main > p.tight",
+      "path": "html > body > main > p:nth-of-type(5)",
+      "tag": "p",
+      "size": 16,
+      "lineHeight": 1,
+      "text": "A long paragraph with a line height of one, so its lines nearly touch each other"
+    }
+  ],
+  "elements": 11,
+  "truncated": false
+}

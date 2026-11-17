@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the PWA check (RB-080-08): Settings > Checks > PWA; rules on/off and severity in checks.rules",
+  "type": "object",
+  "properties": {
+    "offline": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "With an active service worker, ask its caches whether they hold the start URL, so the app opens offline.",
+          "x-category": "checks",
+          "x-section": "pwa",
+          "x-order": 1,
+          "x-scope": ["project", "local", "user"]
+        }
+      }
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 5000,
+      "maximum": 55000,
+      "default": 30000,
+      "description": "No further request (icons, start URL, service worker script) once one check has run this long, in milliseconds.",
+      "x-category": "checks",
+      "x-section": "pwa",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

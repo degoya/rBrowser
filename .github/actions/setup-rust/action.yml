@@ -1,0 +1,36 @@
+name: Set up Rust
+description: >
+  The toolchain of rust-toolchain.toml - its channel, components and targets - through the
+  runner image's rustup, extra targets on request, and the Rust cache (RB-090-04, after
+  rCommander's action of the same name, without a third-party toolchain action). The cache is
+  keyed per job and saved only on main and development: a feature branch's cache would push
+  theirs out of the repository's 10 GB.
+inputs:
+  targets:
+    description: Space-separated targets beyond those of rust-toolchain.toml
+    required: false
+    default: ""
+  cache-key:
+    description: The cache's shared key; empty for no cache
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    # `rustup toolchain install` without a name installs what rust-toolchain.toml names.
+    - name: The toolchain of rust-toolchain.toml
+      shell: bash
+      env:
+        TARGETS: ${{ inputs.targets }}
+      run: |
+        rustup toolchain install
+        if [[ -n "${TARGETS}" ]]; then
+          read -r -a targets <<< "${TARGETS}"
+          rustup target add "${targets[@]}"
+        fi
+        rustc --version
+    - if: inputs.cache-key != ''
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        shared-key: ${{ inputs.cache-key }}
+        save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' }}

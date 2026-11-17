@@ -1,0 +1,21 @@
+{
+  "name": "rbrowser-plugin-screenshot-editor-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The screenshot-editor plugin's panel (RB-080-01), on Nuxt UI since RB-080-86: web/src/panel built by Vite into ../panel/dist; Vitest in happy-dom.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "happy-dom": "21.0.4",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}

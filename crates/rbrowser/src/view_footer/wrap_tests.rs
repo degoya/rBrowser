@@ -1,0 +1,246 @@
+use rb_config::FooterWrap;
+
+use super::*;
+
+/// The footer of the owner's 375 px view (RB-080-53), 50 characters.
+const MOBILE: &str = "mobile | 0-767px | 375 \u{d7} 812 @3x | max-width 767px";
+
+fn lines(text: &str, available: u32) -> Vec<String> {
+    fit(text, Some(available), FooterWrap::Auto).lines
+}
+
+#[test]
+fn the_width_is_the_characters_the_insets_and_the_slack() {
+    assert_eq!(text_width(""), INSETS + SLACK);
+    // 10 characters of 6.05 DIP, rounded up.
+    assert_eq!(text_width("0123456789"), 61 + INSETS + SLACK);
+    // A character counts once, whatever its bytes.
+    assert_eq!(text_width("\u{d7}\u{221e}"), text_width("ab"));
+    assert_eq!(MOBILE.chars().count(), 50);
+    assert_eq!(text_width(MOBILE), 303 + INSETS + SLACK);
+}
+
+#[test]
+fn the_characters_and_the_slack_grow_with_the_text_size_the_insets_not() {
+    // RB-090-26: at 100 % the estimate is the one above.
+    assert_eq!(text_width_at("0123456789", 100), text_width("0123456789"));
+    // 10 characters of 9.075 DIP (6.05 at 150 %), rounded up; a slack of 9.
+    assert_eq!(text_width_at("0123456789", 150), 91 + INSETS + 9);
+    // 225 %: 13.6125 DIP a character, a slack of 14 (13.5 rounded).
+    assert_eq!(text_width_at("0123456789", 225), 137 + INSETS + 14);
+    assert_eq!(text_width_at("", 225), INSETS + 14);
+}
+
+#[test]
+fn a_text_that_fits_stays_on_one_line() {
+    let fitted = fit(MOBILE, Some(375), FooterWrap::Auto);
+    assert_eq!(fitted.lines, [MOBILE]);
+    assert!(!fitted.cut);
+    // Exactly as wide as the strip still fits.
+    assert_eq!(lines(MOBILE, text_width(MOBILE)), [MOBILE]);
+}
+
+#[test]
+fn the_cut_footer_of_the_narrow_view_breaks_between_two_fields() {
+    // The strip of the screenshot is 145 DIP wide and showed "mobile | 0-767px | 3...".
+    assert!(text_width(MOBILE) > 145);
+    // At 220 DIP the breaks after the second and the third field fit; the first one leaves the
+    // lines more alike.
+    let fitted = fit(MOBILE, Some(220), FooterWrap::Auto);
+    assert_eq!(
+        fitted.lines,
+        ["mobile | 0-767px", "375 \u{d7} 812 @3x | max-width 767px"]
+    );
+    assert!(!fitted.cut, "both lines fit: nothing is cut");
+    assert!(fitted.lines.iter().all(|line| text_width(line) <= 220));
+}
+
+#[test]
+fn the_break_that_fits_leaves_the_lines_most_alike() {
+    // Every break fits in 150 DIP; the one in the middle is taken.
+    assert_eq!(
+        lines("aaaa | bbbb | cccc | dddd", 150),
+        ["aaaa | bbbb", "cccc | dddd"]
+    );
+    // Only the break after the long first field fits.
+    assert_eq!(
+        lines("aaaaaaaaaaaaaaaaaaaa | b | c", 150),
+        ["aaaaaaaaaaaaaaaaaaaa", "b | c"]
+    );
+}
+
+#[test]
+fn what_two_lines_do_not_hold_is_cut_at_the_end() {
+    // 145 DIP hold 21 characters: the first line as full as it gets, the second one is cut.
+    let fitted = fit(MOBILE, Some(145), FooterWrap::Auto);
+    assert_eq!(
+        fitted.lines,
+        ["mobile | 0-767px", "375 \u{d7} 812 @3x | max-width 767px"]
+    );
+    assert!(fitted.cut);
+    // Not even the first field fits: it stands alone, and is cut too.
+    let fitted = fit(
+        "a-very-long-breakpoint-name | 0-767px",
+        Some(60),
+        FooterWrap::Auto,
+    );
+    assert_eq!(fitted.lines, ["a-very-long-breakpoint-name", "0-767px"]);
+    assert!(fitted.cut);
+}
+
+#[test]
+fn never_more_than_two_lines() {
+    for width in [1, 30, 60, 100, 145, 200, 375, 1920] {
+        let count = lines(MOBILE, width).len();
+        assert!((1..=MAX_LINES).contains(&count), "{width}: {count} lines");
+    }
+}
+
+#[test]
+fn one_field_has_nowhere_to_break() {
+    let fitted = fit("0-767px", Some(20), FooterWrap::Auto);
+    assert_eq!(fitted.lines, ["0-767px"]);
+    assert!(fitted.cut);
+}
+
+#[test]
+fn never_keeps_one_line_and_says_that_it_is_cut() {
+    let fitted = fit(MOBILE, Some(145), FooterWrap::Never);
+    assert_eq!(fitted.lines, [MOBILE]);
+    assert!(fitted.cut);
+    assert!(!fit(MOBILE, Some(375), FooterWrap::Never).cut);
+}
+
+#[test]
+fn a_strip_without_a_width_yet_takes_one_line() {
+    for available in [None, Some(0)] {
+        let fitted = fit(MOBILE, available, FooterWrap::Auto);
+        assert_eq!(fitted.lines, [MOBILE]);
+        assert!(!fitted.cut);
+    }
+}
+
+#[test]
+fn the_lines_together_are_the_text() {
+    let fitted = fit(MOBILE, Some(220), FooterWrap::Auto);
+    assert_eq!(fitted.lines.join(SEPARATOR), MOBILE);
+}
+
+#[test]
+fn a_footer_takes_at_most_half_of_its_view() {
+    // RB-080-78: on a canvas zoomed far out the strip was higher than the view.
+    let line = super::super::FOOTER_HEIGHT;
+    assert_eq!(lines_for_height(None), MAX_LINES);
+    assert_eq!(lines_for_height(Some(4 * line)), 2);
+    assert_eq!(lines_for_height(Some(1000)), 2);
+    assert_eq!(lines_for_height(Some(4 * line - 1)), 1);
+    assert_eq!(lines_for_height(Some(2 * line)), 1);
+    assert_eq!(lines_for_height(Some(2 * line - 1)), 0);
+    assert_eq!(lines_for_height(Some(0)), 0);
+}
+
+#[test]
+fn half_the_view_counts_the_lines_at_the_text_size() {
+    // RB-090-26: at 225 % a line is 41 DIP; an 80 DIP view has room for none (two would be 82).
+    assert_eq!(lines_for_height_at(Some(80), 225), 0);
+    assert_eq!(lines_for_height_at(Some(81), 225), 0);
+    assert_eq!(lines_for_height_at(Some(82), 225), 1);
+    assert_eq!(lines_for_height_at(Some(163), 225), 1);
+    assert_eq!(lines_for_height_at(Some(164), 225), 2);
+    assert_eq!(lines_for_height_at(None, 225), MAX_LINES);
+    // At 100 % the rule above.
+    assert_eq!(
+        lines_for_height_at(Some(72), 100),
+        lines_for_height(Some(72))
+    );
+}
+
+#[test]
+fn a_low_view_keeps_one_line_or_none() {
+    let line = super::super::FOOTER_HEIGHT;
+    // Two lines by the width, one by the height: one line, its end cut.
+    let one = fit_room(MOBILE, Some(200), Some(3 * line), FooterWrap::Auto);
+    assert_eq!(one.lines, [MOBILE]);
+    assert!(one.cut);
+    // No room for a line: no line.
+    let none = fit_room(MOBILE, Some(375), Some(line), FooterWrap::Auto);
+    assert!(none.lines.is_empty());
+    // Room enough: as by the width alone.
+    assert_eq!(
+        fit_room(MOBILE, Some(200), Some(400), FooterWrap::Auto),
+        fit(MOBILE, Some(200), FooterWrap::Auto)
+    );
+}
+
+#[test]
+fn the_room_counts_every_line_half_the_view_holds() {
+    let line = super::super::FOOTER_HEIGHT;
+    assert_eq!(room_lines(None), usize::MAX, "a window grows by its footer");
+    assert_eq!(room_lines(Some(6 * line)), 3);
+    assert_eq!(room_lines(Some(2 * line - 1)), 0);
+    assert_eq!(
+        lines_for_height(Some(6 * line)),
+        MAX_LINES,
+        "capped for one bar"
+    );
+}
+
+fn shared(bar: usize, vitals: bool, lighthouse: bool) -> Share {
+    Share {
+        bar,
+        vitals,
+        lighthouse,
+    }
+}
+
+#[test]
+fn the_breakpoint_bar_keeps_its_first_line_longest_then_the_vitals_bar() {
+    // RB-090-71: the breakpoint bar's first line, the vitals bar, the second line.
+    assert_eq!(share(0, true, true, false), shared(0, false, false));
+    assert_eq!(share(1, true, true, false), shared(1, false, false));
+    assert_eq!(share(2, true, true, false), shared(1, true, false));
+    assert_eq!(share(3, true, true, false), shared(MAX_LINES, true, false));
+    assert_eq!(
+        share(usize::MAX, true, true, false),
+        shared(MAX_LINES, true, false)
+    );
+    // One bar alone takes what it needs.
+    assert_eq!(share(1, false, true, false), shared(0, true, false));
+    assert_eq!(share(0, false, true, false), shared(0, false, false));
+    assert_eq!(
+        share(5, true, false, false),
+        shared(MAX_LINES, false, false)
+    );
+    assert_eq!(share(5, false, false, false), shared(0, false, false));
+}
+
+#[test]
+fn the_lighthouse_bar_comes_after_the_vitals_bar_before_the_second_line() {
+    // RB-090-73: the breakpoint bar's first line, the vitals bar, the Lighthouse bar, the
+    // breakpoint bar's second line.
+    assert_eq!(share(1, true, true, true), shared(1, false, false));
+    assert_eq!(share(2, true, true, true), shared(1, true, false));
+    assert_eq!(share(3, true, true, true), shared(1, true, true));
+    assert_eq!(share(4, true, true, true), shared(MAX_LINES, true, true));
+    // Without the vitals bar it takes the vitals bar's place.
+    assert_eq!(share(2, true, false, true), shared(1, false, true));
+    assert_eq!(share(1, false, false, true), shared(0, false, true));
+    assert_eq!(share(1, false, true, true), shared(0, true, false));
+    assert_eq!(share(0, false, false, true), shared(0, false, false));
+}
+
+#[test]
+fn fitted_into_lines_none_one_or_as_the_wrap_says() {
+    assert!(
+        fit_lines(MOBILE, Some(200), 0, FooterWrap::Auto)
+            .lines
+            .is_empty()
+    );
+    let one = fit_lines(MOBILE, Some(200), 1, FooterWrap::Auto);
+    assert_eq!(one.lines, [MOBILE]);
+    assert!(one.cut);
+    assert_eq!(
+        fit_lines(MOBILE, Some(200), 2, FooterWrap::Auto),
+        fit(MOBILE, Some(200), FooterWrap::Auto)
+    );
+}

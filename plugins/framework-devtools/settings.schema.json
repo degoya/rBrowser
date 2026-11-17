@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Framework DevTools plugin settings",
+  "type": "object",
+  "properties": {
+    "vue": {
+      "type": "object",
+      "properties": {
+        "timeline": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "framework-devtools",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
+        }
+      }
+    }
+  }
+}

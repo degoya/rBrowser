@@ -1,0 +1,8 @@
+{
+  "url": "http://localhost:8080/pwa-broken/",
+  "secure": true,
+  "manifests": ["http://localhost:8080/pwa-broken/manifest.json"],
+  "themeColor": false,
+  "appleTouchIcon": null,
+  "sw": { "supported": true, "controlled": false, "registration": null, "error": null }
+}

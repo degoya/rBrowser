@@ -1,0 +1,10 @@
+/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{border:0 solid #e5e7eb;box-sizing:border-box}:after,:before{--tw-content:""}html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:ui-sans-serif,system-ui,sans-serif}body{line-height:inherit;margin:0}
+.container{width:100%}@media (min-width:640px){.container{max-width:640px}}@media (min-width:768px){.container{max-width:768px}}@media (min-width:1024px){.container{max-width:1024px}}@media (min-width:1280px){.container{max-width:1280px}}@media (min-width:1536px){.container{max-width:1536px}}
+.flex{display:flex}.grid{display:grid}.hidden{display:none}.content-\[\'\@media\'\]{--tw-content:"@media (min-width: 999px)";content:var(--tw-content)}
+@media (prefers-color-scheme:dark){.dark\:bg-gray-900{--tw-bg-opacity:1;background-color:rgb(17 24 39/var(--tw-bg-opacity))}}
+@media (min-width:640px){.sm\:flex{display:flex}.sm\:px-6{padding-left:1.5rem;padding-right:1.5rem}}
+@media (min-width:768px){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1024px){.lg\:px-8{padding-left:2rem;padding-right:2rem}}
+@media (min-width:1280px){.xl\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1536px){.\32xl\:max-w-7xl{max-width:80rem}}
+@media print{.print\:hidden{display:none}}

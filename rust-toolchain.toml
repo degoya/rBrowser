@@ -1,0 +1,8 @@
+# The newest stable Rust when the project started (2026-11-10), pinned exactly; scripts/update-deps.sh
+# names the next one. Windows is the release target (built from WSL with cargo-xwin), the musl
+# target builds the static rbrowser-wsl helper, and linux-gnu is the development host.
+[toolchain]
+channel = "1.100.0"
+components = ["clippy", "llvm-tools", "rustfmt"]
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "wasm32-unknown-unknown"]
+profile = "default"

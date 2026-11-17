@@ -1,0 +1,23 @@
+/* The Coverage panel's styles: panel-ui's (Tailwind and Nuxt UI), its code view and the classes
+   named here. The marked source tints and underlines unused text, so the mark is not colour
+   alone; its colours meet WCAG AA (4.5:1) in both themes. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';
+@source '../../../../web-common/panel-ui/src/code';
+
+.cov-used {
+  background: #e6f4ea;
+}
+.cov-unused {
+  background: #fce8e6;
+  color: #a50e0e;
+  text-decoration: underline dotted;
+}
+.dark .cov-used {
+  background: #1e3a2a;
+}
+.dark .cov-unused {
+  background: #3c1f1f;
+  color: #f6aea9;
+}

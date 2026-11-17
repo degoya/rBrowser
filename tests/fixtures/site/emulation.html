@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser emulation fixture</title>
+<style>
+  /* RB-010-05: every value a view's emulation sets, as the page sees it. Live values refresh
+     twice a second; the counter only grows, so a reload shows as a reset to 0. Served with
+     `python3 emulation-server.py` from this folder (port 18765), which also echoes the request
+     headers (/echo-headers) and serves 1 MiB (/large.bin) for the throttling check. */
+  html { font: 100% system-ui, sans-serif; }
+  body { margin: 0; padding: 12px; padding-top: max(12px, env(safe-area-inset-top)); }
+  table { border-collapse: collapse; }
+  td { padding: 2px 8px; border-bottom: 1px solid #ccc; vertical-align: top; }
+  td:first-child { font-family: ui-monospace, monospace; }
+  #inset { position: fixed; top: 0; height: env(safe-area-inset-top, 0px); width: 1px; }
+  @media (prefers-color-scheme: dark) { body { background: #111; color: #eee; } }
+</style>
+</head>
+<body>
+<p>Counter (survives a live emulation change, resets on reload): <b id="counter">0</b></p>
+<table><tbody id="values"></tbody></table>
+<p><button id="load">Load 1 MiB</button> <span id="load-time"></span></p>
+<div id="inset"></div>
+<script>
+  const media = {
+    "prefers-color-scheme": ["light", "dark"],
+    "prefers-reduced-motion": ["no-preference", "reduce"],
+    "prefers-reduced-data": ["no-preference", "reduce"],
+    "prefers-reduced-transparency": ["no-preference", "reduce"],
+    "forced-colors": ["none", "active"],
+    "prefers-contrast": ["no-preference", "more", "less", "custom"],
+    "color-gamut": ["srgb", "p3", "rec2020"],
+    "pointer": ["none", "coarse", "fine"],
+  };
+  const matching = (feature) =>
+    media[feature].filter((value) => matchMedia(`(${feature}: ${value})`).matches).join(" ") || "-";
+  let counter = 0;
+  let server = {};
+  const values = () => ({
+    ...Object.fromEntries(Object.keys(media).map((feature) => [feature, matching(feature)])),
+    "media print": String(matchMedia("print").matches),
+    "navigator.maxTouchPoints": navigator.maxTouchPoints,
+    "navigator.userAgent": navigator.userAgent,
+    "navigator.platform": navigator.platform,
+    "navigator.language": navigator.language,
+    "Intl locale": Intl.DateTimeFormat().resolvedOptions().locale,
+    "innerWidth x innerHeight": `${innerWidth} x ${innerHeight}`,
+    "devicePixelRatio": devicePixelRatio,
+    "screen.orientation": screen.orientation ? screen.orientation.type : "-",
+    "safe-area-inset-top": `${document.getElementById("inset").offsetHeight}px`,
+    "default font size": getComputedStyle(document.documentElement).fontSize,
+    ...server,
+  });
+  const render = () => {
+    window.__emulation = values();
+    const rows = Object.entries(window.__emulation).map(([key, value]) => {
+      const row = document.createElement("tr");
+      for (const text of [key, String(value)]) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.append(cell);
+      }
+      return row;
+    });
+    document.getElementById("values").replaceChildren(...rows);
+  };
+  setInterval(() => {
+    counter += 1;
+    window.__counter = counter;
+    document.getElementById("counter").textContent = counter;
+    render();
+  }, 500);
+  // What the server received: Accept-Language and every X- header (emulation-server.py only).
+  fetch("/echo-headers", { cache: "no-store" })
+    .then((response) => (response.ok ? response.json() : {}))
+    .then((headers) => {
+      for (const [name, value] of Object.entries(headers)) {
+        if (name === "accept-language" || name.startsWith("x-")) {
+          server[`server: ${name}`] = value;
+        }
+      }
+      render();
+    })
+    .catch(() => undefined);
+  document.getElementById("load").addEventListener("click", async () => {
+    const started = performance.now();
+    const body = await (await fetch("/large.bin", { cache: "no-store" })).arrayBuffer();
+    const ms = Math.round(performance.now() - started);
+    window.__loadMs = ms;
+    document.getElementById("load-time").textContent = `${body.byteLength} bytes in ${ms} ms`;
+  });
+  render();
+</script>
+</body>
+</html>

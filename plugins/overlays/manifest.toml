@@ -1,0 +1,196 @@
+# The debug overlays (RB-060-03, docs/plugins.md): the overflow detector, the element highlight
+# (CSS selector search over every view) and the layout outlines, drawn by the page script in a
+# closed shadow root of the plugin's isolated world. The component keeps the overlay state per
+# project (.rbrowser/out/overlays/state.json), answers the MCP tools and measures overflow through
+# `evaluate`. The further overlays of RB-070-07 (stacking contexts, unneeded scrollbars, WCAG text
+# spacing, target size, small text, focus tracking, forced states, content chaos, placeholdifier,
+# CSS/JS/images off) and the tab order of RB-070-12 (src/tab_order.rs, overlay_tab_order) join
+# the same registry (src/overlay.rs, web/src/overlays/).
+manifest_version = 1
+id = "overlays"
+name = "Overlays"
+version = "0.3.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "overlay"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Debug overlays in every view: horizontal overflow, selector highlight, layout outlines, stacking contexts, unneeded scrollbars, WCAG text spacing, target size, small text, focus tracking, forced states, content chaos, placeholders, CSS, JavaScript or images off, and the tab order compared across views."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views of an MCP call with target "all"; evaluate: the overflow measurement, the match
+# counts, the scans of the checking overlays and the tab order (overlay_overflow / overlay_set /
+# overlay_tab_order); cdp: force-state (the document through the accessibility tree's root,
+# DOM.querySelector, CSS.forcePseudoState; DOM.getDocument and CSS.enable only when nobody did,
+# src/effects.rs) and js-off (Emulation.setScriptExecutionDisabled), Chromium views only;
+# findings: the hits of target-size, small-text, text-spacing and scrollbars and the warnings of
+# the tab order (setting reportFindings); project-read and out-write: the overlay state below
+# .rbrowser/out/overlays/ (the component lives for one call only).
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Accessibility", "DOM", "CSS", "Emulation"] }
+findings = true
+project-read = true
+out-write = true
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "set"
+description = "plugin.overlays.tools.set"
+input = { type = "object", required = ["overlay"], properties = { overlay = { type = "string", enum = ["overflow", "outlines", "highlight", "stacking", "scrollbars", "text-spacing", "target-size", "small-text", "focus-tracking", "force-state", "content-chaos", "placeholdifier", "css-off", "js-off", "images-off", "tab-order", "all"] }, enabled = { type = "boolean" }, options = { type = "object" } } }
+
+[[tools]]
+name = "overflow"
+description = "plugin.overlays.tools.overflow"
+input = { type = "object", properties = { show100vw = { type = "boolean" } } }
+
+[[tools]]
+name = "state"
+description = "plugin.overlays.tools.state"
+input = { type = "object" }
+
+[[tools]]
+name = "tab_order"
+description = "plugin.overlays.tools.tab_order"
+input = { type = "object", properties = { includeIframes = { type = "boolean" } } }
+
+[[commands]]
+id = "outlines"
+title = "plugin.overlays.commands.outlines"
+shortcut = "Ctrl+Shift+Space D O"
+group = "devtools"
+tool = "set"
+
+[[commands]]
+id = "overflow"
+title = "plugin.overlays.commands.overflow"
+shortcut = "Ctrl+Shift+Space O F"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "highlight"
+title = "plugin.overlays.commands.highlight"
+shortcut = "Ctrl+Shift+Space O H"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "stacking"
+title = "plugin.overlays.commands.stacking"
+shortcut = "Ctrl+Shift+Space O Z"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "scrollbars"
+title = "plugin.overlays.commands.scrollbars"
+shortcut = "Ctrl+Shift+Space O S"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "text_spacing"
+title = "plugin.overlays.commands.text_spacing"
+shortcut = "Ctrl+Shift+Space O E"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "target_size"
+title = "plugin.overlays.commands.target_size"
+shortcut = "Ctrl+Shift+Space O A"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "small_text"
+title = "plugin.overlays.commands.small_text"
+shortcut = "Ctrl+Shift+Space O M"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "focus_tracking"
+title = "plugin.overlays.commands.focus_tracking"
+shortcut = "Ctrl+Shift+Space O K"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "force_state"
+title = "plugin.overlays.commands.force_state"
+shortcut = "Ctrl+Shift+Space O V"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "content_chaos"
+title = "plugin.overlays.commands.content_chaos"
+shortcut = "Ctrl+Shift+Space O L"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "placeholdifier"
+title = "plugin.overlays.commands.placeholdifier"
+shortcut = "Ctrl+Shift+Space O P"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "css_off"
+title = "plugin.overlays.commands.css_off"
+shortcut = "Ctrl+Shift+Space D 1"
+group = "devtools"
+tool = "set"
+
+[[commands]]
+id = "js_off"
+title = "plugin.overlays.commands.js_off"
+shortcut = "Ctrl+Shift+Space D 2"
+group = "devtools"
+tool = "set"
+
+[[commands]]
+id = "images_off"
+title = "plugin.overlays.commands.images_off"
+shortcut = "Ctrl+Shift+Space D 3"
+group = "devtools"
+tool = "set"
+
+[[commands]]
+id = "tab_order"
+title = "plugin.overlays.commands.tab_order"
+shortcut = "Ctrl+Shift+Space O T"
+group = "overlays"
+tool = "set"
+
+[[commands]]
+id = "off"
+title = "plugin.overlays.commands.off"
+shortcut = "Ctrl+Shift+Space O X"
+group = "overlays"
+tool = "set"
+
+[[page_scripts]]
+path = "page/overlays.js"
+run_at = "document-end"
+
+[[panels]]
+id = "main"
+title = "plugin.overlays.panels.main"
+entry = "panel/index.html"
+icon = "layers"
+placement = "sidebar"

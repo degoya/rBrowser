@@ -1,0 +1,122 @@
+{
+  "plugin": {
+    "console": {
+      "commands": {
+        "clear": "Clear the shared console",
+        "exec": "Run a console command in the views",
+        "panel": "Show the shared console"
+      },
+      "errors": {
+        "bad_args": "The console got arguments it cannot read: {reason}",
+        "expression_too_long": "The command is longer than {limit} characters.",
+        "mcp_exec_off": "Running console commands over MCP is off. A person can switch it on in Settings > DevTools & Debugging > Console > Commands over MCP; the console panel's command line works without it.",
+        "no_active_view": "No view is active; run the command in all views instead.",
+        "no_expression": "Type a command first.",
+        "unknown_view": "There is no view {view}."
+      },
+      "findings": {
+        "console_error": "console.error: {text} ({source})",
+        "js_error": "Uncaught exception: {text} ({source})"
+      },
+      "name": "Console",
+      "panel": {
+        "activeView": "Active view",
+        "allViews": "All views",
+        "clear": "Clear",
+        "command": "Command",
+        "commandHint": "A JavaScript expression, run in the views' isolated world; Enter runs it.",
+        "count": "{count} times",
+        "empty": "No messages.",
+        "entries": "Messages",
+        "levels": "Levels",
+        "noCapture": "The console receives nothing yet: the app does not hand this plugin the views' messages.",
+        "rbrowserSource": "rBrowser: {plugin}",
+        "result": "Result",
+        "resultError": "Error: {text}",
+        "run": "Run",
+        "search": "Filter messages",
+        "stack": "Stack trace",
+        "target": "Run in",
+        "truncated": "Showing the newest {shown} of {total} messages.",
+        "unknownSource": "unknown source",
+        "viewDot": "{label} ({breakpoint}, {engine}): {count} times",
+        "views": "Views"
+      },
+      "levels": {
+        "debug": "Debug",
+        "error": "Errors",
+        "info": "Info",
+        "log": "Logs",
+        "network": "Network",
+        "warning": "Warnings"
+      },
+      "panels": {
+        "console": "Console"
+      },
+      "rules": {
+        "console_error": "console.error called",
+        "js_error": "Uncaught JavaScript exception"
+      },
+      "settings": {
+        "bufferSize": {
+          "description": "How many messages the console keeps per view; older ones drop out.",
+          "help": "How many messages the console keeps per view; older ones drop out. Raise it for pages that log a lot, lower it to save memory.",
+          "label": "Messages kept per view"
+        },
+        "clearOnNavigate": {
+          "description": "A view's messages from before its last navigation leave the console.",
+          "help": "Messages from before a view's last navigation leave the console, so each page starts clean. Off keeps them across navigations.",
+          "label": "Clear on navigation"
+        },
+        "execTarget": {
+          "description": "Where a command of the console's command line runs unless the panel says otherwise: in every view or only in the active one.",
+          "help": "Where a command from the console's command line runs unless the panel says otherwise: all views, or the active one only.",
+          "label": "Run commands in"
+        },
+        "levels": {
+          "description": "The levels the console panel shows when it opens: error, warning, info, log, debug and network.",
+          "help": "The levels the console panel shows when it opens; the rest are hidden until you tick them. Example: error and warning only for a quiet review.",
+          "label": "Levels shown"
+        },
+        "mcpExec": {
+          "description": "Lets an AI agent run JavaScript in the views through the MCP tool sharedconsole_exec. Off by default; the panel's command line works either way.",
+          "help": "Lets an AI agent run JavaScript in the views through the MCP tool sharedconsole_exec. Keep it off unless an agent needs it; the panel's command line works either way.",
+          "label": "Commands over MCP"
+        },
+        "networkLevel": {
+          "description": "Which fetch and XHR requests appear at the level Network: none, the failed ones (an error status or no answer) or all of them.",
+          "help": "Which fetch and XHR requests show at the Network level: off none, errors the failed ones (error status or no answer), all every request.",
+          "label": "Network requests"
+        },
+        "showRbrowserMessages": {
+          "description": "Shows what rBrowser's own plugins reported in a view (a failed request of the rulers, say), marked with the source rBrowser and the plugin. Off by default: they are no messages of the page, and the rBrowser log has them either way. A plugin's page script that failed shows either way, with its stack.",
+          "help": "Shows what rBrowser's plugins reported in a view, marked rBrowser and the plugin's name, beside the page's own messages. Off keeps the console to the page; the rBrowser log keeps them either way. A plugin script that failed always shows, with its stack.",
+          "label": "rBrowser's own messages"
+        },
+        "option": {
+          "levels": {
+            "error": "Errors",
+            "warning": "Warnings",
+            "info": "Info",
+            "log": "Logs",
+            "debug": "Debug",
+            "network": "Network"
+          },
+          "networkLevel": {
+            "off": "Off",
+            "errors": "Failed requests",
+            "all": "All requests"
+          },
+          "execTarget": {
+            "all": "All views",
+            "active": "The active view"
+          }
+        }
+      },
+      "tools": {
+        "exec": "Runs a JavaScript expression in the targeted views (isolated world) and answers one result per distinct value, with the views that gave it. Off until a person allows it in the settings (Console > Commands over MCP).",
+        "grouped": "The shared console: the views' console messages, uncaught exceptions and failed fetch/XHR requests, deduplicated (numbers and ids ignored) with the views that reported each and how often. Optional levels, views, search and limit filter; clear: true clears the console after answering."
+      }
+    }
+  }
+}

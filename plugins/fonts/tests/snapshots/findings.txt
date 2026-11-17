@@ -1,0 +1,20 @@
+view 1 warning external-host [family=Roboto, host=fonts.gstatic.com, provider=Google Fonts] at @font-host fonts.gstatic.com Roboto
+view 1 warning font-display-missing [family=Inter, weight=600, style=normal] at @font-face Inter 600 normal
+view 1 info preload-missing [family=Inter, weight=600, style=normal, url=http://localhost:8080/fonts/inter-600.woff2] at @font-face Inter 600 normal
+view 1 warning format-not-woff2 [family=Legacy Serif, weight=400, style=normal, format=truetype] at @font-face Legacy Serif 400 normal
+view 1 info face-unused [family=Unused Display, weight=400, style=normal] at @font-face Unused Display 400 normal
+view 1 warning text-too-small [size=11, min=12, text=Fine print at 11 px.] at html > body > main > p:nth-of-type(6)
+view 1 info line-height-tight [ratio=1, min=1.2, text=A long paragraph with a line height of one, so its lines nearly touch each other] at html > body > main > p:nth-of-type(5)
+view 1 error rendered-fallback [declared=Legacy Serif, rendered=Georgia, text=Legacy text set in a TrueType file.] at html > body > main > p:nth-of-type(3)
+view 1 warning glyph-fallback [family=Inter ASCII, fallback=Arial, glyphs=5, chars=\u{f6}\u{df}\u{dc}\u{e4}\u{c4}] at html > body > main > p:nth-of-type(4)
+view 1 info fluid-not-scaled [role=h1, narrowSize=32, narrow=375, wideSize=32, wide=1280, ratio=1.15] at html > body > header > h1
+view 2 warning external-host [family=Roboto, host=fonts.gstatic.com, provider=Google Fonts] at @font-host fonts.gstatic.com Roboto
+view 2 warning font-display-missing [family=Inter, weight=600, style=normal] at @font-face Inter 600 normal
+view 2 info preload-missing [family=Inter, weight=600, style=normal, url=http://localhost:8080/fonts/inter-600.woff2] at @font-face Inter 600 normal
+view 2 warning format-not-woff2 [family=Legacy Serif, weight=400, style=normal, format=truetype] at @font-face Legacy Serif 400 normal
+view 2 info face-unused [family=Unused Display, weight=400, style=normal] at @font-face Unused Display 400 normal
+view 2 warning text-too-small [size=11, min=12, text=Fine print at 11 px.] at html > body > main > p:nth-of-type(6)
+view 2 warning input-too-small [size=14, min=16] at html > body > main > form > input
+view 2 info line-height-tight [ratio=1, min=1.2, text=A long paragraph with a line height of one, so its lines nearly touch each other] at html > body > main > p:nth-of-type(5)
+view 2 error rendered-fallback [declared=Legacy Serif, rendered=Georgia, text=Legacy text set in a TrueType file.] at html > body > main > p:nth-of-type(3)
+view 2 warning glyph-fallback [family=Inter ASCII, fallback=Arial, glyphs=5, chars=\u{f6}\u{df}\u{dc}\u{e4}\u{c4}] at html > body > main > p:nth-of-type(4)

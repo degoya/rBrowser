@@ -1,0 +1,188 @@
+{
+  "plugin": {
+    "fonts": {
+      "commands": {
+        "check": "Check the fonts of every view",
+        "panel": "Show the fonts"
+      },
+      "findings": {
+        "external-host": "{family} is loaded from {host} ({provider}): every visit sends the visitor's address there, a GDPR risk. Host the font yourself, or allow the host in fonts.allowedHosts.",
+        "external-host-file": "A font is loaded from {host} ({provider}): every visit sends the visitor's address there, a GDPR risk. Host the font yourself, or allow the host in fonts.allowedHosts.",
+        "face-unused": "The face {family} {weight} {style} is declared but no text uses it.",
+        "fluid-not-scaled": "The {role} is {narrowSize} px at {narrow} px and {wideSize} px at {wide} px wide: it grows less than {ratio} times.",
+        "font-display-missing": "The face {family} {weight} {style} has no font-display: text stays invisible while it loads. Set font-display: swap (or optional).",
+        "format-not-woff2": "The face {family} {weight} {style} is served as {format}, not WOFF2: the file is larger than it needs to be.",
+        "glyph-fallback": "{family} lacks some characters, {fallback} draws {glyphs, plural, one {# glyph} other {# glyphs}}: {chars}",
+        "input-too-small": "This form field's text is {size} px; under {min} px iOS zooms in when it is focused.",
+        "large-file": "The font file {url} is {kb} KiB (at most {max}): subset it or use WOFF2.",
+        "line-height-tight": "The line height is {ratio} times the font size (at least {min}): \"{text}\".",
+        "preload-missing": "{family} {weight} sets text in the first screen but {url} is not preloaded (<link rel=\"preload\" as=\"font\" crossorigin>).",
+        "rendered-fallback": "{declared} is declared, {rendered} is rendered: \"{text}\".",
+        "text-too-small": "Text at {size} px is below {min} px: \"{text}\".",
+        "too-many-weights": "{family} loads {count, plural, one {# weight or style} other {# weights and styles}} (at most {max})."
+      },
+      "name": "Fonts",
+      "panel": {
+        "badge": {
+          "fallback": "not rendered",
+          "glyphs": "fallback glyphs"
+        },
+        "breakpoints": "Font sizes per breakpoint",
+        "check": "Check",
+        "checked": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
+        "clear": "Clear marks",
+        "cut": "Showing the first entries only; MCP fonts_list lists them all.",
+        "display": "font-display",
+        "drawn": {
+          "fallback": "fallback: {fonts}",
+          "glyphs": "some glyphs from {fonts}",
+          "ok": "as declared",
+          "unknown": "unknown",
+          "unsupported": "Chromium only"
+        },
+        "elements": "Elements",
+        "empty": "No text and no web fonts in the views.",
+        "export": "Export",
+        "exported": "Written: {files}",
+        "faces": "Faces",
+        "families": "Font families",
+        "file": "File",
+        "findingCount": "{count, plural, one {# finding} other {# findings}}",
+        "findings": "Findings",
+        "jump": "jumps",
+        "kb": "{kb} KiB",
+        "loading": "Reading the views...",
+        "marked": "Marked {count, plural, one {# element} other {# elements}} in {views, plural, one {# view} other {# views}}.",
+        "notScaled": "not scaled",
+        "preloaded": "preloaded",
+        "provider": {
+          "adobe": "Adobe Fonts",
+          "external": "another host",
+          "generic": "generic",
+          "google": "Google Fonts",
+          "inline": "inline",
+          "own": "own server",
+          "system": "installed",
+          "unknown": "unknown source"
+        },
+        "refresh": "Refresh",
+        "rendered": "Rendered",
+        "role": "Role",
+        "sizes": "Sizes (px)",
+        "state": {
+          "error": "failed",
+          "loaded": "loaded",
+          "loading": "loading",
+          "unknown": "unknown",
+          "unloaded": "unused"
+        },
+        "status": "Status",
+        "style": "Style",
+        "unsupported": "No fonts from {views} (Chromium views only).",
+        "usage": "Use",
+        "variable": "variable",
+        "view": "View",
+        "weight": "Weight",
+        "weights": "Weights",
+        "elementCount": "{count, plural, one {# element} other {# elements}}",
+        "stateIn": "{state}: {views}",
+        "summary": "{views, plural, one {# view} other {# views}}, {families, plural, one {# font family} other {# font families}}.",
+        "tabFonts": "Fonts",
+        "tabSizes": "Sizes per breakpoint",
+        "flags": "Notes",
+        "perView": "Elements per view",
+        "preview": {
+          "title": "Preview",
+          "text": "Sample text",
+          "size": "Size",
+          "sizePx": "{px} px",
+          "loading": "Loading the font file...",
+          "installed": "Shown with the font installed on this computer, by its name.",
+          "too_large": "No preview: the font file is larger than {kb} KiB (Settings > Checks > Fonts > Largest preview file).",
+          "not_listed": "No preview: the page did not load this file.",
+          "unreadable": "No preview: the view could not read the file again; its server or the page refuses it.",
+          "no_file": "No preview: this face names no font file.",
+          "not_loaded": "No preview: no Chromium view loaded this face.",
+          "failed": "No preview: the browser could not read the font file."
+        }
+      },
+      "panels": {
+        "fonts": "Fonts"
+      },
+      "rules": {
+        "external-host": "Font loaded from a third party",
+        "face-unused": "Unused @font-face",
+        "fluid-not-scaled": "Heading does not scale",
+        "font-display-missing": "Web font without font-display",
+        "format-not-woff2": "Web font not in WOFF2",
+        "glyph-fallback": "Characters from a fallback font",
+        "input-too-small": "Form field text under the zoom limit",
+        "large-file": "Large font file",
+        "line-height-tight": "Line height too tight",
+        "preload-missing": "Font of the first screen not preloaded",
+        "rendered-fallback": "Declared font not rendered",
+        "text-too-small": "Text too small",
+        "too-many-weights": "Too many weights of one family"
+      },
+      "settings": {
+        "allowedHosts": {
+          "description": "Font hosts that are no privacy finding: a host such as fonts.gstatic.com, or *.example.com for a domain and its subdomains.",
+          "help": "Font hosts that are no privacy finding, such as your own CDN. Example: fonts.gstatic.com, *.example.com for a domain and its subdomains.",
+          "label": "Allowed font hosts"
+        },
+        "fluidMinRatio": {
+          "description": "A heading should grow at least by this factor from the narrowest to the widest view; one that does not is reported as not scaled.",
+          "help": "A heading should grow at least by this factor from the narrowest to the widest view; one that does not is reported as not scaled. Example: 1.15.",
+          "label": "Heading growth"
+        },
+        "maxFileKb": {
+          "description": "Font files larger than this, in KiB, are reported.",
+          "help": "Font files larger than this, in KiB, are reported. Example: 100.",
+          "label": "Largest font file"
+        },
+        "maxWeightsPerFamily": {
+          "description": "A family with more loaded weights and styles is reported.",
+          "help": "A font family with more loaded weights and styles than this is reported, as each one is another download. Example: 4.",
+          "label": "Weights per family"
+        },
+        "minInputPx": {
+          "description": "Form fields with smaller text are reported in views up to 1024 pixels wide: iOS zooms into them.",
+          "help": "Form fields with text smaller than this are reported in views up to 1024 pixels wide, because iOS zooms into them. Example: 16.",
+          "label": "Smallest form field text"
+        },
+        "minLineHeight": {
+          "description": "Paragraphs with a smaller line height, relative to their font size, are reported.",
+          "help": "Paragraphs with a line height below this factor of their font size are reported. Example: 1.2; WCAG recommends 1.5 for body text.",
+          "label": "Smallest line height"
+        },
+        "minTextPx": {
+          "description": "Text smaller than this, in CSS pixels, is reported.",
+          "help": "Text with a computed size below this many CSS pixels is reported as too small. Example: 12.",
+          "label": "Smallest text"
+        },
+        "previewMaxKb": {
+          "description": "Font files up to this size, in KiB, are shown as a preview in the Fonts panel; a larger one says why it is missing.",
+          "help": "The Fonts panel shows each web font in its own type; it reads the file again in a view that loaded it. Files above this size, in KiB, show no preview and say so. Example: 1024.",
+          "label": "Largest preview file"
+        },
+        "previewText": {
+          "description": "The sample text the Fonts panel sets in each font; the panel can change it for the moment.",
+          "help": "The text the Fonts panel shows in each font and face. The field above the preview changes it until the panel is closed. Example: Aa Bb Cc 0123.",
+          "label": "Preview text"
+        },
+        "previewSizePx": {
+          "description": "The size of the large preview in the Fonts panel, in CSS pixels; the panel can change it for the moment.",
+          "help": "The size of the per-face preview in the Fonts panel, in CSS pixels. The size list above the preview changes it until the panel is closed. Example: 24.",
+          "label": "Preview size"
+        }
+      },
+      "tools": {
+        "check": "The font findings of the views - privacy (fonts from Google, Adobe or another host), performance (font-display, WOFF2, preload, unused faces, too many weights, large files), readability (small text, inputs under 16 px on phones and tablets, tight line height), rendered vs declared and fluid typography - with a count per rule.",
+        "export": "Writes the font list of the views to .rbrowser/out/fonts/fonts.json and fonts.csv (a row per family and view).",
+        "list": "The fonts of the views: each family with its source (Google Fonts, Adobe Fonts, own server, installed), formats, faces with their status per view, file sizes and preloads, where it is used per view and what Chromium really rendered (unsupported in Firefox and WebKit views); the font sizes of the text roles per view with jumps and whether headings scale; the font files; the findings. rendered false skips the rendered fonts; budget cuts the lists to fit.",
+        "mark": "Outlines every element whose text is set in a family (optionally one weight and style) in the views and scrolls the first into view; clear removes the marks.",
+        "preview": "One part (40 KiB) of a font file a view loaded, as base64, for the Fonts panel's preview: read again in that view from the browser's cache; only a file the page itself loaded, none above previewMaxKb. view and src name it, offset the part; done says whether more follow; error says why there is none (too_large, not_listed, unreadable)."
+      }
+    }
+  }
+}

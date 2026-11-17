@@ -1,0 +1,220 @@
+# The network panel (RB-070-02, docs/plugins.md): the requests of every view in one list with
+# their differences marked, mocks, blocking and rewrites from `.rbrowser/mocks/*.json`, HAR export
+# and import, the session's cache switch and "clear site data". The host captures the requests
+# (`$console`, capability console-logs) and executes the rules (capability network-rules): it asks
+# the component for them (`@rules`) and applies them through CDP Fetch - no WASM per request.
+manifest_version = 1
+id = "network-panel"
+name = "Network"
+version = "0.2.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+# `network` is an area of the core's own tools (`network_requests`), so the plugin's tools take a
+# prefix of their own, as `console` (`sharedconsole`) and `sitemap-capture` (`sitemapcapture`) do.
+mcp_prefix = "networkpanel"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "The requests of every view in one list with their differences, mocks, blocking and rewrites, HAR export and import; an HTTP debugger with breakpoints, compose and repeat, map local and remote, sessions."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views' labels and engines; cdp (Network only): response bodies for the HAR and the
+# body preview (Network.getResponseBody); project-read: the mock files below `.rbrowser/` (no
+# globs) and HAR files to import; out-write: HAR exports, the plugin's own mocks and its state
+# below .rbrowser/out/network-panel/.
+[capabilities]
+views = true
+cdp = { domains = ["Network"] }
+project-read = true
+out-write = true
+# The host's capture of every view's requests, handed over as `$console`.
+console-logs = true
+# The host applies the plugin's rules; the plugin never sees a request in flight.
+network-rules = true
+
+[limits]
+# A HAR export reads up to 200 response bodies per view.
+timeout_milliseconds = 30000
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "list"
+description = "plugin.network-panel.tools.list"
+input = { type = "object", properties = { search = { type = "string", maxLength = 200 }, types = { type = "array", items = { type = "string", maxLength = 32 } }, status = { type = "string", enum = ["all", "ok", "error", "failed"] }, differences = { type = "boolean" }, limit = { type = "integer", minimum = 1, maximum = 500 } } }
+
+[[tools]]
+name = "body"
+description = "plugin.network-panel.tools.body"
+input = { type = "object", required = ["view", "id"], properties = { view = { type = "integer", minimum = 0 }, id = { type = "string", minLength = 1, maxLength = 200 } } }
+
+[[tools]]
+name = "mocks"
+description = "plugin.network-panel.tools.mocks"
+input = { type = "object" }
+
+[[tools]]
+name = "mock_add"
+description = "plugin.network-panel.tools.mock_add"
+# A mocked response or a rewritten URL puts the caller's content into the page - script included:
+# over MCP only while mcp.allowEvaluate is on (evaluate_disabled). The panel is a person's path.
+evaluates_input = true
+input = { type = "object", required = ["match"], properties = { id = { type = "string", pattern = "^[A-Za-z0-9._-]{1,64}$" }, match = { type = "object", required = ["urlPattern"], properties = { urlPattern = { type = "string", minLength = 1, maxLength = 2048 }, regex = { type = "boolean" }, method = { type = "string" }, resourceType = { type = "string" } } }, mock = { type = "object", properties = { status = { type = "integer", minimum = 100, maximum = 599 }, headers = { type = "object" }, body = {}, delayMs = { type = "integer", minimum = 0, maximum = 60000 } } }, block = { type = "boolean" }, rewrite = { type = "object", properties = { url = { type = "string" }, headers = { type = "object" } } } } }
+
+[[tools]]
+name = "mock_remove"
+description = "plugin.network-panel.tools.mock_remove"
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 1, maxLength = 200 } } }
+
+[[tools]]
+name = "mock_enable"
+description = "plugin.network-panel.tools.mock_enable"
+input = { type = "object", required = ["id", "enabled"], properties = { id = { type = "string", minLength = 1, maxLength = 200 }, enabled = { type = "boolean" } } }
+
+[[tools]]
+name = "mocks_toggle"
+description = "plugin.network-panel.tools.mocks_toggle"
+input = { type = "object", properties = { enabled = { type = "boolean" } } }
+
+[[tools]]
+name = "cache_toggle"
+description = "plugin.network-panel.tools.cache_toggle"
+input = { type = "object", properties = { disabled = { type = "boolean" } } }
+
+[[tools]]
+name = "har_export"
+description = "plugin.network-panel.tools.har_export"
+input = { type = "object", properties = { merged = { type = "boolean" }, bodies = { type = "boolean" } } }
+
+[[tools]]
+name = "har_import"
+description = "plugin.network-panel.tools.har_import"
+# Replayed responses are content the page runs, as with mock_add.
+evaluates_input = true
+input = { type = "object", required = ["path"], properties = { path = { type = "string", minLength = 1, maxLength = 512 } } }
+
+# The HTTP debugger (RB-080-37). The panel's path to the host's breakpoints and holds; over MCP
+# the core tools network_breakpoints, network_continue, network_abort, network_compose and
+# network_repeat carry the finer gates (edits and sends only with mcp.allowEvaluate and
+# allowComposeFromMcp). The plugin tools that let a request go on changed or send one with the
+# person's cookies are therefore evaluates_input: off over MCP unless mcp.allowEvaluate is on.
+[[tools]]
+name = "debug"
+description = "plugin.network-panel.tools.debug"
+input = { type = "object" }
+
+[[tools]]
+name = "breakpoint_add"
+description = "plugin.network-panel.tools.breakpoint_add"
+input = { type = "object", required = ["urlPattern"], properties = { id = { type = "string", pattern = "^[A-Za-z0-9._-]{1,64}$" }, urlPattern = { type = "string", minLength = 1, maxLength = 2048 }, regex = { type = "boolean" }, method = { type = "string", maxLength = 16 }, resourceType = { type = "string", maxLength = 32 }, stage = { type = "string", enum = ["request", "response"] }, views = { type = "array", items = { type = "integer", minimum = 0 }, maxItems = 64 }, enabled = { type = "boolean" } } }
+
+[[tools]]
+name = "breakpoint_remove"
+description = "plugin.network-panel.tools.breakpoint_remove"
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 1, maxLength = 128 } } }
+
+[[tools]]
+name = "breakpoint_enable"
+description = "plugin.network-panel.tools.breakpoint_enable"
+input = { type = "object", required = ["id", "enabled"], properties = { id = { type = "string", minLength = 1, maxLength = 128 }, enabled = { type = "boolean" } } }
+
+[[tools]]
+name = "breakpoints_toggle"
+description = "plugin.network-panel.tools.breakpoints_toggle"
+input = { type = "object", properties = { enabled = { type = "boolean" } } }
+
+[[tools]]
+name = "continue"
+description = "plugin.network-panel.tools.continue"
+evaluates_input = true
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 1, maxLength = 128 }, allViews = { type = "boolean" }, edits = { type = "object", properties = { method = { type = "string", maxLength = 16 }, url = { type = "string", maxLength = 2048 }, headers = { type = "array", items = { type = "array", items = { type = "string" }, minItems = 2, maxItems = 2 }, maxItems = 64 }, body = { type = "string" }, bodyBase64 = { type = "string" }, status = { type = "integer", minimum = 100, maximum = 599 } } } } }
+
+[[tools]]
+name = "abort"
+description = "plugin.network-panel.tools.abort"
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 1, maxLength = 128 }, allViews = { type = "boolean" } } }
+
+[[tools]]
+name = "compose"
+description = "plugin.network-panel.tools.compose"
+evaluates_input = true
+input = { type = "object", required = ["request"], properties = { view = { type = "integer", minimum = 0 }, times = { type = "integer", minimum = 1, maximum = 10 }, request = { type = "object", required = ["url"], properties = { method = { type = "string", maxLength = 16 }, url = { type = "string", minLength = 1, maxLength = 2048 }, headers = { type = "array", items = { type = "array", items = { type = "string" }, minItems = 2, maxItems = 2 }, maxItems = 64 }, body = { type = "string" }, bodyBase64 = { type = "string" } } } } }
+
+[[tools]]
+name = "repeat"
+description = "plugin.network-panel.tools.repeat"
+evaluates_input = true
+input = { type = "object", required = ["view", "requestId"], properties = { view = { type = "integer", minimum = 0 }, requestId = { type = "string", minLength = 1, maxLength = 200 }, times = { type = "integer", minimum = 1, maximum = 10 }, edits = { type = "object" } } }
+
+[[tools]]
+name = "session_save"
+description = "plugin.network-panel.tools.session_save"
+input = { type = "object", properties = { name = { type = "string", pattern = "^[A-Za-z0-9._-]{1,64}$" } } }
+
+[[tools]]
+name = "session_open"
+description = "plugin.network-panel.tools.session_open"
+input = { type = "object", required = ["path"], properties = { path = { type = "string", minLength = 1, maxLength = 512 } } }
+
+[[tools]]
+name = "sessions_list"
+description = "plugin.network-panel.tools.sessions_list"
+input = { type = "object" }
+
+[[commands]]
+id = "panel"
+title = "plugin.network-panel.commands.panel"
+shortcut = "Ctrl+Shift+Space P N"
+group = "panels"
+mcp_omitted = "ui-only: shows the network panel"
+
+[[commands]]
+id = "mocks_toggle"
+title = "plugin.network-panel.commands.mocks_toggle"
+shortcut = "Ctrl+Shift+Space P M"
+group = "panels"
+tool = "mocks_toggle"
+
+[[commands]]
+id = "har_export"
+title = "plugin.network-panel.commands.har_export"
+shortcut = "Ctrl+Shift+Space P H"
+group = "panels"
+tool = "har_export"
+
+# `Ctrl+Shift+Space P R`: the requests' breakpoints on or off (RB-080-37).
+[[commands]]
+id = "breakpoints_toggle"
+title = "plugin.network-panel.commands.breakpoints_toggle"
+shortcut = "Ctrl+Shift+Space P R"
+group = "panels"
+tool = "breakpoints_toggle"
+
+[[commands]]
+id = "cache_toggle"
+title = "plugin.network-panel.commands.cache_toggle"
+shortcut = "Ctrl+Shift+Space R N"
+group = "reload"
+tool = "cache_toggle"
+
+[[commands]]
+id = "site_data_clear"
+title = "plugin.network-panel.commands.site_data_clear"
+shortcut = "Ctrl+Shift+Space R D"
+group = "reload"
+mcp_omitted = "protected: deletes the sessions' site data, a person's decision only"
+
+[[panels]]
+id = "network"
+title = "plugin.network-panel.panels.network"
+entry = "panel/index.html"
+icon = "network"
+placement = "sidebar"

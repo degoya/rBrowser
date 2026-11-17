@@ -1,0 +1,86 @@
+# Snippets (RB-070-04, docs/plugins.md): JavaScript snippets of the person (`snippets.library`),
+# of the project (`.rbrowser/snippets/*.js`, only under workspace trust - the host refuses the
+# folder until a person trusted the workspace) and saved from the panel
+# (`.rbrowser/out/snippets/library.json`, also only under trust), run in every view or the active
+# one over CDP - the page's world (`@world main`) or the plugin's isolated world - with a timeout
+# per snippet; the results joined per view.
+manifest_version = 1
+id = "snippets"
+name = "Snippets"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "snippets"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "JavaScript snippets of the person and the project, run in every view at once or in the active one, results joined per view."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the grid and the active view; cdp: `Runtime.evaluate` in the page's world or in the
+# plugin's isolated world (`Page.getFrameTree`, `Page.createIsolatedWorld`), with the snippet's
+# own timeout - the `evaluate` capability has the plugin's call timeout only and no main world;
+# project-read (no globs: `.rbrowser/` only) and out-write: the project's snippets, the saved ones
+# and the last run.
+[capabilities]
+views = true
+cdp = { domains = ["Runtime", "Page"] }
+project-read = true
+out-write = true
+
+# A run in every view takes up to a snippet's timeout (at most 9 s) per view: 30 s of the
+# component's own time (90 s on the caller's clock); the panel runs view by view, in parallel.
+[limits]
+timeout_milliseconds = 30000
+max_concurrent = 8
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "list"
+description = "plugin.snippets.tools.list"
+input = { type = "object", properties = { withCode = { type = "boolean" } } }
+
+[[tools]]
+name = "run"
+description = "plugin.snippets.tools.run"
+# Runs JavaScript (a stored snippet or the caller's `code`): over MCP only while
+# `mcp.allowEvaluate` is on.
+evaluates_input = true
+input = { type = "object", properties = { name = { type = "string", minLength = 1, maxLength = 80 }, source = { type = "string", enum = ["user", "project", "local"] }, code = { type = "string", minLength = 1, maxLength = 100000 }, world = { type = "string", enum = ["isolated", "main"] }, timeoutMs = { type = "integer", minimum = 100, maximum = 9000 }, remember = { type = "array", items = { type = "integer", minimum = 0 }, minItems = 1, maxItems = 64 } } }
+
+[[tools]]
+name = "save"
+description = "plugin.snippets.tools.save"
+# Stores code the panel and `run_last` run later: over MCP only while `mcp.allowEvaluate` is on.
+evaluates_input = true
+input = { type = "object", required = ["name"], properties = { name = { type = "string", minLength = 1, maxLength = 80 }, code = { type = "string", minLength = 1, maxLength = 100000 }, delete = { type = "boolean" } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.snippets.commands.panel"
+shortcut = "Ctrl+Shift+Space P J"
+group = "panels"
+mcp_omitted = "ui-only: opens the snippets panel"
+
+[[commands]]
+id = "run_last"
+title = "plugin.snippets.commands.run_last"
+shortcut = "Ctrl+Shift+Space D J"
+group = "devtools"
+tool = "run"
+
+[[panels]]
+id = "snippets"
+title = "plugin.snippets.panels.snippets"
+entry = "panel/index.html"
+icon = "code"
+placement = "sidebar"

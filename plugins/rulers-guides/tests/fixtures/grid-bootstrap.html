@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bootstrap grid fixture (RB-060-05)</title>
+    <!--
+      Bootstrap's grid model without Bootstrap (no network in a fixture): a container with half a
+      gutter of padding, a row pulling half a gutter back, columns with half a gutter of padding.
+      Below 1200 px 4 columns with a 16 px gutter; from 1200 px 12 columns with a 24 px gutter in
+      a container of at most 1200 px. The rulers-guides setups that match it:
+        mobile  {"columns": 4,  "gutter": 16, "margin": 8}
+        desktop {"columns": 12, "gutter": 24, "margin": 12, "maxWidth": 1200}
+      `#mark` sits at left: 200px, top: 200px for the rulers.
+    -->
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.4 system-ui, sans-serif; min-height: 3000px; }
+      .container { width: 100%; margin: 0 auto; padding: 0 8px; }
+      .row { display: flex; flex-wrap: wrap; margin: 0 -8px; }
+      .col { flex: 0 0 25%; padding: 0 8px; }
+      .cell { height: 40px; background: #d0d7e2; }
+      @media (min-width: 1200px) {
+        .container { max-width: 1200px; padding: 0 12px; }
+        .row { margin: 0 -12px; }
+        .col { flex-basis: calc(100% / 12); padding: 0 12px; }
+      }
+      #mark { position: absolute; left: 200px; top: 200px; width: 10px; height: 10px; background: #c00; }
+      #target { position: absolute; left: 280px; top: 280px; width: 60px; height: 60px; background: #0a0; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+        <div class="col"><div class="cell"></div></div>
+      </div>
+    </div>
+    <div id="mark"></div>
+    <button id="target" type="button">target</button>
+  </body>
+</html>

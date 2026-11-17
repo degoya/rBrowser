@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "simulators settings",
+  "type": "object",
+  "properties": {
+    "default": {
+      "type": "string",
+      "enum": [
+        "none",
+        "protanopia",
+        "protanomaly",
+        "deuteranopia",
+        "deuteranomaly",
+        "tritanopia",
+        "tritanomaly",
+        "achromatopsia",
+        "achromatomaly",
+        "myopia",
+        "cataract",
+        "glaucoma",
+        "macular-degeneration",
+        "low-contrast",
+        "sunlight",
+        "dimmed"
+      ],
+      "default": "none",
+      "x-category": "devtools",
+      "x-section": "simulators",
+      "x-order": 10,
+      "x-scope": ["user", "project", "local"]
+    },
+    "blurPx": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20,
+      "default": 2,
+      "x-category": "devtools",
+      "x-section": "simulators",
+      "x-order": 20,
+      "x-scope": ["user", "project", "local"]
+    },
+    "preferNative": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "simulators",
+      "x-order": 30,
+      "x-scope": ["user", "project", "local"]
+    },
+    "persist": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "simulators",
+      "x-order": 40,
+      "x-scope": ["user", "project", "local"]
+    }
+  }
+}

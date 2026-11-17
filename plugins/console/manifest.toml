@@ -1,0 +1,80 @@
+# The shared console (RB-060-02, docs/plugins.md): the console messages, uncaught exceptions and
+# failed fetch/XHR requests of every view as one deduplicated list - each entry with a dot per
+# view that reported it - commands run in every view, and JS errors as findings. The host
+# captures (CDP Runtime/Log/Network, Firefox BiDi log.entryAdded, the WebKit sidecar) and hands
+# the views' buffers to each call as the argument `$console` (src/feed.rs); the component
+# normalises, deduplicates and groups them.
+manifest_version = 1
+id = "console"
+name = "Console"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin", "check-plugin"]
+# `console` is an area of the core's own tools (`console_logs`), so the plugin's tools take a
+# prefix of their own, as `sitemap-capture` does (`sitemapcapture`).
+mcp_prefix = "sharedconsole"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "One console for every view: messages deduplicated with a dot per reporting view, commands run in all views, JS errors as findings."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: labels, breakpoints and the active view; evaluate: the command line; project-read and
+# out-write: the clear mark `.rbrowser/out/console/state.json` (no globs: `.rbrowser/` only).
+[capabilities]
+views = true
+evaluate = true
+project-read = true
+out-write = true
+# The host's capture of every view's console, errors and network failures, handed over as `$console`.
+console-logs = true
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "grouped"
+description = "plugin.console.tools.grouped"
+input = { type = "object", properties = { levels = { type = "array", items = { type = "string", enum = ["error", "warning", "info", "log", "debug", "network"] } }, views = { type = "array", items = { type = "integer", minimum = 0 } }, search = { type = "string", maxLength = 200 }, limit = { type = "integer", minimum = 1, maximum = 1000 }, clear = { type = "boolean" } } }
+
+[[tools]]
+name = "exec"
+description = "plugin.console.tools.exec"
+# Runs the caller's JavaScript in the views: over MCP only while `mcp.allowEvaluate` is on.
+evaluates_input = true
+input = { type = "object", required = ["expression"], properties = { expression = { type = "string", minLength = 1, maxLength = 10000 } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.console.commands.panel"
+shortcut = "Ctrl+Shift+Space P C"
+group = "panels"
+mcp_omitted = "ui-only: opens the console panel"
+
+[[commands]]
+id = "clear"
+title = "plugin.console.commands.clear"
+shortcut = "Ctrl+Shift+Space D X"
+group = "devtools"
+tool = "grouped"
+
+[[commands]]
+id = "exec"
+title = "plugin.console.commands.exec"
+shortcut = "Ctrl+Shift+Space D E"
+group = "devtools"
+tool = "exec"
+
+[[panels]]
+id = "console"
+title = "plugin.console.panels.console"
+entry = "panel/index.html"
+icon = "terminal"
+placement = "sidebar"

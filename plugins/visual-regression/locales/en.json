@@ -1,0 +1,24 @@
+{
+  "plugin": {
+    "visual-regression": {
+      "errors": {
+        "bad_args": "The visual regression check got arguments it cannot read: {reason}"
+      },
+      "findings": {
+        "differs": "{label} ({breakpoint}) differs from its baseline by {percent} % ({pixels, plural, one {# pixel} other {# pixels}} in {areas, plural, one {# area} other {# areas}}).",
+        "failed": "{label} ({breakpoint}) could not be compared: {error}",
+        "no_baseline": "{label} ({breakpoint}) has no baseline yet; save one with the baseline update.",
+        "size_mismatch": "{label} ({breakpoint}) is {actual} pixels, its baseline {baseline}: the page changed its size.",
+        "unreliable": "Comparison unreliable for {label} ({breakpoint}): the setup differs from the baseline's in {fields}."
+      },
+      "name": "Visual regression",
+      "rules": {
+        "differs": "Differs from the baseline",
+        "failed": "Not compared",
+        "no_baseline": "No baseline yet",
+        "size_mismatch": "Size differs from the baseline",
+        "unreliable": "Comparison unreliable"
+      }
+    }
+  }
+}

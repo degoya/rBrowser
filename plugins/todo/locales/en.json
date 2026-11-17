@@ -1,0 +1,116 @@
+{
+  "plugin": {
+    "todo": {
+      "commands": {
+        "archive": "Archive the finished todos",
+        "new": "Add a todo",
+        "panel": "Show the todos"
+      },
+      "errors": {
+        "bad_args": "The todo plugin got arguments it cannot read: {reason}",
+        "blank_line": "That line is empty; pick a task, a project or a note.",
+        "changed": "{path} changed since it was shown; it has been read again, nothing was overwritten.",
+        "encoding": "{path} is not UTF-8 text, so it is shown but not changed.",
+        "heading_depth": "A heading has at most three spaces before it; add it higher up in the file.",
+        "no_file": "The todo files setting shows no file to add to, and TODO.todo is not among them; say which file.",
+        "no_line": "That line is no longer in the file.",
+        "no_project": "There is no such project in the file.",
+        "no_sibling": "There is nothing to move it past.",
+        "not_a_parent": "Tasks go below a project or another task.",
+        "not_a_task": "That line is no task.",
+        "search_incomplete": "Not every todo file was found (too many folders or files), so the new todo needs its file named.",
+        "several_files": "The project has several todo files; say which one.",
+        "text": "Write the text on one line, at most 1000 characters, and keep it what it was (a note stays a note).",
+        "too_large": "{path} is larger than the plugin reads ({limit, plural, one {# byte} other {# bytes}}).",
+        "untrusted": "Todo files are changed only in a workspace you trust; trust this project first."
+      },
+      "name": "Todo",
+      "panel": {
+        "add": "Add",
+        "addPlaceholder": "New todo or # heading, then Enter",
+        "addTo": "Add to",
+        "archive": "Archive finished",
+        "archiveSection": "{n, plural, one {Archive: # todo} other {Archive: # todos}}",
+        "archived": "{n, plural, one {# todo archived} other {# todos archived}}",
+        "cancelEdit": "Keep the old text",
+        "cancelTask": "Cancel \"{text}\"",
+        "changed": "A file changed elsewhere; shown as it is now.",
+        "check": "Check \"{text}\"",
+        "confirmDelete": "Delete \"{text}\"? The rest of the file stays.",
+        "confirmDeleteBlock": "{n, plural, one {Delete \"{text}\" and the # line below it?} other {Delete \"{text}\" and the # lines below it?}} The rest of the file stays.",
+        "counts": "{open, plural, one {# open} other {# open}}, {done, plural, one {# done} other {# done}}",
+        "delete": "Delete",
+        "down": "Move down",
+        "edit": "Edit",
+        "empty": "No .todo files in this project yet. Add a todo to start TODO.todo.",
+        "filter": "Filter by tag",
+        "filterClear": "Show every todo",
+        "keep": "Keep",
+        "loading": "Reading the todo files...",
+        "openOnly": "Only open",
+        "reload": "Read the files again",
+        "reopen": "Open \"{text}\" again",
+        "save": "Save",
+        "search": "Search the todos",
+        "searchClear": "Clear the search",
+        "searchNone": "No todo here matches the search.",
+        "searchPlaceholder": "Search, or @tag (Ctrl+F)",
+        "section": "Only {name}",
+        "sectionClear": "Show the whole file, not only {name}",
+        "topLevel": "Top level",
+        "truncated": "Not every todo file is shown: the project has too many folders or files.",
+        "up": "Move up"
+      },
+      "panels": {
+        "todo": "Todo"
+      },
+      "settings": {
+        "exclude": {
+          "description": "Folders never searched for todo files, by name.",
+          "help": "Folders never searched for todo files, by name, in any case; .git and .rbrowser are never searched anyway. By default dependencies and build output: node_modules, .git, target, dist, build, out, .next, .nuxt, .output, .svelte-kit, vendor, .venv, __pycache__.",
+          "label": "Folders left out"
+        },
+        "files": {
+          "description": "Which .todo files of the project are shown, as globs.",
+          "help": "Which .todo files of the project are shown: globs of their paths, ** any folders, * any name. Example: docs/**/*.todo. Only .todo files are read and written.",
+          "label": "Todo files"
+        },
+        "hideArchive": {
+          "description": "Hides the Archive project of every file.",
+          "help": "Hides the Archive project of every file; it is shown folded otherwise.",
+          "label": "Hide the archive"
+        },
+        "hideDone": {
+          "description": "Hides done and cancelled todos outside the archive.",
+          "help": "Hides done and cancelled todos outside the archive, so the list shows what is left to do.",
+          "label": "Hide finished todos"
+        },
+        "option": {
+          "timestampFormat": {
+            "date": "26-11-16",
+            "fullDate": "2026-11-16",
+            "fullYear": "2026-11-16 14:05",
+            "todoPlus": "26-11-16 14:05 (Todo+)"
+          }
+        },
+        "refreshSeconds": {
+          "description": "How often the panel reads the files again, in seconds; 0 only on request.",
+          "help": "How often the open panel reads the todo files again to show what an editor changed, in seconds (0 to 300); 0 reads them only when you ask.",
+          "label": "Read again every"
+        },
+        "timestampFormat": {
+          "description": "The time a checked or cancelled todo gets, as Todo+ writes it.",
+          "help": "The time written into @done(...) and @cancelled(...) when a todo is checked or cancelled, in the panel's local time. Todo+' default is 26-11-16 14:05.",
+          "label": "Time stamp"
+        }
+      },
+      "tools": {
+        "add": "Adds an open todo (☐) to a .todo file - or, when text is a Markdown heading (one to six #, a space, a text: ## Sprint), that heading line without a box, after the whole section of a heading under, so tasks can then go under its line: file (the project's only todo file without it, TODO.todo when there is none), text, and under (the line of a project, task or Markdown heading - below a heading it goes after the heading's own lines) or project (a project path such as Website.Design; a top-level one is made when missing). Only in a trusted workspace. rev, the file's rev from todo_list, refuses a change to a file that changed since.",
+        "archive": "Moves the done and cancelled todos into the Archive project with @project(...), as Todo+ does: in file, or in every todo file. Only in a trusted workspace.",
+        "edit": "Changes item line of file: action text (with text: the task's text and tags after its symbol, a project's name, a note, a Markdown heading's whole line such as ## Design), delete (with everything below it), up or down (past its sibling). Only in a trusted workspace; rev refuses a change to a file that changed since.",
+        "list": "The project's .todo files (Todo+ format), in pages that fit one answer. Without file: each file's path, rev and counts (open, done, cancelled), no items - files names the files (the folders are not searched then). With file: that file's rev, counts and items - line, depth, kind (project, heading, task, note), state (open, done, cancelled), level (a Markdown heading's, 1 to 6), text (a heading's without its #s), tags, project, archived, and cut when a line was too long for an answer and is shown shortened. next, when present, is the from of the following page (a file index without file, an item index with it); pass the first page's rev along with file, and when the file changed meanwhile start again without from. query finds todos: its terms, split at spaces, match without case and accents - a word in an item's text or a tag's name or value, @name a tag whose name starts with name (@done, @high) - and an item matches when every term does. With query and file: the matches with the headings, projects and parent lines above them, each item with match (true for a match, false for context), and matches, how many matched; next and from count these items. With query and without file: only the files with a match, each with matches.",
+        "toggle": "Checks or unchecks todo line of file: done with @done(time), open without it, or the given state (open, done, cancelled). utcOffset, minutes east of UTC, makes the time local. Only in a trusted workspace; rev refuses a change to a file that changed since."
+      }
+    }
+  }
+}

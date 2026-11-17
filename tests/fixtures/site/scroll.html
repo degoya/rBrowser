@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser scroll sync fixture</title>
+<style>
+  /* RB-020-04: the scroll sync fixture. Eight sections whose heights differ per breakpoint (the
+     same content is two to three times taller below 700 px), a fixed header over the top edge,
+     an inner sidebar that scrolls on its own, a table that scrolls horizontally, and smooth
+     scrolling the sync must not fight. window.__scrollLog counts the scroll events of the page,
+     the sidebar and the table (the echo check: after the leader rests, its counts stay put).
+     Served by tests/fixtures/server/post-counter.py; loaded by the agent's Vitest tests. */
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+  .topbar { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: #223; color: #fff; z-index: 1; }
+  .page { display: flex; gap: 24px; padding: 72px 24px 24px; }
+  main { flex: 1; min-width: 0; }
+  section { min-height: 480px; border-bottom: 1px solid #ccc; }
+  section:nth-of-type(odd) { min-height: 720px; }
+  h2 { margin: 0; padding: 8px 0; }
+  #sidebar { width: 240px; height: 400px; overflow: auto; position: sticky; top: 72px; }
+  #sidebar li { height: 48px; }
+  #table-wrap { overflow-x: auto; max-width: 100%; }
+  #table-wrap table { width: 2400px; border-collapse: collapse; }
+  #table-wrap td { width: 200px; border: 1px solid #ccc; }
+  @media (max-width: 699px) {
+    .page { flex-direction: column; }
+    section { min-height: 1200px; }
+    section:nth-of-type(odd) { min-height: 1600px; }
+    #sidebar { width: auto; position: static; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar" data-testid="topbar">rBrowser scroll fixture</div>
+<div class="page">
+  <aside id="sidebar" aria-label="Sidebar">
+    <ul>
+      <li id="item-1">Item 1</li><li id="item-2">Item 2</li><li id="item-3">Item 3</li>
+      <li id="item-4">Item 4</li><li id="item-5">Item 5</li><li id="item-6">Item 6</li>
+      <li id="item-7">Item 7</li><li id="item-8">Item 8</li><li id="item-9">Item 9</li>
+      <li id="item-10">Item 10</li><li id="item-11">Item 11</li><li id="item-12">Item 12</li>
+      <li id="item-13">Item 13</li><li id="item-14">Item 14</li><li id="item-15">Item 15</li>
+      <li id="item-16">Item 16</li><li id="item-17">Item 17</li><li id="item-18">Item 18</li>
+      <li id="item-19">Item 19</li><li id="item-20">Item 20</li><li id="item-21">Item 21</li>
+      <li id="item-22">Item 22</li><li id="item-23">Item 23</li><li id="item-24">Item 24</li>
+    </ul>
+  </aside>
+  <main>
+    <section id="s1"><h2>Section 1</h2><p>The first section.</p></section>
+    <section id="s2"><h2>Section 2</h2><p>The second section.</p></section>
+    <section id="s3"><h2>Section 3</h2>
+      <div id="table-wrap" data-testid="wide-table">
+        <table><tr>
+          <td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td>
+          <td>G</td><td>H</td><td>I</td><td>J</td><td>K</td><td>L</td>
+        </tr></table>
+      </div>
+    </section>
+    <section id="s4"><h2>Section 4</h2><p>The fourth section.</p></section>
+    <section id="s5"><h2>Section 5</h2><p>The fifth section: scroll here in the desktop view.</p></section>
+    <section id="s6"><h2>Section 6</h2><p>The sixth section.</p></section>
+    <section id="s7"><h2>Section 7</h2><p>The seventh section.</p></section>
+    <section id="s8"><h2>Section 8</h2><p>The last section.</p></section>
+  </main>
+</div>
+<script>
+  window.__scrollLog = { page: 0, sidebar: 0, table: 0 };
+  addEventListener('scroll', function () { window.__scrollLog.page += 1; });
+  document.getElementById('sidebar').addEventListener('scroll', function () { window.__scrollLog.sidebar += 1; });
+  document.getElementById('table-wrap').addEventListener('scroll', function () { window.__scrollLog.table += 1; });
+</script>
+</body>
+</html>

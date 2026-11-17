@@ -1,0 +1,3 @@
+# The bundle the package ships (scripts/package-windows.sh); never committed.
+/dist/
+/node_modules/

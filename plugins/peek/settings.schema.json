@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether holding the modifier over an element shows the inspector. The command peek.toggle switches the current documents only.",
+      "x-category": "devtools",
+      "x-section": "peek",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "modifier": {
+      "type": "string",
+      "enum": ["Alt", "Ctrl", "Shift"],
+      "default": "Alt",
+      "description": "The key held while hovering. Held alone, none is a reserved combination; Ctrl+Alt (AltGr) is not offered. Takes effect in documents loaded after the change.",
+      "x-category": "devtools",
+      "x-section": "peek",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "syncHighlight": {
+      "type": "boolean",
+      "default": true,
+      "description": "Outline the inspected element in every other view as well.",
+      "x-category": "devtools",
+      "x-section": "peek",
+      "x-order": 3,
+      "x-scope": ["user"]
+    },
+    "showBoxModel": {
+      "type": "boolean",
+      "default": true,
+      "description": "Draw margin, border, padding and content of the inspected element.",
+      "x-category": "devtools",
+      "x-section": "peek",
+      "x-order": 4,
+      "x-scope": ["user"]
+    }
+  }
+}

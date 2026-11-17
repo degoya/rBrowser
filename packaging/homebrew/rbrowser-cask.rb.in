@@ -1,0 +1,45 @@
+# rBrowser's cask in the tap @TAP@, for macOS (RB-110-04). Rendered from
+# packaging/homebrew/rbrowser-cask.rb.in in @REPOSITORY@ by scripts/package-managers.sh as
+# Casks/rbrowser.rb, and replaced by the release workflow with every release: change the
+# template, not this file. Linux has the formula (Formula/rbrowser.rb); casks are macOS only.
+# The macOS bundles arrive with RB-110-02; until a release carries them, this file is not written.
+cask "rbrowser" do
+  version "@VERSION@"
+
+  on_arm do
+    url "@BASE_URL@/rbrowser-@VERSION@-macos-aarch64.zip"
+    sha256 "@SHA256_MACOS_AARCH64@"
+  end
+  on_intel do
+    url "@BASE_URL@/rbrowser-@VERSION@-macos-x86_64.zip"
+    sha256 "@SHA256_MACOS_X86_64@"
+  end
+
+  name "rBrowser"
+  desc "Development browser that shows every breakpoint of a site at once"
+  homepage "https://github.com/@REPOSITORY@"
+
+  livecheck do
+    url "https://github.com/@REPOSITORY@"
+    strategy :github_latest
+  end
+
+  depends_on macos: ">= :big_sur"
+
+  app "rBrowser.app"
+  binary "#{appdir}/rBrowser.app/Contents/MacOS/rbrowser"
+
+  zap trash: [
+    "~/Library/Application Support/rBrowser",
+    "~/Library/Caches/rBrowser",
+  ]
+
+  caveats <<~EOS
+    rBrowser is signed ad hoc, not notarised. On its first start macOS asks whether to open
+    it: open rBrowser once with a right-click and Open, or allow it under System Settings,
+    Privacy & Security, Open Anyway. The handbook's installation page shows the steps:
+      https://github.com/@REPOSITORY@/wiki/installation
+
+    Update it with `brew upgrade rbrowser`; it does not replace itself.
+  EOS
+end

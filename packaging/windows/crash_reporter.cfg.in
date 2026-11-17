@@ -1,0 +1,9 @@
+# rBrowser: crash dumps stay on this machine. No ServerURL - nothing is uploaded.
+[Config]
+ProductName=rBrowser
+ProductVersion=@VERSION@
+AppName=rBrowser
+RateLimitEnabled=true
+MaxUploadsPerDay=0
+MaxDatabaseSizeInMb=50
+MaxDatabaseAgeInDays=30

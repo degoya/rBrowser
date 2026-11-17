@@ -1,0 +1,46 @@
+[package]
+name = "rb-mcp"
+description = "rBrowser's MCP server: Streamable HTTP on 127.0.0.1 with a bearer token, the instance file with its nonce probe, the stdio forward of `rbrowser mcp` and the core tools over the command registry (RB-030-01)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+async-trait.workspace = true
+# The HTTP routes in front of rmcp's Streamable HTTP service: the token guard and `/health`.
+axum.workspace = true
+# The token and the nonce of the probe: the endpoint secrets of `rb_cdp::secret` (RB-080-28).
+rb-cdp = { path = "../rb-cdp" }
+rb-commands = { path = "../rb-commands" }
+# `breakpoint_remove` takes the references along as the settings window does (RB-090-61).
+rb-config = { path = "../rb-config" }
+# The log buffers mask what pages write (`rb_diag::page_text`), as the log does.
+rb-diag = { path = "../rb-diag" }
+rb-engine = { path = "../rb-engine" }
+# The instance file's folder, the user's alone on Windows too (RB-090-21).
+rb-process = { path = "../rb-process" }
+rb-util = { path = "../rb-util" }
+rmcp.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# HMAC-SHA256: the probe's proof of the token, which never crosses the wire.
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+# `rbrowser mcp`'s forward and probe: blocking HTTP to 127.0.0.1, no proxy, no redirects.
+ureq.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+# The paused clock of the settle test (RB-080-26).
+tokio = { workspace = true, features = ["test-util"] }
+# `tests/coverage.rs` reads the bundled plugins' manifests.
+toml.workspace = true
+# The log the token test searches.
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

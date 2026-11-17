@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser outline analysis fixture</title>
+<style>
+  /* RB-091-03: the acceptance page of the Outline panel's analysis. Expected findings:
+     - no main landmark (outline.landmark-main-missing, at html; axe's landmark-one-main merges);
+     - the headings jump from h2 to h4 at "Specifications" (outline.heading-skip);
+     - an empty h3 and an h3 of an image without alt (heading-empty, heading-image-no-alt);
+     - two navigation landmarks without a name (landmark-unique);
+     - a role=contentinfo inside an aside landmark (landmark-contentinfo-nested);
+     - the content block and "Loose paragraph" outside every landmark (content-outside-landmarks);
+     - the "Offers" heading hidden below 768 px: heading-differs in the narrow views;
+     - in wide views the buttons "Second" and "First" are swapped by `order`: focus-order-jump.
+     Served by any static server from tests/fixtures/site/ (/outline/analysis.html). */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  nav { display: flex; gap: 12px; padding: 8px 16px; }
+  .row { display: flex; gap: 8px; padding: 8px 16px; }
+  @media (min-width: 768px) {
+    .row .first { order: 2; }
+    .row .second { order: 1; }
+  }
+  @media (max-width: 767px) {
+    .wide-only { display: none; }
+  }
+</style>
+</head>
+<body>
+<nav><a href="#top">Top</a><a href="/outline/index.html">Outline fixture</a></nav>
+<nav><a href="/outline/docs.html">Docs</a></nav>
+<div class="content">
+  <h1 id="top">Outline analysis fixture</h1>
+  <h2>Product</h2>
+  <h4>Specifications</h4>
+  <h3></h3>
+  <h3><img src="/outline/chart.png" width="32" height="32"></h3>
+  <h2 class="wide-only">Offers</h2>
+  <div class="row">
+    <button type="button" class="first">First</button>
+    <button type="button" class="second">Second</button>
+  </div>
+</div>
+<p>Loose paragraph</p>
+<aside aria-label="Related">
+  <div role="contentinfo"><p>Inner footer</p></div>
+</aside>
+</body>
+</html>

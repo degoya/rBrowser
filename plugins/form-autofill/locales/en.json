@@ -1,0 +1,206 @@
+{
+  "plugin": {
+    "form-autofill": {
+      "commands": {
+        "fill_invalid": "Fill forms with invalid values",
+        "fill_valid": "Fill forms with valid values",
+        "capture": "Take form as preset"
+      },
+      "errors": {
+        "profile_unknown": "The autofill profile {name} is not in the settings (Settings > DevTools & Debugging > Form autofill > Profiles) or among the presets taken from forms.",
+        "capture_unsupported": "A {engine} view's form cannot be read yet; take it from a Chromium view.",
+        "preset_exists": "A preset named {name} exists already.",
+        "preset_in_settings": "{name} is a profile in the settings; choose another name.",
+        "presets_full": "50 presets are stored, the most there can be; replace one instead.",
+        "preset_empty": "The preset {name} has no field to save.",
+        "presets_unreadable": "The presets file {file} does not read as rBrowser wrote it; nothing is saved over it. Fix or remove the file.",
+        "preset_unknown": "No preset taken from a form is named {name}."
+      },
+      "name": "Form autofill",
+      "panel": {
+        "blocked": "{count, plural, one {# submit cancelled} other {# submits cancelled}}",
+        "broken": "broken: {violation}",
+        "empty": "No fill yet. Fill the forms with the buttons above or Ctrl+Shift+Space D F and D N.",
+        "error": "The fill failed: {text}",
+        "field": "Field",
+        "fillInvalid": "Fill invalid",
+        "fillInvalidTip": "Fill invalid values; no profile is used",
+        "fillValid": "Fill valid",
+        "fillValidNone": "Fill valid values without a profile",
+        "fillValidWith": "Fill valid values from {name}",
+        "formInvalid": "Form invalid",
+        "formValid": "Form valid",
+        "fromProfile": "from the profile",
+        "invalidMark": "invalid",
+        "kind": "Kind",
+        "modes": {
+          "invalid": "invalid values",
+          "valid": "valid values"
+        },
+        "noFields": "No fields",
+        "noProfile": "None",
+        "profile": "Profile",
+        "results": "Results",
+        "running": "Filling the views...",
+        "seed": "Seed",
+        "selector": "Form",
+        "skipped": "skipped ({reason})",
+        "status": {
+          "empty": "no fields",
+          "failed": "failed: {error}",
+          "filled": "filled",
+          "not-found": "nothing matches the selector",
+          "selector": "the selector is not valid",
+          "unsupported": "{engine}, not filled"
+        },
+        "strategies": {
+          "bounds": "Out of bounds",
+          "chars": "Special characters",
+          "empty": "Empty",
+          "format": "Wrong format",
+          "length": "Wrong length",
+          "mixed": "Mixed"
+        },
+        "strategy": "Invalid values",
+        "summary": "Filled {fields, plural, one {# field} other {# fields}} with {mode} in {views, plural, one {# view} other {# views}}, seed {seed}.",
+        "title": "Form autofill",
+        "tooLarge": "Filled, seed {seed}; the result is too large to show here - autofill_fill answers it in full.",
+        "validMark": "valid",
+        "value": "Value",
+        "options": "Options",
+        "allForms": "All forms",
+        "formNumber": "Form {number}",
+        "outside": "Outside a form",
+        "required": "required",
+        "differs": "{count, plural, one {differs in # view} other {differs in # views}}",
+        "skippedFields": "{count, plural, one {# field skipped} other {# fields skipped}}",
+        "notOnPage": "not on the page",
+        "viewNote": "{view}: {state}.",
+        "reasons": {
+          "disabled": "disabled",
+          "file": "file input",
+          "hidden": "hidden",
+          "readonly": "read-only",
+          "hidden-input": "hidden input, no preset value"
+        },
+        "formMixed": "Form invalid in {count, plural, one {# view} other {# views}}",
+        "profileUsed": "Profile: {name}",
+        "seedUsed": "Seed {seed}",
+        "copySeed": "Copy the seed",
+        "seedCopied": "Seed copied",
+        "newSeed": "New seed",
+        "seedEmpty": "From the settings",
+        "strategyHint": "Used by Fill invalid.",
+        "profileHint": "Choose a profile or preset, then fill with it. The fill shortcuts and the page menu use the setting Profile used.",
+        "profileHintChosen": "Fill valid fills with {name}; Fill invalid uses no profile. The fill shortcuts and the page menu use the setting Profile used.",
+        "formHint": "The forms of the last fill; type a selector for another element.",
+        "perView": "Values per view",
+        "emptyValue": "empty",
+        "capture": {
+          "action": "Take form as preset",
+          "title": "New preset from a form",
+          "source": "{view}: {form}",
+          "wholePage": "every field of the page",
+          "name": "Name",
+          "nameHint": "Once saved, the preset is the profile Fill valid uses.",
+          "fields": "Fields",
+          "take": "Take",
+          "field": "Field",
+          "value": "Value",
+          "chosen": "{count, plural, one {# field chosen} other {# fields chosen}}",
+          "excluded": "{count, plural, one {# field not taken} other {# fields not taken}}",
+          "noFields": "This form has no fields.",
+          "replaces": "Saving replaces the preset {name}.",
+          "inSettings": "{name} is a profile in the settings; choose another name.",
+          "noProject": "Presets are stored in the project's .rbrowser folder; open a project to save one.",
+          "truncated": "Only the first 300 fields were read.",
+          "save": "Save preset",
+          "cancel": "Cancel",
+          "reading": "Reading the form...",
+          "saved": "Saved the preset {name} with {count, plural, one {# field} other {# fields}}.",
+          "readFailed": "The form could not be read: {text}",
+          "saveFailed": "The preset was not saved: {text}",
+          "reasons": {
+            "password": "password field",
+            "secret": "looks like a secret",
+            "file": "file input",
+            "multiple": "several options chosen",
+            "long": "longer than 1000 characters",
+            "no-locator": "no name or id to find it by",
+            "duplicate": "an earlier field has its name"
+          },
+          "storeFailed": "Nothing can be saved: {text}"
+        },
+        "choice": {
+          "fillWith": "Fill with {name}",
+          "profiles": "Profiles from the settings",
+          "presets": "Presets taken from forms",
+          "rename": "Rename preset",
+          "newName": "New name for the preset {name}",
+          "renameSave": "Rename",
+          "taken": "A preset named {name} exists already.",
+          "renamed": "Renamed the preset {from} to {to}.",
+          "renameFailed": "The preset was not renamed: {text}",
+          "delete": "Delete preset",
+          "confirmDelete": "Delete the preset {name}? Only this preset goes; the settings profiles and the other presets stay.",
+          "keep": "Keep",
+          "deleted": "Deleted the preset {name}.",
+          "deleteFailed": "The preset was not deleted: {text}"
+        }
+      },
+      "panels": {
+        "autofill": "Form autofill"
+      },
+      "settings": {
+        "activeProfile": {
+          "description": "The profile a fill uses when it names none - a settings profile, else a preset taken from a form; empty fills generated values only.",
+          "help": "The profile a fill uses when the command names none: a settings profile or a preset taken from a form. Example: qa. Empty fills generated values only.",
+          "label": "Profile used"
+        },
+        "invalidStrategy": {
+          "description": "How an invalid fill breaks the fields: mixed (per field one violation the browser checks), empty (required fields left empty), format (an address without @, a value outside the pattern), bounds (just outside min, max or step), length (one character over maxlength or under minlength; browsers flag it only for typed edits) or chars (special characters, emoji and a very long word). A field the strategy does not apply to gets a valid value.",
+          "help": "How an invalid fill breaks the fields: mixed one violation per field, empty leaves required fields empty, format breaks patterns, bounds goes just outside min and max, length over or under the limits, chars uses emoji and long words.",
+          "label": "Invalid values"
+        },
+        "profiles": {
+          "description": "Test users with fixed values, each a name and its values by field kind (email, givenName, familyName, name, username, street, postalCode, city, region, country, phone, organization, url, birthday, ...), field name or field id. A profile replaces the generated value of the fields it names in a valid fill; password fields always get a generated password.",
+          "help": "Test users with fixed values: a name and values by field kind (email, givenName, street, ...), field name or field id. A profile overrides generated values; passwords are always generated. Example: name qa, values email qa@example.com.",
+          "label": "Profiles"
+        },
+        "seed": {
+          "description": "The seed of the generated values: the same seed fills the same values. 0 takes a new seed for every fill; the panel and autofill_fill name the seed used.",
+          "help": "The seed of the generated values; the same seed fills the same values every time, for reproducible tests. 0 takes a new seed per fill and names it.",
+          "label": "Seed"
+        },
+        "skipHidden": {
+          "description": "Leaves fields alone that the view does not show (display: none, hidden), so each breakpoint fills what it shows.",
+          "help": "Leaves fields alone the view does not show (display: none, hidden), so each breakpoint fills what it shows. Off fills hidden fields too.",
+          "label": "Skip hidden fields"
+        },
+        "option": {
+          "invalidStrategy": {
+            "mixed": "Mixed",
+            "empty": "Empty",
+            "format": "Wrong format",
+            "bounds": "Out of bounds",
+            "length": "Wrong length",
+            "chars": "Special characters"
+          }
+        },
+        "captureHiddenInputs": {
+          "label": "Take hidden inputs",
+          "description": "Takes the values of hidden inputs (type=hidden) into a preset taken from a form, and lets a fill set them from a profile or preset. Off leaves them out of both. A hidden input whose name looks like a token or secret is never taken.",
+          "help": "Takes hidden inputs (type=hidden) into a preset taken from a form and fills them from it. Inputs named like a token or secret are never taken."
+        }
+      },
+      "tools": {
+        "fill": "Fills the forms of the targeted views (Chromium views; others are marked unsupported) with plausible valid values (mode valid) or deliberately invalid ones (mode invalid, by strategy: mixed, empty, format, bounds, length, chars) from one seed, so every view gets the same data, matched to each view's locale. Optional selector (one form or element), profile (a test user from the settings; never for passwords), seed (repeat a run). Never submits and never touches file inputs. Answers per view and field the detected kind, the value set, whether the field accepts it, how it was broken, and the form's validity; per view also the page's forms (a selector and a name each, for `selector`), and per field its form and whether it is required.",
+        "capture": "Reads the current values of one form in one view (the target, else the active view; Chromium views only) - the form `selector` names, else the focused field's form, else the page's only form, else every field - and answers them as preset entries: per field its locator (name, else id; the key autofill_save and a profile use), label, kind and value, and why a field is not taken (password, secret, file, multiple, long, no-locator, duplicate). Password fields, fields that look like secrets and file inputs never give their value. Hidden inputs only with the setting captureHiddenInputs. Writes nothing; also names the stored presets and the settings profiles.",
+        "save": "Stores a preset in the form autofill's own file (.rbrowser/out/form-autofill/presets.json, nothing else is written): name and values by field name or id, as autofill_capture answers them. A locator that names a secret (password, token, PIN, card data) is dropped and named in `dropped`; the name of a settings profile is refused, a stored preset's replaced only with replace. A fill uses it like a profile (profile argument or activeProfile). Needs an open project.",
+        "presets": "Lists the presets taken from forms with their values, and whether a project is open to store them (available).",
+        "rename": "Renames a preset taken from a form, in the form autofill's own file (.rbrowser/out/form-autofill/presets.json): `name` the stored preset, `to` the new name - never the name of another stored preset or of a settings profile. Needs an open project.",
+        "delete": "Deletes a preset taken from a form from the form autofill's own file (.rbrowser/out/form-autofill/presets.json); settings profiles and the other presets stay. Needs an open project."
+      }
+    }
+  }
+}

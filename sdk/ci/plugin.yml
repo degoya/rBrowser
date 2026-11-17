@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: MIT
+# The CI workflow of an rBrowser plugin made from an SDK template: test the logic, build the
+# component, refuse an import outside the contract, package it and run the conformance checks; a
+# plugin with a Nuxt UI panel (web/) also builds and tests the panel. A version tag (`v*`) also
+# packs the plugin, signs it with your plugin key (secret PLUGIN_SIGNING_KEY, the PKCS#8 PEM
+# `rb-plugin-pack keygen` writes) and attaches the `.rbplugin` to the tag's GitHub release, where
+# sdk/ci/repository.yml lists it in your plugin repository (RB-091-01).
+# Copy it to `.github/workflows/plugin.yml` of your plugin's repository. The actions are pinned to
+# commits with their release as a comment, as rBrowser's own workflows are
+# (scripts/check-actions-pinned.sh); move them to the commits rBrowser's workflows use.
+name: plugin
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The rBrowser release the plugin is checked against (scripts/set-version.sh keeps it at the
+  # release the SDK comes with); its `rb-plugin-pack conformance` is the check to run once the
+  # release ships the tool.
+  RBROWSER_VERSION: 0.9.0-beta.1
+  # The commit of that release in github.com/degoya/rBrowser (`git ls-remote` its tag): the
+  # packer is built from it, so a moved tag cannot change what runs with your key.
+  RBROWSER_REV: REPLACE_WITH_THE_40_CHARACTER_COMMIT_OF_THE_RELEASE
+  # The Rust release rBrowser is built with (its rust-toolchain.toml).
+  RUST_TOOLCHAIN: 1.100.0
+  # The crate's component name: the package name with `-` as `_`.
+  COMPONENT: rbrowser_plugin_feature_example
+  WASM_TOOLS_VERSION: 1.261.0
+  # The Node release rBrowser's panel-ui is built with (rBrowser's .nvmrc).
+  NODE_VERSION: 26.13.1
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # rustup is on the runner image; no third-party action needed for the toolchain.
+      - name: Install Rust with the wasm32 target
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+          rustup default stable
+      - name: Install wasm-tools
+        run: cargo install wasm-tools --version "${WASM_TOOLS_VERSION}" --locked
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: hashFiles('web/package.json') != ''
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build and test the panel
+        if: hashFiles('web/package.json') != ''
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm test
+      - name: Test
+        run: cargo test
+      - name: Build the component
+        run: |
+          cargo build --release --target wasm32-unknown-unknown
+          wasm-tools component new "target/wasm32-unknown-unknown/release/${COMPONENT}.wasm" \
+            -o target/component.wasm
+      - name: Reject imports outside the contract
+        run: |
+          imports="$(wasm-tools component wit target/component.wasm \
+            | sed -n 's/^[[:space:]]*import[[:space:]]\{1,\}\([^;]*\);.*$/\1/p')"
+          if printf '%s\n' "$imports" | grep -v '^rbrowser:plugin/' | grep -q .; then
+            echo "imports outside rbrowser:plugin:"; printf '%s\n' "$imports"; exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: component
+          path: |
+            target/component.wasm
+            panel/dist/
+
+  # A version tag: the signed package on the tag's release (RB-091-01). rb-plugin-pack is built
+  # from rBrowser's tagged source before the step that reads the key.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: component
+          path: .
+      # Built from one commit of rBrowser's source, never a tag that can move, with a pinned
+      # toolchain (security review RB-091-01, L4), before any step reads a key.
+      - name: Install rb-plugin-pack
+        run: |
+          if [[ ! "${RBROWSER_REV}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::set RBROWSER_REV to the 40-character commit of rBrowser's v${RBROWSER_VERSION} release"
+            exit 1
+          fi
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal
+          cargo "+${RUST_TOOLCHAIN}" install --locked --git https://github.com/degoya/rBrowser \
+            --rev "${RBROWSER_REV}" rb-plugin-host --bin rb-plugin-pack
+      - name: Pack and sign the plugin
+        env:
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+        run: |
+          if [[ -z "${PLUGIN_SIGNING_KEY}" ]]; then
+            echo "::error::the secret PLUGIN_SIGNING_KEY is not set; a release carries signed plugins only"
+            exit 1
+          fi
+          key="${RUNNER_TEMP}/plugin-signing.pem"
+          trap 'rm -f "${key}"' EXIT
+          (umask 077 && printf '%s\n' "${PLUGIN_SIGNING_KEY}" > "${key}")
+          id="$(sed -n 's/^id = "\(.*\)"$/\1/p' manifest.toml | head -n 1)"
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' manifest.toml | head -n 1)"
+          mkdir -p dist
+          rb-plugin-pack package . --component target/component.wasm \
+            --out "dist/${id}-${version}.rbplugin" --key "${key}"
+          rb-plugin-pack conformance "dist/${id}-${version}.rbplugin" \
+            --trust "$(sed -n 's/^key_id = "\(.*\)"$/\1/p' manifest.toml | head -n 1)=$(sed -n 's/^public_key = "\(.*\)"$/\1/p' manifest.toml | head -n 1)"
+      - name: Attach the package to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "${TAG}" dist/*.rbplugin --clobber

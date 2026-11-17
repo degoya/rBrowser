@@ -1,0 +1,29 @@
+# rBrowser's winget installer manifest (RB-090-13). Rendered from
+# packaging/winget/degoya.rBrowser.installer.yaml.in in @REPOSITORY@ by
+# scripts/package-managers.sh and submitted to microsoft/winget-pkgs by the release workflow:
+# change the template, not this file.
+#
+# The portable Windows zip, extracted as a whole into
+# %LOCALAPPDATA%\Microsoft\WinGet\Packages\degoya.rBrowser_<source>\, the program in the zip's
+# version folder. That folder goes on PATH instead of a link in WinGet\Links
+# (ArchiveBinariesDependOnPath): rBrowser runs CEF, Node and its bundled plugins from beside the
+# executable it was started as. A portable package installs per user; winget refuses a `Scope` on
+# one.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
+
+PackageIdentifier: degoya.rBrowser
+PackageVersion: @VERSION@
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: rbrowser-@VERSION@-windows-x64\rbrowser.exe
+  PortableCommandAlias: rbrowser
+ArchiveBinariesDependOnPath: true
+Commands:
+- rbrowser
+Installers:
+- Architecture: x64
+  InstallerUrl: @BASE_URL@/rbrowser-@VERSION@-windows-x64.zip
+  InstallerSha256: @SHA256_WINDOWS_X64_UPPER@
+ManifestType: installer
+ManifestVersion: 1.28.0

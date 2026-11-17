@@ -1,0 +1,16 @@
+info images.social_alt_missing images.social_alt_missing -
+error images.alt_missing images.alt_missing html > body > main > img:nth-of-type(3)
+warning images.alt_empty images.alt_empty html > body > main > img:nth-of-type(5)
+error images.linked_no_name images.linked_no_name html > body > main > a:nth-of-type(2) > img
+warning images.alt_filename images.alt_filename html > body > main > img:nth-of-type(6)
+warning images.alt_filename images.alt_filename html > body > main > img:nth-of-type(7)
+warning images.alt_placeholder images.alt_placeholder html > body > main > img:nth-of-type(8)
+warning images.alt_prefix images.alt_prefix html > body > main > img:nth-of-type(9)
+warning images.alt_too_long images.alt_too_long html > body > main > img:nth-of-type(10)
+warning images.alt_duplicate images.alt_duplicate html > body > main > img:nth-of-type(12)
+warning images.alt_redundant images.alt_redundant html > body > main > figure > img
+warning images.alt_language images.alt_language html > body > main > img:nth-of-type(13)
+error images.input_alt_missing images.input_alt_missing html > body > main > form > input
+error images.area_alt_missing images.area_alt_missing html > body > main > map > area
+warning images.svg_name_missing images.svg_name_missing html > body > main > svg:nth-of-type(2)
+info images.background images.background html > body > main > div

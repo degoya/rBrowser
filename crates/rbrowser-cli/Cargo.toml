@@ -1,0 +1,25 @@
+[package]
+name = "rbrowser-cli"
+description = "rbrowser.com: the console twin of the GUI rbrowser.exe, so a terminal waits for a command and shows its output"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# Built as rbrowser-console.exe and shipped as rbrowser.com (scripts/lib/package-stage.sh,
+# `rb_stage_console`): Windows resolves a bare `rbrowser` to .com before .exe. Not named
+# `rbrowser` here, because rbrowser.dll and an rbrowser.exe in the same target folder would
+# write the same rbrowser.pdb.
+[[bin]]
+name = "rbrowser-console"
+path = "src/main.rs"
+
+[dependencies]
+rb-process = { path = "../rb-process" }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

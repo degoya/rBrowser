@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the colour picker (RB-070-10): Settings > DevTools & Debugging > Colour picker & measuring",
+  "type": "object",
+  "properties": {
+    "defaultFormat": {
+      "type": "string",
+      "enum": ["hex", "rgb", "hsl", "oklch"],
+      "default": "hex",
+      "description": "The format the loupe shows and the panel lists first.",
+      "x-category": "devtools",
+      "x-section": "color-picker",
+      "x-order": 1,
+      "x-scope": ["user"]
+    },
+    "loupeSize": {
+      "type": "integer",
+      "enum": [5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31],
+      "default": 11,
+      "description": "Device pixels per side of the pipette's loupe (odd).",
+      "x-category": "devtools",
+      "x-section": "color-picker",
+      "x-order": 2,
+      "x-scope": ["user"]
+    },
+    "capture": {
+      "type": "string",
+      "enum": ["window", "clip"],
+      "default": "window",
+      "description": "How the pipette reads a view: as its window shows it (no flicker) or a clip of the page (its own colours; the view flickers).",
+      "x-category": "devtools",
+      "x-section": "color-picker",
+      "x-order": 7,
+      "x-scope": ["user"]
+    },
+    "textMeasure": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "default": "p, li",
+          "description": "The elements the text measure takes when no element is chosen.",
+          "x-category": "devtools",
+          "x-section": "color-picker",
+          "x-order": 3,
+          "x-scope": ["project", "local", "user"]
+        },
+        "optimalMin": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 45,
+          "description": "Fewer characters per line on average is rated too short.",
+          "x-category": "devtools",
+          "x-section": "color-picker",
+          "x-order": 4,
+          "x-scope": ["project", "local", "user"]
+        },
+        "optimalMax": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 75,
+          "description": "More characters per line on average is rated too long.",
+          "x-category": "devtools",
+          "x-section": "color-picker",
+          "x-order": 5,
+          "x-scope": ["project", "local", "user"]
+        },
+        "warnAbove": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 80,
+          "description": "Lines with more characters are marked in the views (WCAG 1.4.8).",
+          "x-category": "devtools",
+          "x-section": "color-picker",
+          "x-order": 6,
+          "x-scope": ["project", "local", "user"]
+        }
+      }
+    }
+  }
+}

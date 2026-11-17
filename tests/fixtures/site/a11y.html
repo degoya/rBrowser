@@ -1,0 +1,37 @@
+<!doctype html>
+<!--
+  The a11y-axe fixture (RB-060-06): a menu button without a name that shows only below 768 px
+  (so axe's button-name finding belongs to the narrow views alone), an image without alt (the
+  finding a11y-axe and seo share as img-alt-missing) and a strict CSP (script-src 'self'), under
+  which the run must still work.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+    <title>a11y fixture</title>
+    <style>
+      .burger { display: none; width: 48px; height: 48px; }
+      .menu { display: flex; gap: 1rem; }
+      @media (max-width: 767px) {
+        .burger { display: block; }
+        .menu { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button class="burger" type="button"><span class="icon"></span></button>
+      <nav class="menu">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Accessibility fixture</h1>
+      <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="40" height="40">
+      <p>An image without alt text above, a nameless menu button on narrow screens.</p>
+    </main>
+  </body>
+</html>

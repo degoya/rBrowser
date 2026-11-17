@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser form autofill fixture</title>
+<style>
+  /* RB-070-11: the form autofill's registration form. Every kind of field the plugin knows, each
+     with the constraints the browser checks (required, type, pattern, min/max), a field whose only
+     constraint is a length (a script's value never trips it), a file input it must skip, a hidden
+     input and a submit button it must never press. Every `input` and `change` lands in
+     window.__events ({ id, type, trusted }) and in #log, every submit in window.__submits and
+     #submits: a fill must leave the submits at 0 (served by tests/fixtures/server/post-counter.py,
+     whose POST count stays 0). The plugin's Vitest tests load this page without its script. */
+  body { margin: 16px; font: 16px system-ui, sans-serif; }
+  fieldset { display: grid; gap: 8px; max-width: 520px; margin-bottom: 16px; }
+  .narrow-only { display: none; }
+  @media (max-width: 480px) { .narrow-only { display: block; } }
+</style>
+</head>
+<body>
+<form id="register" method="post" action="/forms/submit">
+  <fieldset>
+    <legend>Salutation</legend>
+    <label><input type="radio" name="salutation" value="ms" required> Ms</label>
+    <label><input type="radio" name="salutation" value="mr"> Mr</label>
+    <label><input type="radio" name="salutation" value="mx"> Mx</label>
+  </fieldset>
+  <fieldset>
+    <legend>Person</legend>
+    <label for="firstName">First name</label>
+    <input id="firstName" name="firstName" autocomplete="given-name" required maxlength="40">
+    <label for="lastName">Last name</label>
+    <input id="lastName" name="lastName" autocomplete="family-name" required maxlength="40">
+    <label for="email">E-mail</label>
+    <input id="email" name="email" type="email" required>
+    <label for="username">User name</label>
+    <input id="username" name="username" pattern="[a-z0-9._]{3,30}" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" minlength="10" required autocomplete="new-password">
+    <label for="birthday">Date of birth</label>
+    <input id="birthday" name="birthday" type="date" max="2008-01-01">
+    <label for="age">Age</label>
+    <input id="age" name="age" type="number" min="18" max="120">
+  </fieldset>
+  <fieldset>
+    <legend>Address</legend>
+    <label for="street">Street and number</label>
+    <input id="street" name="street" autocomplete="street-address" required>
+    <label for="zip">Postal code</label>
+    <input id="zip" name="zip" pattern="[0-9]{5}" inputmode="numeric" required>
+    <label for="city">City</label>
+    <input id="city" name="city" required>
+    <label for="country">Country</label>
+    <select id="country" name="country" required>
+      <option value="">Choose a country</option>
+      <option value="AT">Austria</option>
+      <option value="DE">Germany</option>
+      <option value="CH">Switzerland</option>
+      <option value="GB">United Kingdom</option>
+      <option value="US">United States</option>
+    </select>
+    <label for="phone">Phone</label>
+    <input id="phone" name="phone" type="tel" pattern="\+?[0-9 ()\-]{6,24}">
+    <label for="website">Website</label>
+    <input id="website" name="website" type="url">
+  </fieldset>
+  <fieldset>
+    <legend>More</legend>
+    <label for="comment">Comment</label>
+    <textarea id="comment" name="comment" maxlength="500"></textarea>
+    <label for="avatar">Picture</label>
+    <input id="avatar" name="avatar" type="file">
+    <label class="narrow-only" for="promo">Promo code (narrow screens only)</label>
+    <input class="narrow-only" id="promo" name="promo">
+    <label><input type="checkbox" id="newsletter" name="newsletter"> Newsletter</label>
+    <label><input type="checkbox" id="terms" name="terms" required> I accept the terms</label>
+    <input type="hidden" name="csrf" value="fixture">
+    <button type="submit">Register</button>
+  </fieldset>
+</form>
+<p>Submits: <output id="submits">0</output></p>
+<pre id="log"></pre>
+<script>
+  window.__events = [];
+  window.__submits = 0;
+  const form = document.getElementById('register');
+  for (const type of ['input', 'change']) {
+    form.addEventListener(type, (event) => {
+      const entry = { id: event.target.id || event.target.name, type, trusted: event.isTrusted };
+      window.__events.push(entry);
+      document.getElementById('log').textContent += `${entry.type} ${entry.id} trusted=${entry.trusted}\n`;
+    });
+  }
+  form.addEventListener('submit', () => {
+    window.__submits += 1;
+    document.getElementById('submits').textContent = String(window.__submits);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser divergent links fixture</title>
+<style>
+  /* RB-020-06: one product link that leads elsewhere per layout - /m/produkt.html in the narrow
+     layout, /produkt.html in the wide one. A synced click lands the views on different pages;
+     after sync.navigationSettleMs every view shows the active view's URL. Serve this folder
+     with `python3 -m http.server 18765`. */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  .mobile { display: none; }
+  @media (max-width: 699px) {
+    .desktop { display: none; }
+    .mobile { display: inline; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Divergent links</h1>
+  <a class="desktop" href="/produkt.html" data-testid="product">Produkt</a>
+  <a class="mobile" href="/m/produkt.html" data-testid="product">Produkt</a>
+</main>
+</body>
+</html>

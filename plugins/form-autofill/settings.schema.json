@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Form autofill plugin settings",
+  "type": "object",
+  "properties": {
+    "profiles": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["name", "values"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "values": {
+            "type": "object",
+            "maxProperties": 100,
+            "propertyNames": { "minLength": 1, "maxLength": 200 },
+            "additionalProperties": { "type": "string", "maxLength": 1000 }
+          }
+        }
+      },
+      "default": [],
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 1,
+      "x-scope": ["user", "project", "local"]
+    },
+    "activeProfile": {
+      "type": "string",
+      "maxLength": 80,
+      "default": "",
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 2,
+      "x-scope": ["user", "project", "local"]
+    },
+    "invalidStrategy": {
+      "type": "string",
+      "enum": ["mixed", "empty", "format", "bounds", "length", "chars"],
+      "default": "mixed",
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 3,
+      "x-scope": ["user", "project", "local"]
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295,
+      "default": 0,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 4,
+      "x-scope": ["user", "project", "local"]
+    },
+    "skipHidden": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 5,
+      "x-scope": ["user", "project", "local"]
+    },
+    "captureHiddenInputs": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 6,
+      "x-scope": ["user", "project", "local"]
+    }
+  }
+}

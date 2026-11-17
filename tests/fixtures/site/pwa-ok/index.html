@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PWA fixture: installable</title>
+    <meta name="theme-color" content="#0b57d0" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  </head>
+  <body>
+    <h1>An installable app</h1>
+    <p>The PWA check (RB-080-08) finds no error here: a complete manifest, its icons of 192 and
+      512 px (one maskable), a service worker that caches this page and serves it offline.</p>
+    <script>
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    </script>
+  </body>
+</html>

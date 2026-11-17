@@ -1,0 +1,36 @@
+# rBrowser's winget default locale manifest (RB-090-13). Rendered from
+# packaging/winget/degoya.rBrowser.locale.en-US.yaml.in in @REPOSITORY@ by
+# scripts/package-managers.sh and submitted to microsoft/winget-pkgs by the release workflow:
+# change the template, not this file.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
+
+PackageIdentifier: degoya.rBrowser
+PackageVersion: @VERSION@
+PackageLocale: en-US
+Publisher: DEGOYA.digital
+PublisherUrl: https://github.com/@OWNER@
+PublisherSupportUrl: https://github.com/@REPOSITORY@/issues
+PackageName: rBrowser
+PackageUrl: https://github.com/@REPOSITORY@
+License: GPL-3.0-or-later
+LicenseUrl: https://github.com/@REPOSITORY@/blob/v@VERSION@/LICENSE
+ShortDescription: Development browser that shows every breakpoint of a site at once
+Description: |-
+  rBrowser shows every breakpoint of a site at once, in one window with a freely configurable
+  grid of Chromium views. Navigation, scrolling, clicks, input, keyboard and hover are replayed
+  in every view; Firefox and WebKit windows join the same session. The breakpoint setup lives in
+  the project, so a team shares it, and a built-in MCP server and a Playwright endpoint let AI
+  agents and tests drive every view. Installed through winget it does not replace itself: update
+  it with `winget upgrade degoya.rBrowser`.
+Moniker: rbrowser
+Tags:
+- breakpoints
+- browser
+- developer-tools
+- mcp
+- playwright
+- responsive-design
+- web-development
+ReleaseNotesUrl: https://github.com/@REPOSITORY@/releases/tag/v@VERSION@
+ManifestType: defaultLocale
+ManifestVersion: 1.28.0

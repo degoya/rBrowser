@@ -1,0 +1,17 @@
+import { defineConfig, mergeConfig } from 'vitest/config';
+import panel from './vite.config.ts';
+
+// The panel's components compiled as its build compiles them; the page scripts and the
+// collectors beside them in happy-dom. The fixture page and the plugin's files are read from
+// outside this folder.
+export default mergeConfig(
+  panel,
+  defineConfig({
+    server: { fs: { allow: ['..', '../..', '../../..'] } },
+    test: {
+      environment: 'happy-dom',
+      include: ['src/**/*.test.ts'],
+      setupFiles: ['../../web-common/panel-ui/src/test-setup.ts'],
+    },
+  }),
+);

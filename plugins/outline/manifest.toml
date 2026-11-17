@@ -1,0 +1,98 @@
+# The outline (RB-070-03, docs/plugins.md): the structure of the page in every view side by side -
+# headings, landmarks, links, images, form fields, the focus order, the accessibility tree and the
+# person's own selectors - with what only some views show marked, a broken-link check of the
+# current page, and findings for `checks_run` and the findings panel. A click in the panel marks
+# the entry in every view.
+manifest_version = 1
+id = "outline"
+name = "Outline"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "outline"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "The headings, landmarks, links, images, forms, focus order and accessibility tree of every view side by side, with a broken-link check."
+# Checks > Outline in the page's context menu (RB-090-63): the check, as its shortcut runs it.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: labels and URLs; evaluate: the collector src/collect.js, which only reads the page, in the
+# plugin's isolated world; cdp: the accessibility tree (Accessibility.getFullAXTree) and the mark
+# of an entry (DOM.querySelector, DOM.scrollIntoViewIfNeeded, Overlay.highlightNode), the
+# selector always a parameter; http: the links of the current page, HEAD and GET, at most four
+# requests a second (the seo crawl's pace; outline.linkCheck.rps goes lower); findings: the
+# command `check`.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Accessibility", "DOM", "Overlay"] }
+http = { rate_limit_per_second = 4 }
+findings = true
+
+# A link check of up to two minutes (outline.linkCheck.timeoutMs; host time is credited back),
+# accessibility trees of up to 4 MiB of JSON per view. A GET fallback reads at most 1 MiB: a
+# larger answer counts as reachable.
+[limits]
+memory_bytes = 134217728
+fuel = 20000000000
+timeout_milliseconds = 150000
+max_response_bytes = 1048576
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `outline_get`: the outline of the views, merged (a row per entry with a cell per view) or
+# per view, the sections chosen; findings without the link check.
+[[tools]]
+name = "get"
+description = "plugin.outline.tools.get"
+input = { type = "object", properties = { sections = { type = "array", maxItems = 8, items = { type = "string", enum = ["headings", "landmarks", "links", "images", "forms", "focus", "axtree", "custom"] } }, shape = { type = "string", enum = ["merged", "views"] }, budget = { type = "integer", minimum = 4096, maximum = 4194304 } } }
+
+# MCP `outline_check_links`: the broken-link check of the links the views show (`urls` narrows it
+# to some of them; a URL the page does not link is not requested).
+[[tools]]
+name = "check_links"
+description = "plugin.outline.tools.check_links"
+input = { type = "object", properties = { urls = { type = "array", maxItems = 200, items = { type = "string", maxLength = 2048 } } } }
+
+# MCP `outline_mark`: an entry marked and scrolled into view in the views named, or every mark
+# cleared.
+[[tools]]
+name = "mark"
+description = "plugin.outline.tools.mark"
+input = { type = "object", properties = { targets = { type = "array", minItems = 1, maxItems = 64, items = { type = "object", required = ["view"], properties = { view = { type = "integer", minimum = 0 }, selector = { type = "string", minLength = 1, maxLength = 1024 }, backendNodeId = { type = "integer", minimum = 1 } } } }, clear = { type = "boolean" } } }
+
+# `plugin.outline.panel`, Ctrl+Shift+Space P O: shows the outline panel.
+[[commands]]
+id = "panel"
+title = "plugin.outline.commands.panel"
+shortcut = "Ctrl+Shift+Space P O"
+group = "panels"
+mcp_omitted = "ui-only: opens the outline panel"
+
+# `plugin.outline.check`, Ctrl+Shift+Space K O: every view's outline and the page's links checked,
+# the findings into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.outline.commands.check"
+shortcut = "Ctrl+Shift+Space K O"
+group = "checks"
+tool = "get"
+
+# The Outline panel, on Nuxt UI (RB-080-85): panel/dist built from web/src.
+[[panels]]
+id = "outline"
+title = "plugin.outline.panels.outline"
+entry = "panel/index.html"
+icon = "list-tree"
+placement = "sidebar"

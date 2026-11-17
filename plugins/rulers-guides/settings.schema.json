@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "rulers-guides settings",
+  "type": "object",
+  "properties": {
+    "visible": {
+      "type": "boolean",
+      "default": false,
+      "x-category": "devtools",
+      "x-section": "rulers",
+      "x-order": 10,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "px",
+        "px-right",
+        "percent"
+      ],
+      "default": "px",
+      "x-category": "devtools",
+      "x-section": "rulers",
+      "x-order": 20,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "snapPx": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 64,
+      "default": 8,
+      "x-category": "devtools",
+      "x-section": "rulers",
+      "x-order": 30,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "guides": {
+      "type": "array",
+      "maxItems": 200,
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "axis",
+          "value"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "px",
+              "px-right",
+              "percent"
+            ],
+            "default": "px"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          }
+        }
+      },
+      "x-category": "devtools",
+      "x-section": "rulers",
+      "x-order": 40,
+      "x-scope": [
+        "project",
+        "local"
+      ]
+    },
+    "columns": {
+      "type": "object",
+      "default": {
+        "*": {
+          "preset": "bootstrap"
+        }
+      },
+      "maxProperties": 32,
+      "propertyNames": {
+        "pattern": "^(\\*|[A-Za-z0-9_-]{1,64})$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "preset": {
+            "type": "string",
+            "enum": [
+              "bootstrap",
+              "tailwind"
+            ]
+          },
+          "columns": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 48
+          },
+          "gutter": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "margin": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "maxWidth": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100000
+          },
+          "align": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ]
+          }
+        }
+      },
+      "x-category": "devtools",
+      "x-section": "rulers",
+      "x-order": 50,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "baseline": {
+      "type": "object",
+      "properties": {
+        "lineHeight": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 1000,
+          "default": 8,
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 60,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000,
+          "default": 0,
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 70,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        }
+      }
+    },
+    "colors": {
+      "type": "object",
+      "properties": {
+        "ruler": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#f6f7f9f0",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 80,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "ticks": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#4a4f5c",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 90,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "guide": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#00a2ff",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 100,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "columnFill": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#ff40811f",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 110,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "columnEdge": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#ff408100",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 120,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        "baseline": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "default": "#00a2ff59",
+          "x-category": "devtools",
+          "x-section": "rulers",
+          "x-order": 130,
+          "x-scope": [
+            "user",
+            "project",
+            "local"
+          ]
+        }
+      }
+    }
+  }
+}

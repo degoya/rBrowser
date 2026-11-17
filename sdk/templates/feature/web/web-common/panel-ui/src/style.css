@@ -1,0 +1,79 @@
+/* The styles of every Nuxt UI panel (RB-080-83): Tailwind and Nuxt UI, compiled at build time -
+   the frame loads nothing. Only the classes the panel-ui components and the panel itself name
+   are generated: a panel's own `panel.css` imports this file and adds `@source` for its folder. */
+@import 'tailwindcss' source(none);
+@import '@nuxt/ui';
+
+@source './components';
+
+html,
+body {
+  margin: 0;
+  background: var(--ui-bg);
+}
+
+/* Accessibility (RB-090-22, docs/design.md section 7). Nuxt UI's tokens where its own miss WCAG
+   AA: in the light theme the state colours a step or two darker - text 4.5 : 1 on every ground
+   and on its own soft tint, white on the solid colour - the muted and dimmed text a step, and
+   the input ring (`ring-accented`) 3 : 1; in the dark theme the blue and red a step lighter, the
+   dimmed text and the input ring.
+   Unlayered, so it wins over Nuxt UI's `@layer theme`. `ui/src/assets/contrast.test.ts` measures
+   every pair and holds the shell's and the panels' copies of this block alike. */
+:root:not(.dark) {
+  --ui-primary: var(--ui-color-primary-800);
+  --ui-secondary: var(--ui-color-secondary-700);
+  --ui-success: var(--ui-color-success-800);
+  --ui-info: var(--ui-color-info-700);
+  --ui-warning: var(--ui-color-warning-800);
+  --ui-error: var(--ui-color-error-700);
+  --ui-text-dimmed: var(--ui-color-neutral-500);
+  --ui-text-muted: var(--ui-color-neutral-600);
+  --ui-border-accented: var(--ui-color-neutral-500);
+}
+
+.dark {
+  --ui-secondary: var(--ui-color-secondary-300);
+  --ui-info: var(--ui-color-info-300);
+  --ui-error: var(--ui-color-error-300);
+  --ui-text-dimmed: var(--ui-color-neutral-400);
+  --ui-border-accented: var(--ui-color-neutral-500);
+}
+
+/* A solid button's hover: Nuxt UI lightens it to 75 % of its colour, where white text on the
+   light theme's state colours falls below 4.5 : 1; here it darkens a step instead. */
+:root:not(.dark) .hover\:bg-primary\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-primary-900);
+}
+:root:not(.dark) .hover\:bg-secondary\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-secondary-800);
+}
+:root:not(.dark) .hover\:bg-success\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-success-900);
+}
+:root:not(.dark) .hover\:bg-info\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-info-800);
+}
+:root:not(.dark) .hover\:bg-warning\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-warning-900);
+}
+:root:not(.dark) .hover\:bg-error\/75:is(:hover, :active):not(:disabled, [aria-disabled='true']) {
+  background-color: var(--ui-color-error-800);
+}
+
+/* A pressed toggle is told by more than its ground: a ring in the primary colour, 3 : 1 on every
+   ground. The focus ring takes its place while the control has the focus. */
+[aria-pressed='true']:not(:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--ui-primary);
+}
+
+/* The system's "reduce motion" stills every animation and transition, spinners included. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
