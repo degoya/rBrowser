@@ -80,6 +80,9 @@ const CORE_TOOLS: &[&str] = &[
     "status_messages",
     "sync_set",
     "type",
+    "update_check",
+    "update_install",
+    "update_status",
     "video_list",
     "view_add",
     "view_add_size",
@@ -107,9 +110,10 @@ fn no_tool_can_touch_trust_or_install_plugins() {
     for name in RbMcpServer::tool_names() {
         assert!(!name.contains("trust"), "{name}");
         // `extension_install` (RB-080-23) unpacks nothing before the person confirms it in
-        // rBrowser's window; no tool installs a plugin.
+        // rBrowser's window, `update_install` (RB-090-14) installs nothing before the person's
+        // click; no tool installs a plugin.
         assert!(
-            !name.contains("install") || name == "extension_install",
+            !name.contains("install") || name == "extension_install" || name == "update_install",
             "{name}"
         );
     }

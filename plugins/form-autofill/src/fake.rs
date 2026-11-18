@@ -86,10 +86,12 @@ impl FakeHost {
     }
 }
 
-/// The request of a script: the JSON the page script is called with.
+/// The request of a script: the JSON the page script is called with, before the agent's
+/// selector (src/fill.rs `script`).
 pub fn request_of(script: &str) -> Option<Value> {
+    let script = script.strip_suffix(&format!(", (\n{}\n)())", include_str!("target.js")))?;
     let start = script.rfind("\n)(")? + 3;
-    serde_json::from_str(script.get(start..script.len().checked_sub(1)?)?).ok()
+    serde_json::from_str(script.get(start..)?).ok()
 }
 
 impl PluginHost for FakeHost {

@@ -254,12 +254,16 @@ fn sends_from(browser: i32, request: &str) -> bool {
 #[test]
 fn only_the_pages_window_sends_the_plugin_catalogues_requests() {
     // RB-091-01, security review L3: downloading, installing and removing plugins belongs to
-    // Settings > Plugins > Catalog.
+    // Settings > Plugins > Catalog - and, RB-091-04, to the first-run wizard of the same window.
     for op in [
         "catalog",
         "catalogPrepare",
         "catalogInstall",
         "catalogRemove",
+        "available",
+        "installChosen",
+        "removeChosen",
+        "applyRecommended",
     ] {
         let request = format!(r#"{{"type":"pluginPanel","request":{{"op":"{op}"}}}}"#);
         assert!(is_catalogue_request(&request), "{op}");
@@ -274,4 +278,30 @@ fn only_the_pages_window_sends_the_plugin_catalogues_requests() {
     let installed = r#"{"type":"pluginPanel","request":{"op":"installed"}}"#;
     assert!(!is_catalogue_request(installed));
     assert!(sends_from(KNOWN.panels, installed));
+}
+
+#[test]
+fn only_the_pages_window_sends_the_setup_wizards_requests() {
+    // RB-091-05: the wizard writes project configs; the shell, the palette, the panels and the
+    // status bar never send its requests.
+    for op in [
+        r#"{"op":"info"}"#,
+        r#"{"op":"write","requestId":1,"proposalId":1}"#,
+        r#"{"op":"close"}"#,
+    ] {
+        let request = format!(r#"{{"type":"setup","request":{op}}}"#);
+        assert!(
+            sends_from(KNOWN.pages, &request),
+            "{op} from the pages window"
+        );
+        for other in [
+            KNOWN.shell,
+            KNOWN.palette,
+            KNOWN.panels,
+            KNOWN.panels_dock,
+            KNOWN.status_bar,
+        ] {
+            assert!(!sends_from(other, &request), "{op} from browser {other}");
+        }
+    }
 }

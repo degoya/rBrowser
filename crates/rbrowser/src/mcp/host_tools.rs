@@ -2,10 +2,10 @@
 //! delivered: `sync_set` (RB-020-02), `click`, `type`, `hover`, `press_key` (RB-020-03),
 //! `scroll` (RB-020-04), `bus_send` (RB-020-08), `screenshot` (RB-050-03), `recorder_export`
 //! (RB-050-02), `recorder_play` (RB-090-66), `visual_compare` and `visual_baseline_update`
-//! (RB-050-04). The async ones run on
-//! the host's runtime; `sync_set` and the export off the async workers. And what `views_list`
-//! adds per view: its desync (RB-020-02), whether its navigation is synced (RB-020-06) and its
-//! engine state (RB-040-01).
+//! (RB-050-04), `update_status`, `update_check` and `update_install` (RB-090-14). The async
+//! ones run on the host's runtime; `sync_set` and the export off the async workers. And what
+//! `views_list` adds per view: its desync (RB-020-02), whether its navigation is synced
+//! (RB-020-06) and its engine state (RB-040-01).
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -158,6 +158,10 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
         // RB-080-05: the portal; no answer carries a pairing token or a device session.
         portal if crate::portal::mcp::TOOLS.contains(&portal) => {
             crate::portal::mcp::host_tool(core, portal, &args)
+        }
+        // RB-090-14: the self-update; `update_install` asks the person and installs nothing.
+        update if crate::updates::mcp::is_tool(update) => {
+            crate::updates::mcp::call(core, update).await
         }
         // A loaded plugin's tool (RB-060-12).
         other => match crate::plugins::mcp::call(core, other, args).await {

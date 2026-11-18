@@ -4254,6 +4254,18 @@
                 "local"
               ]
             },
+            "recordAutofill": {
+              "type": "boolean",
+              "description": "The form autofill's fills are steps (RB-090-78): each field it set as a `fill`, `check`,\n`uncheck` or `select` with the value set, a password as its placeholder.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 3,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
             "playbackPace": {
               "oneOf": [
                 {
@@ -4271,7 +4283,7 @@
               "default": "fast",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 3,
+              "x-order": 4,
               "x-scope": [
                 "project",
                 "local"
@@ -4286,7 +4298,7 @@
               "default": [],
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 4,
+              "x-order": 5,
               "x-scope": [
                 "project",
                 "local"
@@ -4299,7 +4311,7 @@
               "default": ".rbrowser/out/recordings",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 5,
+              "x-order": 6,
               "x-scope": [
                 "project",
                 "local"
@@ -4312,6 +4324,7 @@
           "default": {
             "recordScroll": true,
             "recordHover": true,
+            "recordAutofill": true,
             "playbackPace": "fast",
             "secretFields": [],
             "dir": ".rbrowser/out/recordings"
@@ -4352,7 +4365,7 @@
               "default": "auto",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 6,
+              "x-order": 7,
               "x-scope": [
                 "project",
                 "local"
@@ -4364,7 +4377,7 @@
               "default": ".rbrowser/out/exports",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 7,
+              "x-order": 8,
               "x-scope": [
                 "project",
                 "local"
@@ -4378,7 +4391,7 @@
               "default": true,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 8,
+              "x-order": 9,
               "x-scope": [
                 "project",
                 "local"
@@ -4398,6 +4411,7 @@
         "recorder": {
           "recordScroll": true,
           "recordHover": true,
+          "recordAutofill": true,
           "playbackPace": "fast",
           "secretFields": [],
           "dir": ".rbrowser/out/recordings"

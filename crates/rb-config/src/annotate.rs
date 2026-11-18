@@ -294,6 +294,12 @@ pub const PROJECT_KEYS: &[KeyDef] = &[
         Category::Automation,
         "recorder",
     ),
+    // The form autofill's fills in a recording (RB-090-78).
+    key(
+        "automation.recorder.recordAutofill",
+        Category::Automation,
+        "recorder",
+    ),
     // How a recording plays back and its export waits (RB-090-66).
     key(
         "automation.recorder.playbackPace",

@@ -145,6 +145,7 @@ export const coreToShell = [
     platform: 'windows x86_64',
     apis: { configSchema: '1', plugin: 'rbrowser:plugin@0.1.0' },
     dirs: { logs: 'C:/Users/a/AppData/Local/rBrowser/logs' },
+    updates: 'onStart',
   },
   { type: 'uiCommand', id: 'view.focus_address_bar' },
   { type: 'canvasLive', board: { spacePan: true, wheelZoom: true, items: [{ view: 2, label: { x: 0, y: 0, width: 200, height: 20 }, rect: { x: 0, y: 20, width: 200, height: 400 }, visible: true, text: 'Tablet', pageZoom: 110, engineStatus: { text: 'Firefox \u00b7 window closed', tooltip: 'The Firefox window was closed.' } }], camera: { x: 0, y: 0, zoomPermille: 500 }, levelPermille: 250 }, seq: 7 },
@@ -382,4 +383,16 @@ export const coreToShell = [
   ...videoMessages,
   { type: 'nativeMenuClosed', menu: 'theme', item: 'dark' },
   ...recordingCoreMessages,
+  // RB-091-05.
+  {
+    type: 'setup',
+    answer: {
+      op: 'proposal',
+      requestId: 7,
+      proposalId: 3,
+      root: 'C:/work/shop',
+      config: { version: 1, breakpoints: [{ id: 'iphone-15', label: 'iPhone 15', device: 'iphone-15' }] },
+      source: 'devices',
+    },
+  },
 ] satisfies CoreToShell[];

@@ -22,6 +22,25 @@ fn only_an_offered_action_of_the_plugin_itself_runs() {
 }
 
 #[test]
+fn only_the_form_autofill_reports_a_fill_and_needs_no_gesture_for_it() {
+    // RB-090-78: the fields a fill set, for a running recording.
+    let record = json!({ "action": "record_fill", "view": 1, "fields": [] });
+    assert_eq!(offered("form-autofill", &record), Some("record_fill"));
+    assert_eq!(offered("image-overlay", &record), None);
+    assert!(gestureless("form-autofill", &record));
+    assert!(!gestureless("image-overlay", &record));
+    assert!(!gestureless(
+        "form-autofill",
+        &json!({ "action": "add_design" })
+    ));
+    // Adding a design opens a dialog: a person's command only.
+    assert!(!gestureless(
+        "image-overlay",
+        &json!({ "action": "add_design" })
+    ));
+}
+
+#[test]
 fn a_design_is_added_only_to_an_open_trusted_project() {
     let root = PathBuf::from("/work/site");
     assert_eq!(admit(None, true), Err(NO_PROJECT_KEY));

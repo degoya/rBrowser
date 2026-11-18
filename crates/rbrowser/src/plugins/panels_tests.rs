@@ -247,3 +247,34 @@ fn a_page_names_the_core_panel_it_shows() {
     );
     assert!(serde_json::from_value::<PanelRequest>(json!({ "op": "selectedCore" })).is_err());
 }
+
+/// RB-091-04: the first-run wizard's requests, with the names RB-091-05 builds against.
+#[test]
+fn the_wizard_requests_parse() {
+    let available: PanelRequest =
+        serde_json::from_value(json!({ "op": "available" })).expect("available");
+    assert_eq!(available, PanelRequest::Available);
+    let install: PanelRequest =
+        serde_json::from_value(json!({ "op": "installChosen", "ids": ["seo", "todo"] }))
+            .expect("installChosen");
+    assert_eq!(
+        install,
+        PanelRequest::InstallChosen {
+            ids: vec!["seo".to_owned(), "todo".to_owned()]
+        }
+    );
+    let remove: PanelRequest =
+        serde_json::from_value(json!({ "op": "removeChosen", "ids": ["seo"] }))
+            .expect("removeChosen");
+    assert_eq!(
+        remove,
+        PanelRequest::RemoveChosen {
+            ids: vec!["seo".to_owned()]
+        }
+    );
+    assert!(serde_json::from_value::<PanelRequest>(json!({ "op": "installChosen" })).is_err());
+    // Review 7: the wizard's Skip.
+    let skip: PanelRequest =
+        serde_json::from_value(json!({ "op": "applyRecommended" })).expect("applyRecommended");
+    assert_eq!(skip, PanelRequest::ApplyRecommended);
+}

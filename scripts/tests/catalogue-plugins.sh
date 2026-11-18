@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# The official catalogue never lists a bundled plugin (RB-091-01, coordinator 2026-11-16):
-# scripts/catalogue-plugins.sh names only the `CATALOG-ONLY` plugin folders, and the package's
-# plugin list (scripts/lib/package.sh, rb_package_plugins) leaves exactly those out, so no id is
-# in both. On a small tree in a temp directory; builds nothing.
+# The official catalogue lists every first-party plugin but a test-only one (RB-091-04, as
+# rDownloader's index does): scripts/catalogue-plugins.sh names the bundled and the
+# `CATALOG-ONLY` plugin folders alike, and the package's plugin list (scripts/lib/package.sh,
+# rb_package_plugins) still leaves the `CATALOG-ONLY` ones out. On a small tree in a temp
+# directory; builds nothing.
 #
 #   scripts/tests/catalogue-plugins.sh
 set -euo pipefail
@@ -31,8 +32,8 @@ plugin hello
 touch "$TREE/plugins/hello/TEST-ONLY" "$TREE/plugins/hello/CATALOG-ONLY"
 mkdir -p "$TREE/plugins/web-common"
 
-expect "the catalogue lists the catalogue-only plugin alone" "outline" \
-    "$(bash "$TREE/scripts/catalogue-plugins.sh" "$TREE")"
+expect "the catalogue lists every first-party plugin but the test-only one" "outline seo" \
+    "$(bash "$TREE/scripts/catalogue-plugins.sh" "$TREE" | tr '\n' ' ' | sed 's/ $//')"
 
 # shellcheck source=../lib/package.sh
 source "$ROOT/scripts/lib/package.sh"

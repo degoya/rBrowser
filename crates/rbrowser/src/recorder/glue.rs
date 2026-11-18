@@ -181,6 +181,7 @@ impl HostRecorder {
                 record_scroll: config.record_scroll,
                 record_hover: config.record_hover,
                 secret_fields: config.secret_fields,
+                record_autofill: config.record_autofill,
             });
             recorder.start(info)?;
         }
@@ -247,6 +248,14 @@ impl HostRecorder {
         lock(&self.recorder).add_check(source, action, views, now_ms())?;
         tracing::info!("check step recorded");
         Ok(self.publish())
+    }
+
+    /// The form autofill set `fill` (RB-090-78, [`super::autofill`]): its fields are steps while
+    /// a recording runs with `automation.recorder.recordAutofill`.
+    pub fn on_autofill(&self, fill: &rb_sync::recorder::AutofillView) {
+        if lock(&self.recorder).on_autofill(fill, now_ms()) {
+            self.publish();
+        }
     }
 
     /// The state now.

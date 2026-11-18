@@ -7,6 +7,96 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Added
+
+- rBrowser for macOS in every release (RB-090-80): `release.yml` builds `rBrowser.app` for Apple
+  Silicon and for Intel natively from the signed plugins, signed ad hoc and checked, and
+  publishes `rbrowser-X.Y.Z-macos-aarch64` and `-x86_64` each as a DMG and a ZIP beside the
+  Windows ZIP, in `SHA256SUMS`; a release without one of them is not published. The release
+  text lists the downloads and how macOS lets an app start that is not notarised (Open Anyway, or
+  `xattr -dr com.apple.quarantine`); the Homebrew cask follows each release
+  (`brew install --cask degoya/rbrowser/rbrowser`), now for macOS 13 or later. On macOS the app
+  offers a new version as a download of its release page; it does not replace itself.
+- First-party plugins as rDownloader handles them (RB-091-04): the package still carries every
+  first-party plugin, but a start installs only the chosen ones - a fresh installation what the
+  first-run wizard marks (Skip, or no answer by the next start: the recommended set; with the
+  wizard off the recommended set at once), an existing one keeps all it had, a plugin new in a later release waits in
+  Settings › Plugins › Catalog and a removed one does not come back (`--install-all-bundled-plugins`
+  installs all). A chosen plugin comes from the official catalogue when it offers a newer
+  version than the shipped one with the same key and no new permission, otherwise from the package
+  (a newer copy that does not verify leaves the shipped one to load)
+  (`plugins.catalog.preferRepository`). The catalogue lists the shipped plugins with one-click
+  Install and Remove and their updates, which `plugins.catalog.autoUpdate` can install by itself.
+  A project that uses a plugin that is not installed says so in the status bar with an Install
+  button (`plugins.catalog.missingNotice`); MCP `plugins_list` names `missing` and `available`.
+
+- The setup wizard (RB-091-05): optional, once per person at the very first start, every step
+  skippable - welcome, plugins (the first-party plugins by category with search; the wizard only
+  marks what gets loaded: at a fresh install no optional plugin loads until it answers, the
+  recommended ones ticked, anything can be unticked, an installed one included; one confirmation
+  names what is installed with its rights and what is removed, then one install with progress,
+  from the package's bundle without a network; skipping the step or the setup installs the
+  recommended set, a choice made before stays as it is), project (a folder, WSL included, the dev server's address and the
+  analyser's proposal, a mobile and a desktop view or chosen devices; the config `rbrowser init`
+  writes, shown before it is written), basics (theme, grid or canvas, sync) and a summary. A
+  project folder without a config says "Set up project" once in the status bar. "Set up
+  rBrowser..." (`⌘ , W`, the palette, App in the main menu, Settings › General › Start) opens it
+  again; `ui.firstRunWizard` switches it off for a team. MCP can neither open nor answer it.
+- The plugins as a release of their own (RB-090-79): every tag `vX.Y.Z` also publishes
+  `plugins-vX.Y.Z` ("rBrowser plugins X.Y.Z") with the signed first-party `.rbplugin` packages
+  and their own `SHA256SUMS` (no offline bundle: the plugins the application's package carries
+  are the way without a network, RB-091-04); a pre-release with a beta tag, never `latest`. The newest plain tag also signs the official
+  plugin catalogue's index and replaces it in the fixed release `plugin-index`, the address the
+  app reads; a pre-release leaves the index alone. `.github/workflows/release-plugins.yml` builds
+  and signs, `scripts/release-plugins.sh` stages, gates and publishes.
+- Self-update is on (RB-090-14): rBrowser checks for a new version at every start
+  (`updates.check`, on by default) and shows it in the status bar with its size and notes;
+  "Install and restart" (`⌘ , I`) downloads it, checks the signature of the release key and the
+  SHA-256, replaces the program folder through `rbrowser-updater.exe` (shipped beside
+  `rbrowser.exe`) and starts the new version, which proves itself at its start or is taken back.
+  `updates.autoInstall = onQuit` installs a downloaded update when rBrowser quits, never holding
+  the quit up. "Check now" (`⌘ , U`) and the install sit under the switch in Settings › General ›
+  Updates. The channel is automatic by default (beta for a pre-release build, stable otherwise);
+  the beta channel finds its manifest through the GitHub release list. With other projects'
+  windows open the install waits for them; Scoop, winget, Homebrew, deb and rpm installations are shown their
+  package manager's command, other installations the release page. MCP `update_status`,
+  `update_check` and `update_install`, which only asks the person. The notice about an old CEF
+  stays silent while updates are checked. The first release that updates itself is
+  0.9.0-beta.2; 0.9.0-beta.1 is updated by unpacking the new ZIP.
+
+### Changed
+
+- The official plugin index lists every first-party plugin with its group and keeps the last
+  version of each plugin per plugin contract, and the app ignores index fields it does not know; the plugin release no longer has an offline ZIP -
+  the application's package is the offline way (RB-091-04).
+
+### Fixed
+
+- The toolbar menus run their rows again: with CEF 156.0.30 the menu tells its close before the
+  row chosen, so every choice of ≡ and the split buttons was lost (the theme, Create diagnostics
+  ZIP, ...). A submenu closing (the pointer moving on, or its row chosen) no longer counts as the
+  menu's close, and the close is told a moment later; a `&` in a row shows as itself, not as `&&`. The
+  macOS build compiles again (the Print entry's id is `u32` there).
+- The setup wizard scrolls (RB-091-05): in the pages window a long plugin list hid Back and Next;
+  the wizard scrolls itself and keeps its footer in sight. Its plugin step no longer says "No
+  network" when only the plugin catalog cannot be reached (none is published before the first
+  full release); it says the catalog is not reachable and the plugins install from the package.
+- Settings › About names how this installation updates itself - not in this build, switched off,
+  only when asked, or at every start - instead of always "Updates are disabled in this build"
+  (RB-091-05).
+- The public CI after the first push (RB-090-12): the E2E workflow ends green with a notice while
+  `scripts/e2e-windows.sh` (RB-090-05) does not exist, and the package channels workflow ends green
+  with a notice before the first plain release instead of failing on "release not found".
+- A recording takes what Form autofill fills (RB-090-78). The autofill sets values by script,
+  which the recorder rightly does not capture, so a recording ended without the fill - only the
+  checkboxes it clicked showed as steps. Now each field it sets while a recording runs becomes a
+  step - `fill` with the value set, `check` or `uncheck`, `select` - named as a typed field is
+  named, in the views it filled (a view with other values, such as a German phone number, gets
+  its own step); a password or secret field is recorded as its placeholder, and a checkbox the
+  agent saw clicked is one step, not two. A flow exported from the recording fills the same
+  values. `automation.recorder.recordAutofill` (on by default) turns it off; Settings ›
+  Automation › Recorder.
+
 ## [0.9.0-beta.1] - 2026-11-17
 
 ### Added

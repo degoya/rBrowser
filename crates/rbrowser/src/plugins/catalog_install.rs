@@ -8,18 +8,19 @@
 //! same indexed file again, reviews it again and installs it only when the grants and the
 //! capabilities are exactly the ones shown and - for a key not trusted yet or changed - the key's
 //! fingerprint was confirmed in its own step. A confirmed new key is pinned in
-//! `plugins.trustedKeys`, as the settings window would pin it. A bundled plugin is refused before
-//! anything is downloaded (coordinator, 2026-11-16).
+//! `plugins.trustedKeys`, as the settings window would pin it. RB-091-04 lifted the lock on
+//! bundled plugins: the catalogue updates them too, from a package signed by the bundle's key -
+//! one with a bundled plugin's id under another key is refused ([`refuse_foreign`]) - and an
+//! install of a bundled plugin chooses it, so its copy stands in at the next start.
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use chrono::Utc;
 use rb_config::{TrustedPluginKey, UserSettings};
 use rb_ipc::{CoreToShell, IpcErrorCode, PluginGrantDetails};
 use rb_plugin_host::{
-    CatalogStore, Consent, HttpFetcher, IndexEntry, PinnedKey, PluginSource, Prepared,
-    RepositoryError,
+    CatalogStore, Consent, HttpFetcher, IndexEntry, PinnedKey, Prepared, RepositoryError, Shipped,
 };
 use rb_settings::Scope;
 use serde::Deserialize;
@@ -29,8 +30,8 @@ use super::{open_catalog, store_dir};
 use crate::control::Core;
 use crate::ipc::Failure;
 
-/// The failure code of an install of a plugin that ships with rBrowser.
-pub const BUNDLED_CODE: &str = "plugins.catalog.error.bundled";
+/// The failure code of a package with a bundled plugin's id signed by another key (RB-091-04).
+pub const FOREIGN_CODE: &str = "plugins.catalog.error.foreign_bundled";
 
 /// An install the catalogue page asks for.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -60,9 +61,9 @@ pub struct ConsentRequest {
 ///
 /// The failure's code.
 pub fn review(core: &Core, repository: &str, id: &str, version: &str) -> Result<Value, Failure> {
-    refuse_bundled(id, &bundled_ids())?;
     let user = core.user_settings();
     let (prepared, _, _, _) = fetch_and_prepare(&user, repository, id, version)?;
+    refuse_foreign(id, &prepared.key().fingerprint, &bundled_keys())?;
     let capabilities: Vec<&str> = prepared.capability_ids().into_iter().collect();
     Ok(json!({ "value": { "review": {
         "repository": repository,
@@ -81,10 +82,11 @@ pub fn review(core: &Core, repository: &str, id: &str, version: &str) -> Result<
 ///
 /// The failure's code (`plugins.catalog.error.*` or the verifier's `plugins.error.*`).
 pub fn install(core: &Core, request: InstallRequest) -> Result<Value, Failure> {
-    refuse_bundled(&request.id, &bundled_ids())?;
     let user = core.user_settings();
     let (prepared, bytes, entry, store) =
         fetch_and_prepare(&user, &request.repository, &request.id, &request.version)?;
+    let bundled = bundled_keys();
+    refuse_foreign(&request.id, &prepared.key().fingerprint, &bundled)?;
     // The full grants, not only the capability ids (security review M1).
     if !same_grants(&grants_of(&prepared), &request.consent.grants) {
         return Err(refusal(RepositoryError::ConsentMismatch));
@@ -112,6 +114,18 @@ pub fn install(core: &Core, request: InstallRequest) -> Result<Value, Failure> {
     );
     if let Some(pin) = installed.pin {
         pin_key(core, &user, pin);
+    }
+    // The base of the next update check until the restart (review 6).
+    crate::plugins::bundle_install::note_installed(&installed.id, &installed.version);
+    // A bundled plugin installed from the catalogue is chosen: its copy stands in for the
+    // bundled package at the next start (RB-091-04).
+    if bundled.contains_key(&installed.id)
+        && let Err(code) = super::super::bundle::update_choice(|state| state.choose(&installed.id))
+    {
+        tracing::warn!(
+            code = code.as_str(),
+            "the plugin was not added to the choice"
+        );
     }
     Ok(json!({ "value": { "id": installed.id, "version": installed.version, "restart": true } }))
 }
@@ -171,38 +185,40 @@ pub fn remove(id: &str) -> Result<Value, Failure> {
     Ok(json!({ "value": { "id": id, "restart": true } }))
 }
 
-/// Refuses `id` when it is one of `bundled`: with the same id the bundled copy wins at every
-/// start, and its updates come with the app, so the catalogue never installs or updates it.
+/// Refuses a package of `id` signed by the key of `fingerprint` when `bundled` ships `id` under
+/// another key: it could never stand in for the bundled plugin, and a repository may not take a
+/// first-party plugin's id (RB-091-04).
 ///
 /// # Errors
 ///
-/// [`BUNDLED_CODE`].
-pub fn refuse_bundled(id: &str, bundled: &BTreeSet<String>) -> Result<(), Failure> {
-    if bundled.contains(id) {
+/// [`FOREIGN_CODE`].
+pub fn refuse_foreign(
+    id: &str,
+    fingerprint: &str,
+    bundled: &BTreeMap<String, String>,
+) -> Result<(), Failure> {
+    if bundled
+        .get(id)
+        .is_some_and(|shipped| shipped != fingerprint)
+    {
         tracing::info!(
             plugin_id = id,
-            "a bundled plugin is not installed from the catalogue"
+            "a package with a bundled plugin's id under another key is not installed"
         );
-        return Err((IpcErrorCode::BadRequest, BUNDLED_CODE.to_owned()));
+        return Err((IpcErrorCode::BadRequest, FOREIGN_CODE.to_owned()));
     }
     Ok(())
 }
 
-/// The ids of the bundled plugins, loaded or switched off; waits for the load (a blocking
-/// thread only).
-fn bundled_ids() -> BTreeSet<String> {
-    let report = &crate::analyzer::plugins::bundled().report;
-    let loaded = report
-        .loaded
-        .iter()
-        .filter(|entry| entry.source == PluginSource::Bundled)
-        .map(|entry| entry.plugin.manifest().id.clone());
-    let disabled = report
-        .disabled
-        .iter()
-        .filter(|entry| entry.source == PluginSource::Bundled)
-        .map(|entry| entry.manifest.id.clone());
-    loaded.chain(disabled).collect()
+/// The key fingerprint of every bundled plugin, chosen or not, by id; waits for the load (a
+/// blocking thread only).
+fn bundled_keys() -> BTreeMap<String, String> {
+    crate::plugins::bundle_offer::bundled_plugins()
+        .into_iter()
+        .filter_map(|(id, plugin)| {
+            Shipped::of(&plugin.manifest).map(|shipped| (id, shipped.fingerprint))
+        })
+        .collect()
 }
 
 fn folders() -> Result<(PathBuf, PathBuf), Failure> {

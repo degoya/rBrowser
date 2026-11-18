@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# Builds the macOS test build on a Mac - the macos-15 (Apple Silicon) and macos-15-intel runners
-# of ci.yml; nothing builds it locally (RB-090-15) - and packs it:
+# Builds rBrowser for macOS on a Mac - the macos-15 (Apple Silicon) and macos-15-intel runners
+# of ci.yml (the test build, RB-090-15) and of release.yml (the release's packages, RB-090-80);
+# nothing builds it locally - and packs it:
 #   artifacts/macos/rbrowser-<version>-macos-<aarch64|x86_64>.zip   (ditto, the app at the top)
 #   artifacts/macos/rbrowser-<version>-macos-<aarch64|x86_64>.dmg   (hdiutil, with /Applications)
 # holding rBrowser.app (scripts/lib/macos-bundle.sh):

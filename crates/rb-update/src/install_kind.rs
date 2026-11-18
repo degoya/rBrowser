@@ -1,20 +1,25 @@
 //! How this installation came to be, and therefore whether it updates itself or something else
-//! does. Only the portable ZIP (RB-090-01) installs an update itself; an MSI or a package
-//! manager (RB-090-13, RB-110-04) owns its files, and a program that replaced itself behind its
-//! back would leave its records stale. Detection, first match wins:
+//! does ([`InstallKind::update_way`]). Only the portable archive (RB-090-01) installs an update
+//! itself; a package manager (RB-090-13, RB-110-04) owns its files - a program that replaced
+//! itself behind its back would leave its records stale - and is shown its own command; an MSI
+//! (none is published yet) and anything unknown are offered the download. Detection, first match
+//! wins:
 //!
 //! 1. **The marker file** [`INSTALL_KIND_FILE`] (`install-kind`) beside the program: an installer
-//!    or a package writes its kind there (`msi`, `scoop`, `winget`). UTF-8, the first line that is
-//!    neither empty nor a `#` comment; at most 1 KiB is read. `portable` goes on to step 2; a kind
-//!    this build does not know is [`InstallKind::Unknown`].
-//! 2. **`VERSION.txt` beside the program** whose first line names rBrowser, as
+//!    or a package writes its kind there (`scoop` from the bucket's `post_install`; `msi`,
+//!    `winget`, `homebrew`, `deb`, `rpm`). UTF-8, the first line that is neither empty nor a `#`
+//!    comment; at most 1 KiB is read. `portable` goes on to step 3; a kind this build does not
+//!    know is [`InstallKind::Unknown`].
+//! 2. **The folder** of a package manager that writes no marker ([`by_path`]): Scoop's
+//!    `scoop\apps\rbrowser\`, winget's `WinGet\Packages\degoya.rBrowser_*`, Homebrew's
+//!    `Cellar/rbrowser/` and `Caskroom/rbrowser/`.
+//! 3. **`VERSION.txt` beside the program** whose first line names rBrowser, as
 //!    `scripts/package-windows.sh` writes it, in a folder this process may write:
 //!    [`InstallKind::Portable`].
-//! 3. Otherwise [`InstallKind::Unknown`]: a build from source, the copy of
+//! 4. Otherwise [`InstallKind::Unknown`]: a build from source, the copy of
 //!    `scripts/run-windows.sh`, or a folder like `C:\Program Files` that cannot be written.
 //!
-//! Adapted from rCommander's `crates/rc-update/src/install_kind.rs` (RB-090-02): the MSI of
-//! RB-090-13's plans instead of deb and rpm, no path rules yet.
+//! Adapted from rCommander's `crates/rc-update/src/install_kind.rs` (RB-090-02, RB-090-14).
 
 use std::fs;
 use std::io::Read as _;
@@ -35,12 +40,18 @@ const MAX_MARKER_BYTES: u64 = 1024;
 pub enum InstallKind {
     /// The ZIP, unpacked by hand: updates itself.
     Portable,
-    /// An MSI installer (placeholder for RB-090-13): the installer updates it.
+    /// An MSI installer (none is published yet): offered the download.
     Msi,
-    /// Scoop (placeholder for RB-090-13).
+    /// Scoop (RB-090-13): its bucket writes the marker.
     Scoop,
-    /// winget (placeholder for RB-090-13).
+    /// winget (RB-090-13): its portable ZIP under `WinGet\Packages`.
     Winget,
+    /// Homebrew's cask (macOS) or formula (Linux), RB-110-04.
+    Homebrew,
+    /// The apt repository's package (RB-110-04).
+    Deb,
+    /// The dnf repository's package (RB-110-04).
+    Rpm,
     /// Anything else: offered the download only.
     Unknown,
 }
@@ -54,6 +65,9 @@ impl InstallKind {
             Self::Msi => "msi",
             Self::Scoop => "scoop",
             Self::Winget => "winget",
+            Self::Homebrew => "homebrew",
+            Self::Deb => "deb",
+            Self::Rpm => "rpm",
             Self::Unknown => "unknown",
         }
     }
@@ -66,6 +80,9 @@ impl InstallKind {
             "msi" => Self::Msi,
             "scoop" => Self::Scoop,
             "winget" => Self::Winget,
+            "homebrew" => Self::Homebrew,
+            "deb" => Self::Deb,
+            "rpm" => Self::Rpm,
             _ => return None,
         })
     }
@@ -75,6 +92,34 @@ impl InstallKind {
     pub fn installs_itself(self) -> bool {
         self == Self::Portable
     }
+
+    /// How an installation of this kind takes an offered update.
+    #[must_use]
+    pub fn update_way(self) -> UpdateWay {
+        match self {
+            Self::Portable => UpdateWay::SelfUpdate,
+            Self::Scoop => UpdateWay::Command("scoop update rbrowser"),
+            Self::Winget => UpdateWay::Command("winget upgrade degoya.rBrowser"),
+            Self::Homebrew => UpdateWay::Command("brew upgrade rbrowser"),
+            Self::Deb => {
+                UpdateWay::Command("sudo apt update && sudo apt install --only-upgrade rbrowser")
+            }
+            Self::Rpm => UpdateWay::Command("sudo dnf upgrade rbrowser"),
+            Self::Msi | Self::Unknown => UpdateWay::DownloadOnly,
+        }
+    }
+}
+
+/// How an offered update reaches this installation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateWay {
+    /// Download, verify, switch and restart (the portable archive).
+    SelfUpdate,
+    /// The package manager's command, shown to copy; nothing is downloaded.
+    Command(&'static str),
+    /// The release page, for a download by hand.
+    DownloadOnly,
 }
 
 /// How the program in `install_dir` was installed; see the module documentation.
@@ -86,6 +131,8 @@ pub fn detect(install_dir: &Path) -> InstallKind {
             Some(kind) => return kind,
             None => return InstallKind::Unknown,
         }
+    } else if let Some(kind) = by_path(install_dir) {
+        return kind;
     }
     let packaged = fs::read_to_string(install_dir.join(VERSION_FILE)).is_ok_and(|text| {
         text.lines()
@@ -96,6 +143,32 @@ pub fn detect(install_dir: &Path) -> InstallKind {
         InstallKind::Portable
     } else {
         InstallKind::Unknown
+    }
+}
+
+/// The package manager whose own layout `install_dir` lies in, with rBrowser's package in it;
+/// compared without case and with either separator. Each rule names the manager's folder and the
+/// package's name below it - `scoop/apps/rbrowser/`, `winget/packages/degoya.rbrowser`,
+/// `cellar/rbrowser/`, `caskroom/rbrowser/` - so a portable folder whose path merely holds one of
+/// those words stays portable. They stand before the `VERSION.txt` check on purpose: a package
+/// manager's folder carries the same files as the ZIP and is writable by the person.
+#[must_use]
+pub fn by_path(install_dir: &Path) -> Option<InstallKind> {
+    let path = format!(
+        "{}/",
+        install_dir
+            .to_string_lossy()
+            .replace('\\', "/")
+            .to_ascii_lowercase()
+    );
+    if path.contains("/scoop/apps/rbrowser/") {
+        Some(InstallKind::Scoop)
+    } else if path.contains("/winget/packages/degoya.rbrowser") {
+        Some(InstallKind::Winget)
+    } else if path.contains("/cellar/rbrowser/") || path.contains("/caskroom/rbrowser/") {
+        Some(InstallKind::Homebrew)
+    } else {
+        None
     }
 }
 

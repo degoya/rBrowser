@@ -159,6 +159,23 @@ pub struct AboutInfo {
     /// Folders by name: `data`, `local`, `logs`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub dirs: BTreeMap<String, String>,
+    /// How this installation updates itself; absent without a window to ask (RB-091-05).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updates: Option<AboutUpdates>,
+}
+
+/// The self-update as Settings > About names it (RB-090-14).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AboutUpdates {
+    /// The build carries no self-update.
+    NotBuilt,
+    /// `updates.enabled` is off.
+    Off,
+    /// On; checked only when a person asks (`updates.check` off).
+    Manual,
+    /// On; checked at every start.
+    OnStart,
 }
 
 /// The answer of `getTrust` / `revokeTrust` (RB-010-09).

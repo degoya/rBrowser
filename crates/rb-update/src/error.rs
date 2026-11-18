@@ -1,5 +1,5 @@
-//! Why a manifest, a check or a download was refused: [`UpdateError::code`] is the stable code a
-//! later window translates (RB-110-05) and the log names.
+//! Why a manifest, a check or a download was refused: [`UpdateError::code`] is the stable code the
+//! window translates (`update.error.<code>`, RB-090-14) and the log names.
 //!
 //! Copied and adapted from rCommander's `crates/rc-update/src/error.rs` (RB-090-02): `disabled`
 //! for the switched-off feature, no proxy login.
@@ -70,6 +70,34 @@ pub const UPDATE_ERROR_CODES: &[&str] = &[
 ];
 
 impl UpdateError {
+    /// Whether this refuses what a source served - a forged, replayed, misplaced or malformed
+    /// manifest - rather than says that nothing could be reached: the one worth reporting
+    /// louder when another manifest of the same check verified. An expired manifest is none of
+    /// these ([`Self::is_expired`]): a channel without a release for its validity is simply
+    /// nothing to offer.
+    #[must_use]
+    pub fn is_integrity(&self) -> bool {
+        match self {
+            Self::Stale(stale) => !matches!(stale, StaleError::Expired { .. }),
+            Self::TooLarge
+            | Self::Malformed(_)
+            | Self::Untrusted(_)
+            | Self::BadSignature(_)
+            | Self::Revoked
+            | Self::SchemaVersion { .. }
+            | Self::WrongChannel { .. }
+            | Self::Invalid(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Whether the manifest is past its `not_after`: nothing to offer, worth a log line only
+    /// (180 days without a release, or a beta channel after the last beta).
+    #[must_use]
+    pub fn is_expired(&self) -> bool {
+        matches!(self, Self::Stale(StaleError::Expired { .. }))
+    }
+
     /// The stable code.
     #[must_use]
     pub fn code(&self) -> &'static str {
@@ -95,3 +123,7 @@ impl UpdateError {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "error_tests.rs"]
+mod tests;

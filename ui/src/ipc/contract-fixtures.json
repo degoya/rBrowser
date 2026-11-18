@@ -125,7 +125,11 @@
     { "type": "exportRecording", "name": "login", "format": "both", "exportName": "login-flow", "write": true, "overwrite": true },
     { "type": "getFlowRun" },
     { "type": "activityBar", "place": "top" },
-    { "type": "collapseActivity", "activity": "video", "collapsed": true }
+    { "type": "collapseActivity", "activity": "video", "collapsed": true },
+    {
+      "type": "setup",
+      "request": { "op": "preview", "requestId": 7, "root": "C:/work/shop", "url": "http://localhost:5173", "template": "devices", "devices": ["iphone-15"] }
+    }
   ],
   "coreToShell": [
     { "type": "ack" },
@@ -267,7 +271,8 @@
       "built": "2026-11-10T12:00:00Z",
       "platform": "windows x86_64",
       "apis": { "configSchema": "1", "plugin": "rbrowser:plugin@0.1.0" },
-      "dirs": { "logs": "C:/Users/a/AppData/Local/rBrowser/logs" }
+      "dirs": { "logs": "C:/Users/a/AppData/Local/rBrowser/logs" },
+      "updates": "onStart"
     },
     { "type": "uiCommand", "id": "view.focus_address_bar" },
     { "type": "canvasLive", "board": { "spacePan": true, "wheelZoom": true, "items": [{ "view": 2, "label": { "x": 0, "y": 0, "width": 200, "height": 20 }, "rect": { "x": 0, "y": 20, "width": 200, "height": 400 }, "visible": true, "text": "Tablet", "pageZoom": 110, "engineStatus": { "text": "Firefox \u00b7 window closed", "tooltip": "The Firefox window was closed." } }], "camera": { "x": 0, "y": 0, "zoomPermille": 500 }, "levelPermille": 250 }, "seq": 7 },
@@ -616,6 +621,17 @@
         ]
       }
     },
-    { "type": "flowRunChanged" }
+    { "type": "flowRunChanged" },
+    {
+      "type": "setup",
+      "answer": {
+        "op": "proposal",
+        "requestId": 7,
+        "proposalId": 3,
+        "root": "C:/work/shop",
+        "config": { "version": 1, "breakpoints": [{ "id": "iphone-15", "label": "iPhone 15", "device": "iphone-15" }] },
+        "source": "devices"
+      }
+    }
   ]
 }

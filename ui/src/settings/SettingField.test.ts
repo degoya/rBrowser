@@ -39,7 +39,7 @@ describe('a setting field', () => {
   it('shows a locked update key with the hint and takes no change or reset', async () => {
     const wrapper = await field(def('updates.enabled', 'settings.updates.inactive'), true, 'user');
     expect(wrapper.get('[data-testid="locked"]').text()).toBe(
-      'Updates are inactive until rBrowser moves to GitHub (version 1.1). Until then, update by unpacking the new ZIP.',
+      'This build carries no self-update. Update by unpacking the new ZIP.',
     );
     expect(wrapper.get('[data-testid="reset"]').attributes('disabled')).toBeDefined();
     const control = wrapper.get('#setting-updates-enabled');

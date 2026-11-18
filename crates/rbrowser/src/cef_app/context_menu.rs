@@ -44,7 +44,12 @@ wrap_context_menu_handler! {
             let point = params.map(|params| (params.xcoord(), params.ycoord()));
             let items = self.menu.opened(core, point);
             // Chromium's Print has no use in a breakpoint view (owner, 2026-11-17).
-            model.remove(MenuId::PRINT.get_raw());
+            // The raw id is `i32` on Windows and `u32` on macOS (the macOS build, RB-090-80).
+            #[allow(clippy::useless_conversion, reason = "i32 on Windows, u32 on macOS")]
+            let print = i32::try_from(MenuId::PRINT.get_raw()).ok();
+            if let Some(print) = print {
+                model.remove(print);
+            }
             if model.count() > 0 && !items.is_empty() {
                 model.add_separator();
             }

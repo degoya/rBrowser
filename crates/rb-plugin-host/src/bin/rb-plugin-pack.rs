@@ -11,11 +11,15 @@
 //! rb-plugin-pack index <folder of .rbplugin> --out <rbrowser-plugin-index.json> --key <private.pem>
 //!                      --key-id <id> --sequence <n> [--base-url <https://...>]
 //!                      [--validity-days <n>] [--trust <key_id>=<base64>]...
+//!                      [--categories <first-party.json>] [--previous <old index.json>]
 //! ```
 //!
 //! `index` (RB-091-01) lists every package of the folder that verifies under the compiled-in roots
 //! and the `--trust` keys, and signs the index with the repository key: the official catalogue's
-//! with the plugin release key, a third-party repository's with its own.
+//! with the plugin release key, a third-party repository's with its own. RB-091-04: `--categories`
+//! names each plugin's group from `plugins/first-party.json`, and `--previous` carries the
+//! previous index's newest entry of every plugin per contract this one does not build for (its
+//! signature must verify under the same key; its expiry does not matter).
 //!
 //! The private key is read from a file and never printed; `keygen` writes it with owner-only
 //! permissions where the platform has them.
@@ -24,9 +28,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use rb_plugin_host::{
-    DEFAULT_VALIDITY_DAYS, MANIFEST_MEMBER, PACKAGE_EXTENSION, PLUGIN_INDEX_SCHEMA_VERSION,
-    PluginIndex, PluginVerifier, SETTINGS_SCHEMA_MEMBER, describe_package, generate_signing_key,
-    load_signing_key_pem, package_plugin, run_conformance, sign_index, verify_package,
+    DEFAULT_VALIDITY_DAYS, IndexSigners, MANIFEST_MEMBER, PACKAGE_EXTENSION,
+    PLUGIN_INDEX_SCHEMA_VERSION, PluginIndex, PluginVerifier, SETTINGS_SCHEMA_MEMBER, carry_over,
+    describe_package, generate_signing_key, load_signing_key_pem, package_plugin, run_conformance,
+    sign_index, verify_index_signature, verify_package,
 };
 
 fn main() -> Result<()> {
@@ -43,7 +48,8 @@ fn main() -> Result<()> {
                  --out <file> [--key <pem>] | verify <file> [--trust id=key] [--dev] | \
                  conformance <file> [--trust id=key] [--dev] | index <dir> --out <file> \
                  --key <pem> --key-id <id> --sequence <n> [--base-url <url>] \
-                 [--validity-days <n>] [--trust id=key]"
+                 [--validity-days <n>] [--trust id=key] [--categories <json>] \
+                 [--previous <index>]"
             );
             std::process::exit(2);
         }
@@ -234,6 +240,14 @@ fn index(args: &[String]) -> Result<()> {
     for (trusted_id, public) in trusted(args)? {
         verifier.trust_key_base64(trusted_id, &public)?;
     }
+    let categories: serde_json::Map<String, serde_json::Value> = match option(args, "--categories")
+    {
+        Some(path) => serde_json::from_str(
+            &std::fs::read_to_string(path).with_context(|| format!("read {path}"))?,
+        )
+        .with_context(|| format!("{path} is no JSON object"))?,
+        None => serde_json::Map::new(),
+    };
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&folder)
         .with_context(|| format!("read {}", folder.display()))?
         .flatten()
@@ -252,7 +266,22 @@ fn index(args: &[String]) -> Result<()> {
             .and_then(|name| name.to_str())
             .context("a package file name in UTF-8")?;
         let url = base.map_or_else(|| name.to_owned(), |base| format!("{base}/{name}"));
-        plugins.push(describe_package(&bytes, &package, &url, None)?);
+        let mut entry = describe_package(&bytes, &package, &url, None)?;
+        entry.category = categories
+            .get(&entry.id)
+            .and_then(|plugin| plugin.get("category"))
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned);
+        plugins.push(entry);
+    }
+    if let Some(previous) = option(args, "--previous") {
+        let bytes = std::fs::read(previous).with_context(|| format!("read {previous}"))?;
+        let signers = IndexSigners::Pinned(key.verifying_key());
+        // The signature only: the previous index may be past its expiry (a release more than
+        // the index's validity after the last one), and its entries are what it carries.
+        let old = verify_index_signature(&bytes, &signers)
+            .map_err(|error| anyhow::anyhow!("{previous}: {}: {error}", error.code()))?;
+        plugins = carry_over(&old.plugins, plugins);
     }
     let issued_at = chrono::Utc::now();
     let index = PluginIndex {

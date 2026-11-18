@@ -7,10 +7,9 @@
 //! development key, not even in a debug build; tests sign with a throw-away key against a
 //! [`TrustStore`] of their own.
 //!
-//! **Phase 1 ships the placeholder** (RB-090-02): the owner generates the key on his machine
-//! (`rb-pack keygen`, `docs/security/update-signing.md`) and pastes its public half here when
-//! self-update is switched on (RB-110-05). Until then every check fails closed with
-//! `update.not_configured`.
+//! **The owner's root** (RB-090-14): generated on the owner's machine on 2026-11-16 with
+//! `rb-pack keygen` (`docs/security/update-signing.md`); only its public half is here. A table
+//! that holds nothing but [`PLACEHOLDER_KEY`] fails closed with `update.not_configured`.
 //!
 //! Copied and adapted from rCommander's `crates/rc-update/src/sign/roots.rs` (RB-090-02).
 
@@ -22,9 +21,8 @@ use super::trust::TrustStore;
 /// `rbrowser-plugin-v1`.
 pub const UPDATE_KEY_ID: &str = "rbrowser-update-v1";
 
-/// What the table holds until the owner's key is generated (`rb-pack keygen`) and its public half
-/// pasted below. Never decoded and never trusted: a build that still carries it answers every
-/// check with `update.not_configured` - it fails closed.
+/// What a table holds for "no key": never decoded and never trusted; a build that carries only it
+/// answers every check with `update.not_configured` - it fails closed.
 pub const PLACEHOLDER_KEY: &str = "TODO-owner-update-key";
 
 /// One compiled-in public key.
@@ -38,11 +36,14 @@ pub struct EmbeddedKey {
     pub not_after: Option<&'static str>,
 }
 
+/// The public half of the owner's update key `rbrowser-update-v1` (`rbrowser-update.pub`).
+pub(crate) const OWNER_UPDATE_KEY: &str = "rZP+AEOUh4xx4jd+NN/METbwNSlg4N70UzSm1GM52HI=";
+
 /// Every update root this build ships. A second entry with the new key and a `not_after` on the
 /// old one is a rotation (`docs/security/update-signing.md`, "Rotation").
 pub const EMBEDDED_KEYS: &[EmbeddedKey] = &[EmbeddedKey {
     key_id: UPDATE_KEY_ID,
-    public_key: PLACEHOLDER_KEY,
+    public_key: OWNER_UPDATE_KEY,
     not_after: None,
 }];
 

@@ -24,13 +24,14 @@
 //! | [`crate::nav_sync`] | RB-020-06 | `sync.toggle_view_navigation`; `view.back`, `view.forward`, `view.navigate`, `reload.all` | - |
 //! | [`crate::scroll_sync`] | RB-020-04 | `sync.toggle_scroll` | - |
 //! | [`crate::form_sync`] | RB-020-05 | `sync.toggle_focus` | - |
-//! | [`crate::updates`] | RB-090-02 | - (RB-110-05) | - |
+//! | [`crate::updates`] | RB-090-02, RB-090-14 | registered by the module itself | - |
 //! | [`crate::engines`] | RB-040-01 | `view.external.*`, `engine.restart` | - |
 //! | [`crate::recorder`] | RB-050-01, RB-090-60 | `recorder.*`, `panels.recorder` | `getRecordings`, `getRecording`, `saveRecording`, `exportRecording` |
 //! | [`crate::visual`] | RB-050-04 | `visual.*` | - |
 //! | [`crate::flows`] | RB-040-07 | registered by the module itself | `listFlows` (RB-060-11), `getFlowRun` (RB-090-60) |
 //! | [`crate::layout::canvas_board`] | RB-080-04 | - | `canvasDrag`, `canvasPan`, `canvasStep`, `canvasSizePick`, `canvasEnginePick`, `canvasPiece` (RB-090-69) |
 //! | [`crate::engines::set_engine`] | RB-080-33 | `view.set_engine` | - |
+//! | [`crate::first_run`] | RB-091-05 | registered by the module itself | `setup` |
 
 use rb_commands::CommandError;
 use rb_ipc::{CoreToShell, ShellToCore};
@@ -90,6 +91,7 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
         .or_else(|| crate::video::panel::ipc(core, message))
         .or_else(|| recorder::panel::ipc(core, message))
         .or_else(|| crate::flows::panel::ipc(core, message))
+        .or_else(|| crate::first_run::ipc(core, message))
 }
 
 /// The core is up and the project's grid is built: each module starts what it needs (the
@@ -110,6 +112,9 @@ pub fn on_start(core: &Core) {
     crate::cell_info::on_start(core);
     emulation::on_start(core);
     presets::on_start(core);
+    // Before the open project is recorded as a recent one: a settings file that exists then was
+    // there before this start (RB-091-05).
+    crate::first_run::on_start(core);
     instance::on_start(core);
     devtools::on_start(core);
     analyzer::on_start(core);

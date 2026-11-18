@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 use tokio::runtime::Handle;
 
 use super::pages::{Inbox, PluginPages};
-use super::status::side_post;
+use super::status::{Answer, side_post};
 pub use super::status::{HostSink, NoticeSink, Sinks};
 use crate::cdp::{CdpRouter, lock};
 use crate::network_rules::state::Rules;
@@ -192,7 +192,7 @@ impl PluginRuntime {
         let args = self.fed(plugin, args);
         let raw = component.run_command(command, &args.to_string()).await;
         self.sync_network(plugin).await;
-        self.answered_noted(plugin, raw, true)
+        self.answered_noted(plugin, raw, Answer::Command)
     }
 
     /// Calls tool `tool` of plugin `plugin`, as [`PluginRuntime::run_command`].
@@ -210,7 +210,7 @@ impl PluginRuntime {
         let args = self.fed(plugin, args);
         let raw = component.call_tool(tool, &args.to_string()).await;
         self.sync_network(plugin).await;
-        self.answered(plugin, raw)
+        self.answered(plugin, raw, Answer::Tool)
     }
 
     /// A panel's call: as [`PluginRuntime::run_command`] or [`PluginRuntime::call_tool`], its
@@ -356,17 +356,22 @@ impl PluginRuntime {
     }
 
     /// The JSON of a raw answer without its posts; the posts are delivered.
-    fn answered(&self, plugin: &str, raw: Result<String, Failure>) -> Result<Value, Failure> {
-        Ok(self.answered_noted(plugin, raw, false)?.0)
+    fn answered(
+        &self,
+        plugin: &str,
+        raw: Result<String, Failure>,
+        from: Answer,
+    ) -> Result<Value, Failure> {
+        Ok(self.answered_noted(plugin, raw, from)?.0)
     }
 
-    /// [`PluginRuntime::answered`], and whether a status-bar notice was shown; `command`: the
-    /// answer of a command (only that one's `host` posts run).
+    /// [`PluginRuntime::answered`], and whether a status-bar notice was shown; `from`: whose
+    /// answer it is (which `host` posts run, [`Answer`]).
     fn answered_noted(
         &self,
         plugin: &str,
         raw: Result<String, Failure>,
-        command: bool,
+        from: Answer,
     ) -> Result<(Value, bool), Failure> {
         let answer: Value = serde_json::from_str(&raw?)
             .map_err(|_| Failure::coded(FailureKind::BadData, codes::BAD_OUTPUT))?;
@@ -378,13 +383,13 @@ impl PluginRuntime {
                 "posts of a plugin answer dropped"
             );
         }
-        let noted = self.deliver(plugin, posts, command);
+        let noted = self.deliver(plugin, posts, from);
         Ok((answer, noted))
     }
 
     /// Hands `posts` on: to the page scripts on the runtime's tasks, to the panels, the status
     /// bar and the host at once; whether a notice was shown.
-    fn deliver(&self, plugin: &str, posts: Vec<Post>, command: bool) -> bool {
+    fn deliver(&self, plugin: &str, posts: Vec<Post>, from: Answer) -> bool {
         let (mut to_pages, mut noted) = (Vec::new(), false);
         let served = self.plugins.iter().find(|served| served.id == plugin);
         for post in posts {
@@ -395,7 +400,7 @@ impl PluginRuntime {
                 PostTarget::All => to_pages.push((None, post.message)),
                 PostTarget::View(view) => to_pages.push((Some(ViewId(view)), post.message)),
                 // `status` and `host`.
-                side => noted |= side_post(served, &self.sinks, side, &post.message, command),
+                side => noted |= side_post(served, &self.sinks, side, &post.message, from),
             }
         }
         if to_pages.is_empty() {
@@ -450,7 +455,7 @@ impl Inbox for PluginRuntime {
         };
         let component = self.component(plugin).map_err(code_of)?;
         let raw = super::page_wait::within_page_time(&*component, plugin, view, &message).await?;
-        self.answered(plugin, raw)
+        self.answered(plugin, raw, Answer::Page)
             .and_then(bounded)
             .map_err(code_of)
     }

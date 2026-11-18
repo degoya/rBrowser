@@ -61,6 +61,7 @@ mod toolbar_settings;
 pub mod trust;
 mod ui_theme;
 mod user_automation;
+mod user_cdp;
 mod user_engines;
 mod user_file;
 mod user_logs;

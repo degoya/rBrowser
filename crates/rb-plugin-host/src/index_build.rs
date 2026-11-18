@@ -49,6 +49,7 @@ pub fn describe_package(
             .map(|capability| capability.id().to_owned())
             .collect(),
         min_app_version: manifest.metadata.min_app_version.clone(),
+        category: None,
         url: url.to_owned(),
         sha256: hex_sha256(file),
         size: u64::try_from(file.len()).context("package size")?,
@@ -59,6 +60,44 @@ pub fn describe_package(
         },
         release_notes,
     })
+}
+
+/// `current` with what `previous` lists for another `rbrowser:plugin` contract carried over
+/// (RB-091-04, as rDownloader's index keeps it): per plugin and contract the newest version, so an
+/// installation that has not updated yet still finds what it runs. An entry of a contract
+/// `current` lists for that plugin is replaced by it; only entries with an absolute address are
+/// carried, a relative one would resolve against the new release.
+#[must_use]
+pub fn carry_over(previous: &[IndexEntry], mut current: Vec<IndexEntry>) -> Vec<IndexEntry> {
+    let covered: std::collections::BTreeSet<(String, String)> = current
+        .iter()
+        .map(|entry| (entry.id.clone(), entry.api_version.clone()))
+        .collect();
+    let mut kept: std::collections::BTreeMap<(String, String), &IndexEntry> =
+        std::collections::BTreeMap::new();
+    for entry in previous {
+        let key = (entry.id.clone(), entry.api_version.clone());
+        let listed = current
+            .iter()
+            .any(|known| known.id == entry.id && known.version == entry.version);
+        if listed || covered.contains(&key) || !entry.url.starts_with("https://") {
+            continue;
+        }
+        let newer = kept.get(&key).is_none_or(|known| {
+            match (
+                semver::Version::parse(&entry.version),
+                semver::Version::parse(&known.version),
+            ) {
+                (Ok(found), Ok(known)) => found > known,
+                _ => false,
+            }
+        });
+        if newer {
+            kept.insert(key, entry);
+        }
+    }
+    current.extend(kept.into_values().cloned());
+    current
 }
 
 #[cfg(test)]

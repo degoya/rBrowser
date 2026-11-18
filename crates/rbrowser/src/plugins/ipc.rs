@@ -102,10 +102,31 @@ async fn answer(core: &Arc<Core>, request: Value) -> Result<Value, Failure> {
                 let fetcher: Option<&dyn rb_plugin_host::Fetcher> =
                     if refresh { Some(&fetcher) } else { None };
                 let installed = super::catalog::installed_now();
-                Ok(super::catalog::answer(&user, dir, fetcher, installed))
+                let mut answer = super::catalog::answer(&user, dir, fetcher, installed);
+                // RB-091-04: the bundle's plugins, each with its update.
+                if let Value::Object(fields) = &mut answer {
+                    fields.insert(
+                        "bundled".to_owned(),
+                        Value::Array(super::bundle_offer::bundled_rows(&user)),
+                    );
+                }
+                Ok(answer)
             })
             .await
         }
+        // The first-run wizard's plugins (RB-091-04, RB-091-05).
+        PanelRequest::Available => {
+            let core = core.clone();
+            blocking(move || Ok(super::bundle_offer::available(&core))).await
+        }
+        PanelRequest::InstallChosen { ids } => {
+            let core = core.clone();
+            blocking(move || super::bundle_install::install_chosen(&core, ids)).await
+        }
+        PanelRequest::RemoveChosen { ids } => {
+            blocking(move || super::bundle_install::remove_chosen(ids)).await
+        }
+        PanelRequest::ApplyRecommended => blocking(super::bundle_install::apply_recommended).await,
         PanelRequest::CatalogPrepare {
             repository,
             id,

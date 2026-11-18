@@ -35,6 +35,18 @@ export const SETTINGS_ICONS = {
   endpoint: 'i-lucide-link',
   script: 'i-lucide-code',
   terminal: 'i-lucide-terminal',
+  // "Install and restart" under the self-update switch (RB-090-14).
+  install: 'i-lucide-circle-arrow-down',
+  // The setup wizard (RB-091-05): its command, its steps, the plugin step without a network.
+  wizard: 'i-lucide-wand-sparkles',
+  welcome: 'i-lucide-sparkles',
+  plugins: 'i-lucide-puzzle',
+  project: 'i-lucide-folder-cog',
+  basics: 'i-lucide-sliders-horizontal',
+  done: 'i-lucide-circle-check',
+  offline: 'i-lucide-wifi-off',
+  next: 'i-lucide-arrow-right',
+  previous: 'i-lucide-arrow-left',
 } as const;
 
 /** The `collection:name` form `clientBundle.icons` takes. */

@@ -24,6 +24,9 @@ pub struct RecorderConfig {
     pub record_scroll: bool,
     /// A hover is kept as a step when it revealed what the next click hits (a menu trigger).
     pub record_hover: bool,
+    /// The form autofill's fills are steps (RB-090-78): each field it set as a `fill`, `check`,
+    /// `uncheck` or `select` with the value set, a password as its placeholder.
+    pub record_autofill: bool,
     /// How a recording plays back ("Play", `recorder.play`) and how its export waits: `fast`
     /// runs the steps back to back, each waiting only for its element; `recorded` keeps the
     /// pause before each step as it was recorded, each pause at most 10 seconds.
@@ -42,6 +45,7 @@ impl Default for RecorderConfig {
         Self {
             record_scroll: true,
             record_hover: true,
+            record_autofill: true,
             playback_pace: PlaybackPace::Fast,
             secret_fields: Vec::new(),
             dir: ".rbrowser/out/recordings".to_owned(),

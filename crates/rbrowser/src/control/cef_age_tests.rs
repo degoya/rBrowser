@@ -11,14 +11,17 @@ fn day(date: &str) -> i64 {
     rb_diag::cef::days_from_date(date).expect("a date")
 }
 
+/// Updates not checked by themselves (`updates.check` off, RB-090-14): the notice speaks.
+fn unchecked() -> UserSettings {
+    let mut user = UserSettings::default();
+    user.updates.check = rb_config::UpdateCheck::Off;
+    user
+}
+
 #[test]
 fn a_build_older_than_six_weeks_becomes_a_warning_with_a_settings_link() {
-    let message = notification(
-        &build("2026-09-01"),
-        day("2026-11-10"),
-        &UserSettings::default(),
-    )
-    .expect("a notice");
+    let message =
+        notification(&build("2026-09-01"), day("2026-11-10"), &unchecked()).expect("a notice");
     let CoreToShell::Notification(notice) = message else {
         panic!("a notification");
     };
@@ -36,12 +39,23 @@ fn a_build_older_than_six_weeks_becomes_a_warning_with_a_settings_link() {
 fn a_young_build_or_the_switched_off_setting_raises_none() {
     let today = day("2026-11-10");
     assert_eq!(
-        notification(&build("2026-11-07"), today, &UserSettings::default()),
+        notification(&build("2026-11-07"), today, &unchecked()),
         None
     );
-    let mut off = UserSettings::default();
+    let mut off = unchecked();
     off.updates.cef_age_warning = false;
     assert_eq!(notification(&build("2026-09-01"), today, &off), None);
+}
+
+/// RB-090-14: while updates are checked by themselves the notice stays silent; with the check
+/// off, or in a build without self-update, it speaks.
+#[test]
+fn updates_checked_by_themselves_silence_the_notice() {
+    let today = day("2026-11-10");
+    let old = build("2026-09-01");
+    let silent = notification(&old, today, &UserSettings::default());
+    assert_eq!(silent.is_none(), crate::updates::SELF_UPDATE_BUILT);
+    assert!(notification(&old, today, &unchecked()).is_some());
 }
 
 #[test]

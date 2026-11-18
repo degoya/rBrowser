@@ -233,4 +233,9 @@ pub enum CoreToShell {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         item: Option<String>,
     },
+    /// The setup wizard's answer or event (RB-091-05).
+    Setup {
+        /// The answer.
+        answer: crate::SetupAnswer,
+    },
 }

@@ -263,11 +263,23 @@ pub fn load_sources(sources: &Sources, user: &UserSettings) -> LoadedPlugins {
     }
 }
 
-/// The folders of this process's load: the bundled plugins, the user-installed ones when their
-/// folder exists, and the project's.
+/// The folders of this process's load: the bundled plugins - only the ones the person chose
+/// (RB-091-04, `crate::plugins::bundle`) - the user-installed ones when their folder exists, and
+/// the project's.
 fn process_sources() -> Sources {
+    let bundled = bundled_dir();
+    // The bundle's manifests, read once: for the choice and for the load (review 8).
+    let declared = bundled
+        .as_deref()
+        .map(rb_plugin_host::bundle_manifests)
+        .unwrap_or_default();
+    let chosen = bundled
+        .as_ref()
+        .and_then(|_| crate::plugins::bundle::chosen_for_load(&declared));
     Sources {
-        bundled: bundled_dir(),
+        chosen,
+        declared,
+        bundled,
         user: user_dir().filter(|dir| dir.is_dir()),
         project_root: PROJECT.get().cloned().flatten(),
     }

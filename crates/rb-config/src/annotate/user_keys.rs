@@ -14,6 +14,8 @@ pub const USER_KEYS: &[KeyDef] = &[
     // Start behaviour (RB-010-11).
     key("startup.openLastProject", Category::General, "startup"),
     key("startup.focusOnOpen", Category::General, "startup"),
+    // The setup wizard at the first start and the "Set up project" hint (RB-091-05).
+    key("ui.firstRunWizard", Category::General, "startup"),
     // Zoom and focus mode of the grid (RB-010-12).
     key("grid.fitToWindow", Category::Layout, "zoom"),
     key("grid.defaultZoom", Category::Layout, "zoom"),
@@ -391,6 +393,19 @@ pub const USER_KEYS: &[KeyDef] = &[
     // check reaches the network, so neither is MCP's to set.
     protected("plugins.catalog.repositories", Category::Plugins, "catalog"),
     protected("plugins.catalog.checkOnStart", Category::Plugins, "catalog"),
+    // The bundled first-party plugins (RB-091-04): an update installed by itself and the
+    // repository as the source decide what runs, so neither is MCP's to set.
+    protected("plugins.catalog.autoUpdate", Category::Plugins, "catalog"),
+    protected(
+        "plugins.catalog.preferRepository",
+        Category::Plugins,
+        "catalog",
+    ),
+    key(
+        "plugins.catalog.missingNotice",
+        Category::Plugins,
+        "catalog",
+    ),
     // The activity bar while something runs (RB-090-67), beside the toolbar's switches.
     key("ui.activityBar.position", Category::General, "appearance"),
     key("ui.activityBar.mode", Category::General, "appearance"),

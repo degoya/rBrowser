@@ -163,8 +163,8 @@ fn write_signed(key: &SigningKey, update: &UpdateManifest, out: &Path) -> Result
     Ok(())
 }
 
-/// Refuses a key that is not the compiled-in root. While the root is the placeholder (phase 1),
-/// a warning: the manifest verifies nowhere until the public key is pasted in.
+/// Refuses a key that is not the compiled-in root (the owner's, RB-090-14). A table without a
+/// root only warns: the manifest then verifies nowhere until the public key is pasted in.
 fn check_against_root(key: &SigningKey, table: &[EmbeddedKey]) -> Result<()> {
     let roots = sign::keys_at(table, Utc::now());
     match roots.iter().find(|root| root.key_id == UPDATE_KEY_ID) {

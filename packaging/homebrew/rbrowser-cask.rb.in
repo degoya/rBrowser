@@ -2,7 +2,8 @@
 # packaging/homebrew/rbrowser-cask.rb.in in @REPOSITORY@ by scripts/package-managers.sh as
 # Casks/rbrowser.rb, and replaced by the release workflow with every release: change the
 # template, not this file. Linux has the formula (Formula/rbrowser.rb); casks are macOS only.
-# The macOS bundles arrive with RB-110-02; until a release carries them, this file is not written.
+# The archives are those scripts/package-macos.sh writes and release.yml's `macos` job publishes
+# (RB-090-80); a release without them writes no cask.
 cask "rbrowser" do
   version "@VERSION@"
 
@@ -24,20 +25,25 @@ cask "rbrowser" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :big_sur"
+  # LSMinimumSystemVersion of the bundle (scripts/lib/macos-bundle.sh): 13.0.
+  depends_on macos: ">= :ventura"
 
   app "rBrowser.app"
   binary "#{appdir}/rBrowser.app/Contents/MacOS/rbrowser"
 
+  # The settings and the state (logs and the like) where rBrowser keeps them on macOS
+  # (rb-config's dirs.rs).
   zap trash: [
-    "~/Library/Application Support/rBrowser",
-    "~/Library/Caches/rBrowser",
+    "~/.config/rbrowser",
+    "~/.local/state/rBrowser",
   ]
 
   caveats <<~EOS
     rBrowser is signed ad hoc, not notarised. On its first start macOS asks whether to open
-    it: open rBrowser once with a right-click and Open, or allow it under System Settings,
-    Privacy & Security, Open Anyway. The handbook's installation page shows the steps:
+    it: allow it under System Settings, Privacy & Security, Open Anyway (on macOS 14 and
+    earlier a right-click on the app and Open does the same), or remove the quarantine flag:
+      xattr -dr com.apple.quarantine /Applications/rBrowser.app
+    The handbook's installation page shows the steps:
       https://github.com/@REPOSITORY@/wiki/installation
 
     Update it with `brew upgrade rbrowser`; it does not replace itself.

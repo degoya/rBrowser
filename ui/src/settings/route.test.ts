@@ -50,4 +50,10 @@ describe('the pages of the page windows', () => {
     expect(PAGES.palette).not.toBe(PAGES.settings);
     expect(PAGES.findings).toBeUndefined();
   });
+
+  it('has the setup wizard, opened at its project step by the hint (RB-091-05)', async () => {
+    const { PAGES, pageOf } = await import('./routes');
+    expect(pageOf('setup')).toBe(PAGES.setup);
+    expect(parseRoute('#/setup/project')).toEqual({ page: 'setup', key: 'project', tab: null });
+  });
 });

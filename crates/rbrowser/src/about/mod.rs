@@ -55,15 +55,22 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
 }
 
 /// The facts with the Firefox `core` starts (RB-090-49): the setting, else the first
-/// installation of the cache - never a registry or disk walk here, the UI thread asks.
+/// installation of the cache - never a registry or disk walk here, the UI thread asks - and how
+/// updates come.
 pub fn facts_of(core: &Core) -> AboutInfo {
     let settings = core.user_settings();
-    with_firefox(
+    let mut info = with_firefox(
         facts(),
         &crate::engines::firefox::installed::installed(),
         settings.engines.firefox_executable(),
         Path::is_file,
-    )
+    );
+    // How this installation updates itself (RB-091-05).
+    info.updates = Some(crate::updates::about_state(
+        crate::updates::SELF_UPDATE_BUILT,
+        &settings,
+    ));
+    info
 }
 
 /// The answer to `message` when it is `getAbout`.

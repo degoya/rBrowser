@@ -44,8 +44,9 @@ pub struct PluginSettings {
     pub catalog: CatalogSettings,
 }
 
-/// `plugins.catalog`: the signed plugin catalogue (RB-091-01).
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+/// `plugins.catalog`: the signed plugin catalogue (RB-091-01) and the bundled first-party
+/// plugins (RB-091-04).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", default)]
 pub struct CatalogSettings {
     /// Look for updates of the plugins installed from the catalogue at every start, and say so
@@ -55,6 +56,29 @@ pub struct CatalogSettings {
     /// `rbrowser-plugin-index.json` and the public key its index is signed with.
     #[schemars(length(max = 16))]
     pub repositories: Vec<CatalogRepository>,
+    /// Install an update of a plugin by itself when the update check finds one that is signed
+    /// by the same key and asks for nothing more (RB-091-04); one that asks for more waits for a
+    /// click in the catalogue.
+    pub auto_update: bool,
+    /// Install a chosen first-party plugin from the official repository when it offers the
+    /// bundled version or a newer one (RB-091-04); off, every chosen plugin comes from the
+    /// bundle beside rBrowser and nothing reaches the network.
+    pub prefer_repository: bool,
+    /// Say in the status bar when the project's config names a plugin that is not installed
+    /// (RB-091-04).
+    pub missing_notice: bool,
+}
+
+impl Default for CatalogSettings {
+    fn default() -> Self {
+        Self {
+            check_on_start: false,
+            repositories: Vec::new(),
+            auto_update: false,
+            prefer_repository: true,
+            missing_notice: true,
+        }
+    }
 }
 
 /// A plugin repository a person added to the catalogue.

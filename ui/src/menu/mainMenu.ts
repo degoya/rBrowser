@@ -307,6 +307,8 @@ export const APP_MENU: readonly MenuNode[] = [
   sub('shell.menu.trust', [cmd('trust.show'), cmd('trust.grant'), cmd('trust.revoke')]),
   cmd('project.open_recent'),
   cmd('app.reload_config'),
+  // The setup wizard again (RB-091-05).
+  cmd('app.setup_wizard'),
   sub('shell.menu.mcp', [setting('mcp.toggle', 'mcp.enabled'), cmd('mcp.copy_config')]),
   sub('shell.menu.cdp', [cmd('cdp.copy_endpoint'), cmd('cdp.rotate_token')]),
   sep,

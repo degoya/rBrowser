@@ -120,17 +120,79 @@ describe('Settings > Plugins > Catalog', () => {
     expect(wrapper.find('[data-testid="catalog-failure"]').exists()).toBe(true);
   });
 
-  it('marks a bundled plugin and offers no install for it', async () => {
+  it('offers no second install of a plugin the start loaded', async () => {
     const { wrapper } = await open();
     const row = wrapper.get('[data-testid="catalog-row"][data-plugin="overlays"]');
-    expect(row.find('[data-testid="catalog-bundled"]').exists()).toBe(true);
     expect(row.find('[data-testid="catalog-install"]').exists()).toBe(false);
     expect(row.find('[data-testid="catalog-update"]').exists()).toBe(false);
+  });
+
+  it('opens the automatic updates setting above the list', async () => {
+    const { wrapper } = await open();
+    await wrapper.get('[data-testid="catalog-auto-update-key"]').trigger('click');
+    expect(wrapper.emitted('open')).toEqual([['plugins.catalog.autoUpdate']]);
   });
 
   it('opens the repositories setting', async () => {
     const { wrapper } = await open();
     await wrapper.get('[data-testid="catalog-repositories-key"]').trigger('click');
     expect(wrapper.emitted('open')).toEqual([['plugins.catalog.repositories']]);
+  });
+});
+
+describe('Settings > Plugins > Catalog, the bundled plugins (RB-091-04)', () => {
+  const peek = {
+    id: 'peek',
+    name: 'Peek',
+    description: 'Hold Alt.',
+    version: '1.0.0',
+    kinds: ['feature-plugin'],
+    category: 'overlays',
+    sizeBytes: 1024,
+    recommended: false,
+    grants: [],
+    installed: false,
+    origin: 'bundle',
+    update: null,
+  };
+
+  async function openWithBundle(installedPeek: boolean) {
+    const requests: PanelRequest[] = [];
+    const catalog = { ...SAMPLE_CATALOG, bundled: [{ ...peek, installed: installedPeek }] };
+    const client = {
+      async expect(message: { type: string; request: PanelRequest }) {
+        requests.push(message.request);
+        const answer =
+          message.request.op === 'catalog'
+            ? catalog
+            : { value: { results: [{ id: 'peek', ok: true, origin: 'bundle' }], restart: true } };
+        return { type: 'pluginPanel', message: answer };
+      },
+    };
+    const wrapper = mount(CatalogPanel, {
+      props: { client: client as unknown as IpcClient },
+      attachTo: document.body,
+      global: { plugins: [ui, createShellI18n()] },
+    });
+    current = wrapper;
+    await settle();
+    return { wrapper, requests };
+  }
+
+  it('installs a bundled plugin with one click, without a review', async () => {
+    const { wrapper, requests } = await openWithBundle(false);
+    const row = wrapper.get('[data-testid="catalog-row"][data-plugin="peek"]');
+    expect(row.find('[data-testid="catalog-bundled"]').exists()).toBe(true);
+    await row.get('[data-testid="catalog-choose"]').trigger('click');
+    await settle();
+    expect(requests).toContainEqual({ op: 'installChosen', ids: ['peek'] });
+    expect(requests.some((request) => request.op === 'catalogPrepare')).toBe(false);
+  });
+
+  it('takes a chosen bundled plugin out with Remove', async () => {
+    const { wrapper, requests } = await openWithBundle(true);
+    await wrapper.get('[data-testid="catalog-row"][data-plugin="peek"] [data-testid="catalog-remove"]').trigger('click');
+    await settle();
+    expect(requests).toContainEqual({ op: 'removeChosen', ids: ['peek'] });
   });
 });

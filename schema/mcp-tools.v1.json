@@ -2583,7 +2583,7 @@
     {
       "name": "plugins_list",
       "area": "app",
-      "description": "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings. Installing, enabling or trusting a plugin is a person's decision in rBrowser, never over MCP.",
+      "description": "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings; `missing` names the plugins the project's config uses that are not installed, `available` the bundled first-party plugins not chosen. Installing, enabling or trusting a plugin is a person's decision in rBrowser (the first-run wizard or Settings > Plugins > Catalog), never over MCP.",
       "target": "none",
       "actsOn": "the plugins",
       "inputSchema": {
@@ -4022,6 +4022,48 @@
           }
         },
         "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_check",
+      "area": "updates",
+      "description": "Check for an rBrowser update now: fetches the signed manifests of the channel from the GitHub releases, verifies them against the update key built into rBrowser, and answers the status as update_status does. A newer version is also shown to the person in rBrowser's status bar. Installs nothing. Off while updates.enabled is off (problem update.disabled).",
+      "target": "none",
+      "actsOn": "the app",
+      "guard": {
+        "note": "Off while updates.enabled is off (problem update.disabled); it reaches the release host and installs nothing.",
+        "setting": "updates.enabled"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "update_install",
+      "area": "updates",
+      "description": "Ask the person to install the offered rBrowser update (checks first when nothing is offered yet). rBrowser shows the offer with an Install and restart button in its status bar and answers asked true, installed false: only the person's click downloads, verifies and installs it, and rBrowser restarts. No tool grants the confirmation, and the command update.install is refused to MCP. Nothing offered: asked false with the status. Off while updates.enabled is off (code update.disabled, settingsKey).",
+      "target": "none",
+      "actsOn": "the app",
+      "guard": {
+        "note": "Off while updates.enabled is off (code update.disabled); on, it installs nothing: rBrowser shows the offer with its button and only the person's click installs it; the command update.install is refused to MCP.",
+        "setting": "updates.enabled"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "update_status",
+      "area": "updates",
+      "description": "rBrowser's self-update: enabled (updates.enabled), channel (stable or beta: updates.channel, whose default auto reads beta for a pre-release build and stable otherwise), installed (the running version), offered (the newest newer version the last check found, or null) with releasedAt, size in bytes and notes, installKind (portable, msi, scoop, winget, homebrew, deb, rpm or unknown) and updateWay (self_update; command - a package manager's, given in command, nothing is downloaded; download_only - the release page), state (idle, checking, up_to_date, available, downloading, ready, installing, failed), received bytes while downloading, problem (the last failure's code, update.*), autoInstall (off or onQuit), installsOnQuit and otherWindows (other projects' rBrowser windows; while any runs, nothing is installed). A read.",
+      "target": "none",
+      "actsOn": "the app",
+      "withoutCommand": "a read: the self-update's state; update.check and update.install are the commands",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
       }
     },
     {

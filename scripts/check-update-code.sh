@@ -2,9 +2,11 @@
 #
 # Proves that a binary built without the Cargo feature `self-update` carries no update code
 # (RB-090-02): neither rb-update - its symbols, module paths and source paths - nor the release
-# address of crates/rbrowser/src/updates/active.rs, in the binary's strings or in the symbol list
-# of the PDB beside it. scripts/package-windows.sh runs it on the staged binaries, which are
-# never built with the feature; the markers and why: scripts/lib/update_code_scan.py.
+# address of crates/rb-update/src/sources.rs, in the binary's strings or in the symbol list of the
+# PDB beside it. The feature is on by default since RB-090-14: scripts/package-windows.sh runs the
+# positive control (--expect-present) on the staged rbrowser.dll; a build with
+# `--no-default-features` is held to carry none. The markers and why:
+# scripts/lib/update_code_scan.py.
 #
 # Usage:
 #   scripts/check-update-code.sh <binary>...                   # none may carry update code

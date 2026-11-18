@@ -48,6 +48,8 @@ pub fn register_all(
     refused.extend(crate::layout::defs::register(registry, core));
     refused.extend(crate::layout::view_edit::register(registry, core));
     refused.extend(crate::pop_out::register(registry, core));
+    refused.extend(crate::updates::register(registry, core));
+    refused.extend(crate::first_run::register(registry, core));
     refused.extend(crate::sitemap::register(registry, core));
     refused.extend(crate::compare::register(registry, core));
     refused.extend(crate::video::register(registry, core));
@@ -272,13 +274,29 @@ pub fn diagnostics_cli(args: &rb_diag::DiagnosticsArgs, project: Option<&std::pa
 fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
     match def.id.as_str() {
         // The loaded plugins (RB-060-12); their load finishes off the UI thread first.
-        "plugins.list" => Arc::new(|_| {
+        "plugins.list" => Arc::new(move |_| {
             let loaded = crate::analyzer::plugins::bundled();
             let rows = crate::plugins::list::rows(loaded, crate::plugins::list::trusted());
             // An agent gets no text of a package that did not verify.
-            Ok(crate::plugins::list::answer(Some(
-                crate::plugins::list::for_mcp(rows),
-            )))
+            let mut answer =
+                crate::plugins::list::answer(Some(crate::plugins::list::for_mcp(rows)));
+            // RB-091-04: the plugins the project names that are not installed, and the bundled
+            // ones not chosen - by id; MCP installs neither.
+            if let Value::Object(fields) = &mut answer {
+                let missing = core
+                    .upgrade()
+                    .map(|core| crate::plugins::bundle::missing_now(&core))
+                    .unwrap_or_default();
+                let available: Vec<&str> = loaded
+                    .report
+                    .available
+                    .iter()
+                    .map(|entry| entry.manifest.id.as_str())
+                    .collect();
+                fields.insert("missing".to_owned(), json!(missing));
+                fields.insert("available".to_owned(), json!(available));
+            }
+            Ok(answer)
         }),
         // The plugin catalogue (RB-091-01). From a shortcut or the palette (no arguments) the
         // catalogue's tab of Settings > Plugins, or the update check with its notice; from MCP

@@ -67,6 +67,11 @@ view's status; `visual_baseline_update` stores the views as the new baselines.
 
 Firefox and WebKit views run in windows of their own; `engine_restart` restarts them.
 
+rBrowser's own updates: `update_status` answers the installed and the offered version and how
+this installation updates, `update_check` checks the release channel now, and `update_install`
+only asks the person: rBrowser shows the offer with its Install and restart button, and nothing
+installs without their click.
+
 Other tools: `devtools_open`, `devtools_inspect_at` (DevTools with the element at a point
 selected; it opens them whatever `devtools.openOnInspect` says), `app_info`, `wsl_info`, `diagnostics`, `plugins_list`,
 `project_open`.

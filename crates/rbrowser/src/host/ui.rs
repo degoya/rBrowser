@@ -113,6 +113,9 @@ pub trait UiBackend: Send + Sync {
     /// Opens the settings window at `url` (the shell's settings page), or brings it to the
     /// front and loads `url` there (RB-010-08).
     fn open_settings_window(&self, url: String);
+    /// Closes the settings window (the setup wizard's "Skip" and "Done", RB-091-05). A window
+    /// that cannot does nothing.
+    fn close_settings_window(&self) {}
     /// Shows a native file or folder dialog; `done` gets the choice (RB-010-08).
     fn pick_path(&self, pick: PathPick, done: PathPicked);
     /// Frames the grid's views in `color` (`#rrggbb`, the environment's), or not at all

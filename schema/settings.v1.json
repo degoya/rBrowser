@@ -662,6 +662,17 @@
           "x-scope": [
             "user"
           ]
+        },
+        "firstRunWizard": {
+          "type": "boolean",
+          "description": "The setup wizard (RB-091-05) opens by itself at the very first start, and a project\nfolder without a config says \"Set up project\" once in the status bar. Off: neither, and\nthe command that opens the wizard refuses - for a team that rolls out its own setup.",
+          "default": true,
+          "x-category": "general",
+          "x-section": "startup",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
         }
       },
       "description": "General: language and theme.",
@@ -718,7 +729,8 @@
           "engineStatus": true,
           "address": "differs"
         },
-        "fileNameTime": "local"
+        "fileNameTime": "local",
+        "firstRunWizard": true
       }
     },
     "recentProjects": {
@@ -2460,8 +2472,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Self-update at all: off, nothing is fetched and nothing installed (RB-090-02).",
-          "default": false,
+          "description": "Self-update at all: off, nothing is fetched and nothing installed (RB-090-02, RB-090-14).",
+          "default": true,
           "x-category": "general",
           "x-section": "updates",
           "x-order": 1,
@@ -2474,17 +2486,22 @@
           "oneOf": [
             {
               "type": "string",
+              "const": "auto",
+              "description": "The build's own: beta for a pre-release build, stable otherwise (RB-090-14)."
+            },
+            {
+              "type": "string",
               "const": "stable",
               "description": "Releases."
             },
             {
               "type": "string",
               "const": "beta",
-              "description": "Pre-releases."
+              "description": "Pre-releases and releases."
             }
           ],
           "description": "The update channel.",
-          "default": "stable",
+          "default": "auto",
           "x-category": "general",
           "x-section": "updates",
           "x-order": 2,
@@ -2507,7 +2524,7 @@
             }
           ],
           "description": "When to look for an update (RB-090-02).",
-          "default": "off",
+          "default": "onStart",
           "x-category": "general",
           "x-section": "updates",
           "x-order": 3,
@@ -2541,7 +2558,7 @@
         },
         "cefAgeWarning": {
           "type": "boolean",
-          "description": "A notice when the bundled CEF is older than six weeks (RB-010-10).",
+          "description": "A notice when the bundled CEF is older than six weeks (RB-010-10); silent while updates\nare checked (RB-090-14).",
           "default": true,
           "x-category": "general",
           "x-section": "updates",
@@ -2553,9 +2570,9 @@
       },
       "description": "General > updates (inactive until the move to GitHub, RB-090-02).",
       "default": {
-        "enabled": false,
-        "channel": "stable",
-        "check": "off",
+        "enabled": true,
+        "channel": "auto",
+        "check": "onStart",
         "autoInstall": "off",
         "cefAgeWarning": true
       }
@@ -3320,12 +3337,50 @@
                 "user"
               ],
               "x-protected": true
+            },
+            "autoUpdate": {
+              "type": "boolean",
+              "description": "Install an update of a plugin by itself when the update check finds one that is signed\nby the same key and asks for nothing more (RB-091-04); one that asks for more waits for a\nclick in the catalogue.",
+              "default": false,
+              "x-category": "plugins",
+              "x-section": "catalog",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "preferRepository": {
+              "type": "boolean",
+              "description": "Install a chosen first-party plugin from the official repository when it offers the\nbundled version or a newer one (RB-091-04); off, every chosen plugin comes from the\nbundle beside rBrowser and nothing reaches the network.",
+              "default": true,
+              "x-category": "plugins",
+              "x-section": "catalog",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "missingNotice": {
+              "type": "boolean",
+              "description": "Say in the status bar when the project's config names a plugin that is not installed\n(RB-091-04).",
+              "default": true,
+              "x-category": "plugins",
+              "x-section": "catalog",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
             }
           },
           "description": "The plugin catalogue (RB-091-01): Settings > Plugins > Catalog.",
           "default": {
             "checkOnStart": false,
-            "repositories": []
+            "repositories": [],
+            "autoUpdate": false,
+            "preferRepository": true,
+            "missingNotice": true
           }
         }
       },
@@ -3343,7 +3398,10 @@
         "panelMessageMaxBytes": 4194304,
         "catalog": {
           "checkOnStart": false,
-          "repositories": []
+          "repositories": [],
+          "autoUpdate": false,
+          "preferRepository": true,
+          "missingNotice": true
         }
       }
     },

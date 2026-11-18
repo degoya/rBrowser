@@ -6,6 +6,7 @@
 // was installed from only. Every text is shown as text, never as HTML.
 
 import type { PluginGrantDetails } from '../../ipc/protocol';
+import { BUNDLE_ORIGIN, type BundledPlugin, parseBundled } from './bundledRows';
 
 export const KINDS = ['feature-plugin', 'check-plugin', 'analyzer-plugin', 'export-plugin'] as const;
 export type Kind = (typeof KINDS)[number];
@@ -92,6 +93,8 @@ export interface Catalog {
   installs: Record<string, CatalogInstall>;
   /** What the start loaded, by plugin id; `null` while it loads. */
   installed: Record<string, InstalledVersion> | null;
+  /** The first-party plugins the package carries, chosen or not (RB-091-04). */
+  bundled: BundledPlugin[];
 }
 
 type Json = unknown;
@@ -190,11 +193,13 @@ export function parseCatalog(message: Json): Catalog {
     updates: list(answer.updates).map(parseOffer),
     installs,
     installed,
+    bundled: parseBundled(answer.bundled),
   };
 }
 
-/** What a row offers to do. */
-export type RowAction = 'install' | 'update' | 'remove' | 'none';
+/** What a row offers to do: a bundled plugin is chosen with one click and taken out again
+ * (`choose`, `unchoose`, RB-091-04). */
+export type RowAction = 'install' | 'update' | 'remove' | 'choose' | 'unchoose' | 'none';
 
 export interface CatalogRow {
   /** `<repository>/<id>`: unique per row. */
@@ -206,8 +211,7 @@ export interface CatalogRow {
   installedVersion: string | null;
   /** The catalogue installed it from this row's repository. */
   fromHere: boolean;
-  /** It ships with rBrowser: the bundled copy wins and updates come with the app, so the row
-   * offers neither Install nor Update (coordinator, 2026-11-16). */
+  /** It ships with rBrowser (RB-091-04): the row is the bundle's, its update a repository's. */
   bundled: boolean;
   update: boolean;
   action: RowAction;
@@ -219,22 +223,60 @@ export interface CatalogFilter {
   show: ShowFilter;
 }
 
-/** The rows of `catalog` that `filter` lets through, by name. */
+/** The row of a bundled plugin: its update's offer when a repository has one. */
+function bundledRow(plugin: BundledPlugin, names: Map<string, string>): CatalogRow {
+  const update = plugin.update;
+  const offer: Offer = {
+    repository: update?.repository ?? BUNDLE_ORIGIN,
+    entry: {
+      id: plugin.id,
+      name: plugin.name,
+      version: update?.version ?? plugin.version,
+      kinds: plugin.kinds,
+      description: plugin.description,
+      capabilities: plugin.grants,
+      minAppVersion: null,
+      size: plugin.sizeBytes,
+      publisher: { keyId: '', fingerprint: '', author: '' },
+      releaseNotes: null,
+    },
+    compatibility: { state: 'compatible' },
+  };
+  let action: RowAction = 'unchoose';
+  if (!plugin.installed) action = 'choose';
+  else if (update !== null) action = 'update';
+  return {
+    key: `${BUNDLE_ORIGIN}/${plugin.id}`,
+    offer,
+    repositoryName: update === null ? '' : (names.get(update.repository) ?? update.repository),
+    severalOrigins: false,
+    installedVersion: plugin.installed ? plugin.version : null,
+    fromHere: false,
+    bundled: true,
+    update: plugin.installed && update !== null,
+    action,
+  };
+}
+
+/** The rows of `catalog` that `filter` lets through, by name: the bundled plugins first, then
+ * what the repositories offer - the official catalogue's offer of a bundled plugin is its row's
+ * update, not a row of its own. */
 export function rowsOf(catalog: Catalog, filter: CatalogFilter): CatalogRow[] {
   const names = new Map(catalog.repositories.map((repository) => [repository.id, repository.name]));
   const query = filter.query.trim().toLowerCase();
-  const rows: CatalogRow[] = [];
+  const rows: CatalogRow[] = catalog.bundled.map((plugin) => bundledRow(plugin, names));
+  const shipped = new Set(catalog.bundled.map((plugin) => plugin.id));
   for (const entry of catalog.entries) {
     for (const offer of entry.offers) {
+      if (shipped.has(entry.id) && offer.repository === 'official') continue;
       const install = catalog.installs[entry.id];
       const fromHere = install !== undefined && install.repository === offer.repository;
       const installedVersion = catalog.installed?.[entry.id]?.version ?? install?.version ?? null;
       const update = catalog.updates.some((candidate) => candidate.repository === offer.repository && candidate.entry.id === entry.id);
       const compatible = offer.compatibility.state === 'compatible';
-      const bundled = catalog.installed?.[entry.id]?.source === 'bundled';
+      const bundled = false;
       let action: RowAction = 'none';
-      if (bundled) action = 'none';
-      else if (update && compatible) action = 'update';
+      if (update && compatible) action = 'update';
       else if (fromHere) action = 'remove';
       else if (installedVersion === null && compatible) action = 'install';
       rows.push({
@@ -351,5 +393,5 @@ export function capabilityKey(capability: string): string {
 
 /** A failure's text: the core answers a catalogue failure with its i18n key. */
 export function failureKey(message: string): string | null {
-  return /^plugins\.(catalog\.)?error\.[a-z_]+$/.test(message) ? message : null;
+  return /^plugins\.(catalog\.|bundle\.)?error\.[a-z_]+$/.test(message) ? message : null;
 }

@@ -30,6 +30,7 @@ pub mod recorder;
 pub mod sitemap;
 pub mod status;
 pub mod sync;
+pub mod updates;
 pub mod video;
 pub mod views;
 pub mod views_edit;

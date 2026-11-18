@@ -208,7 +208,11 @@ async fn an_old_cef_build_is_shown_once_the_shell_is_ready() {
         version: "156.0.26+g8ea0c73+chromium-156.0.8078.88".to_owned(),
         date: "2000-01-01".to_owned(),
     };
+    // Updates not checked by themselves, or the notice stays silent (RB-090-14).
+    let mut unchecked = UserSettings::default();
+    unchecked.updates.check = rb_config::UpdateCheck::Off;
     let (ui, core) = core_with(CoreSetup {
+        user: unchecked,
         cef_build: Some(old.clone()),
         ..CoreSetup::default()
     });

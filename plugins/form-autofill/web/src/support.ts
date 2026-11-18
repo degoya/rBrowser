@@ -1,12 +1,13 @@
 // The form autofill plugin's files in the test's window: the fixture form as a view's document
 // and the page script as `evaluate` runs it; the loader is plugins/web-common/src/load.ts.
-import { collect, pluginFile } from '../../../web-common/src/load';
+import { pluginFile } from '../../../web-common/src/load';
 
 export { pluginFile, writePluginFile } from '../../../web-common/src/load';
 
-/** The page script with `request`, exactly as the component sends it (src/fill.rs `script`). */
+/** The page script with `request` and the agent's `targetOf`, exactly as the component sends it (src/fill.rs `script`). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- what the page script answers is the test's to check
-export const page = (request: Record<string, unknown>): any => collect('src/page.js', request);
+export const page = (request: Record<string, unknown>): any =>
+  (0, eval)(`(\n${pluginFile('src/page.js')}\n)(${JSON.stringify(request)}, (\n${pluginFile('src/target.js')}\n)())`);
 
 /** The fixture form as the document, without its script; returns its event log. */
 export function loadForm(): { events: { id: string; type: string; trusted: unknown }[]; submits: () => number } {

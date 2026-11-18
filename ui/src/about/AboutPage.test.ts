@@ -141,4 +141,24 @@ describe('Settings > About', () => {
     expect(data().every((row) => `${row.name} ${row.license}`.toLowerCase().includes('mpl'))).toBe(true);
     expect(wrapper.get('[data-testid="licence-count"]').text()).toContain(`of ${allComponents().length}`);
   });
+
+  it('names how this installation updates, not a fixed "disabled" (RB-091-05)', async () => {
+    const texts = {
+      notBuilt: 'Updates are disabled in this build.',
+      off: 'Updates are switched off',
+      manual: 'only when you ask',
+      onStart: 'at every start',
+    } as const;
+    for (const [state, text] of Object.entries(texts)) {
+      const { wrapper } = await mountAbout((message) =>
+        message.type === 'getAbout'
+          ? { type: 'about', ...INFO, updates: state as keyof typeof texts }
+          : { type: 'ack' },
+      );
+      expect(wrapper.get('[data-testid="about-updates"]').text()).toContain(text);
+      wrapper.unmount();
+    }
+    const { wrapper } = await mountAbout();
+    expect(wrapper.find('[data-testid="about-updates"]').exists()).toBe(false);
+  });
 });

@@ -18,6 +18,7 @@
 
 mod bindings;
 mod bridge;
+mod bundle;
 mod call_gate;
 mod cdp_policy;
 mod checks;
@@ -33,6 +34,7 @@ mod index;
 mod limits;
 mod link;
 mod loader;
+mod loader_choice;
 mod log_budget;
 mod manifest;
 mod package;
@@ -61,6 +63,11 @@ pub use bridge::{
     POST_KEY, PageBridge, PageInput, PageLog, PageRefusal, PageScriptSource, Post, PostTarget,
     STOPPED, page_request_args, parse_page_payload, post_message, receiver_call, reply_message,
     split_posts, stop_message, world_name,
+};
+// The bundled plugins the person chose (RB-091-04).
+pub use bundle::{
+    BUNDLE_FILE, BundleStart, BundleState, StartFlags as BundleStartFlags,
+    declared_manifests as bundle_manifests, start as bundle_start,
 };
 pub use call_gate::CallSlot;
 pub use cdp_policy::PLUGIN_CDP_METHODS;
@@ -92,8 +99,9 @@ pub use index::{
     Freshness, INDEX_FILE_NAME, IndexEntry, IndexError, IndexSigners, MAX_CLOCK_SKEW_MINUTES,
     MAX_INDEX_BYTES, MAX_INDEX_PLUGINS, MAX_RELEASE_NOTES_CHARS, MAX_VALIDITY_DAYS, Offer,
     PLUGIN_INDEX_DOMAIN, PLUGIN_INDEX_SCHEMA_VERSION, PluginIndex, Publisher, SignatureError,
-    SignedDocument, StaleError, check_freshness, compatibility, describe_package, merge_offers,
-    package_file_name, sign as sign_index, sign_document, update_for, verify as verify_index,
+    SignedDocument, StaleError, carry_over, check_freshness, compatibility, describe_package,
+    merge_offers, package_file_name, sign as sign_index, sign_document, update_for,
+    verify as verify_index, verify_signature as verify_index_signature,
 };
 pub use limits::{
     DEFAULT_FUEL, DEFAULT_MAX_CONCURRENT, DEFAULT_MAX_RESPONSE_BYTES, DEFAULT_MEMORY_BYTES,
@@ -101,8 +109,8 @@ pub use limits::{
     MAX_TIMEOUT_MILLISECONDS, PluginLimits,
 };
 pub use loader::{
-    DisabledEntry, LoadContext, LoadReport, LoadedEntry, PluginSource, Refused, Sources,
-    declared_capabilities, declared_grants, discover, load_all, project_plugins_dir,
+    AvailableEntry, DisabledEntry, LoadContext, LoadReport, LoadedEntry, PluginSource, Refused,
+    Sources, declared_capabilities, declared_grants, discover, load_all, project_plugins_dir,
 };
 pub use log_budget::MAX_LOG_LINES_PER_CALL;
 pub use manifest::{
@@ -131,9 +139,9 @@ pub use repository::{
     CATALOG_DIR, CONNECT_TIMEOUT_SECONDS, Catalog, CatalogStore, Consent, FLOORS_FILE, Fetcher,
     HttpFetcher, INDEX_TIMEOUT_SECONDS, INSTALLS_FILE, InstallRecord, Installed, KeyReview,
     LoadedIndex, MAX_REDIRECTS, MAX_USER_REPOSITORIES, OFFICIAL_INDEX_URL, OFFICIAL_REPOSITORY,
-    PACKAGE_TIMEOUT_SECONDS, PinnedKey, Prepared, Repository, RepositoryError,
-    download as download_package, install as install_package, parse_https,
-    prepare as prepare_package, remove as remove_package, user_agent,
+    PACKAGE_TIMEOUT_SECONDS, PinnedKey, Prepared, Reachability, Repository, RepositoryError,
+    Shipped, UNREACHABLE_FOR, download as download_package, install as install_package, newer_than,
+    parse_https, prepare as prepare_package, remove as remove_package, replacement, user_agent,
 };
 pub use services::{Caller, HostServices, NoServices, not_available};
 pub use sign::{

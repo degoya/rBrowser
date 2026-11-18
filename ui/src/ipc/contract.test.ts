@@ -79,6 +79,7 @@ const SHELL_TYPES: Record<ShellToCore['type'], true> = {
   convertVideo: true,
   nativeMenu: true,
   ...RECORDING_SHELL_TYPES, activityBar: true, collapseActivity: true, // RB-090-67
+  setup: true, // RB-091-05
 };
 const CORE_TYPES: Record<CoreToShell['type'], true> = {
   ack: true,
@@ -121,6 +122,7 @@ const CORE_TYPES: Record<CoreToShell['type'], true> = {
   videosChanged: true,
   nativeMenuClosed: true,
   ...RECORDING_CORE_TYPES,
+  setup: true, // RB-091-05
 };
 
 describe('the IPC contract fixtures', () => {

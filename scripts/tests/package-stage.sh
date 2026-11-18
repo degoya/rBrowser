@@ -163,6 +163,15 @@ expect_status "the console twin is staged" 0
 expect_true "as rbrowser.com beside rbrowser.exe" 'grep -q "MZ console" "$STAGE/rbrowser.com"'
 expect_true "and not under its build name" '[[ ! -e "$STAGE/rbrowser-console.exe" ]]'
 
+# --- rb_stage_updater: rbrowser-updater.exe ships beside rbrowser.exe (RB-090-14).
+in_lib 'rb_stage_updater "$1" "$2"' "$BUILD" "$STAGE"
+expect_status "a build without the updater stops the run" 1
+expect_output "and names the package to build" "-p rb-update"
+printf 'MZ updater\n' > "$BUILD/rbrowser-updater.exe"
+in_lib 'rb_stage_updater "$1" "$2"' "$BUILD" "$STAGE"
+expect_status "the updater is staged" 0
+expect_true "beside rbrowser.exe under its own name" 'grep -q "MZ updater" "$STAGE/rbrowser-updater.exe"'
+
 # --- crash_reporter.cfg from the template rb-diag holds to crash_reporter_cfg.
 mkdir -p "$STAGE"
 in_lib 'rb_write_crash_reporter_cfg "$1" "$2" 1.2.3' "$ROOT/packaging/windows/crash_reporter.cfg.in" "$STAGE"
@@ -179,6 +188,7 @@ head -c 1048576 /dev/zero > "$SIZES/rbrowser.exe"
 head -c 2097152 /dev/zero > "$SIZES/rbrowser.dll"
 head -c 262144 /dev/zero > "$SIZES/rbrowser.com"
 head -c 524288 /dev/zero > "$SIZES/rbrowser-wsl"
+head -c 262144 /dev/zero > "$SIZES/rbrowser-updater.exe"
 head -c 3145728 /dev/zero > "$SIZES/libcef.dll"
 head -c 1048576 /dev/zero > "$SIZES/resources.pak"
 head -c 524288 /dev/zero > "$SIZES/locales/en-US.pak"
@@ -192,11 +202,12 @@ expect_output "rbrowser.exe" "     1.0 MB  rbrowser.exe"
 expect_output "rbrowser.dll" "     2.0 MB  rbrowser.dll"
 expect_output "the console twin" "     0.2 MB  rbrowser.com"
 expect_output "the WSL helper, not the CEF runtime" "     0.5 MB  rbrowser-wsl"
+expect_output "the updater, not the CEF runtime" "     0.2 MB  rbrowser-updater.exe"
 expect_output "the CEF runtime" "     4.0 MB  CEF runtime"
 expect_output "the locales" "     0.5 MB  CEF locales"
 expect_output "Node" "     1.0 MB  Node runtime"
 expect_output "the shell" "     0.0 MB  shell UI"
-expect_output "the total" "     9.3 MB  total, unpacked"
+expect_output "the total" "     9.5 MB  total, unpacked"
 expect_output "and the ZIP" "     1.0 MB  ZIP"
 
 # --- --sign asks scripts/sign-windows.sh --check before anything is built (RB-090-03).

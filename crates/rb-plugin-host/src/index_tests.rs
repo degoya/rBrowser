@@ -109,10 +109,41 @@ fn a_future_schema_version_is_refused_after_the_signature_held() {
     assert_eq!(error.code(), "plugins.catalog.error.schema_version");
 }
 
+/// Forward compatibility (RB-091-04): a field a later index adds - at the top, in an entry or
+/// in its publisher - is ignored. The signature is the integrity, the package the rights, so an
+/// unknown field can neither change what installs nor what it may do.
 #[test]
-fn an_unknown_field_does_not_parse() {
-    let error = refused_after(|payload| payload["mirror"] = "https://elsewhere.test".into());
-    assert_eq!(error.code(), "plugins.catalog.error.malformed");
+fn an_unknown_field_is_ignored() {
+    let mut payload = serde_json::to_value(index()).expect("encode");
+    payload["mirror"] = "https://elsewhere.test".into();
+    payload["plugins"][0]["category"] = "checks".into();
+    payload["plugins"][0]["screenshots"] = serde_json::json!(["a.png"]);
+    payload["plugins"][0]["publisher"]["homepage"] = "https://example.test".into();
+    let read = verify(&signed_raw(&payload), &roots(), None, now()).expect("verifies");
+    assert_eq!(read.plugins[0].id, "fixture");
+    assert_eq!(read.plugins[0].category.as_deref(), Some("checks"));
+}
+
+/// The previous index of a release (`rb-plugin-pack index --previous`) is held to its signature
+/// only: an index past its expiry still carries its entries over.
+#[test]
+fn the_signature_alone_reads_an_expired_index() {
+    let mut old = index();
+    old.issued_at = now() - Duration::days(400);
+    old.expires_at = now() - Duration::days(300);
+    let bytes = signed_raw(&serde_json::to_value(&old).expect("encode"));
+    assert_eq!(
+        verify(&bytes, &roots(), None, now())
+            .expect_err("expired")
+            .code(),
+        "plugins.catalog.error.expired"
+    );
+    let read = verify_signature(&bytes, &pinned()).expect("signed");
+    assert_eq!(read.plugins.len(), 1);
+    let mut tampered = bytes;
+    let at = tampered.len() / 2;
+    tampered[at] ^= 1;
+    assert!(verify_signature(&tampered, &pinned()).is_err());
 }
 
 #[test]

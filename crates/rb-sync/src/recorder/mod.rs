@@ -4,8 +4,9 @@
 //! store ([`store`], `.rbrowser/out/recordings/<name>.json`), the boundary to the exporters
 //! of RB-050-02 ([`export`]) and the request to the `recorder-export` plugin with the folder its
 //! answers go to ([`exports`], `.rbrowser/out/exports/<name>/`). The app feeds it through
-//! [`crate::Observer`].
+//! [`crate::Observer`], and with the form autofill's fills ([`autofill`], RB-090-78).
 
+pub mod autofill;
 mod cleanup;
 pub mod export;
 pub mod exports;
@@ -17,6 +18,7 @@ pub mod store;
 #[cfg(test)]
 pub(crate) mod testing;
 
+pub use autofill::{AutofillField, AutofillKind, AutofillView};
 pub use export::{ExportError, Exporter, JsonExporter, from_json, to_json};
 pub use exports::{
     DEFAULT_EXPORTS_DIR, ExportOptions, ExportProject, ExportRequest, Exported, ExportsDir,

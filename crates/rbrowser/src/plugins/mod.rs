@@ -9,7 +9,9 @@
 //! status bar ([`status`], RB-080-64); the shell pages told when the panels offered change
 //! ([`panel_list`], RB-080-97); the signed plugin catalogue of Settings > Plugins > Catalog
 //! ([`catalog`], RB-091-01); the page scripts told when their plugin's settings change
-//! ([`settings_post`], RB-090-58).
+//! ([`settings_post`], RB-090-58); the bundled first-party plugins the person chose, the first-run
+//! wizard's install and the notice of plugins a project names that are not installed
+//! ([`bundle`], [`bundle_install`], [`bundle_offer`], [`first_party`], RB-091-04).
 //!
 //! The plugins are the ones `crate::analyzer::plugins` loads (on a thread of its own at start:
 //! bundled, user-installed, the project's under workspace trust); the runtime of a window starts
@@ -19,9 +21,13 @@
 //! `plugins.panelsHidden` switch a plugin's page scripts and panels off without a restart. A
 //! project trusted after the start loads its plugins at the next start; a notice says so.
 
+pub mod bundle;
+pub mod bundle_install;
+pub mod bundle_offer;
 pub mod catalog;
 pub mod commands;
 pub mod console;
+pub mod first_party;
 pub mod host_actions;
 pub mod ipc;
 pub mod list;
@@ -144,6 +150,8 @@ fn start(core: &Arc<Core>) {
     commands::register(core, &runtime, &loaded.report.loaded);
     // RB-080-97: a panels page that asked before is told the list is there now.
     announce_panels(core, panels);
+    // RB-091-04: a plugin the project names that is not installed is said, not missing silently.
+    bundle::notice_missing(core);
     follow_views(core, runtime.pages());
     if runtime.plugins().iter().any(|plugin| plugin.network) {
         let rules = crate::network_rules::start(core);
@@ -212,6 +220,7 @@ pub fn on_config_changed(core: &Core) {
     if core.host().shell_state().trusted && refused_for_trust() {
         notify_restart_once(core);
     }
+    bundle::notice_missing(core);
 }
 
 /// The workspace trust changed - decided, revoked, or stale after a change of a protected part:

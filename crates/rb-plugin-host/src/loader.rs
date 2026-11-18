@@ -6,6 +6,11 @@
 //! collision: bundled first, then user-installed, then project plugins, so a project can never
 //! shadow a plugin the person relies on. Every package is verified again at every start; a
 //! refusal is reported with its code and never stops the others.
+//!
+//! RB-091-04 (after rDownloader): the bundle is where first-party plugins come from, not what
+//! every start loads - only the bundled plugins the person chose ([`Sources::chosen`]) load, the
+//! others are [`LoadReport::available`], and a newer copy of the same key from the repository
+//! stands in for its bundled package ([`crate::loader_choice`]).
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -18,6 +23,7 @@ use rb_plugin_types::{Capability, Failure, FailureKind, PluginKind, codes, paths
 use crate::{
     commands::plugin_command_defs,
     health::PluginHealths,
+    loader_choice::{Candidate, Declared, choose},
     manifest::PluginManifest,
     package::{MANIFEST_MEMBER, PACKAGE_EXTENSION, VerifiedPackage},
     plugin::{LoadedPlugin, PluginOptions},
@@ -48,6 +54,11 @@ pub struct Sources {
     pub bundled: Option<PathBuf>,
     pub user: Option<PathBuf>,
     pub project_root: Option<PathBuf>,
+    /// The bundled plugins the person chose (RB-091-04); `None` loads every bundled package.
+    pub chosen: Option<BTreeSet<String>>,
+    /// Manifests already read without verifying them, by path (`crate::bundle::declared_manifests`
+    /// for the choice), so the load does not read them again.
+    pub declared: BTreeMap<PathBuf, PluginManifest>,
 }
 
 /// `.rbrowser/plugins/` of the project at `root`.
@@ -101,6 +112,15 @@ pub struct DisabledEntry {
     pub signed: bool,
 }
 
+/// A bundled package whose plugin the person did not choose (RB-091-04): not loaded, not
+/// verified, offered by the first-run wizard and the catalogue. Its manifest is what the package
+/// says of itself - text to show, never an identity; an install verifies it at the next start.
+#[derive(Clone, Debug)]
+pub struct AvailableEntry {
+    pub path: PathBuf,
+    pub manifest: PluginManifest,
+}
+
 /// What a start loaded and refused.
 #[derive(Default)]
 pub struct LoadReport {
@@ -108,6 +128,8 @@ pub struct LoadReport {
     pub refused: Vec<Refused>,
     /// The packages skipped for `plugins.disabled`.
     pub disabled: Vec<DisabledEntry>,
+    /// The bundled packages not chosen (RB-091-04).
+    pub available: Vec<AvailableEntry>,
 }
 
 /// What a load needs besides the folders.
@@ -171,7 +193,44 @@ pub async fn load_all(
         .project_root
         .as_deref()
         .is_some_and(|root| context.trust.is_trusted(root));
-    for (source, path) in discover(sources) {
+    // What the bundled and the person's packages say of themselves, for the choice (RB-091-04);
+    // a project package is never read before its trust is known. The bundle's were read once
+    // already for the choice (`Sources::declared`, review 8).
+    let mut manifests: BTreeMap<PathBuf, PluginManifest> = BTreeMap::new();
+    let candidates: Vec<Candidate> = discover(sources)
+        .into_iter()
+        .map(|(source, path)| {
+            let declared = if source == PluginSource::Project {
+                None
+            } else {
+                sources
+                    .declared
+                    .get(&path)
+                    .cloned()
+                    .or_else(|| declared_manifest(&path))
+                    .map(|manifest| {
+                        let declared = Declared::of(&manifest);
+                        manifests.insert(path.clone(), manifest);
+                        declared
+                    })
+            };
+            Candidate {
+                source,
+                path,
+                declared,
+            }
+        })
+        .collect();
+    let choice = choose(candidates, sources.chosen.as_ref());
+    for path in choice.superseded {
+        tracing::debug!(path = %path.display(), "a plugin package left out for another copy");
+    }
+    for path in choice.available {
+        if let Some(manifest) = manifests.remove(&path) {
+            report.available.push(AvailableEntry { path, manifest });
+        }
+    }
+    for (source, path, fallback) in choice.load {
         if source == PluginSource::Project && !project_trusted {
             report.refused.push(Refused {
                 source,
@@ -184,42 +243,84 @@ pub async fn load_all(
             });
             continue;
         }
-        match load_one(&path, context, registry).await {
-            Ok(Outcome::Loaded(loaded)) => {
-                let (plugin, notices, ui_files, signed) = *loaded;
-                report.loaded.push(LoadedEntry {
-                    source,
-                    path,
-                    plugin,
-                    notices,
-                    ui_files: Arc::new(ui_files),
-                    signed,
-                });
+        let outcome = load_one(&path, context, registry).await;
+        let Some(bundled) = fallback else {
+            record(&mut report, source, path, outcome);
+            continue;
+        };
+        // A copy standing in for its bundled package (RB-091-04, review 2): verified first. A
+        // refused copy - tampered, broken, for a newer app - leaves the bundled package to load;
+        // one that loads is first-party only when it is signed (the declared key is the bundle's,
+        // the verifier held the signature to it), an unsigned development copy is an ordinary
+        // user plugin.
+        match outcome {
+            Err(_) => {
+                tracing::warn!(
+                    path = %path.display(),
+                    "a newer copy of a bundled plugin was refused; the bundled one loads"
+                );
+                record(&mut report, source, path, outcome);
+                let outcome = load_one(&bundled, context, registry).await;
+                record(&mut report, PluginSource::Bundled, bundled, outcome);
             }
-            Ok(Outcome::Disabled(manifest, signed)) => report.disabled.push(DisabledEntry {
-                source,
-                path,
-                manifest: *manifest,
-                signed,
-            }),
-            Err((failure, untrusted_key, signed)) => {
-                let claims = declared_manifest(&path).map(Box::new);
-                report.refused.push(Refused {
-                    source,
-                    capabilities: claims
-                        .as_ref()
-                        .map(|manifest| manifest.grants.granted.iter().copied().collect())
-                        .unwrap_or_default(),
-                    path,
-                    failure,
-                    untrusted_key,
-                    signed,
-                    claims,
-                });
+            Ok(ref loaded) => {
+                let signed = match loaded {
+                    Outcome::Loaded(loaded) => loaded.3,
+                    Outcome::Disabled(_, signed) => *signed,
+                };
+                let shown = if signed {
+                    PluginSource::Bundled
+                } else {
+                    source
+                };
+                record(&mut report, shown, path, outcome);
             }
         }
     }
     report
+}
+
+/// Adds what became of the package at `path` from `source` to `report`.
+fn record(
+    report: &mut LoadReport,
+    source: PluginSource,
+    path: PathBuf,
+    outcome: Result<Outcome, LoadFailure>,
+) {
+    match outcome {
+        Ok(Outcome::Loaded(loaded)) => {
+            let (plugin, notices, ui_files, signed) = *loaded;
+            report.loaded.push(LoadedEntry {
+                source,
+                path,
+                plugin,
+                notices,
+                ui_files: Arc::new(ui_files),
+                signed,
+            });
+        }
+        Ok(Outcome::Disabled(manifest, signed)) => report.disabled.push(DisabledEntry {
+            source,
+            path,
+            manifest: *manifest,
+            signed,
+        }),
+        Err((failure, untrusted_key, signed)) => {
+            let claims = declared_manifest(&path).map(Box::new);
+            report.refused.push(Refused {
+                source,
+                capabilities: claims
+                    .as_ref()
+                    .map(|manifest| manifest.grants.granted.iter().copied().collect())
+                    .unwrap_or_default(),
+                path,
+                failure,
+                untrusted_key,
+                signed,
+                claims,
+            });
+        }
+    }
 }
 
 /// The failure, the key a person may confirm, and whether the package is signed when it
@@ -330,7 +431,7 @@ pub fn declared_grants(path: &Path) -> Option<crate::manifest::Grants> {
 
 /// A package's manifest, read without verifying it ([`Refused::claims`], the declared grants):
 /// shown, never trusted. `None` when the package does not read.
-fn declared_manifest(path: &Path) -> Option<PluginManifest> {
+pub(crate) fn declared_manifest(path: &Path) -> Option<PluginManifest> {
     let read = || -> anyhow::Result<PluginManifest> {
         let file = std::fs::File::open(path)?;
         let mut archive = zip::ZipArchive::new(file)?;

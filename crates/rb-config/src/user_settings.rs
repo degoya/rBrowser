@@ -11,6 +11,7 @@ use serde_json::Value;
 pub use crate::plugin_settings::{PluginId, PluginSettings, TrustedPluginKey};
 pub use crate::ui_theme::Theme;
 use crate::user_automation::AutomationSettings;
+pub use crate::user_cdp::CdpSettings;
 use crate::user_engines::{
     CookieSettings, ExternalWindowSettings, FirefoxSettings, WebkitSettings,
 };
@@ -212,6 +213,10 @@ pub struct UiSettings {
     pub cell_label: crate::CellLabelSettings,
     /// Local time or UTC in the folder and file names a person reads (RB-090-69).
     pub file_name_time: crate::FileNameTime,
+    /// The setup wizard (RB-091-05) opens by itself at the very first start, and a project
+    /// folder without a config says "Set up project" once in the status bar. Off: neither, and
+    /// the command that opens the wizard refuses - for a team that rolls out its own setup.
+    pub first_run_wizard: bool,
 }
 
 impl Default for UiSettings {
@@ -234,19 +239,9 @@ impl Default for UiSettings {
             activity_bar: crate::ActivityBarSettings::default(),
             cell_label: crate::CellLabelSettings::default(),
             file_name_time: crate::FileNameTime::Local,
+            first_run_wizard: true,
         }
     }
-}
-
-/// `cdp`: the external CDP proxy.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
-pub struct CdpSettings {
-    /// Off by default.
-    pub enabled: bool,
-    /// A fixed port; random when absent.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub port: Option<u16>,
 }
 
 /// `mcp`. Protected from MCP itself.

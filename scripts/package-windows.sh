@@ -10,6 +10,8 @@
 #     (scripts/lib/cef.sh; the CEF archive held to its SHA-256 pin);
 #   - rbrowser.com, the console twin (crates/rbrowser-cli, RB-010-11): a bare `rbrowser` in a
 #     terminal finds it before the GUI rbrowser.exe, waits for a command and shows its output;
+#   - rbrowser-updater.exe (crates/rb-update, RB-090-14): the app starts a copy of it to switch
+#     the program folder to a verified update;
 #   - crash_reporter.cfg (Crashpad keeps dumps local, no upload; rb_diag::crash_reporter_cfg);
 #   - node\node.exe and node\LICENSE: the Node runtime of .nvmrc, its ZIP held to its SHA-256 pin;
 #   - sidecar\ (RB-040-03): dist\main.js and dist\flow-worker.js built from sidecar/, its
@@ -146,7 +148,7 @@ export CEF_PATH
 rb_cef_verify "$CEF_PATH" --if-present
 echo "==> building rBrowser (cargo ${build[*]}, CEF in $CEF_PATH)"
 CARGO_BUILD_JOBS="$JOBS" cargo "${build[@]}" --locked --profile "$profile" --target "$TARGET" \
-    -j "$JOBS" -p rbrowser -p rbrowser-cli
+    -j "$JOBS" -p rbrowser -p rbrowser-cli -p rb-update
 rb_cef_verify "$CEF_PATH"
 echo "==> building rbrowser-wsl ($RB_WSL_TARGET, static)"
 wsl_helper="$(rb_wsl_helper_build "$profile" "$JOBS")"
@@ -158,16 +160,18 @@ rm -rf "$STAGE" "$ZIP"
 rb_stage_app "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "$STAGE" "$ROOT/ui/dist"
 # The console twin rbrowser.com, so a terminal waits for a command and shows its output.
 rb_stage_console "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "$STAGE"
+# The updater beside rbrowser.exe: the app starts a copy of it to install an update (RB-090-14).
+rb_stage_updater "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "$STAGE"
 # The WSL helper beside rbrowser.exe: the app starts it from there through /mnt/<drive>/.
 rb_stage_wsl_helper "$wsl_helper" "$STAGE"
 # A test package's line tables are in the PDB (Cargo.toml, [profile.release-test]); beside the DLL
 # a panic's backtrace finds it. Other packages ship none.
 [[ "$profile" == release-test ]] || rm -f "$STAGE/rbrowser.pdb"
 [[ -f "$STAGE/ui/index.html" ]] || { echo "!! the stage has no ui\\index.html" >&2; exit 1; }
-# Built without the feature `self-update`: no binary of ours, nor rbrowser.pdb, carries update
-# code or the update address (RB-090-02).
-echo "==> no update code in the binaries (scripts/check-update-code.sh)"
-scripts/check-update-code.sh "$STAGE/rbrowser.exe" "$STAGE/rbrowser.dll" "$STAGE/rbrowser.com"
+# Built with the feature `self-update` (the default since RB-090-14): the app's DLL carries
+# rb-update and the update address - the positive control of scripts/check-update-code.sh.
+echo "==> the app carries the self-update (scripts/check-update-code.sh --expect-present)"
+scripts/check-update-code.sh --expect-present "$STAGE/rbrowser.dll"
 echo "==> rbrowser.exe: icon and version resource (rcedit $RB_RCEDIT_VERSION)"
 rb_patch_exe "$STAGE/rbrowser.exe" crates/rbrowser/resources/rbrowser.ico "$version" "$CACHE"
 rb_write_crash_reporter_cfg packaging/windows/crash_reporter.cfg.in "$STAGE" "$version"

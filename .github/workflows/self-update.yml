@@ -1,0 +1,93 @@
+name: Self-update
+
+# RB-090-14: the portable self-update with real binaries on Linux and Windows. Two debug builds of
+# this tree - the second with the patch version raised by scripts/set-version.sh - of
+# rbrowser-updater and rb-update's stand-in program, and scripts/self-update-smoke.sh, which runs
+# the first as a portable installation and hands it three updates: install and restart (switched,
+# started, proven, .previous/ removed at the next start), a new version that does not prove
+# itself (RB_UPDATE_TEST_FAIL_START, honoured by a debug build only: taken back, the old one
+# started again), and install at quit (switched, proven by the next start).
+#
+# The signed manifest, the replay floor and the verified download are rb-update's unit tests,
+# with a test key: no build carries a trust root other than the release key, on purpose. The
+# browser itself is the acceptance on Windows (docs/roadmap/jobs/090-14-self-update-aktivieren.md).
+#
+#   gh workflow run self-update.yml --ref <branch>
+on:
+  push:
+    # Branches only: a release tag has release.yml.
+    branches: ["**"]
+    paths:
+      - .github/workflows/self-update.yml
+      - scripts/self-update-smoke.sh
+      - crates/rb-update/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RB_NO_LOCK: 1
+  RB_MIN_FREE_MB: 0
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: self-update
+      - name: Build this version
+        run: |
+          set -euo pipefail
+          cargo build --locked -p rb-update --bin rbrowser-updater --example update_smoke_program
+          ext=""
+          [[ "${RUNNER_OS}" == Windows ]] && ext=".exe"
+          mkdir -p smoke/old
+          cp "target/debug/rbrowser-updater${ext}" "target/debug/examples/update_smoke_program${ext}" smoke/old/
+          echo "OLD_VERSION=$(scripts/set-version.sh)" >> "${GITHUB_ENV}"
+      - name: Build the next version
+        run: |
+          set -euo pipefail
+          IFS=. read -r major minor patch <<< "${OLD_VERSION%%-*}"
+          next="${major}.${minor}.$((patch + 1))"
+          scripts/set-version.sh "${next}"
+          cargo build -p rb-update --bin rbrowser-updater --example update_smoke_program
+          ext=""
+          [[ "${RUNNER_OS}" == Windows ]] && ext=".exe"
+          mkdir -p smoke/new
+          cp "target/debug/rbrowser-updater${ext}" "target/debug/examples/update_smoke_program${ext}" smoke/new/
+          echo "NEW_VERSION=${next}" >> "${GITHUB_ENV}"
+      - name: Update, and take back what does not prove itself
+        env:
+          RB_SMOKE_LOGS: ${{ runner.temp }}/self-update-logs
+        run: |
+          set -euo pipefail
+          scripts/self-update-smoke.sh smoke/old "${OLD_VERSION}" smoke/new "${NEW_VERSION}" \
+            > "${RUNNER_TEMP}/self-update.log" 2>&1 || { cat "${RUNNER_TEMP}/self-update.log"; exit 1; }
+          cat "${RUNNER_TEMP}/self-update.log"
+          grep -qx '==> all requested checks passed' "${RUNNER_TEMP}/self-update.log"
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: self-update-logs-${{ matrix.os }}
+          path: ${{ runner.temp }}/self-update-logs
+          if-no-files-found: ignore

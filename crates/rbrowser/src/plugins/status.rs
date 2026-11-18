@@ -51,14 +51,38 @@ pub struct Sinks {
     pub host: HostSink,
 }
 
-/// Hands a `status` or `host` post of `served` on; whether a notice was shown. `command`: the
-/// post is in the answer of one of the plugin's commands.
+/// Whose answer a post is in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Answer {
+    /// One of the plugin's commands: a person's gesture (a menu, a key, the panel's button).
+    Command,
+    /// One of its tools (MCP, its panel).
+    Tool,
+    /// A request of its page script: the page's doing.
+    Page,
+}
+
+impl Answer {
+    /// Whether a `host` post `message` of plugin `plugin` in this answer runs: every offered
+    /// action from a command, from a tool only one that needs no gesture
+    /// ([`super::host_actions::GESTURELESS`]), none from a page request (review S3 of RB-080-74).
+    fn runs_host(self, plugin: &str, message: &Value) -> bool {
+        match self {
+            Self::Command => true,
+            Self::Tool => super::host_actions::gestureless(plugin, message),
+            Self::Page => false,
+        }
+    }
+}
+
+/// Hands a `status` or `host` post of `served` on; whether a notice was shown. `from`: whose
+/// answer the post is in.
 pub(super) fn side_post(
     served: Option<&Plugin>,
     sinks: &Sinks,
     target: PostTarget,
     message: &Value,
-    command: bool,
+    from: Answer,
 ) -> bool {
     let Some(plugin) = served else {
         return false;
@@ -71,7 +95,9 @@ pub(super) fn side_post(
             }
             None => false,
         },
-        PostTarget::Host if command && plugin.source == PluginSource::Bundled => {
+        PostTarget::Host
+            if plugin.source == PluginSource::Bundled && from.runs_host(&plugin.id, message) =>
+        {
             (sinks.host)(&plugin.id, message);
             false
         }

@@ -94,6 +94,11 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_sandbox: bool,
 
+    /// Install every plugin that ships with rBrowser at this start, not only the chosen ones
+    /// (for tests and team rollouts).
+    #[arg(long)]
+    pub install_all_bundled_plugins: bool,
+
     /// URLs to load (the first one in every view); a folder (`.`, `C:\site`) names the project.
     #[arg(value_name = "URL|DIR")]
     pub targets: Vec<String>,

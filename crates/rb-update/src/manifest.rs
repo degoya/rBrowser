@@ -243,7 +243,8 @@ fn invalid(reason: impl Into<String>) -> UpdateError {
 }
 
 /// The trust store of the compiled-in root, or [`UpdateError::NotConfigured`] while this build
-/// carries none (the placeholder of phase 1): a clear state instead of a signature error.
+/// carries none (a table holding only the placeholder): a clear state instead of a signature
+/// error.
 ///
 /// # Errors
 ///

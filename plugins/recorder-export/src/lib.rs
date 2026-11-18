@@ -145,3 +145,7 @@ fn cut(reason: &str) -> String {
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "autofill_tests.rs"]
+mod autofill_tests;

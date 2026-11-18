@@ -127,3 +127,12 @@ fn the_help_lists_the_exit_codes() {
     assert!(help.contains("--background"));
     assert!(help.contains("screenshot"));
 }
+
+/// RB-091-04, as rDownloader's flag: every bundled plugin is chosen at this start.
+#[test]
+fn install_all_bundled_plugins_is_a_flag() {
+    let cli = Cli::try_parse_from(["rbrowser", "--install-all-bundled-plugins"]).expect("parses");
+    assert!(cli.install_all_bundled_plugins);
+    let cli = Cli::try_parse_from(["rbrowser"]).expect("parses");
+    assert!(!cli.install_all_bundled_plugins);
+}

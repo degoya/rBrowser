@@ -11,6 +11,8 @@ export const OTHER_WAYS: Readonly<Record<string, string>> = {
   'view.focus_address_bar': 'toolbar: the address bar',
   'view.force_state.set': 'page menu: Force state (it needs the element under the click)',
   'portal.add_asset_origin': "status bar: the portal's offer to add an origin it saw (it needs that origin)",
+  'update.check': 'Settings > General > Updates: Check now',
+  'update.install': "Settings > General > Updates and the update notice's Install and restart",
   ...Object.fromEntries(
     Array.from({ length: 9 }, (_, index) => [
       `view.set_breakpoint.${index + 1}`,

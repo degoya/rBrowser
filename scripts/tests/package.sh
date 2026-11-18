@@ -176,6 +176,13 @@ cp "$SCRATCH/Cargo.toml" "$TREE/Cargo.toml"
 expect_true "the package builds the console twin with the app" \
     'grep -qF -- "-p rbrowser -p rbrowser-cli" "$ROOT/scripts/package-windows.sh"'
 expect_true "and stages it as rbrowser.com" 'grep -q "^rb_stage_console " "$ROOT/scripts/package-windows.sh"'
+# The updater (RB-090-14): built with the app, staged beside rbrowser.exe, and the app's DLL
+# carries rb-update now (the positive control of scripts/check-update-code.sh).
+expect_true "the package builds the updater with the app" \
+    'grep -qF -- "-p rbrowser -p rbrowser-cli -p rb-update" "$ROOT/scripts/package-windows.sh"'
+expect_true "and stages it beside rbrowser.exe" 'grep -q "^rb_stage_updater " "$ROOT/scripts/package-windows.sh"'
+expect_true "the DLL is held to carry the self-update" \
+    'grep -qF "check-update-code.sh --expect-present" "$ROOT/scripts/package-windows.sh"'
 # The WSL helper (RB-030-04): built for musl and staged beside rbrowser.exe.
 expect_true "the WSL helper is built" 'grep -q "rb_wsl_helper_build \"\$profile\"" "$ROOT/scripts/package-windows.sh"'
 expect_true "and staged beside rbrowser.exe" 'grep -q "^rb_stage_wsl_helper " "$ROOT/scripts/package-windows.sh"'

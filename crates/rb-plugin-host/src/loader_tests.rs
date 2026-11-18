@@ -241,6 +241,8 @@ fn discovery_reads_bundled_then_user_then_project_packages_only() {
         bundled: Some(bundled.path().to_path_buf()),
         user: None,
         project_root: Some(project.path().to_path_buf()),
+        chosen: None,
+        declared: std::collections::BTreeMap::new(),
     });
     let sources: Vec<PluginSource> = found.iter().map(|(source, _)| *source).collect();
     assert_eq!(sources, vec![PluginSource::Bundled, PluginSource::Project]);
@@ -301,4 +303,124 @@ fn the_declared_grants_are_read_without_verifying_the_package() {
     assert!(super::declared_grants(&path).is_none());
     assert!(super::declared_manifest(&path).is_none());
     assert!(super::declared_capabilities(&path).is_empty());
+}
+
+/// RB-091-04: a bundled plugin the person did not choose is not loaded but listed as
+/// available, with what its manifest says; the chosen one loads.
+#[tokio::test]
+async fn an_unchosen_bundled_plugin_is_available_not_loaded() {
+    let bundled = tempfile::tempdir().expect("tempdir");
+    for id in ["alpha", "beta"] {
+        let builder = ManifestBuilder::named(id, id);
+        let package = builder.package(&Bed::feature().build(), &signing_key(1), true, &[]);
+        std::fs::write(bundled.path().join(format!("{id}.rbplugin")), package).expect("write");
+    }
+    let sources = Sources {
+        bundled: Some(bundled.path().to_path_buf()),
+        chosen: Some(BTreeSet::from(["alpha".to_owned()])),
+        ..Sources::default()
+    };
+    let verifier = verifier();
+    let mut registry = Registry::new();
+    let report = load_all(&sources, &context(&verifier, &DenyAllTrust), &mut registry).await;
+    let loaded: Vec<&str> = report
+        .loaded
+        .iter()
+        .map(|entry| entry.plugin.manifest().id.as_str())
+        .collect();
+    assert_eq!(loaded, ["alpha"]);
+    let available: Vec<&str> = report
+        .available
+        .iter()
+        .map(|entry| entry.manifest.id.as_str())
+        .collect();
+    assert_eq!(available, ["beta"]);
+    assert!(report.refused.is_empty());
+}
+
+/// A package of plugin `alpha` at `version`, signed by test key 1 unless `signed` is off.
+fn alpha_at(version: &str, signed: bool) -> Vec<u8> {
+    let builder = ManifestBuilder::named("alpha", "alpha");
+    let text = builder
+        .text(&signing_key(1))
+        .replace("version = \"1.0.0\"", &format!("version = \"{version}\""));
+    crate::package_plugin(
+        text.as_bytes(),
+        &Bed::feature().build(),
+        &[builder.locale()],
+        signed.then(|| signing_key(1)).as_ref(),
+    )
+    .expect("package")
+}
+
+/// The bundled `alpha` 1.0.0 and the person's copy `copy`, loaded with `verifier`.
+async fn load_with_copy(copy: Vec<u8>, verifier: &PluginVerifier) -> super::LoadReport {
+    let bundled = tempfile::tempdir().expect("tempdir");
+    let user = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        bundled.path().join("alpha-1.0.0.rbplugin"),
+        alpha_at("1.0.0", true),
+    )
+    .expect("write");
+    std::fs::write(user.path().join("alpha.rbplugin"), copy).expect("write");
+    let sources = Sources {
+        bundled: Some(bundled.path().to_path_buf()),
+        user: Some(user.path().to_path_buf()),
+        chosen: Some(BTreeSet::from(["alpha".to_owned()])),
+        ..Sources::default()
+    };
+    let mut registry = Registry::new();
+    load_all(&sources, &context(verifier, &DenyAllTrust), &mut registry).await
+}
+
+fn loaded_alpha(report: &super::LoadReport) -> (PluginSource, String) {
+    let entry = report
+        .loaded
+        .iter()
+        .find(|entry| entry.plugin.manifest().id == "alpha")
+        .expect("alpha loads");
+    (entry.source, entry.plugin.manifest().version.to_string())
+}
+
+/// RB-091-04: a newer signed copy from the repository stands in for the bundled package and is
+/// first-party.
+#[tokio::test]
+async fn a_newer_signed_copy_stands_in_as_first_party() {
+    let report = load_with_copy(alpha_at("2.0.0", true), &verifier()).await;
+    assert_eq!(
+        loaded_alpha(&report),
+        (PluginSource::Bundled, "2.0.0".to_owned())
+    );
+    assert!(report.refused.is_empty());
+}
+
+/// Review 2: a newer copy that does not verify never leaves the person without the plugin - the
+/// bundled package loads and the copy is listed as refused.
+#[tokio::test]
+async fn a_tampered_newer_copy_leaves_the_bundled_package_to_load() {
+    let copy = crate::test_support::tampered(&alpha_at("2.0.0", true), "component.wasm", |bytes| {
+        bytes.push(0);
+    });
+    let report = load_with_copy(copy, &verifier()).await;
+    assert_eq!(
+        loaded_alpha(&report),
+        (PluginSource::Bundled, "1.0.0".to_owned())
+    );
+    assert_eq!(report.refused.len(), 1);
+    assert_eq!(report.refused[0].source, PluginSource::User);
+}
+
+/// Security review: in development mode an unsigned copy declaring the bundle's key and a higher
+/// version loads at most as an ordinary user plugin, never as first-party.
+#[tokio::test]
+async fn an_unsigned_development_copy_is_never_first_party() {
+    let verifier = PluginVerifier::new(true);
+    verifier
+        .trust_key(KEY_ID.to_owned(), signing_key(1).verifying_key())
+        .expect("trust");
+    let report = load_with_copy(alpha_at("2.0.0", false), &verifier).await;
+    assert_eq!(
+        loaded_alpha(&report),
+        (PluginSource::User, "2.0.0".to_owned())
+    );
 }

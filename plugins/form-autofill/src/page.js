@@ -12,9 +12,16 @@
 // document - for a preset; a password field, a field that names a secret (the rule of
 // src/secret.rs, `secretOf`) and a file input give no value, so it never leaves the page.
 // `type=hidden` inputs are fields only with `hiddenInputs` (the setting captureHiddenInputs).
+// `apply` also names, per field it set, what a running recording takes (`record`, RB-090-78,
+// src/record.rs): the field's target as the sync agent names an element it captures input on
+// (`targetOf`, src/target.js, which src/fill.rs passes in), what was done and the value - a
+// password's never.
 // @ts-check
-/** @param {{ op: string, selector?: string | null, skipHidden?: boolean, hiddenInputs?: boolean, actions?: any[] }} request */
-(request) => {
+/**
+ * @param {{ op: string, selector?: string | null, skipHidden?: boolean, hiddenInputs?: boolean, actions?: any[] }} request
+ * @param {(element: Element) => unknown} [targetOf]
+ */
+(request, targetOf) => {
   'use strict';
   const MAX_FIELDS = 300;
   const MAX_OPTIONS = 200;
@@ -25,6 +32,8 @@
   const NOT_FIELDS = ['hidden', 'submit', 'button', 'reset', 'image'];
   /** The longest value a preset takes (src/settings.rs MAX_VALUE). */
   const MAX_VALUE = 1000;
+  /** The longest value a recording takes of a field (src/record.rs). */
+  const MAX_RECORDED = 10000;
   /** The secret rule of src/secret.rs: `autocomplete` tokens, whole words and parts of words. */
   const PASSWORD_TOKENS = ['current-password', 'new-password'];
   const SECRET_TOKENS = ['one-time-code', 'cc-number', 'cc-csc', 'cc-exp', 'cc-exp-month', 'cc-exp-year'];
@@ -193,6 +202,34 @@
     return { out, truncated: false };
   }
 
+  /**
+   * What a recording takes of a field this run set (src/record.rs): a text's value - never a
+   * password's, which is only marked `sensitive` as the agent marks it - a checkbox's state, the
+   * radio checked, a select's options; null for a hidden input, a radio group left empty and a
+   * value longer than MAX_RECORDED.
+   * @param {HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement} element @param {HTMLInputElement[] | null} radios
+   */
+  function recordOf(element, radios) {
+    if (!targetOf) return null;
+    if (radios) {
+      const chosen = radios.find((radio) => radio.checked);
+      return chosen ? { target: targetOf(chosen), kind: 'check' } : null;
+    }
+    if (element instanceof HTMLSelectElement) {
+      const selected = Array.from(element.selectedOptions, (option) => option.index);
+      return { target: targetOf(element), kind: 'select', value: element.value, selected };
+    }
+    const type = typeOf(element);
+    if (element instanceof HTMLInputElement && (type === 'checkbox' || type === 'radio')) {
+      if (type === 'radio' && !element.checked) return null;
+      return { target: targetOf(element), kind: element.checked ? 'check' : 'uncheck' };
+    }
+    if (type === 'hidden') return null;
+    if (type === 'password') return { target: targetOf(element), kind: 'fill', sensitive: true };
+    const value = String(element.value ?? '');
+    return value.length > MAX_RECORDED ? null : { target: targetOf(element), kind: 'fill', value };
+  }
+
   function locale() {
     try {
       return new Intl.DateTimeFormat().resolvedOptions().locale || navigator.language;
@@ -312,7 +349,8 @@
         if (element.form) forms.add(element.form);
         touched.push(element);
         const errors = FLAGS.filter((flag) => element.validity[/** @type {keyof ValidityState} */ (flag)] === true);
-        results.push({ index: action.index, status: 'done', value: holds(element, radios), valid: element.validity.valid, errors });
+        results.push({ index: action.index, status: 'done', value: holds(element, radios), valid: element.validity.valid, errors,
+          record: recordOf(element, radios) });
       }
       const formValid = forms.size > 0
         ? Array.from(forms).every((form) => form.checkValidity())

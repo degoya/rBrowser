@@ -14,6 +14,7 @@
 #   rb_sidecar_packages "$ROOT/sidecar/package-lock.json" # what it stages (a dry listing)
 #   rb_prune_sidecar_extras "$STAGE/sidecar/node_modules" # no *.map, *.d.ts, *.md, *.txt
 #   rb_stage_console "$build_dir" "$STAGE"                # rbrowser-console.exe as rbrowser.com
+#   rb_stage_updater "$build_dir" "$STAGE"                # rbrowser-updater.exe beside it
 #   rb_patch_exe "$STAGE/rbrowser.exe" <ico> <version> "$cache"   # icon + version (rcedit)
 #   rb_write_crash_reporter_cfg <template> "$STAGE" <version>
 #   rb_package_sizes "$STAGE" "$ZIP"                      # MB per part
@@ -250,6 +251,18 @@ rb_stage_console() {
     install -m 755 "$build/rbrowser-console.exe" "$app/rbrowser.com"
 }
 
+# Stages the updater of build output $1 (target/<triple>/<profile>, `-p rb-update`) into the app
+# folder $2 (RB-090-14): the app starts a copy of it to switch the program folder to a verified
+# update; rbrowser.exe, CEF's sandbox bootstrap, runs only beside its DLL and cannot do it.
+rb_stage_updater() {
+    local build="$1" app="$2"
+    if [[ ! -f "$build/rbrowser-updater.exe" ]]; then
+        echo "!! $build has no rbrowser-updater.exe: build -p rb-update for Windows first" >&2
+        return 1
+    fi
+    install -m 755 "$build/rbrowser-updater.exe" "$app/rbrowser-updater.exe"
+}
+
 # Writes the icon $2 and the version resource of version $3 into the executable $1 - CEF's
 # bootstrap.exe, which has neither - with rcedit, downloaded into cache $4 and held to its pin.
 # The strings are those build.rs gives rbrowser.dll.
@@ -301,9 +314,10 @@ folders = {"locales": "CEF locales", "ui": "shell UI", "node": "Node runtime",
            "plugins": "plugins", "sidecar": "sidecar", "licenses": "docs, notices, config"}
 files = {"rbrowser.exe": "rbrowser.exe", "rbrowser.com": "rbrowser.com",
          "rbrowser.dll": "rbrowser.dll", "rbrowser.pdb": "rbrowser.dll",
-         "rbrowser-wsl": "rbrowser-wsl"}
+         "rbrowser-wsl": "rbrowser-wsl", "rbrowser-updater.exe": "rbrowser-updater.exe"}
 docs = {"LICENSE", "NOTICE", "README.txt", "CHANGELOG.md", "VERSION.txt", "crash_reporter.cfg"}
-order = ["rbrowser.exe", "rbrowser.com", "rbrowser.dll", "rbrowser-wsl", "CEF runtime",
+order = ["rbrowser.exe", "rbrowser.com", "rbrowser.dll", "rbrowser-wsl", "rbrowser-updater.exe",
+         "CEF runtime",
          "CEF locales", "shell UI", "Node runtime", "plugins", "sidecar", "docs, notices, config"]
 sizes = {}
 for folder, _, names in os.walk(stage):

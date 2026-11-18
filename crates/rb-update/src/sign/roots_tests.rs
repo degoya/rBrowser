@@ -32,7 +32,7 @@ fn every_configured_root_decodes() {
     }
 }
 
-/// The placeholder fails closed: until the coordinator pastes the real root, no key is trusted
+/// The placeholder fails closed: a table holding only it trusts no key,
 /// and every check says `update.not_configured`.
 #[test]
 fn the_placeholder_root_is_never_trusted() {
@@ -135,16 +135,19 @@ fn a_malformed_revocation_fails_the_store() {
     }
 }
 
-/// Phase 1 ships no update root (RB-090-02): self-update stays inactive until RB-110-05 pastes
-/// the owner's public key, and this test is changed with it on purpose.
+/// The owner's root ships (RB-090-14, key generated on 2026-11-16 with `rb-pack keygen`): one
+/// configured, unexpired key under the update key id, and nothing else.
 #[test]
-fn phase_one_ships_only_the_placeholder() {
-    assert!(keys_at(EMBEDDED_KEYS, now()).is_empty());
-    assert!(
+fn the_shipped_table_trusts_the_owners_update_key() {
+    let keys = keys_at(EMBEDDED_KEYS, now());
+    assert_eq!(keys.len(), 1);
+    assert_eq!(keys[0].key_id, UPDATE_KEY_ID);
+    assert_eq!(keys[0].public_key, OWNER_UPDATE_KEY);
+    assert_eq!(
         trust_store_at(EMBEDDED_KEYS, REVOKED_DOCUMENTS, now())
             .expect("store")
             .key_ids()
-            .expect("ids")
-            .is_empty()
+            .expect("ids"),
+        vec![UPDATE_KEY_ID.to_owned()]
     );
 }

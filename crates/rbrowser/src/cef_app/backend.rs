@@ -170,6 +170,10 @@ impl UiBackend for CefUi {
         on_ui(move || settings_window::open(&url));
     }
 
+    fn close_settings_window(&self) {
+        on_ui(settings_window::close);
+    }
+
     fn pick_path(&self, pick: PathPick, done: PathPicked) {
         on_ui(move || dialogs::pick_path(pick, done));
     }

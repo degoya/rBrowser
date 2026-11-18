@@ -33,6 +33,24 @@ describe('automation actions', () => {
     expect(wrapper.find('[data-testid="automation-mcp.copy_config"]').exists()).toBe(false);
   });
 
+  it('runs the update check and the install from General > Updates (RB-090-14)', async () => {
+    const { wrapper, core } = await open('updates.enabled');
+    for (const id of ['update.check', 'update.install']) {
+      await wrapper.get(`[data-testid="automation-${id}"]`).trigger('click');
+      await settle();
+      expect(core.sent).toContainEqual({ type: 'runCommand', id });
+    }
+    expect(wrapper.findAll('button')).toHaveLength(2);
+  });
+
+  it('runs no update command while self-update is off', async () => {
+    const { wrapper, core } = await open('updates.enabled', false);
+    await wrapper.get('[data-testid="automation-update.install"]').trigger('click');
+    await settle();
+    expect(core.sent).not.toContainEqual({ type: 'runCommand', id: 'update.install' });
+    expect(wrapper.find('[data-testid="automation-off"]').exists()).toBe(true);
+  });
+
   it('shows nothing under any other switch', async () => {
     const { wrapper } = await open('sync.enabled');
     expect(wrapper.findAll('button')).toHaveLength(0);
@@ -62,5 +80,14 @@ describe('automation actions', () => {
     await button.trigger('click');
     await settle();
     expect(core.sent.filter((message) => message.type === 'runCommand')).toEqual([]);
+  });
+
+  it('opens the setup wizard again from Settings > General > Start (RB-091-05)', async () => {
+    const { wrapper, core } = await open('ui.firstRunWizard');
+    await wrapper.get('[data-testid="automation-app.setup_wizard"]').trigger('click');
+    await settle();
+    expect(core.sent.filter((message) => message.type === 'runCommand')).toEqual([
+      { type: 'runCommand', id: 'app.setup_wizard' },
+    ]);
   });
 });

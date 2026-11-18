@@ -26,6 +26,7 @@ mod native_menu;
 mod payloads;
 mod portal;
 mod recordings;
+mod setup;
 mod sitemap;
 mod status;
 mod videos;
@@ -47,11 +48,12 @@ pub use messages::{
 pub use metrics::{Rating, ResourceReading, Unavailable, ViewMetrics, ViewThrottle, VitalReading};
 pub use native_menu::NativeMenuRow;
 pub use payloads::{
-    AboutInfo, AnalyzerHint, BindingCheck, BookmarkSummary, BoundaryKind, BreakpointProposal,
-    BreakpointSummary, CommandInfo, DetectedBreakpoint, DevtoolsState, ExtensionPrompt,
-    ExtensionPromptKind, Notification, NotificationLevel, PathKind, PluginGrantDetails, ProjectOff,
-    ProposedBreakpoint, RecorderPhase, RecorderStatus, SessionInfo, SettingIssue, StylesheetSource,
-    TrustDecision, TrustInfo, TrustPrompt, TrustStatus, TrustedProject, WebStoreExtension,
+    AboutInfo, AboutUpdates, AnalyzerHint, BindingCheck, BookmarkSummary, BoundaryKind,
+    BreakpointProposal, BreakpointSummary, CommandInfo, DetectedBreakpoint, DevtoolsState,
+    ExtensionPrompt, ExtensionPromptKind, Notification, NotificationLevel, PathKind,
+    PluginGrantDetails, ProjectOff, ProposedBreakpoint, RecorderPhase, RecorderStatus, SessionInfo,
+    SettingIssue, StylesheetSource, TrustDecision, TrustInfo, TrustPrompt, TrustStatus,
+    TrustedProject, WebStoreExtension,
 };
 pub use portal::{PortalDevice, PortalPairing, PortalState};
 pub use rb_commands::{WhichKey, WhichKeyEntry};
@@ -61,6 +63,9 @@ pub use rb_settings::Scope;
 pub use recordings::{
     FlowRunState, FlowRunning, FlowViewStatus, RecordingEntry, RecordingExport,
     RecordingExportFile, RecordingExportFormat, RecordingList,
+};
+pub use setup::{
+    SetupAnswer, SetupLayout, SetupProject, SetupRequest, SetupSource, SetupStep, SetupTemplate,
 };
 pub use sitemap::{SitemapRunState, SitemapStatus};
 pub use status::{StatusAction, StatusMessage};
