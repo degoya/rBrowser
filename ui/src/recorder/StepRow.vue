@@ -4,15 +4,32 @@
 // and the buttons that move it up or down or delete it. Every control is a native,
 // Tab-reachable element with a name; no direct shortcut moves a step (`Alt+Up/Down` and
 // `Ctrl+Shift+Up/Down` are reserved), the buttons do. A secret fill's value is never shown.
+// While a recording plays (RB-090-84) the number of the step a view runs is marked, a failed
+// step's number is red with the reason below it, and the recorded pause before the step shows
+// beside its kind (`pauses.ts`).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
 import UInput from '@nuxt/ui/components/Input.vue';
 import { RECORDER_ICONS } from './icons';
+import { seconds } from './pauses';
 import { stepKind, stepValue, targetText, type Step } from './recording';
 
-const props = defineProps<{ step: Step; index: number; count: number }>();
+const props = withDefaults(
+  defineProps<{
+    step: Step;
+    index: number;
+    count: number;
+    /** A view runs this step now. */
+    running?: boolean;
+    /** Why the step failed in the last run; null when it did not. */
+    failure?: string | null;
+    /** The pause before the step at the pace "As recorded", in ms. */
+    pauseMs?: number;
+  }>(),
+  { running: false, failure: null, pauseMs: 0 },
+);
 const emit = defineEmits<{
   rename: [name: string];
   value: [value: string];
@@ -27,13 +44,41 @@ const target = computed(() => targetText(props.step.action));
 const value = computed(() => stepValue(props.step.action));
 const secret = computed(() => props.step.action.type === 'fill' && props.step.action.secret === true);
 const onlyIn = computed(() => props.step.onlyIn ?? []);
+const marked = computed(() => props.running || props.failure !== null);
+const failureText = computed(() =>
+  props.failure === null || props.failure === ''
+    ? t('recorder.panel.step.failed_plain')
+    : t('recorder.panel.step.failed', { reason: props.failure }),
+);
 </script>
 
 <template>
-  <li class="flex flex-col gap-1.5 border-b border-default px-3 py-2" :data-testid="`step-${step.id}`">
+  <li
+    class="flex flex-col gap-1.5 border-b border-default px-3 py-2"
+    :class="{ 'bg-elevated': running && failure === null, 'bg-error/10': failure !== null }"
+    :aria-current="running ? 'step' : undefined"
+    :data-testid="`step-${step.id}`"
+  >
     <div class="flex flex-wrap items-center gap-2">
-      <span class="w-6 shrink-0 text-right text-xs text-muted tabular-nums">{{ number }}</span>
+      <UBadge
+        v-if="marked"
+        :color="failure !== null ? 'error' : 'primary'"
+        variant="solid"
+        size="sm"
+        class="min-w-6 shrink-0 justify-center tabular-nums"
+        :label="String(number)"
+        :title="failure !== null ? failureText : t('recorder.panel.step.running')"
+        data-testid="step-number"
+      />
+      <span v-else class="w-6 shrink-0 text-right text-xs text-muted tabular-nums" data-testid="step-number">{{ number }}</span>
       <UBadge color="neutral" variant="subtle" size="sm" :label="kind" data-testid="step-kind" />
+      <span
+        v-if="pauseMs > 0"
+        class="shrink-0 text-xs text-muted tabular-nums"
+        :title="t('recorder.panel.step.pause_hint')"
+        data-testid="step-pause"
+        >{{ t('recorder.panel.step.pause', { seconds: seconds(pauseMs) }) }}</span
+      >
       <code v-if="target !== ''" class="min-w-0 truncate text-xs text-toned" :title="target" data-testid="step-target">
         {{ target }}
       </code>
@@ -98,6 +143,7 @@ const onlyIn = computed(() => props.step.onlyIn ?? []);
         {{ t('recorder.panel.step.secret') }}
       </span>
     </div>
+    <p v-if="failure !== null" class="ps-8 text-xs text-error" data-testid="step-failure">{{ failureText }}</p>
     <div v-if="onlyIn.length > 0" class="flex flex-wrap items-center gap-1 ps-8" data-testid="step-only-in">
       <span class="text-xs text-muted">{{ t('recorder.panel.step.only_in') }}</span>
       <UBadge v-for="breakpoint in onlyIn" :key="breakpoint" color="info" variant="soft" size="sm" :label="breakpoint" />

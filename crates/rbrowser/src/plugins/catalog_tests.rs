@@ -4,9 +4,9 @@ use rb_plugin_host::{OFFICIAL_REPOSITORY, PinnedKey};
 use serde_json::json;
 
 use super::{
-    BUNDLED_CODE, CATALOG_SETTING, CHECK_FAILED_NOTICE_KEY, ConsentRequest, InstallRequest,
-    NO_UPDATES_NOTICE_KEY, UPDATES_NOTICE_KEY, answer, notice, refuse_bundled, repositories,
-    same_grants, with_pinned, without_query,
+    CATALOG_SETTING, CHECK_FAILED_NOTICE_KEY, CHECKING_NOTICE_KEY, ConsentRequest, FOREIGN_CODE,
+    InstallRequest, NO_UPDATES_NOTICE_KEY, UPDATES_NOTICE_KEY, answer, checking_notice, notice,
+    refuse_foreign, repositories, same_grants, with_pinned, without_query,
 };
 
 /// A base64 Ed25519 public key that decodes: the compiled-in release key's.
@@ -199,10 +199,39 @@ fn the_grants_shown_must_be_the_package_s_in_full() {
     assert!(!same_grants(&actual, &window_image));
 }
 
+/// RB-091-04: the catalogue installs and updates a bundled plugin from a package of the bundle's
+/// key; one with a bundled plugin's id under another key is refused.
 #[test]
-fn a_bundled_plugin_is_never_installed_from_the_catalogue() {
-    let bundled: std::collections::BTreeSet<String> = ["seo".to_owned()].into();
-    let refused = refuse_bundled("seo", &bundled).expect_err("bundled");
-    assert_eq!(refused.1, BUNDLED_CODE);
-    assert!(refuse_bundled("todo", &bundled).is_ok());
+fn a_bundled_plugin_installs_only_under_the_bundle_s_key() {
+    let bundled: std::collections::BTreeMap<String, String> =
+        [("seo".to_owned(), "a".repeat(64))].into();
+    assert!(refuse_foreign("seo", &"a".repeat(64), &bundled).is_ok());
+    let refused = refuse_foreign("seo", &"b".repeat(64), &bundled).expect_err("another key");
+    assert_eq!(refused.1, FOREIGN_CODE);
+    assert!(refuse_foreign("todo", &"b".repeat(64), &bundled).is_ok());
+}
+
+/// The status bar counts the bundled plugins' updates with the catalogue's.
+#[test]
+fn the_notice_counts_the_bundled_plugins_updates() {
+    let answer = json!({
+        "repositories": [],
+        "updates": [],
+        "bundled": [
+            { "id": "seo", "update": { "repository": "official", "version": "2.0.0" } },
+            { "id": "todo", "update": null }
+        ]
+    });
+    let notice = notice(&answer);
+    assert_eq!(notice.message_key, UPDATES_NOTICE_KEY);
+    assert_eq!(notice.args["count"], "1");
+}
+
+/// RB-090-85: a person's check names its start, linked to the catalogue's settings.
+#[test]
+fn a_check_names_its_start() {
+    let checking = checking_notice();
+    assert_eq!(checking.message_key, CHECKING_NOTICE_KEY);
+    assert_eq!(checking.level, NotificationLevel::Info);
+    assert_eq!(checking.settings_key.as_deref(), Some(CATALOG_SETTING));
 }

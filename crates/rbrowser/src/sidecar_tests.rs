@@ -139,3 +139,39 @@ fn every_update_run_shows_its_progress_from_the_start() {
     handler(Value::Null).expect("second run");
     assert!(next_step(&last, 0), "the second run shows its first step");
 }
+
+/// RB-090-85: a restart and a download name their start at once, before the handler runs.
+#[tokio::test]
+async fn a_restart_and_an_update_name_their_start() {
+    let core = core();
+    let ran = Arc::new(AtomicU8::new(0));
+    let seen = Arc::clone(&ran);
+    let inner: Handler = Arc::new(move |_| {
+        seen.store(1, Ordering::Release);
+        Ok(Value::Null)
+    });
+    let handler = announced(Arc::downgrade(&core), RESTARTING_KEY, inner);
+    handler(Value::Null).expect("runs");
+    assert_eq!(ran.load(Ordering::Acquire), 1, "the command still runs");
+    let items = core.status_log().items();
+    let last = items.last().expect("a notice");
+    assert_eq!(last.message_key, RESTARTING_KEY);
+    assert_eq!(last.level, NotificationLevel::Info);
+}
+
+/// RB-090-85: the end of a restart is named: restarted, or the error with its setting.
+#[test]
+fn a_restart_names_its_end() {
+    let CoreToShell::Notification(done) = restarted_notice(&Ok(())) else {
+        panic!("a notification");
+    };
+    assert_eq!(done.message_key, RESTARTED_KEY);
+    assert_eq!(done.level, NotificationLevel::Success);
+    let error = SidecarError::NodeNotFound(std::path::PathBuf::from("C:\\node\\node.exe"));
+    let CoreToShell::Notification(failed) = restarted_notice(&Err(error)) else {
+        panic!("a notification");
+    };
+    assert_eq!(failed.level, NotificationLevel::Error);
+    assert_eq!(failed.message_key, "sidecar.error.nodeNotFound");
+    assert_eq!(failed.settings_key.as_deref(), Some("engines.nodePath"));
+}

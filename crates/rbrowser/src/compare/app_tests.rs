@@ -25,3 +25,22 @@ fn the_host_runs_the_four_tools() {
         ]
     );
 }
+
+/// RB-090-85: a comparison names its start with its number of shots, linked to its settings;
+/// the end follows as `envcompare.notice.finished`.
+#[test]
+fn a_started_comparison_names_itself() {
+    let started = Started {
+        run_id: "r1".to_owned(),
+        folder: "C:\\site\\.rbrowser\\out\\env-compare\\r1".to_owned(),
+        shots: 12,
+        diffs: 6,
+    };
+    let CoreToShell::Notification(notification) = started_notice(&started) else {
+        panic!("a notification");
+    };
+    assert_eq!(notification.message_key, STARTED_KEY);
+    assert_eq!(notification.level, NotificationLevel::Info);
+    assert_eq!(notification.args["shots"], "12");
+    assert_eq!(notification.settings_key.as_deref(), Some("env-compare"));
+}

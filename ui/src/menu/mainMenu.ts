@@ -27,6 +27,18 @@ const setting = (id: string, key: string, fallback = false): MenuNode =>
 
 const activeView = (ctx: MenuContext) => ctx.state?.activeView ?? null;
 const layoutMode = (mode: string) => (ctx: MenuContext) => ctx.state?.layout.mode === mode;
+/**
+ * A row of a layout mode's own command, choosable only in `modes` (RB-090-82): outside them the
+ * command fails (`layout.error.not_split`, `not_canvas`, not in focus mode), and an enabled row
+ * that only answers with an error read as a row that does not work.
+ */
+const inModes =
+  (...modes: string[]) =>
+  (ctx: MenuContext) =>
+    modes.includes(ctx.state?.layout.mode ?? 'grid');
+const modeCmd = (id: string, ...modes: string[]): MenuNode => cmd(id, { enabled: inModes(...modes) });
+/** A recording's own commands (pause, stop, check): only while one runs (RB-090-82). */
+const recording = (ctx: MenuContext) => ctx.state?.recorder !== undefined;
 
 /** The project's bookmarks on the main menu's top level, grouped, then add and search. */
 function bookmarkRows(ctx: MenuContext): MenuNode[] {
@@ -144,8 +156,9 @@ export const LAYOUT_MENU: readonly MenuNode[] = [
   cmd('layout.mode.canvas', { radio: true, checked: layoutMode('canvas') }),
   // The command toggles; `enabled` makes the row a choice like the modes beside it.
   cmd('layout.focus_mode', { radio: true, checked: layoutMode('focus'), args: { enabled: true } }),
-  cmd('layout.focus_next'),
-  cmd('layout.focus_prev'),
+  // The strip scrolls by them in horizontal mode.
+  modeCmd('layout.focus_next', 'focus', 'horizontal'),
+  modeCmd('layout.focus_prev', 'focus', 'horizontal'),
   cmd('layout.zoom_to_fit'),
   sep,
   sub('shell.menu.presets', [
@@ -153,15 +166,22 @@ export const LAYOUT_MENU: readonly MenuNode[] = [
     sep,
     cmd('layout.save_preset'),
   ]),
-  sub('shell.menu.split', [cmd('layout.split.swap'), cmd('layout.split.grow'), cmd('layout.split.shrink')]),
-  sub('shell.menu.canvas', [
-    cmd('canvas.zoom.in'),
-    cmd('canvas.zoom.out'),
-    cmd('canvas.zoom.reset'),
-    cmd('layout.center'),
-    cmd('layout.canvas.place'),
+  sub('shell.menu.split', [
+    modeCmd('layout.split.swap', 'split'),
+    modeCmd('layout.split.grow', 'split'),
+    modeCmd('layout.split.shrink', 'split'),
   ]),
-  setting('layout.minimap.toggle', 'layoutModes.minimap'),
+  sub('shell.menu.canvas', [
+    modeCmd('canvas.zoom.in', 'canvas'),
+    modeCmd('canvas.zoom.out', 'canvas'),
+    modeCmd('canvas.zoom.reset', 'canvas'),
+    modeCmd('layout.center', 'canvas', 'horizontal'),
+    modeCmd('layout.canvas.place', 'canvas'),
+  ]),
+  // The session's switch, in any mode; the setting until it was switched (RB-090-82).
+  cmd('layout.minimap.toggle', {
+    checked: (ctx) => ctx.state?.layout.minimap ?? settingOn(ctx, 'layoutModes.minimap'),
+  }),
   sep,
   sub('shell.menu.breakpoints', [
     cmd('breakpoints.analyze'),
@@ -223,7 +243,14 @@ export const CAPTURE_SUBMENU: readonly MenuNode[] = [
   sub('shell.menu.screenshot', CAPTURE_MENU),
   sub('shell.menu.video', VIDEO_MENU),
   sub('shell.menu.visual', [cmd('visual.compare'), cmd('visual.baseline_update'), cmd('visual.lfs_setup')]),
-  sub('shell.menu.sitemap', [cmd('sitemap.capture'), cmd('sitemap.cancel'), cmd('panels.sitemap')]),
+  sub('shell.menu.sitemap', [
+    cmd('sitemap.capture'),
+    // Only while a capture runs: with none it failed with an empty message.
+    cmd('sitemap.cancel', { enabled: (ctx) => ctx.state?.sitemap?.state === 'running' }),
+    // A window of its own, once the last run wrote its gallery (RB-090-83).
+    cmd('sitemap.gallery', { enabled: (ctx) => Boolean(ctx.state?.sitemap?.gallery) }),
+    cmd('panels.sitemap'),
+  ]),
   { kind: 'plugins', group: 'capture' },
 ];
 
@@ -250,9 +277,9 @@ export const FLOWS_MENU: readonly MenuNode[] = [
   sep,
   sub('shell.menu.recorder', [
     cmd('recorder.start'),
-    cmd('recorder.pause'),
-    cmd('recorder.stop'),
-    cmd('recorder.check'),
+    cmd('recorder.pause', { enabled: recording }),
+    cmd('recorder.stop', { enabled: recording }),
+    cmd('recorder.check', { enabled: recording }),
     cmd('recorder.play'),
     cmd('recorder.export_flow'),
     cmd('recorder.export_spec'),
@@ -276,16 +303,22 @@ export const PANELS_MENU: readonly MenuNode[] = [
   cmd('panels.close'),
 ];
 
+/**
+ * The rows of the plugin list's own commands ask it to show (RB-090-82): Settings > Plugins
+ * opens. Without it `plugins.list` only answers the rows (MCP) and the others are the page's.
+ */
+const SHOW = { args: { show: true } };
+
 export const PLUGINS_MENU: readonly MenuNode[] = [
-  cmd('plugins.list'),
+  cmd('plugins.list', SHOW),
   cmd('plugins.catalog'),
-  cmd('plugins.install'),
-  cmd('plugins.enable'),
-  cmd('plugins.disable'),
-  cmd('plugins.remove'),
+  cmd('plugins.install', SHOW),
+  cmd('plugins.enable', SHOW),
+  cmd('plugins.disable', SHOW),
+  cmd('plugins.remove', SHOW),
   cmd('plugins.resume'),
   cmd('plugins.check_updates'),
-  cmd('plugins.trust_key'),
+  cmd('plugins.trust_key', SHOW),
   sep,
   sub('shell.menu.extensions', [
     cmd('extensions.manage'),
@@ -307,6 +340,8 @@ export const APP_MENU: readonly MenuNode[] = [
   sub('shell.menu.trust', [cmd('trust.show'), cmd('trust.grant'), cmd('trust.revoke')]),
   cmd('project.open_recent'),
   cmd('app.reload_config'),
+  // The setup wizard again (RB-091-05).
+  cmd('app.setup_wizard'),
   sub('shell.menu.mcp', [setting('mcp.toggle', 'mcp.enabled'), cmd('mcp.copy_config')]),
   sub('shell.menu.cdp', [cmd('cdp.copy_endpoint'), cmd('cdp.rotate_token')]),
   sep,

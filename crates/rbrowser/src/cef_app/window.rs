@@ -121,8 +121,9 @@ wrap_window_delegate! {
             // The pages window and the page windows close with the main one (RB-010-08).
             super::settings_window::close();
             super::page_windows::close_all();
-            // So do the report windows (RB-091-02).
+            // So do the report windows (RB-091-02) and the sitemap gallery's (RB-090-83).
             super::report_window::close_all();
+            super::gallery_window::close_all();
             // Popped-out views go back into this window first, so they close with it (RB-080-14).
             super::pop_out::close_all();
             1

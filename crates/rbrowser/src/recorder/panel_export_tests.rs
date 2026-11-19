@@ -35,4 +35,12 @@ fn the_saved_notice_names_every_file_written() {
         notice.args.get("files").map(String::as_str),
         Some(".rbrowser/flows/login.ts, .rbrowser/out/exports/login/login.spec.ts")
     );
+    // The export commands name their files the same way (RB-090-84).
+    assert_eq!(
+        saved_paths_notice(&[
+            ".rbrowser/flows/login.ts",
+            ".rbrowser/out/exports/login/login.spec.ts"
+        ]),
+        saved_notice(&files)
+    );
 }

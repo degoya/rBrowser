@@ -32,6 +32,9 @@ import type { ViewFrameworks } from './frameworks';
 import type { AboutInfo } from './about';
 
 export type * from './about';
+// RB-091-05.
+export type * from './setup';
+import type { SetupCoreMessage, SetupShellMessage } from './setup';
 import type { ViewMetrics, VitalMetric } from './metrics';
 
 export type * from './frameworks';
@@ -273,7 +276,8 @@ export type ShellToCore =
   | { type: 'getTextScale' }
   /** The Videos panel's requests (`./videos.ts`, RB-110-12). */
   | VideoRequest
-  | NativeMenuRequest | RecordingRequest | ActivityRequest; // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60), `./activity.ts` (RB-090-67)
+  | NativeMenuRequest | RecordingRequest | ActivityRequest // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60), `./activity.ts` (RB-090-67)
+  | SetupShellMessage; // `./setup.ts` (RB-091-05)
 
 // ---- core -> shell ------------------------------------------------------------------------
 
@@ -293,6 +297,8 @@ export interface LayoutState {
   modes?: ModeState;
   /** The hidden breakpoints with a cell to open (`layout.hidden`, RB-080-41); absent for none. */
   hidden?: string[];
+  /** The minimap switched for this session in any mode; absent while the setting holds (RB-090-82). */
+  minimap?: boolean;
 }
 
 /** A breakpoint of the config as the shell lists it. */
@@ -447,4 +453,5 @@ export type CoreToShell =
   | SettingsEvent
   /** The Videos panel's list and its change (`./videos.ts`, RB-110-12). */
   | VideoEvent
-  | NativeMenuEvent | RecordingEvent; // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60)
+  | NativeMenuEvent | RecordingEvent // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60)
+  | SetupCoreMessage; // `./setup.ts` (RB-091-05)

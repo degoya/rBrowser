@@ -5,9 +5,9 @@
 //! arguments ([`findings`]), and go to the findings panel like any check run.
 //!
 //! A command answers at once (`{"started": true}`) and the run goes on the core's runtime, one
-//! at a time; a notification names the outcome and the folder of the diff images (below the
-//! screenshot folder, `visual/<run>/<page>/<breakpoint>-diff.png`). [`compare`] and [`update`]
-//! are the same runs for the MCP tools, which wait for their answer. Saving baselines checks
+//! at a time; a notification names its start (RB-090-85), another its outcome and the folder
+//! of the diff images (below the screenshot folder, `visual/<run>/<page>/<breakpoint>-diff.png`).
+//! [`compare`] and [`update`] are the same runs for the MCP tools, which wait for their answer. Saving baselines checks
 //! Git LFS (`visual.lfsCheck`) and names the set-up command when it is missing; only
 //! `visual.lfs_setup`, the person's own command, changes `.gitattributes` and the Git
 //! configuration. Baselines come from the project and only produce findings: no trust gate.
@@ -44,6 +44,10 @@ pub const COMPARE_COMMAND: &str = "visual.compare";
 pub const UPDATE_COMMAND: &str = "visual.baseline_update";
 /// Set the project up for LFS baselines.
 pub const LFS_SETUP_COMMAND: &str = "visual.lfs_setup";
+/// The notice that a compare started; placeholder `{count}` (RB-090-85).
+pub const COMPARING_KEY: &str = "visual.notice.comparing";
+/// The notice that a baseline update started; placeholder `{count}` (RB-090-85).
+pub const UPDATING_KEY: &str = "visual.notice.updating";
 /// The notice after a compare; placeholders `{regressions}`, `{count}`, `{folder}`.
 pub const COMPARED_KEY: &str = "visual.notice.compared";
 /// The notice of unreliable comparisons; placeholder `{count}`.
@@ -233,6 +237,7 @@ pub async fn compare(
     let root = host.project_root().ok_or(VisualRunError::NoProject)?;
     let options = options(&host.config().visual, args.threshold);
     let views = targets(&host, args.target.unwrap_or(Target::All))?;
+    core.notify(started_notice(COMPARING_KEY, views.len()));
     let since = now();
     let run_id = rb_plugin_host::run_id(since.as_millis());
     let diff_dir = crate::capture::settings(core)
@@ -273,6 +278,7 @@ pub async fn update(core: &Arc<Core>, args: &UpdateArgs) -> Result<UpdateAnswer,
     let root = host.project_root().ok_or(VisualRunError::NoProject)?;
     let options = options(&host.config().visual, None);
     let views = targets(&host, args.target.unwrap_or(Target::All))?;
+    core.notify(started_notice(UPDATING_KEY, views.len()));
     let setup = RunSetup {
         options,
         machine: machine_meta(now().as_secs()),
@@ -378,6 +384,16 @@ fn failed(core: &Core, error: &VisualRunError) {
     tracing::warn!(%error, "the visual run failed");
     let args = [("error", error.to_string())];
     core.notify(notice(NotificationLevel::Error, FAILED_KEY, &args));
+}
+
+/// The notice that a run over `count` views started (`key`): the shots take a while before the
+/// outcome is named (RB-090-85).
+fn started_notice(key: &str, count: usize) -> CoreToShell {
+    notice(
+        NotificationLevel::Info,
+        key,
+        &[("count", count.to_string())],
+    )
 }
 
 fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> CoreToShell {

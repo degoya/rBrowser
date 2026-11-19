@@ -67,7 +67,7 @@ rb-sync = { path = "../rb-sync" }
 rb-wsl = { path = "../rb-wsl" }
 # Screenshot names, folder and the overview image (RB-050-03).
 rb-visual = { path = "../rb-visual" }
-# Self-update (RB-090-02), linked only with the feature `self-update`.
+# Self-update (RB-090-02, RB-090-14), linked with the feature `self-update` (on by default).
 rb-update = { path = "../rb-update", optional = true }
 # hex, the poison-tolerant lock, origins and hosts, JSON pointers (RB-080-28).
 rb-util = { path = "../rb-util" }
@@ -94,9 +94,10 @@ url.workspace = true
 zip.workspace = true
 
 [features]
-# Self-update (RB-090-02): off in phase 1 and switched on with the move to GitHub (RB-110-05).
-# Without it rb-update is not linked: the binary carries no update code and no update address,
+# Self-update (RB-090-02), on by default since RB-090-14. `--no-default-features` builds the app
+# without it: rb-update is not linked, the binary carries no update code and no update address,
 # and the settings window shows General > Updates locked (`src/updates/`).
+default = ["self-update"]
 self-update = ["dep:rb-update"]
 
 [target.'cfg(windows)'.dependencies]

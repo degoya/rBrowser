@@ -2,14 +2,15 @@
 // The About tab: logo (light and dark, switched by the `dark` class the theme sets), the build,
 // the engines, the API versions, the folders, "Copy version info", the links, the author, the
 // update status. An absent Firefox links to Settings > Engines. A link opens in the grid's
-// views (`navigate`) or goes to the clipboard; only http(s) addresses do either.
+// views (`navigate`) or goes to the clipboard; only http(s) addresses do either. The update
+// status is the core's (`updates`): not in this build, off, by hand or at every start.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
 import logoLight from '@assets/rBrowser-logo.svg';
 import logoDark from '@assets/rBrowser-logo-dark.svg';
 import type { IpcClient } from '../ipc/client';
-import type { AboutInfo } from '../ipc/protocol';
+import type { AboutInfo, AboutUpdates } from '../ipc/protocol';
 import { SETTINGS_ICONS } from '../settings/icons';
 import { apiRows, AUTHOR, engineRows, engineText, isWebLink, LICENSE, LINKS, versionInfo } from './facts';
 
@@ -33,6 +34,13 @@ const DIR_KEYS: Record<string, string> = {
 const folders = computed(() =>
   Object.entries(props.info.dirs ?? {}).map(([name, path]) => ({ key: DIR_KEYS[name] ?? name, path })),
 );
+/** How updates come (RB-091-05); a build without self-update keeps its sentence. */
+const UPDATES_KEYS: Record<AboutUpdates, string> = {
+  notBuilt: 'settings.about.updates_disabled',
+  off: 'settings.about.updates_state.off',
+  manual: 'settings.about.updates_state.manual',
+  onStart: 'settings.about.updates_state.onStart',
+};
 const LINK_KEYS = {
   source: 'settings.about.link.source',
   handbook: 'settings.about.link.handbook',
@@ -168,7 +176,9 @@ function openEngines(): void {
     <section class="flex flex-col gap-1 text-sm">
       <p><span class="text-muted">{{ t('settings.about.author') }}:</span> {{ AUTHOR }}</p>
       <p><span class="text-muted">{{ t('settings.about.license') }}:</span> {{ LICENSE }}</p>
-      <p><span class="text-muted">{{ t('settings.about.updates') }}:</span> {{ t('settings.about.updates_disabled') }}</p>
+      <p v-if="info.updates !== undefined" data-testid="about-updates">
+        <span class="text-muted">{{ t('settings.about.updates') }}:</span> {{ t(UPDATES_KEYS[info.updates]) }}
+      </p>
       <p class="pt-2 text-muted">{{ t('settings.about.thanks') }}</p>
     </section>
   </div>

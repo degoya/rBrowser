@@ -2,7 +2,12 @@
 //! `// @views` (breakpoint ids or labels), else all. Chromium views with a page run; Firefox views
 //! are skipped (Playwright does not drive the installed Firefox reliably over BiDi), and so are
 //! WebKit views (their pages live in the WebKit module, which this runner does not reach yet) and
-//! Chromium views without a page.
+//! Chromium views without a page. A view the layout hides - placed off screen by a layout mode -
+//! is skipped too ([`without_hidden`], RB-090-84): the browser throttles its page, so its actions
+//! wait in vain; the breakpoints a flow names that no view shows (focus mode) are named in the
+//! result ([`missing_breakpoints`]).
+
+use std::collections::BTreeSet;
 
 use rb_engine::{EngineKind, ViewId, ViewInfo};
 use serde_json::Value;
@@ -16,6 +21,8 @@ pub const FIREFOX_REASON: &str = "Firefox views are not driven by flows: Playwri
 pub const WEBKIT_REASON: &str = "flows do not reach WebKit views in this build";
 /// Why a Chromium view without a page is skipped.
 pub const NO_PAGE_REASON: &str = "the view has no page yet";
+/// Why a view the layout hides is skipped (`automation.flows.hiddenViews`, RB-090-84).
+pub const HIDDEN_REASON: &str = "the view is hidden in the layout (automation.flows.hiddenViews)";
 
 /// A view that runs the flow and its CDP target.
 #[derive(Clone, Debug, PartialEq)]
@@ -97,6 +104,50 @@ pub fn plan(
         planned.skipped.push(skipped(view, reason));
     }
     Ok(planned)
+}
+
+/// `planned` with the views of `hidden` skipped ([`HIDDEN_REASON`]); the run sorts its results
+/// into grid order.
+#[must_use]
+pub fn without_hidden(mut planned: Planned, hidden: &BTreeSet<ViewId>) -> Planned {
+    let (gone, kept): (Vec<Runnable>, Vec<Runnable>) = planned
+        .run
+        .into_iter()
+        .partition(|runnable| hidden.contains(&runnable.view.id));
+    planned.run = kept;
+    planned.skipped.extend(
+        gone.iter()
+            .map(|runnable| skipped(&runnable.view, HIDDEN_REASON)),
+    );
+    planned
+}
+
+/// Why a run whose views were all `skipped` has nothing to play: every view hidden in the
+/// layout, else the reasons the views give.
+#[must_use]
+pub fn nothing_to_play(skipped: &[ViewResult]) -> String {
+    let mut reasons: Vec<&str> = Vec::new();
+    for reason in skipped.iter().filter_map(|view| view.reason.as_deref()) {
+        if !reasons.contains(&reason) {
+            reasons.push(reason);
+        }
+    }
+    if !reasons.is_empty() && reasons.iter().all(|reason| *reason == HIDDEN_REASON) {
+        return "every view of the run is hidden in the layout (automation.flows.hiddenViews)"
+            .to_owned();
+    }
+    format!("no view of the run can play: {}", reasons.join("; "))
+}
+
+/// The names of `names` (breakpoint ids or labels, as `// @views` or a recording gives them)
+/// that no view of `views` shows.
+#[must_use]
+pub fn missing_breakpoints(views: &[ViewInfo], names: &[String]) -> Vec<String> {
+    names
+        .iter()
+        .filter(|name| !views.iter().any(|view| self::names(view, name)))
+        .cloned()
+        .collect()
 }
 
 /// The views of a command's `views` argument: ids, or breakpoint ids and labels (every view

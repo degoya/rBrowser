@@ -40,7 +40,15 @@ export const recordingCoreMessages = [
     recordings: [{ name: 'login', steps: 2, modifiedMs: 1763380900000 }],
     recordingNow: 'checkout',
   },
-  { type: 'recording', name: 'login', recording: RECORDING },
+  {
+    type: 'recording',
+    name: 'login',
+    recording: RECORDING,
+    pauses: [
+      { step: 1, ms: 0 },
+      { step: 2, ms: 400 },
+    ],
+  },
   {
     type: 'recordingExport',
     written: true,
@@ -82,6 +90,16 @@ export const recordingCoreMessages = [
     },
   },
   { type: 'flowRunChanged' },
+  {
+    type: 'flowStep',
+    runId: '20261117-101500-a1b2c3',
+    flow: 'login',
+    view: 1,
+    name: 'Step 2: waitFor',
+    stepId: 2,
+    state: 'failed',
+    message: 'locator.waitFor: Timeout 10000ms exceeded.',
+  },
 ] satisfies CoreToShell[];
 
 /** Every request type of the panels once; a new one in `recordings.ts` fails the type check. */
@@ -101,4 +119,5 @@ export const RECORDING_CORE_TYPES: Record<RecordingEvent['type'], true> = {
   recordingsChanged: true,
   flowRun: true,
   flowRunChanged: true,
+  flowStep: true,
 };

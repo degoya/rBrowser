@@ -23,7 +23,8 @@
 #                                  # package-lock.json, scripts/lib/npm.sh); no lock,
 #                                  # but each npm stage waits for free memory
 #   scripts/check.sh --rust        # clippy over the workspace (-D warnings), the app again with
-#                                  # `--features self-update` (RB-090-02), every test
+#                                  # `--no-default-features`, without self-update (RB-090-14),
+#                                  # every test
 #                                  # (--no-fail-fast: every failing test is named); the native
 #                                  # tests of each first-party plugin, its unsigned build
 #                                  # (build-plugins.sh --unsigned) and the analyser's end-to-end
@@ -36,7 +37,7 @@
 #                                  # static x86-64 executable (wsl-helper, RB-030-04)
 #   scripts/check.sh --windows     # cargo xwin clippy for x86_64-pc-windows-msvc (-D warnings),
 #                                  # all targets, then the libraries alone with the features
-#                                  # they ship with, then the app with `--features self-update`;
+#                                  # they ship with, then the app with `--no-default-features`;
 #                                  # in target/lanes/windows
 #   scripts/check.sh --full        # all three (also the default without a mode)
 #
@@ -365,9 +366,9 @@ rust() {
     echo "==> rust"
     stage clippy env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
         cargo clippy --locked --workspace --all-targets -j "$CLIPPY_JOBS" -- -D warnings
-    # The app with self-update built in (RB-090-02): off in phase 1, linted in both variants.
-    stage clippy-self-update env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
-        cargo clippy --locked -p rbrowser --all-targets --features self-update -j "$CLIPPY_JOBS" \
+    # The app without self-update (RB-090-14: on by default), linted in both variants.
+    stage clippy-no-self-update env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
+        cargo clippy --locked -p rbrowser --all-targets --no-default-features -j "$CLIPPY_JOBS" \
         -- -D warnings
     stage tests env CARGO_BUILD_JOBS="$JOBS" \
         cargo nextest run --locked --workspace --no-fail-fast --test-threads "$TEST_THREADS"
@@ -413,11 +414,11 @@ windows() {
     stage windows-lib env CARGO_BUILD_JOBS="$CLIPPY_JOBS" CARGO_TARGET_DIR="$ROOT/target/lanes/windows" \
         cargo xwin clippy --locked --target "$WINDOWS_TARGET" --workspace -j "$CLIPPY_JOBS" \
         -- -D warnings
-    # The app with self-update built in (RB-090-02), as RB-110-05 will ship it.
-    stage windows-self-update env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
+    # The app without self-update (`--no-default-features`, RB-090-14), as a build may ship it.
+    stage windows-no-self-update env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
         CARGO_TARGET_DIR="$ROOT/target/lanes/windows" \
         cargo xwin clippy --locked --target "$WINDOWS_TARGET" -p rbrowser --all-targets \
-        --features self-update -j "$CLIPPY_JOBS" -- -D warnings
+        --no-default-features -j "$CLIPPY_JOBS" -- -D warnings
 }
 
 # The stamp of a green --full, for scripts/worktree.sh finish: only when the tree was clean from

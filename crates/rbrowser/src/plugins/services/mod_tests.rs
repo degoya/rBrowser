@@ -146,3 +146,25 @@ fn a_sidecar_call_without_an_object_is_refused() {
         assert_eq!(with_caller(params.clone(), "lighthouse"), None, "{params}");
     }
 }
+
+/// RB-090-82: a plugin's `views.active` is the active view, else the first view - before a person
+/// clicked a view there is none active, and the colour picker's palette failed with
+/// `unknown_view view=active` (diag23) where the core's own commands take the first view.
+#[tokio::test]
+async fn the_active_view_falls_back_to_the_first_view() {
+    use crate::layout::test_support::{config, setup, view_ids};
+    use rb_engine::ViewHost as _;
+    let setup = setup(config());
+    let services = AppServices::new();
+    services.bind(&setup.core);
+    let ids = view_ids(&setup);
+    assert_eq!(setup.core.host().active_view(), None, "no view clicked yet");
+    let first = setup.core.host().views()[0].id;
+    assert_eq!(services.active_view(), Some(first.0));
+    setup
+        .core
+        .host()
+        .set_active_view(ids[1])
+        .expect("activates");
+    assert_eq!(services.active_view(), Some(ids[1].0));
+}

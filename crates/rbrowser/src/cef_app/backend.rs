@@ -170,6 +170,10 @@ impl UiBackend for CefUi {
         on_ui(move || settings_window::open(&url));
     }
 
+    fn close_settings_window(&self) {
+        on_ui(settings_window::close);
+    }
+
     fn pick_path(&self, pick: PathPick, done: PathPicked) {
         on_ui(move || dialogs::pick_path(pick, done));
     }
@@ -197,6 +201,22 @@ impl UiBackend for CefUi {
 
     fn open_report(&self, report: crate::report_view::ReportOpen) {
         on_ui(move || super::report_window::open(report));
+    }
+
+    fn open_render_view(
+        &self,
+        view: crate::sitemap::render_views::RenderView,
+        made: crate::sitemap::render_views::RenderViewMade,
+    ) {
+        on_ui(move || super::render_views::open(view, made));
+    }
+
+    fn close_render_view(&self, marker: String) {
+        on_ui(move || super::render_views::close(&marker));
+    }
+
+    fn open_gallery(&self, gallery: crate::sitemap::gallery::GalleryOpen) {
+        on_ui(move || super::gallery_window::open(gallery));
     }
 
     fn hide_page_window(&self, window: PageWindow) {

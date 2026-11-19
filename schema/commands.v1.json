@@ -1187,6 +1187,17 @@
       }
     },
     {
+      "id": "sitemap.gallery",
+      "titleKey": "commands.sitemap.gallery",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C I"
+      ],
+      "mcp": {
+        "covered": "sitemap_gallery"
+      }
+    },
+    {
       "id": "visual.baseline_update",
       "titleKey": "commands.visual.baseline_update",
       "group": "capture",
@@ -2375,6 +2386,17 @@
       }
     },
     {
+      "id": "app.setup_wizard",
+      "titleKey": "commands.app.setup_wizard",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , W"
+      ],
+      "mcp": {
+        "omitted": "a person's dialog: MCP can neither open nor answer the setup wizard"
+      }
+    },
+    {
       "id": "cdp.copy_endpoint",
       "titleKey": "commands.cdp.copy_endpoint",
       "group": "settings",
@@ -2504,6 +2526,28 @@
       ],
       "mcp": {
         "omitted": "protected: trust only via UI"
+      }
+    },
+    {
+      "id": "update.check",
+      "titleKey": "commands.update.check",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , U"
+      ],
+      "mcp": {
+        "covered": "update_check"
+      }
+    },
+    {
+      "id": "update.install",
+      "titleKey": "commands.update.install",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , I"
+      ],
+      "mcp": {
+        "covered": "update_install"
       }
     }
   ]

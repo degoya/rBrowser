@@ -47,7 +47,11 @@ const optionName = useOptionName();
 
 const nullable = computed(() => isNullable(props.schema));
 const options = computed(() => enumOptions(props.schema) ?? []);
-const suggestions = computed<Suggestion[]>(() => optionsOf(props.schema).map((value) => ({ value, label: value })));
+/** A free string's suggestions: the schema's own, else the values of the source it names. */
+const suggestions = computed<Suggestion[]>(() => {
+  const own = optionsOf(props.schema).map((value) => ({ value, label: value }));
+  return own.length > 0 ? own : (props.dynamic?.options ?? []);
+});
 const pathKind = computed(() => pathInputOf(props.schema) ?? 'file');
 const alpha = computed(() => allowsAlpha(baseSchema(props.schema)));
 const text = computed(() => (typeof props.value === 'string' ? props.value : ''));

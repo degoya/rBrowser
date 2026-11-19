@@ -1,8 +1,9 @@
 // Sitemap capture in the shell (RB-050-05): the last run the core's state carries, its progress
 // text, and the commands the toolbar indicator and the sitemap bar run. The capture itself runs
-// in the core, in hidden views; the shell only shows it and starts, cancels or resumes it.
+// in the core, in render views of its own; the shell only shows it and starts, cancels or
+// resumes it, and asks for its gallery (RB-090-83).
 
-import type { ShellToCore, SitemapStatus, StateSnapshot, ViewId } from '../ipc/protocol';
+import type { ShellToCore, SitemapStatus, StateSnapshot } from '../ipc/protocol';
 
 /** Shows the sitemap bar (`Ctrl+Shift+Space P G`), sent back as `uiCommand`. */
 export const PANEL_COMMAND = 'panels.sitemap';
@@ -10,6 +11,8 @@ export const PANEL_COMMAND = 'panels.sitemap';
 export const CAPTURE_COMMAND = 'sitemap.capture';
 /** Cancels the capture in progress. */
 export const CANCEL_COMMAND = 'sitemap.cancel';
+/** Opens a run's gallery in its own window (RB-090-83). */
+export const GALLERY_COMMAND = 'sitemap.gallery';
 
 /** The window's last sitemap capture; `null` before the first. */
 export function sitemapOf(state: StateSnapshot | null): SitemapStatus | null {
@@ -61,22 +64,17 @@ export function cancelMessage(runId: string): ShellToCore {
   return { type: 'runCommand', id: CANCEL_COMMAND, args: { runId } };
 }
 
-/** The `file:` URL of a local path: a Windows drive path, a UNC path (`\\wsl.localhost\...`)
- * or a POSIX path; each segment percent-encoded. */
-export function fileUrl(path: string): string {
-  const slashed = path.replace(/\\/g, '/');
-  const encode = (rest: string) => rest.split('/').map(encodeURIComponent).join('/');
-  if (slashed.startsWith('//')) {
-    return `file:${'//'}${encode(slashed.slice(2))}`;
-  }
-  const drive = /^([A-Za-z]):\/(.*)$/.exec(slashed);
-  if (drive !== null) {
-    return `file:///${drive[1]}:/${encode(drive[2] ?? '')}`;
-  }
-  return `file://${encode(slashed)}`;
+/** Opens the gallery of run `runId` in its own window (or the system browser, as
+ * `sitemap.galleryOpensIn` says) - never in a view (RB-090-83). */
+export function galleryMessage(runId: string): ShellToCore {
+  return { type: 'runCommand', id: GALLERY_COMMAND, args: { runId } };
 }
 
-/** Opens the gallery at `path` in `view` (the active one), through `view.navigate`. */
-export function galleryMessage(path: string, view: ViewId): ShellToCore {
-  return { type: 'runCommand', id: 'view.navigate', args: { url: fileUrl(path), target: view } };
+/** Whether the bar opens by itself on `now`: a run that started or resumed since `before`
+ * (RB-090-83: a start shows that something happens, whatever opened the bar). */
+export function startsShowing(now: SitemapStatus | null, before: SitemapStatus | null): boolean {
+  if (!isRunning(now)) {
+    return false;
+  }
+  return before === null || before.runId !== now?.runId || !isRunning(before);
 }

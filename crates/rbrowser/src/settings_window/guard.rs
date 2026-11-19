@@ -66,18 +66,27 @@ pub fn request_allowed(origin: QueryOrigin<'_>, known: KnownBrowsers, request: &
     query_allowed(origin, known)
         && (origin.browser != known.board || board_may_send(request))
         && (origin.browser == known.pages || !is_catalogue_request(request))
+        // The setup wizard's messages write project configs: the pages window's only (RB-091-05).
+        && (origin.browser == known.pages || !crate::first_run::is_setup_request(request))
 }
 
 /// Whether `request` is one of the plugin catalogue's (`pluginPanel` with an `op` starting
-/// `catalog`, RB-091-01): it downloads, installs or removes plugins, so only the pages window -
-/// Settings > Plugins > Catalog - may send it (security review L3), never the panels window or
-/// the palette.
+/// `catalog`, RB-091-01, or the first-run wizard's `available`, `installChosen` and
+/// `removeChosen`, RB-091-04): it downloads, installs or removes plugins, so only the pages
+/// window - Settings > Plugins > Catalog and the wizard - may send it (security review L3), never
+/// the panels window or the palette.
 pub fn is_catalogue_request(request: &str) -> bool {
     match parse_request(request) {
         Ok(ShellToCore::PluginPanel { request }) => request
             .get("op")
             .and_then(serde_json::Value::as_str)
-            .is_some_and(|op| op.starts_with("catalog")),
+            .is_some_and(|op| {
+                op.starts_with("catalog")
+                    || matches!(
+                        op,
+                        "available" | "installChosen" | "removeChosen" | "applyRecommended"
+                    )
+            }),
         _ => false,
     }
 }

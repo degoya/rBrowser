@@ -6,6 +6,7 @@ import {
   isGeneratedId,
   makeSelector,
   makeTarget,
+  matchAll,
 } from './selector';
 import { el, giveBoxes, loadPage, setViewport } from './test-page';
 
@@ -68,6 +69,98 @@ describe('makeSelector', () => {
       expect(path).not.toMatch(/css-[a-z0-9]|jsx-\d|sc-[a-z]|kGfCyH/i);
       expect(document.querySelector(path)).toBe(element);
     }
+  });
+});
+
+describe('visibleNth (RB-090-81)', () => {
+  it('counts the cards a person sees: the fourth visible "Read more" is visibleNth 3', () => {
+    document.body.innerHTML = [1, 2, 3, 4, 5]
+      .map((n) => `<article><h2>Card ${n}</h2><a href="/c${n}">Read more</a></article>`)
+      .join('');
+    const fourth = document.querySelectorAll('a')[3] as Element;
+    expect(makeSelector(fourth)).toMatchObject({
+      kind: 'role',
+      role: 'link',
+      name: 'Read more',
+      nth: 3,
+      visibleNth: 3,
+    });
+  });
+
+  it('skips a hidden twin: the desktop link after a hidden mobile menu is the first visible', () => {
+    document.body.innerHTML =
+      '<nav id="mobile" style="display:none"><a href="/trainees">Trainees</a>' +
+      '<a href="/experienced">Experienced</a></nav>' +
+      '<nav id="desktop"><a href="/trainees">Trainees</a><a href="/experienced">Experienced</a></nav>';
+    const desktop = el('#desktop > a:nth-of-type(2)');
+    expect(makeSelector(desktop)).toMatchObject({
+      kind: 'role',
+      role: 'link',
+      name: 'Experienced',
+      nth: 1,
+      visibleNth: 0,
+    });
+  });
+
+  it('leaves visibleNth out for the first match and for a hidden element', () => {
+    document.body.innerHTML =
+      '<a href="/a">More</a><a href="/b" style="display:none">More</a>';
+    const [first, hidden] = Array.from(document.querySelectorAll('a'));
+    expect(makeSelector(first as Element)).not.toHaveProperty('visibleNth');
+    const selector = makeSelector(hidden as Element);
+    expect(selector).toMatchObject({ kind: 'role', nth: 1 });
+    expect(selector).not.toHaveProperty('visibleNth');
+  });
+
+  it('counts visible text matches too', () => {
+    document.body.innerHTML =
+      '<p><span style="display:none">Details</span></p><p><span>Details</span></p>' +
+      '<p><span>Details</span></p>';
+    const third = document.querySelectorAll('span')[2] as Element;
+    expect(makeSelector(third)).toMatchObject({ kind: 'text', nth: 2, visibleNth: 1 });
+  });
+});
+
+describe('within (RB-090-84)', () => {
+  // A hover-only mega menu's link and a content link of the same name, both shown while the
+  // menu is open: a view that has not opened the menu yet must still wait for the menu's link.
+  const MENU =
+    '<header><nav id="main-nav"><ul><li><a href="/news">News</a><div class="mega"><ul><li>' +
+    '<a href="/news/brands">Brands &amp; Produkte</a></li></ul></div></li></ul></nav></header>' +
+    '<main><p><a class="pill" href="/news/brands">Brands &amp; Produkte</a></p></main>';
+
+  it('narrows a name the page shows twice to the nearest ancestor that makes it unique', () => {
+    document.body.innerHTML = MENU;
+    const menu = makeSelector(el('#main-nav .mega a'));
+    expect(menu).toMatchObject({ kind: 'role', role: 'link', name: 'Brands & Produkte', within: '#main-nav' });
+    expect(menu).not.toHaveProperty('nth');
+    expect(menu).not.toHaveProperty('visibleNth');
+    // The only `main` of the page scopes the content link.
+    expect(makeSelector(el('a.pill'))).toMatchObject({ kind: 'role', within: 'main' });
+    expect(describeSelector(menu)).toBe('#main-nav >> role=link[name="Brands & Produkte"]');
+  });
+
+  it('finds the element within its scope, and the whole page where the scope is missing', () => {
+    document.body.innerHTML = MENU;
+    const selector = makeSelector(el('#main-nav .mega a'));
+    expect(matchAll(selector, document)).toEqual([el('#main-nav .mega a')]);
+    expect(matchAll({ ...selector, within: '#no-such-nav' } as typeof selector, document)).toHaveLength(2);
+  });
+
+  it('keeps the role selector of a name shown twice without a scope, for the live sync', () => {
+    document.body.innerHTML = '<div><a href="/a">Offers</a></div><div><a href="/b">Offers</a></div>';
+    const [first, second] = Array.from(document.querySelectorAll('a'));
+    const kept = makeSelector(first as Element);
+    expect(kept).toMatchObject({ kind: 'role', role: 'link', name: 'Offers' });
+    expect(kept).not.toHaveProperty('within');
+    expect(kept).not.toHaveProperty('nth');
+    // A later one keeps its visible index (RB-090-81).
+    expect(makeSelector(second as Element)).toMatchObject({ kind: 'role', nth: 1, visibleNth: 1 });
+  });
+
+  it('keeps a hidden twin as RB-090-81 had it', () => {
+    document.body.innerHTML = MENU.replace('<p>', '<p style="display:none">');
+    expect(makeSelector(el('#main-nav .mega a'))).not.toHaveProperty('within');
   });
 });
 

@@ -28,6 +28,8 @@ use crate::shell::page_url;
 pub const ROUTE_PANELS: &str = "panels";
 /// The status message after a plugin command that opened no panel (`{command}`: its title).
 pub const COMMAND_DONE_KEY: &str = "plugins.notice.command_done";
+/// The status message when a plugin's check starts (`{command}`: its title), RB-090-85.
+pub const COMMAND_STARTED_KEY: &str = "plugins.notice.command_started";
 
 /// Registers the commands of every feature plugin among `loaded` with `core`'s registry.
 pub fn register(core: &Arc<Core>, runtime: &Arc<PluginRuntime>, loaded: &[LoadedEntry]) {
@@ -81,12 +83,13 @@ fn handler(
         let core = core.upgrade().ok_or_else(closed)?;
         let runtime = runtime.upgrade().ok_or_else(closed)?;
         let args = if args.is_null() { json!({}) } else { args };
+        report_started(&core, &plugin, &title_key, group);
         let (answer, noted) = block_on(runtime.run_command_noted(&plugin, &command, &args))
             .map_err(|error| CommandError::Failed(error.to_string()))?
             .map_err(|failure| command_error(&plugin, failure))?;
         // RB-091-02: a report it asks to open, run folders it asks to delete.
         let (answer, shown) = crate::report_view::take_noted(&core, &runtime, &plugin, answer);
-        let (answer, panel_opened) = opened(&core, &runtime, &plugin, answer);
+        let (answer, panel_opened) = opened(&core, &runtime, &plugin, answer, group);
         // A command that said in the status bar what it did needs no "done" (RB-080-64: the
         // colour picker's "click a pixel, Esc to stop" was replaced by "Pick a colour: done"),
         // nor one that showed a report (RB-091-02).
@@ -98,15 +101,34 @@ fn handler(
 }
 
 /// `answer` without its `$open`, and whether the panels window was opened at the panel it asks
-/// for (only when plugin `plugin` offers that panel).
-fn opened(core: &Core, runtime: &PluginRuntime, plugin: &str, answer: Value) -> (Value, bool) {
+/// for (only when plugin `plugin` offers that panel) - as [`open_asked`] opens it for `group`.
+fn opened(
+    core: &Core,
+    runtime: &PluginRuntime,
+    plugin: &str,
+    answer: Value,
+    group: Group,
+) -> (Value, bool) {
     let offered = super::ipc::panels_offered(core, runtime);
     let (answer, panel) = split_open(plugin, answer, &offered);
     let Some(panel) = panel else {
         return (answer, false);
     };
-    open_panels(core, &json!({ "plugin": plugin, "panel": panel }));
+    open_asked(core, &json!({ "plugin": plugin, "panel": panel }), group);
     (answer, true)
+}
+
+/// A plugin command's `$open` for a command of `group`. A command of the Panels group shows its
+/// panel (a colour picker's "Show the colour picker panel"): a person's ask from the Panels
+/// menus, the palette or its shortcut - no MCP tool runs a plugin command - so a dock folded to
+/// its rail opens, as the core panels' commands open it (RB-090-71, RB-090-82). Any other
+/// command's panel is a side effect and keeps the fold ([`open_panels`]).
+pub fn open_asked(core: &Core, args: &Value, group: Group) -> Value {
+    if group == Group::Panels {
+        open_panels_unfolded(core, args)
+    } else {
+        open_panels(core, args)
+    }
 }
 
 /// Names the end of plugin `plugin`'s command titled `title_key` in the status bar; a command
@@ -116,12 +138,24 @@ fn report_done(core: &Core, plugin: &str, title_key: &str, group: Group) {
     if group == Group::Checks {
         crate::panel_dock::core_panels::open(core, crate::panel_dock::core_panels::FINDINGS);
     }
+    notify_command(core, COMMAND_DONE_KEY, plugin, title_key);
+}
+
+/// Names the start of plugin `plugin`'s check titled `title_key` in the status bar: a check
+/// (Lighthouse, accessibility, SEO) runs for a while before its end is named (RB-090-85).
+fn report_started(core: &Core, plugin: &str, title_key: &str, group: Group) {
+    if group == Group::Checks {
+        notify_command(core, COMMAND_STARTED_KEY, plugin, title_key);
+    }
+}
+
+fn notify_command(core: &Core, message_key: &str, plugin: &str, title_key: &str) {
     let title = rb_i18n::plugin_texts(plugin)
         .remove(title_key)
         .unwrap_or_else(|| title_key.to_owned());
     core.notify(CoreToShell::Notification(Notification {
         level: NotificationLevel::Info,
-        message_key: COMMAND_DONE_KEY.to_owned(),
+        message_key: message_key.to_owned(),
         args: std::collections::BTreeMap::from([("command".to_owned(), title)]),
         settings_key: None,
     }));

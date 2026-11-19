@@ -6,6 +6,7 @@
 //! | Part | Where |
 //! | --- | --- |
 //! | The log, the check of a shell's report | [`log`] |
+//! | Arguments without the error code in front (RB-090-85) | [`readable`] |
 //! | Commands `status.toggle_bar` (`Leader P S`), `status.history` (`Leader P L`) | [`defs`] |
 //! | MCP `status_messages` | [`mcp`] |
 //! | Settings `ui.statusBar.*` | `rb_config::StatusBarSettings` |
@@ -15,6 +16,7 @@
 pub mod defs;
 pub mod log;
 pub mod mcp;
+pub mod readable;
 
 use rb_ipc::{CoreToShell, IpcErrorCode, ShellToCore};
 
@@ -25,6 +27,7 @@ use crate::page_window::PageWindow;
 pub use defs::{HISTORY, TOGGLE_BAR, definitions, register};
 pub use log::{StatusLog, checked_report, now_ms};
 pub use mcp::STATUS_MESSAGES_TOOL;
+pub use readable::strip_codes;
 
 /// Answers the status bar's messages: `getStatusMessages`, `reportStatus` and `dismissHistory`.
 pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Failure>> {

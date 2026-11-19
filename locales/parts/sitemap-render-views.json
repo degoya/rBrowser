@@ -1,0 +1,40 @@
+{
+  "commands": {
+    "sitemap": {
+      "gallery": "Open the sitemap gallery"
+    }
+  },
+  "settings": {
+    "key": {
+      "sitemap": {
+        "galleryOpensIn": {
+          "description": "Where the gallery of a sitemap capture opens: a window of rBrowser's own or your browser.",
+          "help": "window opens the gallery in a window of rBrowser's own, beside the main window, which loads only the files of the run's folder and runs no script; system opens it in the default browser of Windows. It never opens in the views of the grid, and an agent over MCP always opens the window. This setting is yours, not the project's.",
+          "label": "Open the gallery in"
+        },
+        "shotTimeoutSec": {
+          "description": "The longest one screenshot may take, in seconds (5 to 120).",
+          "help": "The longest a page's screenshot may take once the page is ready, in seconds (5 to 120). A shot that takes longer fails with its reason in the log and in run.json, and is retried as the retries say.",
+          "label": "Screenshot timeout"
+        }
+      }
+    },
+    "option": {
+      "sitemap": {
+        "galleryOpensIn": {
+          "system": "Your browser",
+          "window": "A window of rBrowser"
+        }
+      }
+    }
+  },
+  "sitemap": {
+    "gallery": {
+      "title": "Sitemap gallery - {runId}"
+    },
+    "notice": {
+      "busy": "A sitemap capture is running already: its progress is in the sitemap bar.",
+      "started": "Sitemap capture started: {pages, plural, one {# page} other {# pages}} × {breakpoints, plural, one {# breakpoint} other {# breakpoints}}, {pending, plural, one {# shot} other {# shots}}."
+    }
+  }
+}

@@ -130,6 +130,27 @@ describe('the settings page', () => {
     expect(wrapper.get('[aria-current="page"]').attributes('data-category')).toBe('layout');
   });
 
+  it('opens an area link at its section, on its tab, with the section highlighted (RB-090-85)', async () => {
+    const { wrapper } = await open({ routeKey: 'capture', routeSection: 'sitemap' });
+    expect(wrapper.get('[aria-current="page"]').attributes('data-category')).toBe('capture');
+    const card = wrapper.get('[data-section="capture.sitemap"]');
+    expect(card.attributes('data-highlighted')).toBe('true');
+    expect(wrapper.find('[data-section="capture.screenshots"]').exists()).toBe(false);
+    // A key link afterwards highlights the field, not the section.
+    await wrapper.setProps({ routeKey: 'sitemap.maxPages', routeSection: null });
+    await settle();
+    expect(wrapper.get('[data-section="capture.sitemap"]').attributes('data-highlighted')).toBeUndefined();
+    expect(wrapper.get('[data-key="sitemap.maxPages"]').attributes('data-highlighted')).toBe('true');
+  });
+
+  it('opens an area link at its section with the section tabs off too', async () => {
+    const core = createFakeCore();
+    core.values.set('settings.sectionTabs', { key: 'settings.sectionTabs', value: false, origin: 'user' });
+    const { wrapper } = await open({ routeKey: 'capture', routeSection: 'env-compare' }, core);
+    expect(wrapper.find('[data-section="capture.screenshots"]').exists()).toBe(true);
+    expect(wrapper.get('[data-section="capture.env-compare"]').attributes('data-highlighted')).toBe('true');
+  });
+
   it('shows a refused value at the field and keeps the old one', async () => {
     const core = createFakeCore();
     const { wrapper } = await open({ routeKey: 'logs.maxFiles' }, core);

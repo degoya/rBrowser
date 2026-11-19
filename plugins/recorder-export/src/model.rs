@@ -35,6 +35,9 @@ pub struct ExportOptions {
     pub projects: Vec<Project>,
     /// `fast` or `recorded` (`automation.recorder.playbackPace`, RB-090-66).
     pub pace: crate::pace::Pace,
+    /// The least pause before each step but the first at the `recorded` pace, in ms
+    /// (`automation.recorder.minPauseMs`, RB-090-84).
+    pub min_pause_ms: u64,
     /// The export's name, the files' stem; the recording's name when absent or not a file name.
     /// The text still names the recording (RB-090-69).
     pub name: Option<String>,
@@ -308,6 +311,14 @@ pub enum Selector {
         /// The match to take.
         #[serde(default)]
         nth: u32,
+        /// The match's index among the visible ones (RB-090-81); absent in a recording made
+        /// before, and for a hidden element.
+        #[serde(default, rename = "visibleNth")]
+        visible_nth: Option<u32>,
+        /// The CSS selector of an ancestor inside which role and name match the element alone
+        /// (RB-090-84); absent when the page showed the name once.
+        #[serde(default)]
+        within: Option<String>,
     },
     /// Tag and normalised text.
     Text {
@@ -318,6 +329,12 @@ pub enum Selector {
         /// The match to take.
         #[serde(default)]
         nth: u32,
+        /// The match's index among the visible ones (RB-090-81).
+        #[serde(default, rename = "visibleNth")]
+        visible_nth: Option<u32>,
+        /// The ancestor inside which the text matches the element alone (RB-090-84).
+        #[serde(default)]
+        within: Option<String>,
     },
     /// The CSS path.
     Css {

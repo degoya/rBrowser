@@ -7,9 +7,10 @@
 //!
 //! **Only the person unfolds it**: the toggle, the expand button, a panel chosen in the strip,
 //! a command that asks for a panel - `plugins.panels`, `panels.findings`, `panels.recorder`,
-//! `panels.flows`, `capture.video.panel`, only ever a person's (RB-090-71, `show_unfolded`).
+//! `panels.flows`, `capture.video.panel`, a plugin's command of the Panels group (RB-090-82),
+//! only ever a person's (RB-090-71, `show_unfolded`).
 //! A dock command (`panels.dock.<side>`, the Dock menu) keeps the fold unless its `collapsed`
-//! says otherwise; a panel opened as a side effect (a plugin command's `$open`, a finished
+//! says otherwise; a panel opened as a side effect (another plugin command's `$open`, a finished
 //! check's findings) keeps it too - the page marks the entry in the strip. Undocking ends the
 //! fold; the window never folds, closing it brings the rail back (`rail`). The setting is the
 //! one source the toggle and the page read.

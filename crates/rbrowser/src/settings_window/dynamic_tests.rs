@@ -235,3 +235,18 @@ fn the_project_sources_offer_its_environments_and_breakpoints() {
     assert_eq!(values(&breakpoints), ids);
     assert!(config_options(&config, "plugins").is_none());
 }
+
+#[test]
+fn the_layouts_source_offers_the_modes_then_the_presets() {
+    let mut config = default_config();
+    config.layouts.presets = serde_json::from_value(json!({
+        "review": { "mode": "focus" },
+        "grid": { "mode": "grid" }
+    }))
+    .expect("presets");
+    let layouts = config_options(&config, "layouts").expect("layouts");
+    assert_eq!(
+        values(&layouts),
+        ["grid", "horizontal", "split", "canvas", "review"]
+    );
+}

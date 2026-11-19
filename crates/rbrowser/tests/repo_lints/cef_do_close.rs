@@ -22,6 +22,10 @@ const OWN_WINDOW: &[(&str, &str)] = &[
         "a Lighthouse report window (`report_window.rs`) is a top-level window of its own",
     ),
     (
+        "struct GalleryPopups",
+        "the sitemap gallery window (`gallery_window.rs`) is a top-level window of its own",
+    ),
+    (
         "struct WindowLifeSpan",
         "the native DevTools window (`devtools.rs`) is a top-level window of its own",
     ),

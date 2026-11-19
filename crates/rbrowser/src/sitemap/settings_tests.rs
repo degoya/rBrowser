@@ -10,6 +10,7 @@ fn the_defaults_are_the_configs() {
     assert!(effective.batch.wait.network_idle);
     assert!(effective.batch.wait.auto_scroll);
     assert_eq!(effective.batch.wait.timeout, Duration::from_secs(30));
+    assert_eq!(effective.shot_timeout, Duration::from_secs(15));
     assert_eq!(effective.batch.wait.selector, None);
     assert_eq!(effective.max_pages, 0);
     assert!(effective.respect_robots);
@@ -21,6 +22,7 @@ fn values_out_of_bounds_are_held_to_them() {
     let config = SitemapConfig {
         parallel: 99,
         timeout_sec: 1,
+        shot_timeout_sec: 1,
         delay_ms: u32::MAX,
         retries: 50,
         max_depth: 50,
@@ -32,6 +34,7 @@ fn values_out_of_bounds_are_held_to_them() {
     let effective = Effective::new(&config, &CaptureArgs::default());
     assert_eq!(effective.batch.parallel, MAX_PARALLEL);
     assert_eq!(effective.batch.wait.timeout, Duration::from_secs(5));
+    assert_eq!(effective.shot_timeout, Duration::from_secs(5));
     assert_eq!(effective.batch.wait.delay, Duration::from_secs(30));
     assert_eq!(effective.batch.retries, MAX_RETRIES);
     assert_eq!(effective.max_depth, 5);

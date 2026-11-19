@@ -103,6 +103,10 @@ pub struct LayoutState {
     /// (`layout.hidden`, RB-080-41): the "+" menu offers them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hidden: Vec<String>,
+    /// The minimap switched on or off for this session (`layout.minimap.toggle`), in every
+    /// mode; `None` while the setting `layoutModes.minimap` holds (RB-090-82).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minimap: Option<bool>,
 }
 
 /// The sync part of the state.

@@ -10,6 +10,7 @@ import {
   pathInputOf,
   propertiesOf,
 } from './kinds';
+import type { JsonSchema } from './schema';
 import { newItem } from './newItem';
 import { realDefs } from './test/fakeCore';
 
@@ -71,6 +72,21 @@ describe('the field renderers', () => {
     expect(footerColor).toBeDefined();
     expect(kindOf(footerColor ?? {}, 'color')).toBe('color');
     // What "Add" starts with is `newItem.test.ts` (RB-090-61).
+  });
+
+  // RB-090-81: an earlier form the schema still accepts (a branch marked `deprecated`) is no
+  // choice the window offers.
+  it('offers no deprecated branch as a choice', () => {
+    const recordHover: JsonSchema = {
+      oneOf: [
+        { type: 'string', const: 'menu' },
+        { type: 'string', const: 'all' },
+        { type: 'string', const: 'off' },
+        { type: 'boolean', deprecated: true },
+      ],
+    };
+    expect(enumOptions(recordHover)?.map((o) => o.value)).toEqual(['menu', 'all', 'off']);
+    expect(kindOf(recordHover, 'automation.recorder.recordHover')).toBe('enum');
   });
 
   // RB-080-20: the dialog comes from the schema, not from the name.

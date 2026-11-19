@@ -68,3 +68,15 @@ fn a_web_store_notice_links_the_switch() {
     assert_eq!(note.settings_key.as_deref(), Some(ALLOW_KEY));
     assert_eq!(note.message_key, INSTALLED_KEY);
 }
+
+/// RB-090-85: a person's update check names its start with the number of extensions.
+#[test]
+fn an_update_check_names_its_start() {
+    let CoreToShell::Notification(notification) = checking_notice(2) else {
+        panic!("a notification");
+    };
+    assert_eq!(notification.message_key, CHECKING_KEY);
+    assert_eq!(notification.level, NotificationLevel::Info);
+    assert_eq!(notification.args["count"], "2");
+    assert_eq!(notification.settings_key.as_deref(), Some(ALLOW_KEY));
+}

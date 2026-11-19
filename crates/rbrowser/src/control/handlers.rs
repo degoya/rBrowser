@@ -48,6 +48,8 @@ pub fn register_all(
     refused.extend(crate::layout::defs::register(registry, core));
     refused.extend(crate::layout::view_edit::register(registry, core));
     refused.extend(crate::pop_out::register(registry, core));
+    refused.extend(crate::updates::register(registry, core));
+    refused.extend(crate::first_run::register(registry, core));
     refused.extend(crate::sitemap::register(registry, core));
     refused.extend(crate::compare::register(registry, core));
     refused.extend(crate::video::register(registry, core));
@@ -268,17 +270,38 @@ pub fn diagnostics_cli(args: &rb_diag::DiagnosticsArgs, project: Option<&std::pa
 /// (`crate::plugins::list`, RB-080-51), `plugins.panels` opens the panels window (RB-060-12),
 /// `plugins.resume` runs a paused plugin again - the one named, or every paused one
 /// (`crate::plugins::resume`, RB-090-59); install, enable, disable, remove and trust are
-/// Settings > Plugins' own (its switch and the catalogue) and have no handler here.
+/// Settings > Plugins' own (its switch and the catalogue) and have no handler here. Asked with
+/// `{"show": true}` (their rows in ≡ › Plugins) `plugins.list` and those open Settings > Plugins
+/// (RB-090-82); their rows did nothing before.
 fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
     match def.id.as_str() {
         // The loaded plugins (RB-060-12); their load finishes off the UI thread first.
-        "plugins.list" => Arc::new(|_| {
+        "plugins.list" => Arc::new(move |args: Value| {
+            if shows(&args) {
+                return open_plugin_list(&core);
+            }
             let loaded = crate::analyzer::plugins::bundled();
             let rows = crate::plugins::list::rows(loaded, crate::plugins::list::trusted());
             // An agent gets no text of a package that did not verify.
-            Ok(crate::plugins::list::answer(Some(
-                crate::plugins::list::for_mcp(rows),
-            )))
+            let mut answer =
+                crate::plugins::list::answer(Some(crate::plugins::list::for_mcp(rows)));
+            // RB-091-04: the plugins the project names that are not installed, and the bundled
+            // ones not chosen - by id; MCP installs neither.
+            if let Value::Object(fields) = &mut answer {
+                let missing = core
+                    .upgrade()
+                    .map(|core| crate::plugins::bundle::missing_now(&core))
+                    .unwrap_or_default();
+                let available: Vec<&str> = loaded
+                    .report
+                    .available
+                    .iter()
+                    .map(|entry| entry.manifest.id.as_str())
+                    .collect();
+                fields.insert("missing".to_owned(), json!(missing));
+                fields.insert("available".to_owned(), json!(available));
+            }
+            Ok(answer)
         }),
         // The plugin catalogue (RB-091-01). From a shortcut or the palette (no arguments) the
         // catalogue's tab of Settings > Plugins, or the update check with its notice; from MCP
@@ -291,6 +314,10 @@ fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
                     .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
                 if !args.is_object() {
                     if refresh {
+                        // A person's check names its start (RB-090-85).
+                        core.notify(CoreToShell::Notification(
+                            crate::plugins::catalog::checking_notice(),
+                        ));
                         crate::plugins::catalog::check_in_background(&core);
                     } else {
                         crate::settings_window::open(
@@ -334,6 +361,28 @@ fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
                 .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
             Ok(crate::plugins::commands::open_panels_unfolded(&core, &args))
         }),
+        "plugins.install" | "plugins.enable" | "plugins.disable" | "plugins.remove"
+        | "plugins.trust_key" => Arc::new(move |args: Value| {
+            if shows(&args) {
+                return open_plugin_list(&core);
+            }
+            Err(CommandError::NotImplemented)
+        }),
         _ => Arc::new(|_| Err(CommandError::NotImplemented)),
     }
+}
+
+/// Whether a `plugins.*` command was asked to show Settings > Plugins (`{"show": true}`, the
+/// menu rows, RB-090-82).
+fn shows(args: &Value) -> bool {
+    args.get("show").and_then(Value::as_bool) == Some(true)
+}
+
+/// Settings > Plugins, for a `plugins.*` command asked to show it.
+fn open_plugin_list(core: &Weak<Core>) -> Result<Value, CommandError> {
+    let core = core
+        .upgrade()
+        .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
+    crate::settings_window::open(&core, Some(crate::settings_window::PLUGINS_CATEGORY));
+    Ok(Value::Null)
 }

@@ -2,46 +2,13 @@
 // registry - core (`schema/commands.v1.json`) and every bundled plugin's `[[commands]]` - has a
 // visible way or a reason why not. A new command without either fails here.
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CommandInfo, Group } from '../ipc/protocol';
 import { BUTTONS } from './buttonMenus';
 import { MENU_OMITTED, OTHER_WAYS } from './coverage';
 import { MAIN_MENU } from './mainMenu';
 import { buildMenu, isPluginCommand, namedCommands, pluginGroups, type MenuContext } from './menuModel';
-
-// The repository root: the tests run in ui/ (`npm test`).
-const ROOT = join(process.cwd(), '..');
-
-/** The core's commands as the registry writes them. */
-function coreCommands(): { id: string; group: Group }[] {
-  const file = JSON.parse(readFileSync(join(ROOT, 'schema/commands.v1.json'), 'utf-8')) as {
-    commands: { id: string; group: Group }[];
-  };
-  return file.commands;
-}
-
-/** Every bundled plugin's commands, as the plugin host names them (`plugin.<id_>.<command>`). */
-function pluginCommands(): { id: string; group: Group }[] {
-  const out: { id: string; group: Group }[] = [];
-  const plugins = join(ROOT, 'plugins');
-  for (const dir of readdirSync(plugins)) {
-    const path = join(plugins, dir, 'manifest.toml');
-    if (!existsSync(path)) {
-      continue;
-    }
-    const text = readFileSync(path, 'utf-8');
-    const plugin = /^id = "([^"]+)"/m.exec(text)?.[1] ?? dir;
-    for (const block of text.split(/^\[\[commands\]\]$/m).slice(1)) {
-      const table = block.split(/^\[/m)[0] ?? '';
-      const id = /^id = "([^"]+)"/m.exec(table)?.[1] ?? '?';
-      const group = (/^group = "([^"]+)"/m.exec(table)?.[1] ?? 'plugins') as Group;
-      out.push({ id: `plugin.${plugin.replaceAll('-', '_')}.${id}`, group });
-    }
-  }
-  return out;
-}
+import { coreCommands, pluginCommands } from './testRegistry';
 
 const TREES = [MAIN_MENU, ...Object.values(BUTTONS).map((button) => button.menu)];
 

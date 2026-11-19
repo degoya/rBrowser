@@ -24,6 +24,8 @@ pub fn role(role: &str, name: &str, path: &str) -> ElementSelector {
         role: role.into(),
         name: name.into(),
         nth: 0,
+        visible_nth: None,
+        within: None,
         path: path.into(),
     }
 }

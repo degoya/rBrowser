@@ -14,6 +14,8 @@ pub const USER_KEYS: &[KeyDef] = &[
     // Start behaviour (RB-010-11).
     key("startup.openLastProject", Category::General, "startup"),
     key("startup.focusOnOpen", Category::General, "startup"),
+    // The setup wizard at the first start and the "Set up project" hint (RB-091-05).
+    key("ui.firstRunWizard", Category::General, "startup"),
     // Zoom and focus mode of the grid (RB-010-12).
     key("grid.fitToWindow", Category::Layout, "zoom"),
     key("grid.defaultZoom", Category::Layout, "zoom"),
@@ -107,6 +109,17 @@ pub const USER_KEYS: &[KeyDef] = &[
     ),
     key(
         "automation.flows.screenshotOnFailure",
+        Category::Automation,
+        "playwright",
+    ),
+    // RB-090-84: what a run does with the views a layout hides, and the layout it may show.
+    key(
+        "automation.flows.hiddenViews",
+        Category::Automation,
+        "playwright",
+    ),
+    key(
+        "automation.flows.runLayout",
         Category::Automation,
         "playwright",
     ),
@@ -371,6 +384,9 @@ pub const USER_KEYS: &[KeyDef] = &[
     key("settings.sectionTabs", Category::General, "settings-window"),
     // Where a link from rBrowser's own surfaces opens (RB-080-92).
     key("ui.openLinksIn", Category::General, "appearance"),
+    // Where a sitemap capture's gallery opens (RB-090-83): the person's, and no MCP caller's -
+    // `system` hands a file of the repository to the system browser.
+    protected("sitemap.galleryOpensIn", Category::Capture, "sitemap"),
     // How the docked panels start and what their Close does (RB-080-93); the panels' switch in
     // the toolbar (RB-080-79).
     key("panels.dockAtStart", Category::Plugins, "installed"),
@@ -391,6 +407,19 @@ pub const USER_KEYS: &[KeyDef] = &[
     // check reaches the network, so neither is MCP's to set.
     protected("plugins.catalog.repositories", Category::Plugins, "catalog"),
     protected("plugins.catalog.checkOnStart", Category::Plugins, "catalog"),
+    // The bundled first-party plugins (RB-091-04): an update installed by itself and the
+    // repository as the source decide what runs, so neither is MCP's to set.
+    protected("plugins.catalog.autoUpdate", Category::Plugins, "catalog"),
+    protected(
+        "plugins.catalog.preferRepository",
+        Category::Plugins,
+        "catalog",
+    ),
+    key(
+        "plugins.catalog.missingNotice",
+        Category::Plugins,
+        "catalog",
+    ),
     // The activity bar while something runs (RB-090-67), beside the toolbar's switches.
     key("ui.activityBar.position", Category::General, "appearance"),
     key("ui.activityBar.mode", Category::General, "appearance"),

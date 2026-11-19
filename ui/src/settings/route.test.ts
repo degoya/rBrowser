@@ -25,6 +25,22 @@ describe('the pages router', () => {
     expect(parseRoute('#/settings?tab=grid')).toEqual({ page: 'settings', key: null, tab: null });
   });
 
+  it('reads the section an area link opens and highlights (RB-090-85)', () => {
+    expect(parseRoute('#/settings/capture?section=sitemap')).toEqual({
+      page: 'settings',
+      key: 'capture',
+      tab: null,
+      section: 'sitemap',
+    });
+    expect(parseRoute('#/settings/capture?section=sitemap').section).toBe('sitemap');
+    // A section that is no section id is dropped, and so is one without a key.
+    expect(parseRoute('#/settings/capture?section=<b>').section).toBeUndefined();
+    expect(parseRoute('#/settings?section=sitemap').section).toBeUndefined();
+    expect(routeHash({ page: 'settings', key: 'capture', tab: null, section: 'sitemap' })).toBe(
+      '#/settings/capture?section=sitemap',
+    );
+  });
+
   it('drops anything that is no key', () => {
     expect(parseRoute('#/settings/<img onerror=x>')).toEqual({ page: 'settings', key: null, tab: null });
     expect(parseRoute('#/settings/a/b')).toEqual({ page: 'settings', key: null, tab: null });
@@ -49,5 +65,11 @@ describe('the pages of the page windows', () => {
     expect(pageOf('palette')).toBe(PAGES.palette);
     expect(PAGES.palette).not.toBe(PAGES.settings);
     expect(PAGES.findings).toBeUndefined();
+  });
+
+  it('has the setup wizard, opened at its project step by the hint (RB-091-05)', async () => {
+    const { PAGES, pageOf } = await import('./routes');
+    expect(pageOf('setup')).toBe(PAGES.setup);
+    expect(parseRoute('#/setup/project')).toEqual({ page: 'setup', key: 'project', tab: null });
   });
 });

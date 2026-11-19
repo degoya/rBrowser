@@ -46,12 +46,74 @@ fn candidates_rank_the_agent_selector_before_its_css_path() {
     );
 }
 
+/// RB-090-81: the agent's index among the visible matches reaches the recording, so the
+/// export can take the match the person saw; without it the recording reads as before.
+#[test]
+fn the_visible_index_of_a_role_or_text_match_is_recorded() {
+    let agent: ElementSelector = serde_json::from_value(json!({
+        "kind": "role", "role": "link", "name": "Read more", "nth": 4, "visibleNth": 3,
+        "path": "main > article:nth-of-type(5) > a"
+    }))
+    .expect("the agent's selector");
+    let recorded = candidates(&agent);
+    assert_eq!(
+        serde_json::to_value(&recorded[0]).expect("serialise"),
+        json!({ "kind": "role", "role": "link", "name": "Read more", "nth": 4, "visibleNth": 3 })
+    );
+    let text: ElementSelector = serde_json::from_value(json!({
+        "kind": "text", "tag": "span", "text": "Details", "nth": 2, "visibleNth": 0, "path": "p > span"
+    }))
+    .expect("a text selector");
+    assert_eq!(
+        serde_json::to_value(&candidates(&text)[0]).expect("serialise"),
+        json!({ "kind": "text", "tag": "span", "text": "Details", "nth": 2, "visibleNth": 0 })
+    );
+    let old: Selector =
+        serde_json::from_value(json!({ "kind": "role", "role": "link", "name": "More", "nth": 1 }))
+            .expect("a recording without the field");
+    assert_eq!(
+        old,
+        Selector::Role {
+            role: "link".into(),
+            name: "More".into(),
+            nth: 1,
+            visible_nth: None,
+            within: None,
+        }
+    );
+}
+
+#[test]
+fn a_selector_keeps_the_ancestor_that_makes_it_unique() {
+    // RB-090-84: the agent's `within` goes into the recording; one without reads as before.
+    let agent: ElementSelector = serde_json::from_value(json!({
+        "kind": "role", "role": "link", "name": "Brands & Produkte", "within": "#main-nav",
+        "path": "#main-nav > ul > li:nth-of-type(6) > div > a"
+    }))
+    .expect("a role selector");
+    let recorded = candidates(&agent);
+    assert_eq!(
+        serde_json::to_value(&recorded[0]).expect("serialise"),
+        json!({ "kind": "role", "role": "link", "name": "Brands & Produkte", "within": "#main-nav" })
+    );
+    let text: ElementSelector = serde_json::from_value(json!({
+        "kind": "text", "tag": "span", "text": "Offers", "within": "main", "path": "main > p > span"
+    }))
+    .expect("a text selector");
+    assert_eq!(
+        serde_json::to_value(&candidates(&text)[0]).expect("serialise"),
+        json!({ "kind": "text", "tag": "span", "text": "Offers", "within": "main" })
+    );
+}
+
 #[test]
 fn a_locator_keeps_hosts_and_frames_and_finds_its_css_path() {
     let mut element = target(ElementSelector::Role {
         role: "button".into(),
         name: "Menu".into(),
         nth: 1,
+        visible_nth: None,
+        within: None,
         path: "#burger".into(),
     });
     element.hosts = vec![ElementSelector::Css {
@@ -82,6 +144,8 @@ fn a_step_serialises_in_the_documented_shape() {
                         role: "button".into(),
                         name: "Menu".into(),
                         nth: 0,
+                        visible_nth: None,
+                        within: None,
                     },
                     Selector::Css {
                         path: "#burger".into(),

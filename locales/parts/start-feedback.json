@@ -1,0 +1,54 @@
+{
+  "capture": {
+    "notice": {
+      "capturing": "Taking the screenshot..."
+    }
+  },
+  "diagnostics": {
+    "saving": "Saving the diagnostics ZIP..."
+  },
+  "envcompare": {
+    "notice": {
+      "started": "Environment comparison started: {shots, plural, one {# shot} other {# shots}} to take. The report follows when it is done."
+    }
+  },
+  "extensions": {
+    "notice": {
+      "checking": "Checking {count, plural, one {# extension} other {# extensions}} for updates in the Chrome Web Store..."
+    }
+  },
+  "plugins": {
+    "catalog": {
+      "notice": {
+        "checking": "Checking the plugin catalog for updates..."
+      }
+    },
+    "notice": {
+      "command_started": "{command}: running..."
+    }
+  },
+  "sidecar": {
+    "notice": {
+      "restarted": "The Node sidecar restarted.",
+      "restarting": "Restarting the Node sidecar...",
+      "updating": "Downloading the WebKit browser for Playwright..."
+    }
+  },
+  "update": {
+    "notice": {
+      "checking": "Checking for a newer rBrowser than {version}..."
+    }
+  },
+  "visual": {
+    "notice": {
+      "comparing": "Comparing {count, plural, one {# view} other {# views}} with their baselines...",
+      "updating": "Saving {count, plural, one {# view} other {# views}} as baselines..."
+    }
+  },
+  "wsl": {
+    "notice": {
+      "restarted": "WSL watch helper restarted: {state}.",
+      "restarting": "Restarting the WSL watch helper..."
+    }
+  }
+}

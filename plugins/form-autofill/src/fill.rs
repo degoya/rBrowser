@@ -3,6 +3,8 @@
 //! world. Each view is filled by its own script - the values are the same because the seed and
 //! the field keys are - and the sync agent relays no part of it: it relays trusted input only,
 //! and a script's events are not trusted, so nothing arrives twice. The page script never submits.
+//! For the same reason a recording would lack the fill: each view's set fields go to the recorder
+//! as `host` posts beside the answer (`src/record.rs`, RB-090-78).
 //! Firefox and WebKit views have no `evaluate` yet and are reported `unsupported`.
 
 use rb_plugin_api::{Failure, FailureKind, PluginHost, ViewInfo, codes};
@@ -15,18 +17,20 @@ use crate::key;
 use crate::plan::{Options, Planned, plan};
 use crate::settings::Settings;
 
-/// The page script: one function expression called with the request.
+/// The page script: one function expression called with the request and `targetOf`.
 const PAGE_JS: &str = include_str!("page.js");
+/// The sync agent's selector, a function expression that answers `targetOf` (RB-090-78).
+const TARGET_JS: &str = include_str!("target.js");
 /// The longest value an answer shows, in characters.
 const MAX_SHOWN: usize = 200;
 /// The largest answer posted to the panel (a post may be 64 KiB).
 const MAX_POST: usize = 60_000;
 
-/// The expression that runs the page script with `request`.
+/// The expression that runs the page script with `request` and the agent's `targetOf`.
 #[must_use]
 pub fn script(request: &Value) -> String {
     // The request is JSON text: data, never code, inside the expression.
-    format!("(\n{PAGE_JS}\n)({request})")
+    format!("(\n{PAGE_JS}\n)({request}, (\n{TARGET_JS}\n)())")
 }
 
 /// What `apply` says about one field.
@@ -38,6 +42,8 @@ struct AppliedField {
     value: Value,
     valid: Value,
     errors: Value,
+    /// What the recorder takes of the field (`src/record.rs`).
+    record: Value,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -154,6 +160,15 @@ fn fill_view(
             field_result(entry, found.filter(|_| entry.fill.is_some()))
         })
         .collect();
+    let record: Vec<Value> = done
+        .fields
+        .iter()
+        .filter(|field| field.status == "done" && field.record.is_object())
+        .map(|field| field.record.clone())
+        .collect();
+    if !record.is_empty() {
+        head["record"] = json!(record);
+    }
     head
 }
 
@@ -229,16 +244,20 @@ pub fn fill(host: &mut dyn PluginHost, args: &Args, mode: Option<Mode>) -> Resul
     }))
 }
 
-/// `answer` with a post of itself to the plugin's open panels (a notice when it is too large).
+/// `answer` with a post of itself to the plugin's open panels (a notice when it is too large),
+/// and its views' set fields for the recorder taken out into `host` posts (`src/record.rs`).
 #[must_use]
-pub fn answer_with_post(answer: Value) -> Value {
+pub fn answer_with_post(mut answer: Value) -> Value {
+    let records = crate::record::take_posts(&mut answer);
     let message = if answer.to_string().len() <= MAX_POST {
         json!({ "type": "filled", "result": answer })
     } else {
         json!({ "type": "filled", "tooLarge": true, "seed": answer["seed"], "mode": answer["mode"] })
     };
     let mut posted = answer;
-    posted["$post"] = json!([{ "target": "panel", "message": message }]);
+    let mut posts = vec![json!({ "target": "panel", "message": message })];
+    posts.extend(records);
+    posted["$post"] = json!(posts);
     posted
 }
 

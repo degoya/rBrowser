@@ -171,6 +171,7 @@ fn the_request_is_the_recording_and_the_options_in_camel_case() {
                 reduced_motion: None,
             }],
             pace: "recorded".into(),
+            min_pause_ms: 1_500,
             name: Some("flow-test".into()),
         },
     };
@@ -180,6 +181,7 @@ fn the_request_is_the_recording_and_the_options_in_camel_case() {
     assert_eq!(value["options"]["locatorPreference"], "testid");
     assert_eq!(value["options"]["baseUrl"], "http://127.0.0.1:8000");
     assert_eq!(value["options"]["pace"], "recorded");
+    assert_eq!(value["options"]["minPauseMs"], 1_500);
     let project = &value["options"]["projects"][0];
     assert_eq!(project["deviceScaleFactor"], 3.0);
     assert_eq!(project["isMobile"], true);

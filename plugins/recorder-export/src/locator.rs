@@ -1,8 +1,19 @@
 //! Playwright locators from the recorder's selector candidates: `data-testid` as
 //! `getByTestId`, role and name as `getByRole(role, { name, exact: true })`, text as
 //! `getByText(text, { exact: true })`, the CSS path as `locator(css)`; `.nth(n)` for a later
-//! match. Frames (`frameLocator`) and open shadow hosts (Playwright's locators pierce open shadow
-//! roots) come first.
+//! test id match. Frames (`frameLocator`) and open shadow hosts (Playwright's locators pierce
+//! open shadow roots) come first.
+//!
+//! A role or text locator of the element counts the matches a view shows (RB-090-81,
+//! Playwright 1.51 and later): `.filter({ visible: true })` and then `.first()`, or
+//! `.nth(visibleNth)` for the later visible match the person picked (the fourth of several
+//! cards' "Read more"). The leader's document position is not every view's - a breakpoint hides
+//! the desktop navigation, another its mobile copy - and a name two elements share is no
+//! strict-mode error. A later match recorded without its visible index (a recording made
+//! before, a hidden element) keeps `.nth(n)`. The CSS path names one element and stays as it is.
+//! A role or text the page showed more than once comes with the ancestor that makes it unique
+//! (`within`, RB-090-84): `locator(within).getByRole(...)`, so a view that shows the other match
+//! first - a content link while the menu is still closed - waits for the one the person picked.
 //!
 //! The candidate is the first of the preferred kind, else the first one - the recorder ranks
 //! them. A role Playwright's `getByRole` does not accept is skipped, so the code type-checks.
@@ -117,8 +128,39 @@ pub fn locator(target: &Locator, preference: LocatorPreference) -> Result<String
         code.push_str(&host_call(host));
     }
     code.push('.');
-    code.push_str(&call(chosen));
+    code.push_str(&element_call(chosen));
     Ok(code)
+}
+
+/// The element's own locator method: a role or text match among the visible ones (RB-090-81),
+/// inside the ancestor that makes it unique when the recording names one (RB-090-84).
+fn element_call(selector: &Selector) -> String {
+    let (Selector::Role {
+        nth,
+        visible_nth,
+        within,
+        ..
+    }
+    | Selector::Text {
+        nth,
+        visible_nth,
+        within,
+        ..
+    }) = selector
+    else {
+        return call(selector);
+    };
+    let method = match within.as_deref().filter(|css| !css.trim().is_empty()) {
+        Some(css) => format!("locator({}).{}", string(css), method(selector).0),
+        None => method(selector).0,
+    };
+    match (*visible_nth, *nth) {
+        (Some(0), _) | (None, 0) => {
+            format!("{method}.filter({{ visible: true }}).first()")
+        }
+        (Some(index), _) => format!("{method}.filter({{ visible: true }}).nth({index})"),
+        (None, nth) => format!("{method}.nth({nth})"),
+    }
 }
 
 /// Whether Playwright can use `selector` as it is.
@@ -141,14 +183,24 @@ fn kind_of(selector: &Selector) -> LocatorPreference {
     }
 }
 
-/// The locator method for `selector`, without the receiver.
+/// The locator method for `selector`, without the receiver, with `.nth(n)` for a later match.
 fn call(selector: &Selector) -> String {
-    let (method, nth) = match selector {
+    match method(selector) {
+        (method, 0) => method,
+        (method, nth) => format!("{method}.nth({nth})"),
+    }
+}
+
+/// The locator method for `selector` and the index of its match.
+fn method(selector: &Selector) -> (String, u32) {
+    match selector {
         Selector::Testid { testid, nth } => (format!("getByTestId({})", string(testid)), *nth),
-        Selector::Role { role, name, nth } if name.is_empty() => {
-            (format!("getByRole({})", string(role)), *nth)
-        }
-        Selector::Role { role, name, nth } => (
+        Selector::Role {
+            role, name, nth, ..
+        } if name.is_empty() => (format!("getByRole({})", string(role)), *nth),
+        Selector::Role {
+            role, name, nth, ..
+        } => (
             format!(
                 "getByRole({}, {{ name: {}, exact: true }})",
                 string(role),
@@ -161,11 +213,6 @@ fn call(selector: &Selector) -> String {
             *nth,
         ),
         Selector::Css { path } => (format!("locator({})", string(path)), 0),
-    };
-    if nth > 0 {
-        format!("{method}.nth({nth})")
-    } else {
-        method
     }
 }
 

@@ -5,7 +5,10 @@
 //! when steps are reordered, so a diff between two exports shows what changed. An `onlyIn` step
 //! runs inside a guard: in the spec on the project's name (`test.info().project.name`), in the
 //! flow on the view's breakpoint (`view.breakpoint`). At the `recorded` pace ([`crate::pace`]) a
-//! step's recorded pause is a `page.waitForTimeout` below its comment, before any guard.
+//! step's recorded pause is a `page.waitForTimeout` before any guard - in the spec below the
+//! step's comment, in the flow first inside its `step(...)`, so the step a run reports is the one
+//! waiting; a hover keeps a short dwell before the step after it ([`crate::pace::pauses`],
+//! RB-090-84).
 //!
 //! RB-090-76: in the flow each step runs inside the runner's `step('Step <id>: <kind>', ...)`,
 //! so a run's result names the step that failed or ran out of time. A navigation that follows
@@ -19,7 +22,7 @@
 use crate::js::{Secrets, comment, number, relative_url, secret as secret_value, string};
 use crate::locator::locator;
 use crate::model::{Action, Assertion, Locator, LocatorPreference, Selector, Step};
-use crate::pace::{Pace, pause_before};
+use crate::pace::{Pace, pauses};
 
 /// Where the steps go.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,6 +40,8 @@ pub struct Context {
     preference: LocatorPreference,
     base_url: Option<String>,
     pace: Pace,
+    /// The least pause before a step at the `recorded` pace (`automation.recorder.minPauseMs`).
+    min_pause_ms: u64,
     /// The environment variables of the secrets used so far.
     pub secrets: Secrets,
 }
@@ -49,6 +54,7 @@ impl Context {
             preference,
             base_url,
             pace: Pace::Fast,
+            min_pause_ms: 0,
             secrets: Secrets::default(),
         }
     }
@@ -57,6 +63,13 @@ impl Context {
     #[must_use]
     pub fn paced(mut self, pace: Pace) -> Self {
         self.pace = pace;
+        self
+    }
+
+    /// The same context with `min_ms` as the least pause before a step at the `recorded` pace.
+    #[must_use]
+    pub fn least_pause(mut self, min_ms: u64) -> Self {
+        self.min_pause_ms = min_ms;
         self
     }
 }
@@ -70,6 +83,29 @@ pub struct StepError {
     pub reason: String,
 }
 
+/// The pause before each step that is written - a left-out legacy fill has none - as `(step id,
+/// ms)` at the `recorded` pace with the least pause `min_ms` ([`crate::pace::pauses`]). The one
+/// rule: the flow waits these, the host's run budget adds them up and the Recorder panel shows
+/// them (the `pauses` format, RB-090-84).
+#[must_use]
+pub fn step_pauses(steps: &[Step], min_ms: u64) -> Vec<(u32, u64)> {
+    let written: Vec<&Step> = steps
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| left_out(steps, *index).is_none())
+        .map(|(_, step)| step)
+        .collect();
+    let timing: Vec<(u64, bool)> = written
+        .iter()
+        .map(|step| (step.at_ms, matches!(step.action, Action::Hover { .. })))
+        .collect();
+    written
+        .iter()
+        .map(|step| step.id)
+        .zip(pauses(&timing, min_ms))
+        .collect()
+}
+
 /// `steps` as statements, each line indented by `depth` levels of two spaces.
 ///
 /// # Errors
@@ -77,7 +113,9 @@ pub struct StepError {
 /// A step has no selector Playwright can use.
 pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<String, StepError> {
     let mut out = String::new();
-    let mut previous = None;
+    let mut waits = step_pauses(steps, context.min_pause_ms)
+        .into_iter()
+        .map(|(_, ms)| ms);
     // The breakpoints of the clicks and keys since the last navigation step; `all` when one
     // ran in every breakpoint.
     let mut clicked: Vec<&str> = Vec::new();
@@ -87,7 +125,7 @@ pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<Str
         Guard::Breakpoint => "view.breakpoint",
     };
     for (index, step) in steps.iter().enumerate() {
-        if let Some(next) = steps.get(index + 1).filter(|next| sets_toggle(step, next)) {
+        if let Some(next) = left_out(steps, index) {
             let mut title = format!("Step {}: fill", step.id);
             let only_in = ids(step);
             if !only_in.is_empty() {
@@ -114,17 +152,17 @@ pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<Str
             title.push_str(&format!(" (only in {})", comment(&only_in.join(", "))));
         }
         line(&mut out, depth, &format!("// {title}"));
-        let pause = pause_before(previous, step.at_ms);
-        previous = Some(step.at_ms);
-        if context.pace == Pace::Recorded && pause > 0 {
-            line(
-                &mut out,
-                depth,
-                &format!("await page.waitForTimeout({pause});"),
-            );
-        }
-        // The body as (depth below the step, text).
+        let pause = waits.next().unwrap_or(0);
+        let wait = (context.pace == Pace::Recorded && pause > 0)
+            .then(|| format!("await page.waitForTimeout({pause});"));
+        // The body as (depth below the step, text). In the flow the pause waits inside the step,
+        // so the step a run reports is the one waiting (RB-090-84).
         let mut body = Vec::new();
+        match (&wait, context.guard) {
+            (Some(wait), Guard::Breakpoint) => body.push((0, wait.clone())),
+            (Some(wait), Guard::Project) => line(&mut out, depth, wait),
+            (None, _) => {}
+        }
         let inner = usize::from(!only_in.is_empty());
         if inner == 1 {
             body.push((
@@ -183,6 +221,13 @@ pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<Str
         }
     }
     Ok(out)
+}
+
+/// The step after the one at `index` when it sets the control the legacy fill at `index` filled:
+/// that fill is left out ([`sets_toggle`]).
+fn left_out(steps: &[Step], index: usize) -> Option<&Step> {
+    let step = steps.get(index)?;
+    steps.get(index + 1).filter(|next| sets_toggle(step, next))
 }
 
 /// The breakpoints `step` runs in; empty for all.

@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 import { type FlowFunction, FlowSyntaxError, compileFlow, fileColumn } from './compile.ts';
 import { createSteps, flowArguments } from './globals.ts';
+import { type StepProgress, firstLine, stepIdOf, stepProgress } from './steps.ts';
 import {
   CLOSE_TIMEOUT_MS,
   DEFAULT_ACTION_TIMEOUT_MS,
@@ -39,6 +40,8 @@ export interface RunnerDeps {
   onStatus(viewId: number, status: ViewStatus | 'running'): void;
   /** A view's result, as soon as it ends - kept even when the worker is stopped later. */
   onView(result: ViewResult): void;
+  /** A step of a view started or ended (RB-090-84). */
+  onStep?(viewId: number, step: StepProgress): void;
 }
 
 export interface RunOptions {
@@ -94,7 +97,9 @@ async function runView(
   closeTimeoutMs: number,
 ): Promise<ViewResult> {
   const start = deps.now();
-  const steps = createSteps(deps.now);
+  const steps = createSteps(deps.now, (name, state, error) =>
+    deps.onStep?.(view.id, stepProgress(name, state, error, secrets)),
+  );
   let connected: Connected | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
@@ -112,7 +117,7 @@ async function runView(
     status = caught instanceof TimedOut ? 'timedOut' : 'failed';
     error = errorInfo(caught, job.flow.file, steps.stepOf(caught), secrets);
     if (caught instanceof TimedOut) {
-      steps.abort();
+      steps.abort(caught);
     }
     if (connected !== null && job.screenshotOnFailure) {
       screenshot = await takeScreenshot(connected.page, join(job.outDir, screenshotName(view)), deps);
@@ -189,10 +194,14 @@ function errorInfo(caught: unknown, file: string, step: string | null, secrets: 
   const message = redact(caught instanceof Error ? caught.message : String(caught), secrets);
   const stack = redact(caught instanceof Error ? (caught.stack ?? '') : '', secrets);
   const where = caught instanceof TimedOut ? null : locate(stack, file);
+  const stepId = step === null ? null : stepIdOf(step);
+  const summary = firstLine(message, secrets);
   return {
     message,
     stack,
     step,
+    ...(stepId === null ? {} : { stepId }),
+    ...(summary === null ? {} : { summary }),
     line: where?.line ?? null,
     column: where === null ? null : fileColumn(where.line, where.column),
     file,

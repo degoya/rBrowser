@@ -53,3 +53,18 @@ fn the_commands_are_this_modules_only() {
         assert!(key.starts_with("visual."), "{key}");
     }
 }
+
+/// RB-090-85: a compare and a baseline update name their start with the number of views; the
+/// outcome follows as `visual.notice.compared` or `visual.notice.updated`.
+#[test]
+fn a_started_run_names_itself_with_its_views() {
+    for key in [COMPARING_KEY, UPDATING_KEY] {
+        let CoreToShell::Notification(notification) = started_notice(key, 3) else {
+            panic!("a notification");
+        };
+        assert_eq!(notification.message_key, key);
+        assert_eq!(notification.level, NotificationLevel::Info);
+        assert_eq!(notification.args["count"], "3");
+        assert_eq!(notification.settings_key.as_deref(), Some(SETTINGS_KEY));
+    }
+}

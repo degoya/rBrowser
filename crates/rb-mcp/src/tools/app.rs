@@ -104,7 +104,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings. Installing, enabling or trusting a plugin is a person's decision in rBrowser, never over MCP."
+        description = "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings; `missing` names the plugins the project's config uses that are not installed, `available` the bundled first-party plugins not chosen. Installing, enabling or trusting a plugin is a person's decision in rBrowser (the first-run wizard or Settings > Plugins > Catalog), never over MCP."
     )]
     pub(crate) async fn plugins_list(&self) -> ToolResult {
         respond(self.command("plugins.list", Value::Null).await)

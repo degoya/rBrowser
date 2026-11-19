@@ -21,6 +21,7 @@ pub(crate) enum UiCall {
     Dock(Option<DevtoolsDock>),
     CloseDevtools(ViewId),
     SettingsWindow(String),
+    CloseSettingsWindow,
     PickPath(PathPick),
     FrameColor(Option<String>),
     Activate,
@@ -118,6 +119,9 @@ impl UiBackend for RecordingUi {
     }
     fn open_settings_window(&self, url: String) {
         self.push(UiCall::SettingsWindow(url));
+    }
+    fn close_settings_window(&self) {
+        self.push(UiCall::CloseSettingsWindow);
     }
     /// Records the dialog and answers "cancelled".
     fn pick_path(&self, pick: PathPick, done: PathPicked) {

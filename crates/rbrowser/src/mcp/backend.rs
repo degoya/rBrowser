@@ -137,6 +137,10 @@ impl Backend for CoreBackend {
         super::url_policy::check_command(id, &args, core.host().project_root().as_deref())?;
         // Adding a portal asset origin writes the project config: a person's click (RB-090-71).
         crate::portal::offer::refuse_mcp(id)?;
+        // Installing an update is a person's click; `update_install` asks them (RB-090-14).
+        crate::updates::refuse_mcp(id)?;
+        // The setup wizard is a person's dialog (RB-091-05).
+        crate::first_run::refuse_mcp(id)?;
         core.run_command(id, args)
     }
 

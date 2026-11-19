@@ -183,7 +183,7 @@ pub fn release() {
 }
 
 /// A link the person clicked in a report: through `app.open_link`, off the UI thread.
-fn open_outside(url: String) {
+pub(super) fn open_outside(url: String) {
     let Some(core) = super::views::core().cloned() else {
         return;
     };

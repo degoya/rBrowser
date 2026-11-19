@@ -202,6 +202,21 @@ pub enum PanelRequest {
     },
     /// Removes a plugin the catalogue installed (RB-091-01): `{"value": {id, restart}}`.
     CatalogRemove { id: String },
+    /// The first-party plugins the first-run wizard offers (RB-091-04, RB-091-05): `{"value":
+    /// {offline, plugins: [{id, name, description, category, sizeBytes, recommended, origin,
+    /// grants, installed, version}]}}` ([`super::bundle_offer::available`]). The settings window
+    /// only.
+    Available,
+    /// Installs the chosen first-party plugins, each from the repository first and the bundle
+    /// otherwise (RB-091-04): `{"value": {results: [{id, ok, error?, origin}], restart}}`, with a
+    /// `pluginInstallProgress` message before and after each. The settings window only.
+    InstallChosen { ids: Vec<String> },
+    /// Takes the named plugins out of the choice and removes the catalogue's copies (RB-091-04):
+    /// `{"value": {results: [{id, ok, error?}], restart}}`. The settings window only.
+    RemoveChosen { ids: Vec<String> },
+    /// The first-run wizard's Skip (review 7): the recommended set is chosen and the choice no
+    /// longer waits for the wizard: `{"value": {chosen, restart}}`. The settings window only.
+    ApplyRecommended,
 }
 
 /// What a call names, checked: exactly one of a command and a tool, arguments within `limit`

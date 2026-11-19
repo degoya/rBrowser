@@ -4,10 +4,11 @@
 # `self-update` carries no code of rb-update and not its update address. On fixture files: a
 # clean binary passes; each marker - the crate's name as its symbols and module paths carry it,
 # its source path in either separator as a panic location carries it, the release address of
-# crates/rbrowser/src/updates/active.rs - fails the check, named with the file; so does a marker
+# crates/rb-update/src/sources.rs - fails the check, named with the file; so does a marker
 # in the symbol list beside the binary (its PDB); --expect-present (the positive control of a
 # build with the feature) turns the verdict round; a missing file and no file are usage errors.
-# The markers are held to the sources they stand for, and the packager runs the check.
+# The markers are held to the sources they stand for, and the packager runs the positive check
+# on the app, which carries self-update by default since RB-090-14.
 #
 # Pure bash and python3, a second.
 #
@@ -96,11 +97,11 @@ expect_status "an unknown option is a usage error" 2
 # The markers stand for real sources: the crate's name, its folder and the release address.
 expect_true "the crate is named rb-update" \
     'grep -qx "name = \"rb-update\"" "$ROOT/crates/rb-update/Cargo.toml"'
-expect_true "the release address is the one updates/active.rs fetches from" \
-    'grep -qF "releases/latest/download/\";" "$ROOT/crates/rbrowser/src/updates/active.rs"'
-expect_true "updates/active.rs is compiled only with the feature" \
-    'grep -qx "#\[cfg(feature = \"self-update\")\]" "$ROOT/crates/rbrowser/src/updates/mod.rs"'
-expect_true "the packager checks the staged binaries" \
-    'grep -qF "scripts/check-update-code.sh" "$ROOT/scripts/package-windows.sh"'
+expect_true "the release address is the one rb-update's sources.rs fetches from" \
+    'grep -qF "/releases/latest/download/{}" "$ROOT/crates/rb-update/src/sources.rs"'
+expect_true "rb-update is linked only with the feature" \
+    'grep -qx "self-update = \[\"dep:rb-update\"\]" "$ROOT/crates/rbrowser/Cargo.toml"'
+expect_true "the packager checks the staged app carries it (RB-090-14)" \
+    'grep -qF "scripts/check-update-code.sh --expect-present" "$ROOT/scripts/package-windows.sh"'
 
 finish_tests "check-update-code"

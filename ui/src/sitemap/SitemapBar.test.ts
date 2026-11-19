@@ -71,7 +71,25 @@ describe('the sitemap bar', () => {
     });
   });
 
-  it('resumes a cancelled capture and opens its gallery in the active view', async () => {
+  it('opens by itself when a capture starts, without taking the focus (RB-090-83)', async () => {
+    const result = await mountWithShell(SitemapBar, { mount: { props: { subscribe: () => () => undefined } } });
+    current = result.wrapper;
+    await settle();
+    expect(result.wrapper.find('[data-testid="sitemap-bar"]').exists()).toBe(false);
+    const focused = document.activeElement;
+    result.mock.emit({ type: 'state', ...sampleState(), sitemap: { ...run, done: 0, failed: 0 } });
+    await settle();
+    expect(result.wrapper.find('[data-testid="sitemap-bar"]').exists()).toBe(true);
+    expect(result.wrapper.get('[data-testid="sitemap-line"]').text()).toContain('0 of 76 shots');
+    expect(document.activeElement).toBe(focused);
+    // Closed, it stays closed while the same run goes on.
+    await result.wrapper.get('[data-testid="sitemap-close"]').trigger('click');
+    result.mock.emit({ type: 'state', ...sampleState(), sitemap: run });
+    await settle();
+    expect(result.wrapper.find('[data-testid="sitemap-bar"]').exists()).toBe(false);
+  });
+
+  it('resumes a cancelled capture and opens its gallery through sitemap.gallery', async () => {
     const cancelled: SitemapStatus = {
       ...run,
       state: 'cancelled',
@@ -87,14 +105,10 @@ describe('the sitemap bar', () => {
       id: 'sitemap.capture',
       args: { resume: 'r1' },
     });
-    expect(mock.sent).toContainEqual({
-      type: 'runCommand',
-      id: 'view.navigate',
-      args: {
-        url: 'file:///C:/shop/.rbrowser/out/sitemap-capture/r1/index.html',
-        target: sampleState().activeView,
-      },
-    });
+    expect(mock.sent).toContainEqual({ type: 'runCommand', id: 'sitemap.gallery', args: { runId: 'r1' } });
+    expect(mock.sent.some((message) => message.type === 'runCommand' && message.id === 'view.navigate')).toBe(
+      false,
+    );
   });
 });
 

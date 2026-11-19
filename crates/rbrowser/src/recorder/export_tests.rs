@@ -115,6 +115,8 @@ fn the_request_carries_the_pace_asked_for_or_the_settings() {
     // RB-090-66: Play's choice wins over automation.recorder.playbackPace.
     let mut config = default_config();
     config.automation.recorder.playback_pace = PlaybackPace::Recorded;
+    // RB-090-84: the least pause goes along.
+    config.automation.recorder.min_pause_ms = 1_500;
     assert_eq!(pace_of(None, &config), PlaybackPace::Recorded);
     assert_eq!(
         pace_of(Some(PlaybackPace::Fast), &config),
@@ -125,6 +127,24 @@ fn the_request_carries_the_pace_asked_for_or_the_settings() {
     )
     .expect("parses");
     assert_eq!(request["options"]["pace"], "recorded");
+    assert_eq!(request["options"]["minPauseMs"], 1_500);
+}
+
+#[test]
+fn the_plugins_pauses_read_as_step_and_ms() {
+    // RB-090-84: the exporter's `pauses` format, the one rule for the run budget and the panel.
+    let pauses =
+        parse_pauses(r#"{"pauses":[{"step":1,"ms":0},{"step":4,"ms":2504}]}"#).expect("pauses");
+    assert_eq!(
+        pauses,
+        [
+            StepPause { step: 1, ms: 0 },
+            StepPause { step: 4, ms: 2_504 }
+        ]
+    );
+    assert_eq!(PAUSES_FORMAT, "pauses");
+    assert!(parse_pauses("").is_err());
+    assert!(parse_pauses(r#"{"pauses":[{"step":-1,"ms":0}]}"#).is_err());
 }
 
 #[test]

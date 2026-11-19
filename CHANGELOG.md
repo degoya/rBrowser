@@ -7,6 +7,146 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.9.0-beta.2] - 2026-11-19
+
+### Added
+
+- Playing a recording shows where it is (RB-090-84): the Recorder panel marks the number of the
+  step each view runs, marks a failed step red with its reason and scrolls the running step into
+  sight (`automation.recorder.followPlayback`), and shows each step's pause.
+  `automation.recorder.minPauseMs` sets the least pause at the pace As recorded. A flow run skips
+  the views a layout hides and names them, or shows a layout of its own
+  (`automation.flows.hiddenViews`, `automation.flows.runLayout`). Every run's end and each failed
+  view's step and reason go into the log; Run all, recorder checks and exports say when they
+  start or end.
+
+- rBrowser for macOS in every release (RB-090-80): `release.yml` builds `rBrowser.app` for Apple
+  Silicon and for Intel natively from the signed plugins, signed ad hoc and checked, and
+  publishes `rbrowser-X.Y.Z-macos-aarch64` and `-x86_64` each as a DMG and a ZIP beside the
+  Windows ZIP, in `SHA256SUMS`; a release without one of them is not published. The release
+  text lists the downloads and how macOS lets an app start that is not notarised (Open Anyway, or
+  `xattr -dr com.apple.quarantine`); the Homebrew cask follows each release
+  (`brew install --cask degoya/rbrowser/rbrowser`), now for macOS 13 or later. On macOS the app
+  offers a new version as a download of its release page; it does not replace itself.
+- First-party plugins as rDownloader handles them (RB-091-04): the package still carries every
+  first-party plugin, but a start installs only the chosen ones - a fresh installation what the
+  first-run wizard marks (Skip, or no answer by the next start: the recommended set; with the
+  wizard off the recommended set at once), an existing one keeps all it had, a plugin new in a later release waits in
+  Settings › Plugins › Catalog and a removed one does not come back (`--install-all-bundled-plugins`
+  installs all). A chosen plugin comes from the official catalogue when it offers a newer
+  version than the shipped one with the same key and no new permission, otherwise from the package
+  (a newer copy that does not verify leaves the shipped one to load)
+  (`plugins.catalog.preferRepository`). The catalogue lists the shipped plugins with one-click
+  Install and Remove and their updates, which `plugins.catalog.autoUpdate` can install by itself.
+  A project that uses a plugin that is not installed says so in the status bar with an Install
+  button (`plugins.catalog.missingNotice`); MCP `plugins_list` names `missing` and `available`.
+
+- The setup wizard (RB-091-05): optional, once per person at the very first start, every step
+  skippable - welcome, plugins (the first-party plugins by category with search; the wizard only
+  marks what gets loaded: at a fresh install no optional plugin loads until it answers, the
+  recommended ones ticked, anything can be unticked, an installed one included; one confirmation
+  names what is installed with its rights and what is removed, then one install with progress,
+  from the package's bundle without a network; skipping the step or the setup installs the
+  recommended set, a choice made before stays as it is), project (a folder, WSL included, the dev server's address and the
+  analyser's proposal, a mobile and a desktop view or chosen devices; the config `rbrowser init`
+  writes, shown before it is written), basics (theme, grid or canvas, sync) and a summary. A
+  project folder without a config says "Set up project" once in the status bar. "Set up
+  rBrowser..." (`⌘ , W`, the palette, App in the main menu, Settings › General › Start) opens it
+  again; `ui.firstRunWizard` switches it off for a team. MCP can neither open nor answer it.
+- The plugins as a release of their own (RB-090-79): every tag `vX.Y.Z` also publishes
+  `plugins-vX.Y.Z` ("rBrowser plugins X.Y.Z") with the signed first-party `.rbplugin` packages
+  and their own `SHA256SUMS` (no offline bundle: the plugins the application's package carries
+  are the way without a network, RB-091-04); a pre-release with a beta tag, never `latest`. The newest plain tag also signs the official
+  plugin catalogue's index and replaces it in the fixed release `plugin-index`, the address the
+  app reads; a pre-release leaves the index alone. `.github/workflows/release-plugins.yml` builds
+  and signs, `scripts/release-plugins.sh` stages, gates and publishes.
+- Self-update is on (RB-090-14): rBrowser checks for a new version at every start
+  (`updates.check`, on by default) and shows it in the status bar with its size and notes;
+  "Install and restart" (`⌘ , I`) downloads it, checks the signature of the release key and the
+  SHA-256, replaces the program folder through `rbrowser-updater.exe` (shipped beside
+  `rbrowser.exe`) and starts the new version, which proves itself at its start or is taken back.
+  `updates.autoInstall = onQuit` installs a downloaded update when rBrowser quits, never holding
+  the quit up. "Check now" (`⌘ , U`) and the install sit under the switch in Settings › General ›
+  Updates. The channel is automatic by default (beta for a pre-release build, stable otherwise);
+  the beta channel finds its manifest through the GitHub release list. With other projects'
+  windows open the install waits for them; Scoop, winget, Homebrew, deb and rpm installations are shown their
+  package manager's command, other installations the release page. MCP `update_status`,
+  `update_check` and `update_install`, which only asks the person. The notice about an old CEF
+  stays silent while updates are checked. The first release that updates itself is
+  0.9.0-beta.2; 0.9.0-beta.1 is updated by unpacking the new ZIP.
+
+### Changed
+
+- Every run a command starts in the background shows itself (RB-090-85): the plugins' checks,
+  the environment comparison, the visual compare and baseline update, captures,
+  `sidecar.restart` (now also its end), `engines.update`, `wsl.restart_helper` (start and end),
+  the update, plugin catalogue and extension checks and the diagnostics ZIP name their start in
+  the status bar. A message's Setting opens the field, or the section of an area (`sitemap`,
+  `visual`) ringed on its tab, instead of the settings' first page; the settings lint checks
+  every notice's target. Notices drop an error's code in front of its text.
+
+- The official plugin index lists every first-party plugin with its group and keeps the last
+  version of each plugin per plugin contract, and the app ignores index fields it does not know; the plugin release no longer has an offline ZIP -
+  the application's package is the offline way (RB-091-04).
+
+### Fixed
+
+- A sitemap capture takes its pictures and says that it runs (RB-090-83): its render views - and
+  the environment comparison's - are windowless browsers that paint, not hidden CDP targets, which
+  never answered a screenshot. A shot has its own deadline (`sitemap.shotTimeoutSec`, 15 s); a
+  failed one names its reason in the log and in `run.json`. A start says "Sitemap capture started:
+  N pages × M breakpoints" and opens the sitemap bar by itself; a second start shows the running
+  capture. The gallery opens in a window of its own, which loads only its run's files and runs no
+  script, or - your own setting `sitemap.galleryOpensIn` - the system browser; never in the
+  views: `sitemap.gallery` (`Leader C I`), MCP `sitemap_gallery` (always the window). Render
+  views have unguessable markers and never take a popup or another context's page.
+- A played recording clicks the link the person picked when the page shows its name twice - a
+  hover menu's link and a content link: the recorder keeps the ancestor that makes it unique and
+  the flow looks inside it (RB-090-84). At the pace As recorded a hover rests before the next
+  step, and the recorded pauses no longer count against the flow's timeout.
+- A recorded flow no longer fails on the pointer's way and on duplicate names (RB-090-81): the
+  setting Record hovers (`automation.recorder.recordHover`) is a choice - only menu hovers (the
+  default: the hover that opened the submenu the next click goes into), all, or none. An old
+  `true`, which kept every hover the recorder guessed, loads as `menu`, `false` as `off`; the
+  schema still accepts the switch as its earlier form. The agent records a role or text match's
+  index among the visible matches (`visibleNth`), and the export writes
+  `.filter({ visible: true }).nth(visibleNth)` (`.first()` for the first) instead of the leader's
+  `.nth(n)`: a breakpoint that hides an element finds its visible twin, the fourth of several
+  visible cards' links stays the fourth, and a name two elements share is no strict-mode error.
+- Main menu rows that did nothing (RB-090-82): ≡ › Plugins › List plugins, Install, Enable,
+  Disable, Remove and Trust a key open Settings > Plugins (the list answered only MCP, the
+  others were not implemented); a plugin's panel command (Show the colour picker panel and the
+  other panel rows) opens the docked panels also when they are folded to their rail, instead of
+  only marking the panel there; a plugin's call on the active view (the colour picker's palette) and the engine
+  pick take the first view while no view is active. The Split and Canvas rows, the canvas centre
+  and placement, focus stepping, a recording's pause, stop and check and the sitemap's cancel
+  are choices only where they act; the minimap row is checked by this session's switch; pausing
+  hot reload says "Hot reload paused" or "Hot reload resumed".
+- The toolbar menus run their rows again: with CEF 156.0.30 the menu tells its close before the
+  row chosen, so every choice of ≡ and the split buttons was lost (the theme, Create diagnostics
+  ZIP, ...). A submenu closing (the pointer moving on, or its row chosen) no longer counts as the
+  menu's close, and the close is told a moment later; a `&` in a row shows as itself, not as `&&`. The
+  macOS build compiles again (the Print entry's id is `u32` there).
+- The setup wizard scrolls (RB-091-05): in the pages window a long plugin list hid Back and Next;
+  the wizard scrolls itself and keeps its footer in sight. Its plugin step no longer says "No
+  network" when only the plugin catalog cannot be reached (none is published before the first
+  full release); it says the catalog is not reachable and the plugins install from the package.
+- Settings › About names how this installation updates itself - not in this build, switched off,
+  only when asked, or at every start - instead of always "Updates are disabled in this build"
+  (RB-091-05).
+- The public CI after the first push (RB-090-12): the E2E workflow ends green with a notice while
+  `scripts/e2e-windows.sh` (RB-090-05) does not exist, and the package channels workflow ends green
+  with a notice before the first plain release instead of failing on "release not found".
+- A recording takes what Form autofill fills (RB-090-78). The autofill sets values by script,
+  which the recorder rightly does not capture, so a recording ended without the fill - only the
+  checkboxes it clicked showed as steps. Now each field it sets while a recording runs becomes a
+  step - `fill` with the value set, `check` or `uncheck`, `select` - named as a typed field is
+  named, in the views it filled (a view with other values, such as a German phone number, gets
+  its own step); a password or secret field is recorded as its placeholder, and a checkbox the
+  agent saw clicked is one step, not two. A flow exported from the recording fills the same
+  values. `automation.recorder.recordAutofill` (on by default) turns it off; Settings ›
+  Automation › Recorder.
+
 ## [0.9.0-beta.1] - 2026-11-17
 
 ### Added

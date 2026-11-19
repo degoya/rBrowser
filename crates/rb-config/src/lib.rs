@@ -61,12 +61,14 @@ mod toolbar_settings;
 pub mod trust;
 mod ui_theme;
 mod user_automation;
+mod user_cdp;
 mod user_engines;
 mod user_file;
 mod user_logs;
 mod user_portal;
 mod user_settings;
 mod user_shortcuts;
+mod user_sitemap;
 mod user_updates;
 mod user_view;
 mod user_vitals;
@@ -86,7 +88,8 @@ pub use activity_bar_settings::{
     ActivityBarMode, ActivityBarPosition, ActivityBarSettings, ActivityBarShow,
 };
 pub use automation::{
-    AutomationConfig, LocatorPreference, PlaybackPace, RecorderConfig, RecorderExportConfig,
+    AutomationConfig, LocatorPreference, PlaybackPace, RecordHover, RecorderConfig,
+    RecorderExportConfig,
 };
 pub use bookmarks::{Bookmark, BookmarkTarget, ResolvedBookmark};
 pub use breakpoint::{
@@ -152,8 +155,11 @@ pub use status_bar_settings::{
     MAX_HISTORY_SIZE, MAX_INFO_TIMEOUT_SEC, MIN_HISTORY_SIZE, StatusBarSettings,
 };
 pub use toolbar_settings::{ToolbarOverflow, ToolbarSettings};
-pub use user_automation::{AutomationSettings, DEFAULT_FLOWS_DIR, FlowSettings};
+pub use user_automation::{
+    AutomationSettings, DEFAULT_FLOWS_DIR, FlowSettings, HiddenViews, RUN_LAYOUTS,
+};
 pub use user_engines::{CookieSettings, ExternalWindowSettings, FirefoxSettings, WebkitSettings};
+pub use user_sitemap::{GalleryOpensIn, UserSitemapSettings};
 // The plugin catalogue's settings (RB-091-01).
 pub use plugin_settings::{CatalogRepository, CatalogSettings};
 pub use user_file::settings_path_for;

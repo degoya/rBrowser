@@ -1,8 +1,9 @@
 //! The settings window (RB-010-08): its own CEF window with the shell's pages
 //! (`cef_app/settings_window.rs`, `rbrowser://ui/settings.html`), the settings over IPC
 //! (`getSettings` with the schema, `setSetting` with `settingRejected`, `settingsChanged` to
-//! every page), deep links (`settings.open { key }`, `openSettings { key }`), the native path
-//! dialog (`pickPath`), and who may query the core at all ([`guard`]).
+//! every page), deep links (`settings.open { key }`, `openSettings { key }`: a key, a category,
+//! a section or a key prefix, [`target`], RB-090-85), the native path dialog (`pickPath`), and
+//! who may query the core at all ([`guard`]).
 //!
 //! `pickPath` answers `ack` at once; the choice follows as the event `pickedPath`, because the
 //! dialog runs on the UI thread the query is answered on. A field with `"x-options": "dynamic"`
@@ -17,6 +18,7 @@ mod lane;
 mod program;
 mod project_edit;
 mod refs;
+pub mod target;
 pub mod user_file;
 mod values;
 pub mod write;
@@ -24,7 +26,7 @@ pub mod write;
 use rb_commands::CommandError;
 use rb_commands::builtin::SHORTCUTS_EDIT_COMMAND;
 use rb_ipc::{CoreToShell, ShellToCore};
-use rb_settings::{Category, SettingsRegistry};
+use rb_settings::SettingsRegistry;
 use serde_json::Value;
 
 pub use apply::{
@@ -102,25 +104,19 @@ pub fn on_config_changed(core: &Core) {
     apply::project_changed(core);
 }
 
-/// Opens the settings window at `key` (a setting or a category id), else at its start.
+/// Opens the settings window at `key` (a setting, a category, a section or a key prefix,
+/// [`target`]), else at its start.
 pub fn open(core: &Core, key: Option<&str>) {
     let route = route(core.settings_registry(), key);
     core.ui().open_settings_window(page_url(&route));
 }
 
-/// The pages window's route for `key`: `settings/<key>` for a known setting or category,
-/// `settings` for anything else (an unknown key never reaches the URL).
+/// The pages window's route for `key` ([`target::route_of`]); `settings` without one.
 pub fn route(registry: &SettingsRegistry, key: Option<&str>) -> String {
-    match key {
-        Some(key) if registry.get(key).is_some() || Category::from_id(key).is_some() => {
-            format!("{ROUTE_SETTINGS}/{key}")
-        }
-        Some(key) => {
-            tracing::debug!(key, "no such setting; the settings open at their start");
-            ROUTE_SETTINGS.to_owned()
-        }
-        None => ROUTE_SETTINGS.to_owned(),
-    }
+    key.map_or_else(
+        || ROUTE_SETTINGS.to_owned(),
+        |key| target::route_of(registry, key),
+    )
 }
 
 #[cfg(test)]

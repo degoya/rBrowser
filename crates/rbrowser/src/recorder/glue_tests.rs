@@ -70,6 +70,14 @@ fn the_kinds_not_captured_follow_the_switches_and_the_settings() {
     assert_eq!(missing_kinds(off, false, true), ["keyboard", "scroll"]);
 }
 
+/// RB-090-81: the setting's choice is the recorder's, in one place.
+#[test]
+fn the_record_hover_setting_is_the_recorders_choice() {
+    assert_eq!(hover_capture(RecordHover::Menu), HoverCapture::Menu);
+    assert_eq!(hover_capture(RecordHover::All), HoverCapture::All);
+    assert_eq!(hover_capture(RecordHover::Off), HoverCapture::Off);
+}
+
 #[test]
 fn no_recording_takes_steps_while_a_flow_runs() {
     // The flow's navigations would become the recording's steps (RB-090-71).

@@ -1,10 +1,11 @@
 //! Installing a verified update and taking it back: the files of the switch, the journal that
 //! makes it recoverable, and what a start does with an interrupted one.
 //!
-//! **Who does what** (the app's part arrives with RB-110-05). The app verifies and downloads the
-//! artifact (`download.rs`), writes the [`Journal`] in phase `handed` and starts the updater: a
-//! copy of its own executable outside the program folder ([`process::launch_updater`]), because a
-//! running `.exe` cannot be replaced on Windows. Then the app ends. The updater ([`apply::run`])
+//! **Who does what** (RB-090-14). The app verifies and downloads the artifact (`download.rs`),
+//! writes the [`Journal`] in phase `handed` and starts the updater ([`handover`]): a copy of
+//! `rbrowser-updater`, which ships beside the program, outside the program folder
+//! ([`process::launch_updater`]), because a running `.exe` cannot be replaced on Windows. Then the
+//! app ends. The updater ([`apply::run`])
 //! holds [`UpdaterLock`] for its whole life, waits until no window holds [`InstanceLock`] any
 //! more, switches the files, starts the new version and waits until it writes `verified` into
 //! the journal at its first start. A failure takes the switch back and starts the old version;
@@ -26,6 +27,7 @@ use std::path::{Path, PathBuf};
 
 pub mod apply;
 pub(crate) mod durable;
+pub mod handover;
 mod journal;
 mod journal_check;
 mod locks;
@@ -36,7 +38,7 @@ pub mod steps;
 pub mod trash;
 
 pub use journal::{Journal, Phase, Plan};
-pub use locks::{InstanceLock, UpdaterLock, updater_running};
+pub use locks::{InstanceLock, UpdaterLock, WINDOWS_DIR, updater_running};
 
 /// Below the local data directory: what an update keeps between the app and the updater.
 pub const UPDATE_DIR: &str = "update";
@@ -56,7 +58,7 @@ pub const PREVIOUS_DIR: &str = ".previous";
 pub const INSTANCE_WAIT_SECS: u64 = 60;
 /// How long the updater waits for the new version's proof.
 pub const DEFAULT_CONFIRM_TIMEOUT_SECS: u64 = 90;
-/// The hidden subcommand the updater runs as (wired with RB-110-05).
+/// The subcommand of `rbrowser-updater` (`src/updater/main.rs`).
 pub const APPLY_COMMAND: &str = "apply-update";
 /// Honoured by a debug build only: the new version refuses to prove itself, so a test shows the
 /// way back without publishing a broken release.
@@ -90,6 +92,8 @@ impl InstallError {
 pub const INSTALL_CODES: &[&str] = &[
     "update.plan_invalid",
     "update.journal_invalid",
+    "update.updater_missing",
+    "update.busy",
     "update.install_dir_not_writable",
     "update.not_enough_space",
     "update.digest_mismatch",

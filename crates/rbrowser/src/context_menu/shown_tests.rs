@@ -162,9 +162,11 @@ async fn a_chosen_entry_that_fails_is_named_in_the_status_bar() {
     let items = client.clone().opened(&core, Some((5, 5)));
     let id = id_of(&items, "capture.full_page");
     assert!(client.clone().chosen(&core, id));
-    until(|| !core.status_log().items().is_empty()).await;
-    let message = &core.status_log().items()[0];
-    assert_eq!(message.level, rb_ipc::NotificationLevel::Error);
+    // The capture names its start first (RB-090-85); the failure follows.
+    let is_error = |item: &&rb_ipc::StatusMessage| item.level == rb_ipc::NotificationLevel::Error;
+    until(|| core.status_log().items().iter().any(|item| is_error(&item))).await;
+    let items = core.status_log().items();
+    let message = items.iter().find(is_error).expect("an error");
     assert!(
         message.message_key == crate::capture::FAILED_KEY
             || message.args.get("command").map(String::as_str) == Some("capture.full_page"),

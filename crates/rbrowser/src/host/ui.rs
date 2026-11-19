@@ -113,6 +113,9 @@ pub trait UiBackend: Send + Sync {
     /// Opens the settings window at `url` (the shell's settings page), or brings it to the
     /// front and loads `url` there (RB-010-08).
     fn open_settings_window(&self, url: String);
+    /// Closes the settings window (the setup wizard's "Skip" and "Done", RB-091-05). A window
+    /// that cannot does nothing.
+    fn close_settings_window(&self) {}
     /// Shows a native file or folder dialog; `done` gets the choice (RB-010-08).
     fn pick_path(&self, pick: PathPick, done: PathPicked);
     /// Frames the grid's views in `color` (`#rrggbb`, the environment's), or not at all
@@ -269,6 +272,30 @@ pub trait UiBackend: Send + Sync {
     fn clear_session_cookies(&self, session: String, done: CookiesCleared) {
         tracing::warn!(%session, "this window cannot clear a session's cookies");
         done(false);
+    }
+
+    /// Makes the windowless browser of a render view at `view.marker`, in its session's request
+    /// context, and calls `made` (RB-090-83, `cef_app/render_views.rs`). A window that cannot
+    /// answers why.
+    fn open_render_view(
+        &self,
+        view: crate::sitemap::render_views::RenderView,
+        made: crate::sitemap::render_views::RenderViewMade,
+    ) {
+        let _ = view;
+        made(Err("this window makes no render views".to_owned()));
+    }
+
+    /// Closes the render view's browser that started at `marker`. A window without one does
+    /// nothing.
+    fn close_render_view(&self, marker: String) {
+        let _ = marker;
+    }
+
+    /// Shows a sitemap capture's gallery in its window of its own, never in the grid
+    /// (RB-090-83, `cef_app/gallery_window.rs`). A window that cannot does nothing.
+    fn open_gallery(&self, gallery: crate::sitemap::gallery::GalleryOpen) {
+        let _ = gallery;
     }
 }
 

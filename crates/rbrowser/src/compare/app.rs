@@ -1,14 +1,14 @@
 //! The environment comparison in the window: the commands, the MCP host tools' entry points and
-//! the notice when a run ends. A run gets the sitemap capture's render views (hidden targets of
-//! the app's CDP connection, `crate::sitemap::backend`); everything runs on the core's runtime,
-//! the diff and the reading of a `report.json` (up to 64 MiB) on blocking threads, and the
-//! grid's views are not touched - the grid stays usable.
+//! the notices when a run starts (RB-090-85) and ends. A run gets the sitemap capture's render
+//! views (windowless browsers driven over the app's CDP connection,
+//! `crate::sitemap::render_views`); everything runs on the core's runtime, the diff and the
+//! reading of a `report.json` (up to 64 MiB) on blocking threads, and the grid's views are not
+//! touched - the grid stays usable.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock, Weak};
 
 use rb_commands::CommandError;
-use rb_config::EngineKind;
 use rb_engine::chromium::hidden::RenderSpec;
 use rb_engine::{Target, ViewHost as _};
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
@@ -25,9 +25,9 @@ use super::tool::{
     ResultArgs, Started,
 };
 use crate::control::Core;
-use crate::host::Host;
-use crate::sitemap::backend::{CdpRenderBackend, SessionTarget};
 
+/// The notice of a started run; placeholder `{shots}` (RB-090-85).
+pub const STARTED_KEY: &str = "envcompare.notice.started";
 /// The notice of a finished run; placeholders `{differing}`, `{diffs}`, `{folder}`.
 pub const FINISHED_KEY: &str = "envcompare.notice.finished";
 /// The notice of a run that could not start; placeholder `{error}`.
@@ -90,18 +90,6 @@ impl RunEvents for ShellEvents {
         ];
         core.notify(notice(level, FINISHED_KEY, &args));
     }
-}
-
-/// A grid view's target showing a session, for the render views' browser context.
-fn session_target(host: &Arc<Host>) -> SessionTarget {
-    let host = Arc::downgrade(host);
-    Box::new(move |session| {
-        let host = host.upgrade()?;
-        host.views()
-            .into_iter()
-            .filter(|view| view.engine == EngineKind::Chromium && view.session == session)
-            .find_map(|view| host.target_id(view.id))
-    })
 }
 
 /// Starts a comparison: the MCP tool `env_compare` and the command `env.compare.run`.
@@ -201,12 +189,23 @@ pub async fn start(core: &Arc<Core>, args: CompareArgs) -> Result<Started, RunEr
     };
     let services = Services {
         backend: Arc::new(
-            CdpRenderBackend::new(host.cdp().clone(), session_target(&host))
+            crate::sitemap::render_views::backend_for(&host)
                 .with_clean(crate::capture::clean_plan(core, clean)),
         ),
         events: Arc::new(ShellEvents(Arc::downgrade(core))),
     };
-    runs().start(new, services).await
+    let started = runs().start(new, services).await?;
+    core.notify(started_notice(&started));
+    Ok(started)
+}
+
+/// The notice that `started` runs: the person sees the comparison begin (RB-090-85).
+fn started_notice(started: &Started) -> CoreToShell {
+    notice(
+        NotificationLevel::Info,
+        STARTED_KEY,
+        &[("shots", started.shots.to_string())],
+    )
 }
 
 /// The state and diffs of a run: the MCP tool `env_compare_result`. A finished run's

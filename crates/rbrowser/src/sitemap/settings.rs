@@ -27,6 +27,8 @@ pub struct Effective {
     pub max_depth: u32,
     pub max_bytes: usize,
     pub max_urls: usize,
+    /// The longest one screenshot may take (`sitemap.shotTimeoutSec`, RB-090-83).
+    pub shot_timeout: Duration,
 }
 
 impl Effective {
@@ -73,6 +75,7 @@ impl Effective {
                 * 1024
                 * 1024,
             max_urls: usize::try_from(config.max_urls.clamp(1, 200_000)).unwrap_or(200_000),
+            shot_timeout: Duration::from_secs(u64::from(config.shot_timeout_sec.clamp(5, 120))),
         }
     }
 

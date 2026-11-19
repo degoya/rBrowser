@@ -239,6 +239,8 @@ pub const PROJECT_KEYS: &[KeyDef] = &[
     key("sitemap.waitSelector", Category::Capture, "sitemap"),
     key("sitemap.delayMs", Category::Capture, "sitemap"),
     key("sitemap.timeoutSec", Category::Capture, "sitemap"),
+    // RB-090-83: a shot's own deadline.
+    key("sitemap.shotTimeoutSec", Category::Capture, "sitemap"),
     key("sitemap.fullPage", Category::Capture, "sitemap"),
     key("sitemap.autoScroll", Category::Capture, "sitemap"),
     key("sitemap.include", Category::Capture, "sitemap"),
@@ -294,9 +296,27 @@ pub const PROJECT_KEYS: &[KeyDef] = &[
         Category::Automation,
         "recorder",
     ),
+    // The form autofill's fills in a recording (RB-090-78).
+    key(
+        "automation.recorder.recordAutofill",
+        Category::Automation,
+        "recorder",
+    ),
     // How a recording plays back and its export waits (RB-090-66).
     key(
         "automation.recorder.playbackPace",
+        Category::Automation,
+        "recorder",
+    ),
+    // The Recorder panel follows a played recording's steps (RB-090-84).
+    key(
+        "automation.recorder.followPlayback",
+        Category::Automation,
+        "recorder",
+    ),
+    // The least pause before each step at the pace `recorded` (RB-090-84).
+    key(
+        "automation.recorder.minPauseMs",
         Category::Automation,
         "recorder",
     ),

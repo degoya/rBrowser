@@ -2,10 +2,13 @@
 // The sitemap bar (RB-050-05): `panels.sitemap` (`Ctrl+Shift+Space P G`, or the toolbar's
 // indicator) reaches the shell as `uiCommand`, and this bar covers the toolbar strip (the shell
 // view, never a page) with the last capture: its progress and time left while it runs, its
-// outcome afterwards. Start, cancel, resume and "open the gallery" (in the active view) are
-// `UButton`s (RB-080-88), the first one focused; Escape closes. The coordinator mounts it in `App.vue`.
-// Closed by Escape, Cancel or done, the focus goes back to its opener (`returnFocus.ts`, RB-090-23).
-import { computed, nextTick, onScopeDispose, ref } from 'vue';
+// outcome afterwards. It also opens by itself when a capture starts or resumes, from wherever
+// (RB-090-83: a start shows that something happens) - then without taking the focus - and stays
+// until it is closed. Start, cancel, resume and "open the gallery" (`sitemap.gallery`: a window
+// of its own, never a view) are `UButton`s (RB-080-88), the first one focused when the person
+// opened the bar; Escape closes. The coordinator mounts it in `App.vue`. Closed by Escape,
+// Cancel or done, the focus goes back to its opener (`returnFocus.ts`, RB-090-23).
+import { computed, nextTick, onScopeDispose, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
 import { returnFocus } from '../focus/returnFocus';
@@ -19,6 +22,7 @@ import {
   isRunning,
   resumeMessage,
   sitemapOf,
+  startsShowing,
   stateKey,
   timeLeft,
 } from './sitemap';
@@ -32,7 +36,6 @@ const bar = ref<HTMLElement | null>(null);
 const focus = returnFocus();
 const status = computed(() => sitemapOf(shell.state.value));
 const running = computed(() => isRunning(status.value));
-const view = computed(() => shell.state.value?.activeView ?? shell.state.value?.views[0]?.id ?? null);
 const line = computed(() => {
   const args = {
     done: status.value?.done ?? 0,
@@ -52,6 +55,13 @@ const stop = (props.subscribe ?? windowEvents)((message) => {
   }
 });
 onScopeDispose(stop);
+
+// A capture that starts or resumes opens the bar, wherever it was started; the focus stays.
+watch(status, (now, before) => {
+  if (startsShowing(now, before)) {
+    open.value = true;
+  }
+});
 
 function close(): void {
   open.value = false;
@@ -75,9 +85,8 @@ function resume(): void {
 }
 
 function gallery(): void {
-  const path = status.value?.gallery;
-  if (path !== undefined && view.value !== null) {
-    void shell.send(galleryMessage(path, view.value));
+  if (status.value?.gallery !== undefined && status.value?.gallery !== null) {
+    void shell.send(galleryMessage(status.value.runId));
     close();
   }
 }
@@ -115,7 +124,7 @@ function gallery(): void {
       </UButton>
     </template>
     <UButton
-      v-if="status?.gallery !== undefined && status?.gallery !== null && view !== null"
+      v-if="status?.gallery !== undefined && status?.gallery !== null"
       size="sm"
       color="neutral"
       variant="outline"

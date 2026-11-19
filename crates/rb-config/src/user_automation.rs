@@ -7,6 +7,23 @@ use serde::{Deserialize, Serialize};
 /// The folder of the flows when `automation.flows.dir` is not set.
 pub const DEFAULT_FLOWS_DIR: &str = ".rbrowser/flows";
 
+/// The layout modes `automation.flows.runLayout` offers; a preset's id may be typed instead.
+pub const RUN_LAYOUTS: [&str; 4] = ["grid", "horizontal", "split", "canvas"];
+
+/// `automation.flows.hiddenViews` (RB-090-84): what a run does with the views the layout hides -
+/// horizontal mode scrolls views out of sight, focus mode shows one breakpoint - whose pages the
+/// browser throttles, so their actions wait in vain.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum HiddenViews {
+    /// The run plays in the views shown; the hidden ones and the breakpoints the flow names that
+    /// no view shows are named as skipped in the result and a notice.
+    #[default]
+    Skip,
+    /// The run shows the layout `runLayout` while it goes on, and the one before after it.
+    Layout,
+}
+
 /// `automation`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", default)]
@@ -38,6 +55,14 @@ pub struct FlowSettings {
     pub sync_during_run: bool,
     /// Save a screenshot of a view whose flow failed or timed out.
     pub screenshot_on_failure: bool,
+    /// What a run does with views the layout hides: `skip` plays in the views shown and names the
+    /// rest, `layout` shows `runLayout` for the run (RB-090-84).
+    pub hidden_views: HiddenViews,
+    /// The layout a run shows with `hiddenViews: layout`: `grid`, `horizontal`, `split` or
+    /// `canvas` over the preset shown, or a preset's id.
+    /// The settings window offers the modes and the project's presets (source `layouts`).
+    #[schemars(extend("x-options" = "layouts"))]
+    pub run_layout: String,
 }
 
 impl Default for FlowSettings {
@@ -49,6 +74,8 @@ impl Default for FlowSettings {
             action_timeout_ms: 10_000,
             sync_during_run: false,
             screenshot_on_failure: true,
+            hidden_views: HiddenViews::Skip,
+            run_layout: "grid".to_owned(),
         }
     }
 }

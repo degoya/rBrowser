@@ -37,8 +37,11 @@ INPUTS = ("file", "folder")
 DYNAMIC_OPTIONS = "dynamic"
 # The sources of known values the core fills in (`rbrowser::settings_window::dynamic::SOURCES`).
 OPTION_SOURCES = (
-    "plugins", "plugin-panels", "plugin-page-scripts", "check-rules", "environments", "breakpoints"
+    "plugins", "plugin-panels", "plugin-page-scripts", "check-rules", "environments", "breakpoints",
+    "layouts"
 )
+# The sources whose values one string takes (a choice of one), not a list or a map's keys.
+STRING_SOURCES = ("layouts",)
 PATH_LEAF = re.compile(r"(path|dir)\Z", re.I)
 MAX_DEPTH = 32
 KEY_SEGMENT = re.compile(r"[A-Za-z][A-Za-z0-9_-]*\Z")
@@ -330,6 +333,9 @@ def input_problems(path: str, schema) -> list[str]:
     if options == DYNAMIC_OPTIONS:
         if "x-input" not in schema:
             problems.append('x-options "dynamic" sits on a key without x-input')
+    elif options in STRING_SOURCES:
+        if not is_string_schema(schema):
+            problems.append(f'x-options "{options}" sits on a key that is no string')
     elif options in OPTION_SOURCES:
         if not is_list_or_map(schema):
             problems.append(f'x-options "{options}" sits on a key that is no list or map')

@@ -491,4 +491,9 @@ pub enum ShellToCore {
         /// Folded or open.
         collapsed: bool,
     },
+    /// The setup wizard's requests (RB-091-05), from the pages window only.
+    Setup {
+        /// The request; answered with `setup` or `ack`.
+        request: crate::SetupRequest,
+    },
 }

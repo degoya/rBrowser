@@ -105,6 +105,7 @@ pub fn facts_from(build: Build<'_>, dirs: &Dirs) -> AboutInfo {
         firefox_path: None,
         apis,
         dirs: folders,
+        updates: None,
     }
 }
 

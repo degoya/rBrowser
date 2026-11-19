@@ -55,13 +55,13 @@ pub enum Entry {
     },
 }
 
-/// `text` as a native menu shows it: `&` marks a mnemonic there, so a literal one is doubled,
-/// and a tab or a line break (a tab starts the shortcut column) is a space.
+/// `text` as a native menu shows it: a tab or a line break (a tab starts the shortcut column) is
+/// a space. A `&` stays as it is: CEF 156's toolbar menus show it literally, so a doubled one read
+/// "Plugins && extensions" (owner, 2026-11-18).
 pub fn menu_label(text: &str) -> String {
     text.chars()
         .map(|c| if c.is_control() { ' ' } else { c })
-        .collect::<String>()
-        .replace('&', "&&")
+        .collect()
 }
 
 /// The accelerator of a direct shortcut; `None` for a leader chord, a shortcut with the Windows
@@ -180,8 +180,10 @@ impl Pending {
     /// Row `index` was chosen; a heading, a submenu, a disabled row or no row at all chooses
     /// nothing.
     pub fn choose(&self, index: usize) {
-        if let Some(Some(id)) = self.choices.get(index) {
-            *rb_util::lock(&self.chosen) = Some(id.clone());
+        let id = self.choices.get(index).cloned().flatten();
+        tracing::info!(index, chosen = ?id, "a native menu row was chosen");
+        if let Some(id) = id {
+            *rb_util::lock(&self.chosen) = Some(id);
         }
     }
 
@@ -190,6 +192,7 @@ impl Pending {
         let done = rb_util::lock(&self.done).take();
         if let Some(done) = done {
             let item = rb_util::lock(&self.chosen).take();
+            tracing::info!(chosen = ?item, "a native menu closed");
             done(item);
         }
     }

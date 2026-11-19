@@ -22,6 +22,7 @@ use std::time::SystemTime;
 use rb_commands::CommandError;
 use rb_config::{Breakpoint, PlaybackPace, ProjectConfig};
 use rb_engine::{Emulation, Target};
+use rb_ipc::StepPause;
 use rb_sync::recorder::{
     ExportOptions, ExportProject, ExportRequest, ExportsDir, ExportsError, Recording,
     RecordingStore, StoreError, check_name,
@@ -106,13 +107,17 @@ pub struct RecorderExportAnswer {
     pub files: Vec<ExportedFile>,
 }
 
-/// Runs `recorder.export_flow` or `recorder.export_spec`: `args` with the command's format.
+/// Runs `recorder.export_flow` or `recorder.export_spec`: `args` with the command's format. The
+/// notice names the files written, as the panel's export does (RB-090-84).
 pub fn run_export_command(
     core: &Core,
     format: ExportFormat,
     args: &Value,
 ) -> Result<RecorderExportAnswer, CommandError> {
-    recorder_export(core, &with_format(args, format))
+    let answer = recorder_export(core, &with_format(args, format))?;
+    let paths: Vec<&str> = answer.files.iter().map(|file| file.path.as_str()).collect();
+    core.notify(super::panel_export::saved_paths_notice(&paths));
+    Ok(answer)
 }
 
 /// `args` (an object or null) with `format` set.
@@ -188,6 +193,39 @@ pub fn render_recording_at(
     render_all(core.runtime().clone(), &formats, &request)
 }
 
+/// The plugin's internal format with the pause before each step (`recorder-export`'s `pauses`).
+pub const PAUSES_FORMAT: &str = "pauses";
+
+/// The pause before each written step of `recording` at the `recorded` pace with
+/// `automation.recorder.minPauseMs`, as the exporter writes them into the flow (RB-090-84): the
+/// one rule, for a played flow's timeout and the Recorder panel.
+///
+/// # Errors
+///
+/// The plugin failed or answered no pauses.
+pub fn recorded_pauses(core: &Core, recording: &Recording) -> Result<Vec<StepPause>, CommandError> {
+    let config = core.host().config();
+    let request = request_json(recording, None, &config, PlaybackPace::Recorded)?;
+    let files = render_all(core.runtime().clone(), &[PAUSES_FORMAT], &request)?;
+    let text = files.first().map_or("", |(_, text)| text.as_str());
+    parse_pauses(text)
+}
+
+/// The plugin's `{"pauses":[{"step":1,"ms":0},...]}`.
+///
+/// # Errors
+///
+/// The text is no such list.
+pub fn parse_pauses(text: &str) -> Result<Vec<StepPause>, CommandError> {
+    #[derive(Deserialize)]
+    struct Answer {
+        pauses: Vec<StepPause>,
+    }
+    serde_json::from_str::<Answer>(text)
+        .map(|answer| answer.pauses)
+        .map_err(|error| CommandError::Failed(format!("the plugin's pauses: {error}")))
+}
+
 /// Writes `files` into a new folder `name` of `automation.recorderExport.dir` below `root`.
 pub fn write_export(
     core: &Core,
@@ -260,6 +298,7 @@ pub fn request_json(
             base_url: base_url_of(recording, config),
             projects: projects_of(recording, config),
             pace: pace.as_str().to_owned(),
+            min_pause_ms: config.automation.recorder.min_pause_ms,
             name: export_name.map(str::to_owned),
         },
     };

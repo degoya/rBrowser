@@ -1,11 +1,11 @@
 //! The switch in front of everything that reaches the network: self-update runs only in a build
-//! with the Cargo feature `self-update` (of the app, off in phase 1) **and** with the setting
-//! `updates.enabled` on (off by default, protected from MCP). While either is off, [`check`]
+//! with the Cargo feature `self-update` (of the app, on by default since RB-090-14) **and** with the
+//! setting `updates.enabled` on (protected from MCP). While either is off, [`check`]
 //! answers `update.disabled` before it builds a trust store, reads a file or asks the fetcher
 //! for anything - `gate_tests.rs` proves that with a fetcher that records every request.
 //!
-//! Then the order: the compiled-in root (`update.not_configured` while it is the placeholder,
-//! still without a request), the manifest of the channel, its verification against the stored
+//! Then the order: the compiled-in root (`update.not_configured` for a table without a key, still
+//! without a request), the manifest of the channel, its verification against the stored
 //! floor, and the raised floor stored before the manifest is handed on.
 
 use std::path::Path;

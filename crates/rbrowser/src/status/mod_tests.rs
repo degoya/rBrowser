@@ -71,6 +71,31 @@ async fn every_notification_reaches_the_log_and_the_bar_at_once_and_only_the_bar
 }
 
 #[tokio::test]
+async fn a_notice_reaches_the_bar_without_the_error_code_in_front_of_its_text() {
+    let (ui, core) = core();
+    core.shell_ready();
+    let mut notification = notice("sitemap.notice.failed", NotificationLevel::Error);
+    notification.args.insert(
+        "error".to_owned(),
+        "sitemap.error.busy: a sitemap capture is already running".to_owned(),
+    );
+    core.notify(CoreToShell::Notification(notification));
+    let items = core.status_log().items();
+    let last = items.last().expect("logged");
+    assert_eq!(last.args["error"], "a sitemap capture is already running");
+    // The shell's own copy carries the same text.
+    let events = sent(&ui);
+    let shell = events
+        .iter()
+        .find(|event| event["type"] == "notification")
+        .expect("the shell's notification");
+    assert_eq!(
+        shell["args"]["error"],
+        "a sitemap capture is already running"
+    );
+}
+
+#[tokio::test]
 async fn the_bar_reads_the_log_and_the_shell_reports_into_it() {
     let (_ui, core) = core();
     let report =

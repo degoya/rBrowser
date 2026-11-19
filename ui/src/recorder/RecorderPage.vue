@@ -12,8 +12,12 @@
 // and while a run goes on - which shows here with "Cancel" (`flows.cancel`; the core's
 // `flowRunChanged` asks again). While no recording runs, "Start recording" starts one
 // (`recorder.start`); the core's `recordingsChanged` (a recording stopped or saved) refreshes the
-// list, and a recording with unsaved edits is never replaced under the person's hands.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+// list, and a recording with unsaved edits is never replaced under the person's hands. While the
+// chosen recording plays (RB-090-84) its steps follow the run (`playback.ts`): the step a view
+// runs is marked, a failed one red with its reason, and with `automation.recorder.followPlayback`
+// the running step scrolls into sight; each step shows the pause Play waits before it at the pace
+// As recorded - the exporter's, answered with the recording, left out while edits are unsaved.
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -27,6 +31,16 @@ import ExportDialog from './ExportDialog.vue';
 import { recorderChannel } from './host';
 import { RECORDER_ICONS } from './icons';
 import { PACE_KEY, PACES, paceOf, type Pace } from './pace';
+import { pauseMap } from './pauses';
+import {
+  FOLLOW_KEY,
+  NO_PLAYBACK,
+  followOf,
+  runningSteps,
+  withResult,
+  withStep,
+  type Playback,
+} from './playback';
 import { deleteStep, moveStep, renameStep, setStepValue, type Recording } from './recording';
 import StepRow from './StepRow.vue';
 
@@ -57,11 +71,17 @@ const notice = ref<string | null>(null);
 const exporting = ref(false);
 const flowRun = ref<FlowRunState | null>(null);
 const pace = ref<Pace>('fast');
+const playback = ref<Playback>(NO_PLAYBACK);
+const follow = ref(true);
+/** By step id: the pause before it, as the recording's file holds it. */
+const pauses = ref<Map<number, number>>(new Map());
+const stepList = ref<HTMLElement | null>(null);
 
 const dirty = computed(
   () => draft.value !== null && JSON.stringify(draft.value) !== JSON.stringify(original.value),
 );
 const steps = computed(() => draft.value?.steps ?? []);
+const runningIds = computed(() => runningSteps(playback.value));
 const running = computed(() => flowRun.value?.running ?? null);
 const paces = computed(() => PACES.map((value) => ({ value, label: t(`recorder.panel.pace.${value}`) })));
 /** "Play"'s tooltip: what it does, and its shortcut from the registry. */
@@ -97,10 +117,12 @@ async function choose(name: string): Promise<void> {
   error.value = null;
   notice.value = null;
   try {
-    const recording = await channel.get(name);
+    const { recording, pauses: known } = await channel.get(name);
     chosen.value = name;
+    playback.value = NO_PLAYBACK;
     original.value = recording;
     draft.value = recording;
+    pauses.value = pauseMap(known);
   } catch (caught) {
     error.value = t('recorder.panel.error.open', { name, reason: reason(caught) });
   }
@@ -122,6 +144,8 @@ async function save(): Promise<void> {
     list.value = await channel.save(chosen.value, draft.value);
     original.value = draft.value;
     notice.value = t('recorder.panel.saved', { name: chosen.value });
+    // The saved order has pauses of its own.
+    pauses.value = pauseMap((await channel.get(chosen.value)).pauses);
   } catch (caught) {
     error.value = t('recorder.panel.error.save', { reason: reason(caught) });
   }
@@ -142,12 +166,26 @@ function run(id: string, args?: JsonValue): void {
 
 function play(): void {
   if (chosen.value !== null) {
+    playback.value = NO_PLAYBACK;
     run('recorder.play', { recordingId: chosen.value, pace: pace.value });
   }
 }
 
 function exported(folder: string): void {
   notice.value = t('recorder.export.saved', { folder });
+}
+
+/** Scrolls step `id` into sight when the panel follows the playback. */
+function reveal(id: number | null | undefined): void {
+  if (!follow.value || id === null || id === undefined) {
+    return;
+  }
+  void nextTick(() => {
+    const row = stepList.value?.querySelector(`[data-testid="step-${id}"]`);
+    if (row !== null && row !== undefined && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  });
 }
 
 /** The run going on, if any; the panel works without (an older core). */
@@ -157,29 +195,56 @@ async function loadRun(): Promise<void> {
   } catch {
     flowRun.value = null;
   }
+  const state = flowRun.value;
+  const followed = playback.value.runId;
+  if (state?.running !== undefined) {
+    if (state.running.flow === chosen.value && state.running.runId !== followed) {
+      playback.value = { ...NO_PLAYBACK, runId: state.running.runId };
+    }
+  } else if (state?.last !== undefined && followed !== null && state.last.runId === followed) {
+    // The run followed ended: its result names the step each failed view stopped at.
+    const ended = withResult(playback.value, state.last);
+    if (JSON.stringify(ended) !== JSON.stringify(playback.value)) {
+      playback.value = ended;
+      const first = Object.keys(ended.failed)[0];
+      reveal(first === undefined ? null : Number(first));
+    }
+  }
 }
 
-/** The choice beside "Play" starts at the setting. */
-async function loadPace(): Promise<void> {
+/** The choice beside "Play" starts at the setting; following the playback is one too. */
+async function loadSettings(): Promise<void> {
   try {
     const answer = await props.client.expect({ type: 'getSettings' }, 'settings');
-    pace.value = paceOf(answer.values.find((entry) => entry.key === PACE_KEY)?.value);
+    const value = (key: string) => answer.values.find((entry) => entry.key === key)?.value;
+    pace.value = paceOf(value(PACE_KEY));
+    follow.value = followOf(value(FOLLOW_KEY));
   } catch {
-    // The default stays: fast.
+    // The defaults stay: fast, following.
   }
 }
 
 const stop = channel.onChanged(() => void load());
 const stopRuns = runs.onChanged(() => void loadRun());
+const stopSteps = channel.onStep((step) => {
+  if (step.flow !== chosen.value) {
+    return;
+  }
+  playback.value = withStep(playback.value, step);
+  if (step.state !== 'passed') {
+    reveal(step.stepId);
+  }
+});
 onMounted(() => {
   shell.loadCommands();
   void load();
   void loadRun();
-  void loadPace();
+  void loadSettings();
 });
 onBeforeUnmount(() => {
   stop();
   stopRuns();
+  stopSteps();
 });
 </script>
 
@@ -311,13 +376,16 @@ onBeforeUnmount(() => {
             </span>
           </div>
           <p v-if="steps.length === 0" class="p-3 text-sm text-muted">{{ t('recorder.panel.no_steps') }}</p>
-          <ol class="min-h-0 flex-1 overflow-auto" data-testid="recorder-steps">
+          <ol ref="stepList" class="min-h-0 flex-1 overflow-auto" data-testid="recorder-steps">
             <StepRow
               v-for="(step, index) in steps"
               :key="step.id"
               :step="step"
               :index="index"
               :count="steps.length"
+              :running="runningIds.has(step.id)"
+              :failure="playback.failed[step.id] ?? null"
+              :pause-ms="dirty ? 0 : (pauses.get(step.id) ?? 0)"
               @rename="(name) => edit((recording) => renameStep(recording, step.id, name))"
               @value="(value) => edit((recording) => setStepValue(recording, step.id, value))"
               @move="(by) => edit((recording) => moveStep(recording, step.id, by))"

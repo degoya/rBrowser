@@ -3259,13 +3259,28 @@
             "local"
           ]
         },
+        "shotTimeoutSec": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 5,
+          "description": "The longest one screenshot may take, in seconds (5 to 120); the reason of a shot that\nfailed is in the log and in run.json (RB-090-83).",
+          "maximum": 120,
+          "default": 15,
+          "x-category": "capture",
+          "x-section": "sitemap",
+          "x-order": 6,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
         "fullPage": {
           "type": "boolean",
           "description": "Capture the whole page, not only the viewport.",
           "default": true,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 6,
+          "x-order": 7,
           "x-scope": [
             "project",
             "local"
@@ -3277,7 +3292,7 @@
           "default": true,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 7,
+          "x-order": 8,
           "x-scope": [
             "project",
             "local"
@@ -3292,7 +3307,7 @@
           "default": [],
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 8,
+          "x-order": 9,
           "x-scope": [
             "project",
             "local"
@@ -3307,7 +3322,7 @@
           "default": [],
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 9,
+          "x-order": 10,
           "x-scope": [
             "project",
             "local"
@@ -3322,7 +3337,7 @@
           "default": 0,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 10,
+          "x-order": 11,
           "x-scope": [
             "project",
             "local"
@@ -3337,7 +3352,7 @@
           "default": 250,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 11,
+          "x-order": 12,
           "x-scope": [
             "project",
             "local"
@@ -3349,7 +3364,7 @@
           "default": true,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 12,
+          "x-order": 13,
           "x-scope": [
             "project",
             "local"
@@ -3364,7 +3379,7 @@
           "default": [],
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 13,
+          "x-order": 14,
           "x-scope": [
             "project",
             "local"
@@ -3379,7 +3394,7 @@
           "default": 1,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 14,
+          "x-order": 15,
           "x-scope": [
             "project",
             "local"
@@ -3394,7 +3409,7 @@
           "default": 3,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 15,
+          "x-order": 16,
           "x-scope": [
             "project",
             "local"
@@ -3409,7 +3424,7 @@
           "default": 10,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 16,
+          "x-order": 17,
           "x-scope": [
             "project",
             "local"
@@ -3424,7 +3439,7 @@
           "default": 50000,
           "x-category": "capture",
           "x-section": "sitemap",
-          "x-order": 17,
+          "x-order": 18,
           "x-scope": [
             "project",
             "local"
@@ -4243,12 +4258,45 @@
               ]
             },
             "recordHover": {
-              "type": "boolean",
-              "description": "A hover is kept as a step when it revealed what the next click hits (a menu trigger).",
-              "default": true,
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "menu",
+                  "description": "Only the hover that opened the submenu the next click goes into."
+                },
+                {
+                  "type": "string",
+                  "const": "all",
+                  "description": "Also a hover that seems to reveal what the next click hits."
+                },
+                {
+                  "type": "string",
+                  "const": "off",
+                  "description": "No hover."
+                },
+                {
+                  "type": "boolean",
+                  "deprecated": true,
+                  "description": "The earlier form of this setting: `true` loads as `menu`, `false` as `off`."
+                }
+              ],
+              "description": "Which hovers are steps (RB-090-81): `menu` only the hover that opened the submenu the\nnext click goes into, `all` also a hover the recorder guesses revealed what the next\nclick hits, `off` none.",
+              "default": "menu",
               "x-category": "automation",
               "x-section": "recorder",
               "x-order": 2,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "recordAutofill": {
+              "type": "boolean",
+              "description": "The form autofill's fills are steps (RB-090-78): each field it set as a `fill`, `check`,\n`uncheck` or `select` with the value set, a password as its placeholder.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 3,
               "x-scope": [
                 "project",
                 "local"
@@ -4271,7 +4319,34 @@
               "default": "fast",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 3,
+              "x-order": 4,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "followPlayback": {
+              "type": "boolean",
+              "description": "While a recording plays, the Recorder panel marks the step each view runs, a failed step\nred with its reason, and scrolls the running step into sight (RB-090-84). Off, it marks\nthe steps but leaves the list where it is.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 5,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "minPauseMs": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0,
+              "description": "The least pause, in milliseconds, before each step but the first when a recording plays\nor exports at the pace `recorded` (RB-090-84), so a navigation's effect can be watched;\n0 keeps the pauses as recorded.",
+              "maximum": 10000,
+              "default": 0,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 6,
               "x-scope": [
                 "project",
                 "local"
@@ -4286,7 +4361,7 @@
               "default": [],
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 4,
+              "x-order": 7,
               "x-scope": [
                 "project",
                 "local"
@@ -4299,7 +4374,7 @@
               "default": ".rbrowser/out/recordings",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 5,
+              "x-order": 8,
               "x-scope": [
                 "project",
                 "local"
@@ -4311,8 +4386,11 @@
           "description": "The recorder (RB-050-01).",
           "default": {
             "recordScroll": true,
-            "recordHover": true,
+            "recordHover": "menu",
+            "recordAutofill": true,
             "playbackPace": "fast",
+            "followPlayback": true,
+            "minPauseMs": 0,
             "secretFields": [],
             "dir": ".rbrowser/out/recordings"
           }
@@ -4352,7 +4430,7 @@
               "default": "auto",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 6,
+              "x-order": 9,
               "x-scope": [
                 "project",
                 "local"
@@ -4364,7 +4442,7 @@
               "default": ".rbrowser/out/exports",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 7,
+              "x-order": 10,
               "x-scope": [
                 "project",
                 "local"
@@ -4378,7 +4456,7 @@
               "default": true,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 8,
+              "x-order": 11,
               "x-scope": [
                 "project",
                 "local"
@@ -4397,8 +4475,11 @@
       "default": {
         "recorder": {
           "recordScroll": true,
-          "recordHover": true,
+          "recordHover": "menu",
+          "recordAutofill": true,
           "playbackPace": "fast",
+          "followPlayback": true,
+          "minPauseMs": 0,
           "secretFields": [],
           "dir": ".rbrowser/out/recordings"
         },

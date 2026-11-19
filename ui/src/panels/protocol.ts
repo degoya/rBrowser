@@ -47,7 +47,16 @@ export type PanelRequest =
       consent: { capabilities: string[]; grants: PluginGrantDetails; keyFingerprint: string | null };
     }
   /** Removes a plugin the catalogue installed (RB-091-01). */
-  | { op: 'catalogRemove'; id: string };
+  | { op: 'catalogRemove'; id: string }
+  /** The first-party plugins the first-run wizard offers (RB-091-04, RB-091-05); a read. */
+  | { op: 'available' }
+  /** Installs the chosen first-party plugins, each from the repository first and the bundle
+   * otherwise, with `pluginInstallProgress` messages (RB-091-04). */
+  | { op: 'installChosen'; ids: string[] }
+  /** Takes the named plugins out of the choice and removes the catalogue's copies (RB-091-04). */
+  | { op: 'removeChosen'; ids: string[] }
+  /** The first-run wizard's Skip: the recommended set is chosen, the choice no longer pending. */
+  | { op: 'applyRecommended' };
 
 /** A message for a plugin's panels: from its page scripts (with their view) or its component. */
 export interface PanelEvent {
@@ -80,4 +89,14 @@ export type PanelMessage =
   | { select: PanelSelect }
   /** The panels offered changed - the plugins are loaded, a panel hidden, a project plugin under
    * new trust: a panels page asks for the list again (RB-080-97, `plugins/panel_list.rs`). */
-  | { panelsChanged: true };
+  | { panelsChanged: true }
+  /** One chosen plugin's install began or ended (RB-091-04, `plugins/bundle_install.rs`). */
+  | {
+      pluginInstallProgress: {
+        id: string;
+        done: number;
+        total: number;
+        state: 'installing' | 'installed' | 'failed';
+        error?: string;
+      };
+    };

@@ -30,8 +30,13 @@ use crate::control::Core;
 pub const UPDATES_NOTICE_KEY: &str = "plugins.catalog.notice.updates";
 /// The status bar's notice that the catalogue has no update.
 pub const NO_UPDATES_NOTICE_KEY: &str = "plugins.catalog.notice.no_updates";
+/// The status bar's notice of updates installed by themselves (`{count}`,
+/// `plugins.catalog.autoUpdate`, RB-091-04).
+pub const AUTO_UPDATED_NOTICE_KEY: &str = "plugins.catalog.notice.auto_updated";
 /// The status bar's notice that a check failed; the catalogue's tab names which repository.
 pub const CHECK_FAILED_NOTICE_KEY: &str = "plugins.catalog.notice.check_failed";
+/// The status message when a person's update check starts (RB-090-85).
+pub const CHECKING_NOTICE_KEY: &str = "plugins.catalog.notice.checking";
 /// The setting the notices link to: the catalogue's tab of Settings > Plugins.
 pub const CATALOG_SETTING: &str = "plugins.catalog.repositories";
 
@@ -42,7 +47,7 @@ static START_CHECKED: AtomicBool = AtomicBool::new(false);
 mod install;
 
 pub use install::{
-    BUNDLED_CODE, ConsentRequest, InstallRequest, install, refuse_bundled, remove, review,
+    ConsentRequest, FOREIGN_CODE, InstallRequest, install, refuse_foreign, remove, review,
     same_grants, with_pinned,
 };
 
@@ -185,6 +190,17 @@ pub fn without_query(url: &str) -> String {
     }
 }
 
+/// The notice that a person's update check started: the repositories answer in seconds, and the
+/// count follows as [`notice`] (RB-090-85).
+pub fn checking_notice() -> Notification {
+    Notification {
+        level: NotificationLevel::Info,
+        message_key: CHECKING_NOTICE_KEY.to_owned(),
+        args: Default::default(),
+        settings_key: Some(CATALOG_SETTING.to_owned()),
+    }
+}
+
 /// Refreshes the catalogue and says in the status bar how many updates there are: the command
 /// `plugins.check_updates` from a shortcut or the palette, and the start check. Off the UI
 /// thread.
@@ -197,19 +213,39 @@ pub fn check_in_background(core: &Core) {
         let Some(dir) = store_dir() else {
             return;
         };
-        let answer = answer(
-            &core.user_settings(),
-            dir,
-            Some(&HttpFetcher::new()),
-            Value::Null,
-        );
+        let user = core.user_settings();
+        let mut answer = answer(&user, dir, Some(&HttpFetcher::new()), Value::Null);
+        // RB-091-04: what may install by itself does, then the rest is counted with the
+        // bundled plugins' updates.
+        let updated = super::bundle_offer::auto_update(&core);
+        if updated > 0 {
+            core.notify(CoreToShell::Notification(Notification {
+                level: NotificationLevel::Info,
+                message_key: AUTO_UPDATED_NOTICE_KEY.to_owned(),
+                args: [("count".to_owned(), updated.to_string())].into(),
+                settings_key: Some(CATALOG_SETTING.to_owned()),
+            }));
+        }
+        if let Value::Object(fields) = &mut answer {
+            fields.insert(
+                "bundled".to_owned(),
+                Value::Array(super::bundle_offer::bundled_rows(&user)),
+            );
+        }
         core.notify(CoreToShell::Notification(notice(&answer)));
     });
 }
 
-/// The status bar's notice of a check's `answer`.
+/// The status bar's notice of a check's `answer`: the catalogue's updates and the bundled
+/// plugins' (`bundled[].update`, RB-091-04).
 pub fn notice(answer: &Value) -> Notification {
-    let updates = answer["updates"].as_array().map_or(0, Vec::len);
+    let bundled = answer["bundled"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| row["update"].is_object())
+        .count();
+    let updates = answer["updates"].as_array().map_or(0, Vec::len) + bundled;
     // The page names the repository that failed and why; the notice says a sentence only.
     let failed = answer["repositories"]
         .as_array()

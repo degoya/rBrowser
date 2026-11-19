@@ -36,25 +36,39 @@ longer goes unnoticed while you look at another.
 **Beta.** rBrowser is young: expect rough edges and changes between releases. What each release
 changed is in [CHANGELOG.md](CHANGELOG.md).
 
-rBrowser runs on **Windows 10 and 11 (x64)**. Linux and macOS follow later.
+rBrowser runs on **Windows 10 and 11 (x64)** and on **macOS 13 or later** (Apple Silicon and
+Intel). Linux follows later.
 
 ## Download
 
-Every release is on [GitHub Releases](https://github.com/degoya/rBrowser/releases). No installer
-and no administrator rights are needed: unpack the whole `rbrowser-<version>-windows-x64.zip`
-into a folder of your own and start `rbrowser.exe`. Do not start it from inside the zip or from a
-WSL share: the browser sandbox refuses both.
+Every release is on [GitHub Releases](https://github.com/degoya/rBrowser/releases) and lists its
+files with their SHA-256 in `SHA256SUMS`.
 
-The program is not code-signed yet, so Windows SmartScreen may warn on the first start; choose
-*More info* and *Run anyway*. Every release lists its files with their SHA-256 in `SHA256SUMS`.
+**Windows.** No installer and no administrator rights are needed: unpack the whole
+`rbrowser-<version>-windows-x64.zip` into a folder of your own and start `rbrowser.exe`. Do not
+start it from inside the zip or from a WSL share: the browser sandbox refuses both. The program is
+not code-signed yet, so Windows SmartScreen may warn on the first start; choose *More info* and
+*Run anyway*. Node.js is not needed: the package carries its own runtime.
 
-Firefox (version 140 or newer) is optional and only needed for Firefox views. Node.js is not
-needed: the package carries its own runtime.
+**macOS.** Download `rbrowser-<version>-macos-aarch64.dmg` for Apple Silicon or
+`rbrowser-<version>-macos-x86_64.dmg` for an Intel Mac (each also as a zip), open it and drag
+rBrowser into Applications. The app is signed ad hoc, not notarised, so macOS refuses its first
+start: open *System Settings > Privacy & Security* and choose *Open Anyway* (on macOS 14 and
+earlier, a right-click on the app and *Open* does the same), or remove the quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/rBrowser.app
+```
+
+The macOS app does not carry WebKit views, flows and Lighthouse yet, and it updates by download:
+it shows a new release and opens its page.
+
+Firefox (version 140 or newer) is optional and only needed for Firefox views.
 
 ### Package managers
 
-Scoop and winget carry full releases only; a beta (a pre-release on GitHub Releases) is
-downloaded from there.
+Scoop, winget and Homebrew carry full releases only; a beta (a pre-release on GitHub Releases)
+is downloaded from there.
 
 ```powershell
 scoop bucket add rbrowser https://github.com/degoya/scoop-rbrowser
@@ -62,8 +76,12 @@ scoop install rbrowser               # Windows (Scoop)
 winget install degoya.rBrowser       # Windows (winget)
 ```
 
+```bash
+brew install --cask degoya/rbrowser/rbrowser   # macOS (Homebrew)
+```
+
 winget lists rBrowser once Microsoft has reviewed its first submission. An installation through a
-package manager is updated by it (`scoop update`, `winget upgrade`).
+package manager is updated by it (`scoop update`, `winget upgrade`, `brew upgrade rbrowser`).
 
 ## Documentation
 

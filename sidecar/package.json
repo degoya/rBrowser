@@ -1,7 +1,7 @@
 {
   "name": "rbrowser-sidecar",
   "private": true,
-  "version": "0.9.0-beta.1",
+  "version": "0.9.0-beta.2",
   "description": "The rBrowser Node sidecar: JSON-RPC 2.0 over stdio for WebKit, flows and Lighthouse (RB-040-03).",
   "license": "GPL-3.0-or-later",
   "type": "module",

@@ -76,8 +76,51 @@ fn restart_helper_without_a_wsl_project_fails_clearly() {
         )
     };
     assert_eq!(
-        run_restart_helper(&service),
+        run_restart_helper(service.restart_helper()),
         Err(CommandError::Failed(NO_HELPER_KEY.to_owned()))
     );
     assert_eq!(NO_HELPER_KEY, "wsl.error.noHelper");
+}
+
+/// RB-090-82: pausing hot reload from ≡ › Tools › Reload, the palette or its shortcut says what
+/// it did - no control shows the watch state, and the row read as one that does nothing.
+/// Resuming names the watch only when it is not the plain one ("Hot reload off" read as if the
+/// toggle had switched hot reload off).
+#[test]
+fn the_pause_toggle_says_paused_or_resumed() {
+    use super::classify::HotMode;
+    let notice = |status: WatcherStatus, paused: bool| match pause_notice(&WatcherInfo::new(
+        status,
+        paused,
+        HotMode::Auto,
+        None,
+    )) {
+        rb_ipc::CoreToShell::Notification(notice) => {
+            assert_eq!(notice.level, rb_ipc::NotificationLevel::Info);
+            (notice.message_key, notice.args)
+        }
+        other => panic!("{other:?}"),
+    };
+    let none = std::collections::BTreeMap::new();
+    assert_eq!(
+        notice(WatcherStatus::Native { folders: 1 }, true),
+        (PAUSED_KEY.to_owned(), none.clone())
+    );
+    assert_eq!(
+        notice(WatcherStatus::Native { folders: 1 }, false),
+        (RESUMED_KEY.to_owned(), none.clone())
+    );
+    assert_eq!(
+        notice(
+            WatcherStatus::Helper {
+                distro: "debian".to_owned(),
+                folders: 3
+            },
+            false
+        ),
+        (RESUMED_KEY.to_owned(), none)
+    );
+    let (key, args) = notice(WatcherStatus::Off, false);
+    assert_eq!(key, RESUMED_STATE_KEY);
+    assert_eq!(args["state"], rb_i18n::t("reload.status.off"));
 }

@@ -11,6 +11,11 @@
 //! `.rbrowser/designs/` ([`add_design`]), then the overlay's own tool `set` chooses it for the
 //! active view's breakpoint and shows it. Each outcome - a cancel included - is one notice in
 //! the status bar and the same sentence in the panel (`hostNotice`); no path reaches a log.
+//!
+//! **`form-autofill` / `record_fill`** (RB-090-78): the fields a fill set in one view, for a
+//! running recording ([`crate::recorder::autofill`]). It opens nothing and asks no one, so it runs
+//! from the plugin's tool answers too ([`GESTURELESS`]) - an autofill from its panel or MCP is
+//! recorded as one from its command. Never from a page request.
 
 pub mod add_design;
 
@@ -35,8 +40,17 @@ pub const ADD_DESIGN: &str = "add_design";
 /// The overlay's tool that chooses and shows a design.
 pub const SET_TOOL: &str = "set";
 
+/// The form autofill's plugin id.
+pub const FORM_AUTOFILL: &str = "form-autofill";
+
 /// The actions offered, as (plugin id, action).
-pub const OFFERED: &[(&str, &str)] = &[(IMAGE_OVERLAY, ADD_DESIGN)];
+pub const OFFERED: &[(&str, &str)] = &[
+    (IMAGE_OVERLAY, ADD_DESIGN),
+    (FORM_AUTOFILL, crate::recorder::autofill::RECORD_FILL),
+];
+/// The offered actions that need no person's gesture: they run from a tool's answer as well as
+/// from a command's.
+pub const GESTURELESS: &[(&str, &str)] = &[(FORM_AUTOFILL, crate::recorder::autofill::RECORD_FILL)];
 
 /// The file dialog's title.
 pub const PICK_TITLE_KEY: &str = "plugins.add_design.pick_title";
@@ -87,10 +101,22 @@ pub fn offered<'a>(plugin: &str, message: &'a Value) -> Option<&'a str> {
         .then_some(action)
 }
 
+/// Whether plugin `plugin`'s `host` post `message` names an action of [`GESTURELESS`].
+#[must_use]
+pub fn gestureless(plugin: &str, message: &Value) -> bool {
+    let action = message.get("action").and_then(Value::as_str);
+    GESTURELESS
+        .iter()
+        .any(|(id, name)| *id == plugin && action == Some(*name))
+}
+
 /// Runs plugin `plugin`'s `host` post `message`.
 pub fn run(core: &Arc<Core>, plugin: &str, message: &Value) {
     match offered(plugin, message) {
         Some(ADD_DESIGN) => start_add_design(core),
+        Some(crate::recorder::autofill::RECORD_FILL) => {
+            crate::recorder::autofill::record(core, message);
+        }
         _ => tracing::debug!(
             plugin_id = plugin,
             "a plugin asked for a host action it is not offered; ignored"

@@ -32,6 +32,8 @@ pub const FAILED_KEY: &str = "extensions.notice.web_store_failed";
 pub const STORE_OFF_KEY: &str = "extensions.notice.web_store_off";
 /// The notice: nothing is installed from the Web Store.
 pub const NOTHING_INSTALLED_KEY: &str = "extensions.notice.nothing_installed";
+/// The notice: a person's update check started; `{count}` extensions (RB-090-85).
+pub const CHECKING_KEY: &str = "extensions.notice.checking";
 /// The MCP tool that installs.
 pub const INSTALL_TOOL: &str = "extension_install";
 /// The MCP tool that removes ([`super::remove`]).
@@ -55,6 +57,15 @@ pub fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> C
             .collect(),
         settings_key: Some(ALLOW_KEY.to_owned()),
     })
+}
+
+/// The notice that a person's update check of `count` extensions started.
+fn checking_notice(count: usize) -> CoreToShell {
+    notice(
+        NotificationLevel::Info,
+        CHECKING_KEY,
+        &[("count", count.to_string())],
+    )
 }
 
 /// The store on disk; `None` without a local folder.
@@ -133,7 +144,8 @@ fn install_candidate(core: &Core, candidate: &Candidate) -> Result<InstalledExte
 /// Asks the Web Store for a newer version of every installed extension (one client for the
 /// run; the version check downloads nothing, [`super::update_check`]); each one found is a
 /// question in the window and installed only on the person's word. `report` says whether a
-/// notice is shown when nothing is newer (the command: yes; the start: no). Blocking.
+/// notice is shown when the check starts and when nothing is newer (the command: yes; the
+/// start: no). Blocking.
 pub fn check_updates(core: &Arc<Core>, report: bool) {
     let installed = store().map(|store| store.installed()).unwrap_or_default();
     if installed.is_empty() {
@@ -141,6 +153,10 @@ pub fn check_updates(core: &Arc<Core>, report: bool) {
             core.notify(notice(NotificationLevel::Info, NOTHING_INSTALLED_KEY, &[]));
         }
         return;
+    }
+    if report {
+        // One request per extension: the person sees the check begin (RB-090-85).
+        core.notify(checking_notice(installed.len()));
     }
     let mut newer = Vec::new();
     let hops = HttpHops::new();

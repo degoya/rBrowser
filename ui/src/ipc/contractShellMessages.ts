@@ -94,4 +94,9 @@ export const shellToCore = [
   ...recordingShellMessages,
   { type: 'activityBar', place: 'top' },
   { type: 'collapseActivity', activity: 'video', collapsed: true },
+  // RB-091-05.
+  {
+    type: 'setup',
+    request: { op: 'preview', requestId: 7, root: 'C:/work/shop', url: 'http://localhost:5173', template: 'devices', devices: ['iphone-15'] },
+  },
 ] satisfies ShellToCore[];

@@ -32,6 +32,9 @@ pub fn release() {
     super::devtools::release();
     super::panel_dock::release();
     super::report_window::release();
+    // The sitemap's render views and its gallery window (RB-090-83).
+    super::render_views::release();
+    super::gallery_window::release();
     // The windows that follow `ui.theme` (RB-080-95).
     super::theme::clear();
     UI.with(|ui| *ui.borrow_mut() = Default::default());

@@ -20,14 +20,14 @@ impl Drop for Flag {
 }
 
 #[derive(Default)]
-struct Fake {
-    opened: Mutex<Vec<(Vec<u32>, Vec<String>)>>,
+pub(super) struct Fake {
+    pub(super) opened: Mutex<Vec<(Vec<u32>, Vec<String>)>>,
     paused: Mutex<Vec<Vec<u32>>>,
     resumed: Arc<AtomicBool>,
     closed: Arc<AtomicBool>,
-    calls: Mutex<Vec<(Value, Duration)>>,
+    pub(super) calls: Mutex<Vec<(Value, Duration)>>,
     /// The answer of `flows.run`; `None` never answers.
-    answer: Mutex<Option<Result<Value, FlowError>>>,
+    pub(super) answer: Mutex<Option<Result<Value, FlowError>>>,
 }
 
 #[async_trait]
@@ -68,13 +68,13 @@ impl FlowDeps for Fake {
     }
 }
 
-struct Project {
-    root: tempfile::TempDir,
+pub(super) struct Project {
+    pub(super) root: tempfile::TempDir,
     settings: tempfile::TempDir,
 }
 
 impl Project {
-    fn new(flow: &str) -> Self {
+    pub(super) fn new(flow: &str) -> Self {
         let root = tempfile::tempdir().expect("a project");
         let rbrowser = root.path().join(".rbrowser");
         std::fs::create_dir_all(rbrowser.join("flows")).expect("folders");
@@ -94,7 +94,7 @@ impl Project {
         self.settings.path().join(rb_config::trust::TRUST_FILE)
     }
 
-    fn trust(&self) {
+    pub(super) fn trust(&self) {
         let root = self.root.path();
         let hash = trust_state(root, &TrustStore::default())
             .expect("a state")
@@ -105,7 +105,7 @@ impl Project {
         .expect("writes the store");
     }
 
-    fn setup(&self) -> Setup {
+    pub(super) fn setup(&self) -> Setup {
         let mut firefox = view(3, "desktop", "https://a.test/");
         firefox.engine = EngineKind::Firefox;
         Setup {
@@ -121,6 +121,7 @@ impl Project {
                 (ViewId(2), "T2".to_owned()),
                 (ViewId(3), "T3".to_owned()),
             ]),
+            hidden: std::collections::BTreeSet::new(),
             env: Some("https://a.test".to_owned()),
             trust_store: Some(self.store()),
             started_at: "2026-11-11T10:15:00Z".to_owned(),
@@ -139,19 +140,20 @@ fn request() -> RunRequest {
 }
 
 /// A stored recording's flow (RB-090-66): not in the flows folder, its breakpoint `mobile`.
-fn played() -> RunRequest {
+pub(super) fn played() -> RunRequest {
     RunRequest {
         name: "checkout".to_owned(),
         inline: Some(InlineFlow {
             source: "await page.goto(env);\n".to_owned(),
             file: ".rbrowser/out/recordings/checkout.json".to_owned(),
             views: vec!["mobile".to_owned()],
+            pause_ms: 4_000,
         }),
         ..request()
     }
 }
 
-fn passed(id: u32) -> Value {
+pub(super) fn passed(id: u32) -> Value {
     json!({ "viewId": id, "label": format!("V{id}"), "breakpoint": null, "engine": "chromium",
             "status": "passed", "durationMs": 5, "steps": [], "error": null, "screenshot": null })
 }
@@ -400,6 +402,8 @@ async fn a_recording_runs_from_memory_in_the_views_of_its_breakpoints() {
     assert_eq!(lock(&fake.opened)[0].0, [1]);
     let (params, _) = lock(&fake.calls)[0].clone();
     assert_eq!(params["flow"]["name"], json!("checkout"));
+    // RB-090-84: the recorded pauses on top of the flow's timeout (30 s by default).
+    assert_eq!(params["timeoutMs"], json!(34_000));
     assert_eq!(params["flow"]["source"], json!("await page.goto(env);\n"));
     assert_eq!(
         params["flow"]["file"],

@@ -53,6 +53,12 @@ pub struct ErrorInfo {
     /// The step that was running.
     #[serde(default)]
     pub step: Option<String>,
+    /// That step's id in the recording, for a name `Step <id>: ...` (the sidecar's, RB-090-84).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_id: Option<u32>,
+    /// The message's first line, masked and cut (the sidecar's): what the panel shows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
     /// The line in the flow file, 1-based.
     #[serde(default)]
     pub line: Option<u32>,
@@ -116,6 +122,10 @@ pub struct RunResult {
     pub passed: bool,
     /// Every view asked for, in grid order.
     pub views: Vec<ViewResult>,
+    /// The breakpoints the flow names (`// @views`, a played recording's) that no view of the
+    /// grid showed, so the run skipped them - focus mode shows one (RB-090-84).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped_breakpoints: Vec<String>,
     /// Why the run reached no view (no such flow, the trust gate, no endpoint); its views are
     /// then empty and `passed` is `false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

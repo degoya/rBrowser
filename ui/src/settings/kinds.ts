@@ -74,14 +74,19 @@ export function baseSchema(schema: JsonSchema): JsonSchema {
   return schema;
 }
 
-/** The allowed values of an `enum` or a `oneOf` of constants; `null` when the schema is none. */
+/**
+ * The allowed values of an `enum` or a `oneOf` of constants; `null` when the schema is none. A
+ * branch marked `deprecated` - an earlier form the schema still accepts - is no option.
+ */
 export function enumOptions(schema: JsonSchema): EnumOption[] | null {
   const base = baseSchema(schema);
   if (Array.isArray(base.enum)) {
     return base.enum.map((value) => ({ value, label: String(value) }));
   }
-  const branches = base.oneOf;
-  if (Array.isArray(branches) && branches.length > 0) {
+  const branches = Array.isArray(base.oneOf)
+    ? base.oneOf.filter((branch) => !(isSchema(branch) && branch.deprecated === true))
+    : null;
+  if (branches && branches.length > 0) {
     const consts = branches.filter(
       (branch): branch is JsonSchema => isSchema(branch) && branch.const !== undefined,
     );

@@ -15,8 +15,9 @@
 //!   that trigger's hover at the press (`agent/src/menu-trigger.ts`). A hover on the element of
 //!   the click before (same CSS path, or same best selector after a navigation) is the pointer
 //!   resting where it clicked, never a step - unless the agent marked it as the menu entry's
-//!   (`menu`, RB-090-76). Every other move is dropped, and with
-//!   `recordHover` off all of them.
+//!   (`menu`, RB-090-76). Every other move is dropped. `recordHover` (RB-090-81) decides which
+//!   hovers wait for a click at all: `menu` (the default) only the agent's, `all` every one,
+//!   `off` none.
 //! - Scroll only with `recordScroll`, consecutive scrolls of one container as one step.
 //! - Pointer, key-up, focus, wheel, context menu and submit events are no steps.
 //!
@@ -29,6 +30,7 @@ use rb_engine::ViewId;
 
 use super::keys::is_press;
 use super::model::{Action, Locator, Selector, Step, secret_placeholder};
+use super::record::HoverCapture;
 use super::secrets::{is_secret, secret_name};
 use crate::event::{ElementSelector, ElementTarget, InputData, MouseButton, SyncEvent};
 use crate::forms::is_file_skip;
@@ -43,6 +45,8 @@ pub(crate) struct Trail {
     pub views: BTreeSet<ViewId>,
     /// The `(event type, CSS path)` of the events it came from.
     pub origins: Vec<(&'static str, String)>,
+    /// A step of the form autofill (RB-090-78, [`super::autofill`]), not of captured events.
+    pub autofill: bool,
 }
 
 impl Trail {
@@ -71,7 +75,7 @@ pub(crate) struct Capture<'a> {
     /// Ms after the start.
     pub at_ms: u64,
     /// `automation.recorder.recordHover`.
-    pub record_hover: bool,
+    pub record_hover: HoverCapture,
     /// `automation.recorder.recordScroll`.
     pub record_scroll: bool,
     /// `automation.recorder.secretFields`.
@@ -116,6 +120,15 @@ impl Builder {
         self.hovers.clear();
     }
 
+    /// Takes the last step out; its id is free again.
+    pub fn pop_last(&mut self) {
+        if let Some(entry) = self.entries.pop()
+            && entry.step.id == self.next_id
+        {
+            self.next_id -= 1;
+        }
+    }
+
     /// Records the (already redacted) `event`.
     pub fn event(&mut self, capture: &Capture<'_>, event: &SyncEvent) {
         let kind = crate::switches::event_type(event);
@@ -123,7 +136,7 @@ impl Builder {
         let trail = |path: &str| {
             let mut trail = Trail {
                 views: capture.views.clone(),
-                origins: Vec::new(),
+                ..Trail::default()
             };
             trail.add_origin(kind, path);
             trail
@@ -168,7 +181,7 @@ impl Builder {
                     merged,
                 );
             }
-            SyncEvent::Hover(data) if capture.record_hover => {
+            SyncEvent::Hover(data) if capture.record_hover.keeps(data.menu) => {
                 let target = locator(&data.target);
                 let path = target.css_path().to_owned();
                 if data.menu {
@@ -347,7 +360,7 @@ impl Builder {
         let value = value.unwrap_or_else(|| data.unwrap_or("").to_owned());
         let mut trail = Trail {
             views: capture.views.clone(),
-            origins: Vec::new(),
+            ..Trail::default()
         };
         trail.add_origin(kind, &path);
         self.push(
@@ -419,7 +432,7 @@ fn merge(trail: &mut Trail, merged: Option<Trail>) {
 
 /// Whether `a` and `b` name one element: the same CSS path, or the same best selector that is
 /// no CSS path (a link's role and name stay when a navigation moves it).
-fn same_element(a: &Locator, b: &Locator) -> bool {
+pub(crate) fn same_element(a: &Locator, b: &Locator) -> bool {
     a.css_path() == b.css_path()
         || matches!(
             (a.selectors.first(), b.selectors.first()),

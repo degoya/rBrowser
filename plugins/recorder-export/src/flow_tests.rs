@@ -44,7 +44,7 @@ fn the_flow_has_no_imports_and_uses_the_injected_globals() {
          // Step 3: click (only in mobile)\n\
          await step('Step 3: click', async () => {\n  \
          if (['mobile'].includes(view.breakpoint)) {\n    \
-         await page.getByRole('button', { name: 'Menu', exact: true }).click();\n  }\n\
+         await page.getByRole('button', { name: 'Menu', exact: true }).filter({ visible: true }).first().click();\n  }\n\
          });\n"
     );
     assert!(!text.contains("import "));

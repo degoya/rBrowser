@@ -82,6 +82,10 @@ export interface ErrorInfo {
   stack: string;
   /** The step that was running, if any. */
   step: string | null;
+  /** That step's id in the recording, for a name `Step <id>: ...` (RB-090-84). */
+  stepId?: number;
+  /** The message's first line, masked and cut: what the Recorder panel shows (RB-090-84). */
+  summary?: string;
   /** In the flow file, 1-based. */
   line: number | null;
   column: number | null;

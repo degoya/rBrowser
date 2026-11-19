@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- A hover rests before the step after it at the `recorded` pace (RB-090-84): the recorder
+  reports a menu's hover at the pointer-down of the click into its submenu, so the two carried
+  one time and played back to back. A hover followed sooner than 500 ms now waits that long
+  before the next step, the time taken from the pause before the hover - the run takes no
+  longer than the recording did. Each step but the first waits at least `options.minPauseMs`
+  (`automation.recorder.minPauseMs`, 0 by default), and in the flow the pause waits first inside
+  the step's `step(...)`, so the step a run reports is the one waiting. The internal format
+  `pauses` (not offered as an export) answers the pause before each written step, so the host's
+  run budget and the Recorder panel read the one rule from here.
+- Locators that hold in every breakpoint (RB-090-81): a role or text locator of the element ends
+  in `.filter({ visible: true })` and `.nth(visibleNth)` - the match's index among the visible
+  ones, recorded by the agent - or `.first()` for the first, a unique one too, so each view
+  takes the visible match the person picked and a name two elements share is no strict-mode
+  error (Playwright 1.51 or later). A later match recorded without `visibleNth` (a recording made
+  before, a hidden element) keeps `.nth(n)`. Test ids, shadow hosts and the CSS path stay as
+  they were.
 - A recorded flow runs through in every breakpoint (RB-090-76): a `waitForUrl` after a click
   (or key) of only some breakpoints first takes the others there -
   `if (![<clicked>].includes(<breakpoint>)) { await page.goto(<url>); }`, the clicked

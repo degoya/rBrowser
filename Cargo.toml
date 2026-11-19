@@ -6,7 +6,7 @@ members = ["crates/*"]
 exclude = ["spikes", "sdk"]
 
 [workspace.package]
-version = "0.9.0-beta.1"
+version = "0.9.0-beta.2"
 authors = ["Alexander Herling / DEGOYA.digital"]
 edition = "2024"
 rust-version = "1.99"

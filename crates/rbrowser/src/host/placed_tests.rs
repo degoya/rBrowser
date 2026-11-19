@@ -111,8 +111,13 @@ async fn views_out_of_sight_are_marked_and_scrolling_places_them_again() {
         .iter()
         .map(|id| state.views[id].off_screen)
         .collect();
+    let order = state.order.clone();
     drop(state);
     assert_eq!(off, [false, true, true, true, true, true]);
+    // What the flow log names (RB-090-84).
+    let asked: Vec<bool> = order.iter().map(|id| host.is_off_screen(*id)).collect();
+    assert_eq!(asked, off);
+    assert!(!host.is_off_screen(ViewId(999)));
 
     assert!(host.update_mode(|spec| {
         if let ModeKind::Horizontal { first, .. } = &mut spec.kind {

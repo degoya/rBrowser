@@ -80,6 +80,9 @@ impl IndexEntry {
         }
         word_list("kinds", &self.kinds)?;
         word_list("capabilities", &self.capabilities)?;
+        if let Some(category) = &self.category {
+            word_list("category", std::slice::from_ref(category))?;
+        }
         if !is_sha256_hex(&self.sha256) {
             return Err("sha256 is not 64 lowercase hexadecimal characters".to_owned());
         }

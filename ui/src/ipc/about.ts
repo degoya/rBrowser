@@ -18,4 +18,9 @@ export interface AboutInfo {
   apis?: Record<string, string>;
   /** Folders by name: `data`, `local`, `logs`. */
   dirs?: Record<string, string>;
+  /** How this installation updates itself (RB-091-05); absent without a window to ask. */
+  updates?: AboutUpdates;
 }
+
+/** The self-update as Settings > About names it: not in this build, off, by hand, at start. */
+export type AboutUpdates = 'notBuilt' | 'off' | 'manual' | 'onStart';

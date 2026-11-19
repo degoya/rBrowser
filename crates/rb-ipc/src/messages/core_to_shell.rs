@@ -215,6 +215,10 @@ pub enum CoreToShell {
         name: String,
         /// The recording (schema `recording.v1`).
         recording: Value,
+        /// The pause before each written step at the pace `recorded`, the exporter's
+        /// (RB-090-84); none when the plugin could not say.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pauses: Vec<crate::StepPause>,
     },
     /// The answer to `exportRecording`.
     RecordingExport(crate::RecordingExport),
@@ -224,6 +228,8 @@ pub enum CoreToShell {
     FlowRun(crate::FlowRunState),
     /// A flow run started or ended: the Flows panel asks `getFlowRun` again.
     FlowRunChanged,
+    /// A step of the flow run going on started or ended (RB-090-84).
+    FlowStep(crate::FlowStep),
     /// A native menu the shell asked for (`nativeMenu`, RB-090-41) closed: `item` is the id of
     /// the row chosen, none when it closed without a choice (Esc, a click elsewhere).
     NativeMenuClosed {
@@ -232,5 +238,10 @@ pub enum CoreToShell {
         /// The row chosen.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         item: Option<String>,
+    },
+    /// The setup wizard's answer or event (RB-091-05).
+    Setup {
+        /// The answer.
+        answer: crate::SetupAnswer,
     },
 }

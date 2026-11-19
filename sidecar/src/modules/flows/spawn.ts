@@ -10,8 +10,9 @@
 //   flow drives the views over the CDP endpoints and pages load what they load.
 //
 // The environment is not the sidecar's: only `SystemRoot` (Windows needs it for sockets) and the
-// temp folder pass. The worker gets the job on stdin; its status lines become `$/progress`, and
-// each view's result line is kept as it comes. A worker that outlives its budget (`runBudgetMs`)
+// temp folder pass. The worker gets the job on stdin; its status lines become `$/progress`, its
+// step lines too (`{ runId, viewId, step }`, RB-090-84), and each view's result line is kept as it
+// comes. A worker that outlives its budget (`runBudgetMs`)
 // by `graceMs` is killed - the views it reported keep their results, the others time out -, and
 // so is one whose request rBrowser cancels. One that ends before it reported names its exit code
 // and the first error line of its stderr in the views it left.
@@ -22,6 +23,7 @@ import { LineSplitter } from '../../framing.ts';
 import { checkParams, type RunParams } from './params.ts';
 import { grantForms } from './grants.ts';
 import { type RunJob, type ViewResult, type ViewStatus, redact, secretsOf } from './result.ts';
+import { stepProgressOf } from './steps.ts';
 import { shotsDirOf, workerTmpDir } from './tmp.ts';
 
 /** The longest line read from a worker (a result with stacks of many views). */
@@ -165,6 +167,11 @@ function collect(
         const event = parse(line);
         if (event?.type === 'status') {
           ctx.progress({ runId: job.runId, viewId: event.viewId, status: event.status });
+        } else if (event?.type === 'step') {
+          const step = stepProgressOf(event.step);
+          if (step !== null && typeof event.viewId === 'number') {
+            ctx.progress({ runId: job.runId, viewId: event.viewId, step });
+          }
         } else if (event?.type === 'view' && isViewResult(event.view)) {
           early.set(event.view.viewId, event.view);
         } else if (event?.type === 'result' && Array.isArray(event.views)) {

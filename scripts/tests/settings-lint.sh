@@ -129,6 +129,11 @@ run_status "$LINT" "$fixture"
 expect_status "a source on a string fails" 1
 expect_output "the place is named" 'startUrl: x-options "plugins" sits on a key that is no list or map'
 
+fixture="$(settings_fixture "$SCRATCH/options-source-one")"
+edit_json "$fixture/schema/config.v1.json" 'doc["properties"]["startUrl"]["x-options"] = "layouts"'
+run_status "$LINT" "$fixture"
+expect_status "a one-value source on a string passes" 0
+
 fixture="$(settings_fixture "$SCRATCH/options-source-unknown")"
 edit_json "$fixture/schema/config.v1.json" \
     'doc["properties"]["startUrl"].update({"type": "array", "items": {"type": "string"}, "default": [], "x-options": "breakpoint-ids"})'
@@ -209,5 +214,65 @@ edit_json "$fixture/plugins/seo/locales/en.json" \
 run_status "$LINT" "$fixture"
 expect_status "a plugin key named option fails" 1
 expect_output "the reserved name is named" "seo.option: \`option\` is reserved for the names of the choices"
+
+# RB-090-81: a choice that still accepts its earlier form (a branch marked `deprecated`, the old
+# switch) names its options as any choice does; the earlier form needs no name.
+fixture="$(settings_fixture "$SCRATCH/option-deprecated")"
+edit_json "$fixture/schema/config.v1.json" \
+    'doc["properties"]["paper"] = {"oneOf": [{"type": "string", "const": "a4"}, {"type": "boolean", "deprecated": True}], "default": "a4", "x-category": "project", "x-section": "start-url", "x-order": 2, "x-scope": ["project", "local"]}'
+edit_json "$fixture/locales/en.json" \
+    'doc["settings"]["key"]["paper"] = {"label": "Paper", "description": "Paper", "help": "Paper"}'
+run_status "$LINT" "$fixture"
+expect_status "a choice with an earlier form still needs its names" 1
+expect_output "the option is named" "paper: missing i18n key settings.option.paper.a4 (option \"a4\")"
+
+# RB-090-85: every settings target of a notice and every openSettings key opens a place in the
+# settings window - a key, a category, a section or a key prefix; a constant is read where it
+# is defined, the nearest definition first.
+fixture="$(settings_fixture "$SCRATCH/targets-ok")"
+mkdir -p "$fixture/crates/rbrowser/src/a" "$fixture/crates/rbrowser/src/b" "$fixture/ui/src/x"
+cat > "$fixture/crates/rbrowser/src/a/mod.rs" << 'EOF'
+const SETTINGS_KEY: &str = "sync";
+fn notices() {
+    let _ = Notification { settings_key: Some(SETTINGS_KEY.to_owned()) };
+    let _ = Notification { settings_key: Some("sync.scroll".to_owned()) };
+    let _ = Notification { settings_key: Some(super::b::AREA.to_owned()) };
+    let _ = warning_notification(KEY, Some("network"));
+    let _ = Notification { settings_key: Some(key.to_owned()) };
+}
+impl Failure {
+    pub fn settings_key(&self) -> Option<&'static str> {
+        match self {
+            Failure::Off => Some("start-url"),
+            _ => None,
+        }
+    }
+}
+EOF
+printf 'pub const AREA: &str = "scroll";\n' > "$fixture/crates/rbrowser/src/a/b.rs"
+printf 'const SETTINGS_KEY: &str = "no.such";\n' > "$fixture/crates/rbrowser/src/b/mod.rs"
+printf "send({ type: 'openSettings', key: 'checks' });\n" > "$fixture/ui/src/x/page.ts"
+run_status "$LINT" "$fixture"
+expect_status "keys, categories, sections and prefixes as targets pass" 0
+expect_output "the targets are counted" "6 notice targets"
+
+fixture="$(settings_fixture "$SCRATCH/targets-bad")"
+mkdir -p "$fixture/crates/rbrowser/src/a" "$fixture/ui/src/x"
+cat > "$fixture/crates/rbrowser/src/a/mod.rs" << 'EOF'
+const SETTINGS_KEY: &str = "sitemaps";
+fn notices() {
+    let _ = Notification { settings_key: Some(SETTINGS_KEY.to_owned()) };
+    let _ = Notification { settings_key: Some(MISSING_KEY.to_owned()) };
+}
+EOF
+printf "const message = { settingsKey: 'sync.nothing' };\n" > "$fixture/ui/src/x/page.ts"
+run_status "$LINT" "$fixture"
+expect_status "a target that opens nothing fails" 1
+expect_output "the constant's target is named" \
+    "crates/rbrowser/src/a/mod.rs:3: settings target \`sitemaps\` is no key, category, section or key prefix"
+expect_output "a constant that does not read is named" \
+    "crates/rbrowser/src/a/mod.rs:4: settings target: the constant MISSING_KEY does not read"
+expect_output "a page's target is named" \
+    "ui/src/x/page.ts:1: settings target \`sync.nothing\` is no key"
 
 finish_tests settings-lint

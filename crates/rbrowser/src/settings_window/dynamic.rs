@@ -30,13 +30,14 @@ pub fn fields(core: &Core) -> Vec<(&'static str, Value)> {
 
 /// The sources of known values a schema may name in `x-options` (the settings lint,
 /// `scripts/lib/settings_schema.py`, holds the same list).
-pub const SOURCES: [&str; 6] = [
+pub const SOURCES: [&str; 7] = [
     "plugins",
     "plugin-panels",
     "plugin-page-scripts",
     "check-rules",
     "environments",
     "breakpoints",
+    "layouts",
 ];
 
 /// What a source needs to know of a verified plugin.
@@ -111,7 +112,7 @@ pub fn plugin_options(facts: &[PluginFacts], source: &str) -> Option<Value> {
 }
 
 /// The options of project source `source` (`environments`: id and URL, `breakpoints`: label
-/// and id) of `config`; `None` for another source.
+/// and id, `layouts`: the layout modes and the presets) of `config`; `None` for another source.
 pub fn config_options(config: &rb_config::ProjectConfig, source: &str) -> Option<Value> {
     let options: Vec<Value> = match source {
         "environments" => config
@@ -127,6 +128,20 @@ pub fn config_options(config: &rb_config::ProjectConfig, source: &str) -> Option
             .map(|breakpoint| {
                 json!({ "value": breakpoint.id, "label": breakpoint.label.as_deref().unwrap_or(&breakpoint.id) })
             })
+            .collect(),
+        // The layout a flow run shows (`automation.flows.runLayout`, RB-090-84): the modes over
+        // the preset shown, then the project's presets by id.
+        "layouts" => rb_config::RUN_LAYOUTS
+            .iter()
+            .map(|mode| json!({ "value": mode, "label": mode }))
+            .chain(
+                config
+                    .layouts
+                    .presets
+                    .keys()
+                    .filter(|id| !rb_config::RUN_LAYOUTS.contains(&id.as_str()))
+                    .map(|id| json!({ "value": id, "label": id })),
+            )
             .collect(),
         _ => return None,
     };

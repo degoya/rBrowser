@@ -31,7 +31,7 @@ mod signed;
 #[path = "index_validate.rs"]
 mod validate;
 
-pub use build::{describe_package, package_file_name};
+pub use build::{carry_over, describe_package, package_file_name};
 pub use merge::{CatalogEntry, Compatibility, Offer, compatibility, merge_offers, update_for};
 pub use signed::{
     ALGORITHM_ED25519, DocumentSignature, Freshness, IndexSigners, MAX_CLOCK_SKEW_MINUTES,
@@ -56,9 +56,10 @@ pub const DEFAULT_VALIDITY_DAYS: i64 = 90;
 /// stays useful to an attacker on a first contact.
 pub const MAX_VALIDITY_DAYS: i64 = 366;
 
-/// The signed payload.
+/// The signed payload. A field this build does not know is ignored here, in an entry and in its
+/// publisher (RB-091-04, forward compatibility): the signature is the integrity and every package
+/// is verified again with its own capabilities, so an unknown field changes nothing that installs.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
 pub struct PluginIndex {
     /// Always [`PLUGIN_INDEX_SCHEMA_VERSION`].
     pub schema_version: u32,
@@ -75,7 +76,6 @@ pub struct PluginIndex {
 
 /// One downloadable `.rbplugin`.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
 pub struct IndexEntry {
     /// The manifest's `id`.
     pub id: String,
@@ -99,6 +99,10 @@ pub struct IndexEntry {
     /// The first rBrowser release the plugin runs on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_app_version: Option<String>,
+    /// The first-run wizard's and the catalogue's group (`checks`, `devtools`, `overlays`,
+    /// `capture`, `tools`; RB-091-04), from `plugins/first-party.json` for a first-party plugin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
     /// Absolute `https://` URL, or a path relative to the index's own URL that cannot leave the
     /// index's directory.
     pub url: String,
@@ -116,7 +120,6 @@ pub struct IndexEntry {
 /// The package's signer, as the manifest names it: a claim until the package is downloaded and
 /// verified, when the install compares it with the key that actually signed it.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
 pub struct Publisher {
     /// The manifest's `key_id`.
     pub key_id: String,
@@ -241,6 +244,37 @@ pub fn verify(
     check_freshness(index.freshness(), known_sequence, now)?;
     index.validate()?;
     Ok(index)
+}
+
+/// A signed index held to its signature and its schema only - no freshness, no content rules:
+/// what `rb-plugin-pack index --previous` carries entries over from, which may be past its expiry
+/// (RB-091-04). Never what the app reads; the app takes [`verify`].
+///
+/// # Errors
+///
+/// Too large, malformed, not signed by `signers`, or another schema version.
+pub fn verify_signature(bytes: &[u8], signers: &IndexSigners) -> Result<PluginIndex, IndexError> {
+    if bytes.len() > MAX_INDEX_BYTES {
+        return Err(IndexError::TooLarge);
+    }
+    let document = SignedDocument::parse(bytes)
+        .map_err(|error| IndexError::Malformed(format!("{error:#}")))?;
+    let payload: serde_json::Value =
+        document
+            .verify(PLUGIN_INDEX_DOMAIN, signers)
+            .map_err(|error| match error {
+                SignatureError::Untrusted { .. } => IndexError::Untrusted(error.to_string()),
+                SignatureError::BadSignature { .. } => IndexError::BadSignature(error.to_string()),
+                SignatureError::Malformed(other) => IndexError::Malformed(format!("{other:#}")),
+            })?;
+    let saw = payload
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| IndexError::Malformed("schema_version is missing".to_owned()))?;
+    if saw != u64::from(PLUGIN_INDEX_SCHEMA_VERSION) {
+        return Err(IndexError::SchemaVersion { saw });
+    }
+    serde_json::from_value(payload).map_err(|error| IndexError::Malformed(error.to_string()))
 }
 
 /// Signs `index` under `key_id` and returns the document as it is published. Refuses an index

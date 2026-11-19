@@ -142,6 +142,12 @@ pub fn open(core: &Core, args: Value) -> Result<Value, CommandError> {
     Ok(json!({ "opened": true, "where": target.name() }))
 }
 
+/// Takes one open of the budget the system browser has now (at most [`throttle::MAX_OPENS`] per
+/// [`throttle::WINDOW`]) for another opener - the sitemap gallery (RB-090-83); `false` over it.
+pub fn take_slot() -> bool {
+    lock(&THROTTLE).allow(Instant::now())
+}
+
 /// Hands `url` to the browser on a thread of its own (the shell call may take a moment); the
 /// status bar says how it went.
 fn to_browser(core: &Core, url: url::Url, host: String) {

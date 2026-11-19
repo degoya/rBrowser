@@ -80,13 +80,17 @@ fn set(core: &Core, key: &str, value: Value, scope: Scope) -> CoreToShell {
 }
 
 #[test]
-fn a_deep_link_routes_to_a_known_key_or_category_only() {
+fn a_deep_link_routes_to_a_known_key_or_area_only() {
     let (registry, _) = crate::control::settings::settings_registry();
     assert_eq!(
         route(&registry, Some("sync.scroll")),
         "settings/sync.scroll"
     );
     assert_eq!(route(&registry, Some("shortcuts")), "settings/shortcuts");
+    assert_eq!(
+        route(&registry, Some("sitemap")),
+        "settings/capture?section=sitemap"
+    );
     assert_eq!(route(&registry, Some("no.such")), "settings");
     assert_eq!(route(&registry, Some("\"><script>")), "settings");
     assert_eq!(route(&registry, None), "settings");

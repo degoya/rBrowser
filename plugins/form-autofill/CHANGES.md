@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fixed (RB-090-78): a fill during a recording is recorded. `apply` names, per field it set, its
+  target the way the sync agent names an element (`src/target.js`, a copy of the agent's
+  selector), what was done and the value set - a password only marked `sensitive`, never its
+  value; the fill's answer carries them to the core as `host` posts `record_fill`, one or more
+  per view (`src/record.rs`), and leaves them out of the answer and the panel's post. The core
+  records them while a recording runs with `automation.recorder.recordAutofill`.
+
 - Fixed (RB-090-72): a profile or preset chosen in the panel is applied from a button beside the
   choice, "Fill with <name>" (valid values, every view, as Fill valid). The hint under the choice
   and the tooltips of Fill valid and Fill invalid say what each takes: Fill valid the profile

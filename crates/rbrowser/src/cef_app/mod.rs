@@ -31,6 +31,7 @@ mod embed;
 mod embed_windows;
 mod engine_badge;
 mod frame;
+mod gallery_window;
 mod grid;
 mod handle;
 mod icon;
@@ -49,6 +50,7 @@ mod pop_out;
 mod popup;
 mod queries;
 mod render;
+mod render_views;
 mod report_scheme;
 mod report_window;
 mod scheme;
@@ -240,6 +242,14 @@ fn run(
         crate::settings_window::set_log_handle(guard.handle());
     }
     user.log();
+    // RB-091-04: before anything loads a plugin - whether this installation ran before (its user
+    // settings are there), `--install-all-bundled-plugins`, and whether the first-run wizard may
+    // ask (RB-091-05), whose answer the choice then waits for.
+    crate::plugins::bundle::record_start(
+        cli.install_all_bundled_plugins,
+        user.path.as_deref().is_some_and(std::path::Path::is_file),
+        user.settings.ui.first_run_wizard,
+    );
     if let Some(Command::Diagnostics(args)) = &cli.command {
         return crate::control::diagnostics_cli(args, cli.project.as_deref());
     }
@@ -255,6 +265,11 @@ fn run(
         tracing::error!(exe = %exe.display(), "rBrowser does not run from the WSL share; copy it to a local folder");
         eprintln!("rbrowser: rBrowser does not run from the WSL share; copy it to a local folder");
         return EXIT_WSL_SHARE;
+    }
+    // An interrupted self-update is ended or taken back before any window, and this window takes
+    // its share of the instance lock the updater waits on (RB-090-14).
+    if let Some(code) = crate::updates::before_window() {
+        return code;
     }
     // Read before CEF starts: the global context and every session's are made with it.
     crate::sessions::set_persist_session_cookies(user.settings.sessions.persist_session_cookies);
@@ -311,6 +326,9 @@ fn run(
         persist_session_cookies: i32::from(crate::sessions::persist_session_cookies()),
         log_file: cef_path(&cef_log),
         log_severity: log_severity(log_settings.level),
+        // The render views of a sitemap capture or an environment comparison are windowless
+        // browsers (RB-090-83, `render_views.rs`): a hidden target paints no frame to capture.
+        windowless_rendering_enabled: 1,
         ..Default::default()
     };
     if initialize(
@@ -323,6 +341,9 @@ fn run(
         return start_failed(&profile);
     }
     run_message_loop();
+    // `updates.autoInstall = onQuit`: a ready download goes to the updater, which switches once
+    // this process is gone; never waits for a download (RB-090-14).
+    crate::updates::on_quit();
     start::stop();
     crate::mcp::shutdown();
     crate::cdp_proxy::shutdown();

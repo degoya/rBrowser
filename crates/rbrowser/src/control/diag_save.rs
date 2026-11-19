@@ -27,6 +27,8 @@ pub const SAVE_TITLE_KEY: &str = "diagnostics.save_title";
 pub const SAVED_KEY: &str = "diagnostics.saved";
 /// The i18n key of the notice when it could not be written; placeholder `{reason}`.
 pub const SAVE_FAILED_KEY: &str = "diagnostics.save_failed";
+/// The i18n key of the notice while the ZIP is written (RB-090-85).
+pub const SAVING_KEY: &str = "diagnostics.saving";
 
 /// Writes the ZIP to a path that does not exist yet; the error as text for the person.
 pub type WriteZip = Arc<dyn Fn(&Path) -> Result<(), String> + Send + Sync>;
@@ -114,6 +116,8 @@ pub fn ask(core: &Core, folder: &Path, write: WriteZip) {
                 return;
             };
             answer.failed_on_drop = true;
+            // Writing the ZIP takes a while: the person sees it begin (RB-090-85).
+            core.notify(saving_notice());
             let worker = core.clone();
             drop(
                 core.runtime()
@@ -121,6 +125,16 @@ pub fn ask(core: &Core, folder: &Path, write: WriteZip) {
             );
         }),
     );
+}
+
+/// The notice while the ZIP is written; its end is [`SAVED_KEY`] or [`SAVE_FAILED_KEY`].
+fn saving_notice() -> CoreToShell {
+    CoreToShell::Notification(Notification {
+        level: NotificationLevel::Info,
+        message_key: SAVING_KEY.to_owned(),
+        args: Default::default(),
+        settings_key: None,
+    })
 }
 
 /// Writes to `target` and says how it went.

@@ -22,6 +22,7 @@ fn last() -> RunResult {
             screenshot: Some("mobile-2.png".to_owned()),
             reason: None,
         }],
+        skipped_breakpoints: Vec::new(),
         error: None,
     }
 }

@@ -47,6 +47,8 @@ pub struct ExportOptions {
     pub projects: Vec<ExportProject>,
     /// `fast` or `recorded`: whether the code waits the recorded pauses (RB-090-66).
     pub pace: String,
+    /// The least pause before each step but the first at `recorded`, in ms (RB-090-84).
+    pub min_pause_ms: u64,
     /// The export's name, the files' stem; the recording's when absent (RB-090-69).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,

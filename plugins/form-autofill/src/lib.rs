@@ -8,7 +8,8 @@
 //! native Rust over [`PluginHost`], tested against a fake host; `src/guest.rs` translates it for
 //! the component. "Take this form as a preset" (RB-090-70) reads a form's values the same way
 //! (`src/capture.rs`) and stores what the panel or MCP saves in the plugin's own file
-//! (`src/store.rs`); the panel renames and deletes one (`src/preset_edit.rs`, RB-090-71).
+//! (`src/store.rs`); the panel renames and deletes one (`src/preset_edit.rs`, RB-090-71). A fill
+//! names the fields it set to the recorder in `host` posts (`src/record.rs`, RB-090-78).
 //! Grants: `views`, `evaluate`, `project-read` (`.rbrowser/` only) and `out-write`
 //! (`.rbrowser/out/form-autofill/` only).
 
@@ -26,6 +27,7 @@ pub mod pattern;
 pub mod persona;
 pub mod plan;
 pub mod preset_edit;
+pub mod record;
 pub mod rng;
 pub mod secret;
 pub mod settings;

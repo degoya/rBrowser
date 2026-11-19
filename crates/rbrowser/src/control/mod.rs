@@ -371,8 +371,10 @@ impl Core {
         self.notify_with(CoreToShell::Notification(notification), Some(action));
     }
 
-    fn notify_with(&self, message: CoreToShell, action: Option<StatusAction>) {
-        if let CoreToShell::Notification(notification) = &message {
+    fn notify_with(&self, mut message: CoreToShell, action: Option<StatusAction>) {
+        if let CoreToShell::Notification(notification) = &mut message {
+            // A person reads the sentence, not the error code in front of it (RB-090-85).
+            crate::status::strip_codes(notification);
             let entry =
                 self.status
                     .push_with(notification.clone(), action, crate::status::now_ms());

@@ -101,3 +101,14 @@ fn the_agents_answer_gives_the_target_and_the_text() {
     assert!(described(&json!({ "result": { "value": { "target": null, "text": "" } } })).is_err());
     assert!(described(&json!({ "exceptionDetails": {} })).is_err());
 }
+
+#[test]
+fn a_check_that_waits_for_its_click_says_so() {
+    // RB-090-84 (RB-090-85's audit): the capture's pick hint, no settings link.
+    let CoreToShell::Notification(notice) = pick_notice() else {
+        panic!("a notice");
+    };
+    assert_eq!(notice.message_key, "capture.notice.pick");
+    assert!(notice.args.is_empty());
+    assert_eq!(notice.settings_key, None);
+}

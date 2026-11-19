@@ -3,10 +3,13 @@
 // text (not for containers of controls), CSS path. The
 // CSS path prefers stable ids and classes and avoids generated ones (`css-1x2y3z`, CSS modules,
 // styled-components); it is also the fallback of every other kind. Open shadow roots are
-// walked: the hosts above an element come with its target.
+// walked: the hosts above an element come with its target. A later role or text match also
+// carries its index among the visible matches (`visibleNth`, RB-090-81), which a recording's
+// export uses: the breakpoints differ in what they hide, not in what a person picked.
 
 import type { ElementSelector, ElementTarget } from './protocol';
 import { MAX_NAME, nameOf, normalize, roleOf } from './role';
+import { isVisible } from './visible';
 
 /** Texts longer than this are no selector. */
 export const MAX_TEXT = 80;
@@ -124,22 +127,37 @@ export function cssPath(element: Element): string {
   return parts.join(' > ');
 }
 
+/**
+ * Where `selector` is looked for in `root`: inside its `within` element (RB-090-84) when `root`
+ * has one, else `root` - a breakpoint without that container falls back to the whole page.
+ */
+function scopeOf(selector: ElementSelector, root: Root): ParentNode {
+  const within = selector.kind === 'role' || selector.kind === 'text' ? selector.within : undefined;
+  if (!within) return root;
+  try {
+    return root.querySelector(within) ?? root;
+  } catch {
+    return root;
+  }
+}
+
 /** Every element `selector` matches in `root`, in document order (its `nth` not applied). */
 export function matchAll(selector: ElementSelector, root: Root): Element[] {
   try {
+    const scope = scopeOf(selector, root);
     switch (selector.kind) {
       case 'testid':
         return Array.from(root.querySelectorAll(`[data-testid="${CSS.escape(selector.testid)}"]`));
       case 'role': {
         const tags = ROLE_TAGS[selector.role];
         const query = `[role="${CSS.escape(selector.role)}"]${tags ? `,${tags}` : ''}`;
-        return Array.from(root.querySelectorAll(query)).filter((element) => {
+        return Array.from(scope.querySelectorAll(query)).filter((element) => {
           const role = roleOf(element);
           return role === selector.role && nameOf(element, role) === selector.name;
         });
       }
       case 'text':
-        return Array.from(root.querySelectorAll(CSS.escape(selector.tag))).filter(
+        return Array.from(scope.querySelectorAll(CSS.escape(selector.tag))).filter(
           (element) => normalize(element.textContent) === selector.text,
         );
       case 'css':
@@ -155,6 +173,57 @@ function withNth<T extends ElementSelector>(selector: T, nth: number): T {
   return nth > 0 ? { ...selector, nth } : selector;
 }
 
+/**
+ * A role or text selector at `nth` of `matches`: with `visibleNth`, the element's index among
+ * the visible ones, when it is a later match and shown itself (RB-090-81).
+ */
+function withVisibleNth<T extends ElementSelector>(
+  selector: T,
+  matches: Element[],
+  element: Element,
+): T {
+  const nth = matches.indexOf(element);
+  const numbered = withNth(selector, nth);
+  if (nth === 0 || !isVisible(element)) return numbered;
+  return { ...numbered, visibleNth: matches.filter(isVisible).indexOf(element) };
+}
+
+/** Landmarks that scope a selector by their tag when the page has one of them only. */
+const LANDMARKS = ['header', 'nav', 'main', 'aside', 'footer'];
+
+type Scoped = Extract<ElementSelector, { kind: 'role' | 'text' }>;
+
+/**
+ * The nearest ancestor of `element` - one with a stable unique id, or the page's only landmark
+ * of its kind - inside which `selector` matches `element` alone, as a CSS selector; null when
+ * none does.
+ */
+function uniqueScope(selector: Scoped, element: Element, root: Root): string | null {
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    let css: string | null = null;
+    if (node.id && !isGeneratedId(node.id)) css = `#${CSS.escape(node.id)}`;
+    else if (LANDMARKS.includes(node.localName)) css = node.localName;
+    if (css === null || root.querySelectorAll(css).length !== 1) continue;
+    const inside = matchAll({ ...selector, within: css }, root);
+    if (inside.length === 1 && inside[0] === element) return css;
+  }
+  return null;
+}
+
+/**
+ * A role or text selector of `element` among `matches` (RB-090-84). Several shown at once - a
+ * mega menu's link and a content link of the same name - is narrowed to the nearest ancestor
+ * that makes it unique (`within`): a view that shows the content link first, before the menu
+ * opens, still waits for the menu's. Without such an ancestor - and for a shown element with
+ * hidden twins (a breakpoint's copy of the navigation) - it keeps its visible index
+ * (RB-090-81): a CSS path differs between the breakpoints' DOMs, so the live sync would lose it.
+ */
+function narrowed(selector: Scoped, matches: Element[], element: Element, root: Root): Scoped {
+  const ambiguous = isVisible(element) && matches.filter(isVisible).length > 1;
+  const within = ambiguous ? uniqueScope(selector, element, root) : null;
+  return within === null ? withVisibleNth(selector, matches, element) : { ...selector, within };
+}
+
 /** The selector of `element`, the strongest kind that finds it. */
 export function makeSelector(element: Element): ElementSelector {
   const root = rootOf(element);
@@ -166,8 +235,11 @@ export function makeSelector(element: Element): ElementSelector {
   const name = role ? nameOf(element, role) : '';
   if (role && name && name.length <= MAX_NAME) candidates.push({ kind: 'role', role, name, path });
   for (const candidate of candidates) {
-    const nth = matchAll(candidate, root).indexOf(element);
-    if (nth >= 0) return withNth(candidate, nth);
+    const matches = matchAll(candidate, root);
+    if (!matches.includes(element)) continue;
+    return candidate.kind === 'role'
+      ? narrowed(candidate, matches, element, root)
+      : withNth(candidate, matches.indexOf(element));
   }
   // A stable unique id says more than a text that may change with the content.
   if (path.startsWith('#') && !path.includes(' ')) return { kind: 'css', path };
@@ -180,9 +252,9 @@ export function makeSelector(element: Element): ElementSelector {
     tag !== 'body' &&
     !element.querySelector(CONTROLS)
   ) {
-    const candidate: ElementSelector = { kind: 'text', tag, text, path };
-    const nth = matchAll(candidate, root).indexOf(element);
-    if (nth >= 0) return withNth(candidate, nth);
+    const candidate: Scoped = { kind: 'text', tag, text, path };
+    const matches = matchAll(candidate, root);
+    if (matches.includes(element)) return narrowed(candidate, matches, element, root);
   }
   return { kind: 'css', path };
 }
@@ -190,13 +262,14 @@ export function makeSelector(element: Element): ElementSelector {
 /** A selector for people (desync tooltips, logs): `[data-testid="save"]`, `role=button[...]`. */
 export function describeSelector(selector: ElementSelector): string {
   const nth = 'nth' in selector && selector.nth ? ` >> nth=${selector.nth}` : '';
+  const within = 'within' in selector && selector.within ? `${selector.within} >> ` : '';
   switch (selector.kind) {
     case 'testid':
       return `[data-testid="${selector.testid}"]${nth}`;
     case 'role':
-      return `role=${selector.role}[name="${selector.name}"]${nth}`;
+      return `${within}role=${selector.role}[name="${selector.name}"]${nth}`;
     case 'text':
-      return `${selector.tag}:text("${selector.text}")${nth}`;
+      return `${within}${selector.tag}:text("${selector.text}")${nth}`;
     case 'css':
       return selector.path;
   }

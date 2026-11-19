@@ -8,8 +8,11 @@
 // version's, is a step of its own that says the key is trusted for every plugin it signs, and
 // warns when an update changed its key - Cancel is the default there (security review H1, M1).
 // Only the last confirm sends the install, with exactly what was shown. Remove is offered for what the
-// catalogue installed only. A change takes effect at the next start. Every text is rendered as
-// text, never as HTML.
+// catalogue installed only. RB-091-04: the bundled plugins are rows of their own, first - one
+// click installs one that is not chosen (from the repository when it offers a newer version than
+// the bundle's, from the bundle otherwise), Remove takes a chosen one out, and an update of the
+// repository opens the same review. A change takes effect at the next start. Every text is
+// rendered as text, never as HTML.
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
@@ -22,6 +25,7 @@ import TrustGrants from '../../trust/TrustGrants.vue';
 import type { IpcClient } from '../../ipc/client';
 import type { PanelRequest } from '../../panels/protocol';
 import { SETTINGS_ICONS } from '../icons';
+import { chosenFailure } from './bundledRows';
 import {
   type Catalog,
   type CatalogRow,
@@ -47,6 +51,7 @@ const emit = defineEmits<{ open: [key: string] }>();
 const { t, te } = useI18n();
 
 const REPOSITORIES_KEY = 'plugins.catalog.repositories';
+const AUTO_UPDATE_KEY = 'plugins.catalog.autoUpdate';
 
 const catalog = ref<Catalog | null>(null);
 const busy = ref(false);
@@ -149,6 +154,26 @@ async function sendInstall(keyConfirmed: boolean): Promise<void> {
   }
 }
 
+/** A bundled plugin with one click: chosen (installed) or taken out (RB-091-04). */
+async function choose(row: CatalogRow, chosen: boolean): Promise<void> {
+  busy.value = true;
+  failure.value = null;
+  try {
+    const answer = await ask({ op: chosen ? 'installChosen' : 'removeChosen', ids: [row.offer.entry.id] });
+    const failed = chosenFailure(answer);
+    if (failed !== null) {
+      failure.value = failureText(failed);
+      return;
+    }
+    notice.value = t(chosen ? 'settings.plugins.catalog.installed' : 'settings.plugins.catalog.removed', { name: row.offer.entry.name });
+    await load(false);
+  } catch (error) {
+    failure.value = failureText(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
 async function remove(row: CatalogRow): Promise<void> {
   busy.value = true;
   failure.value = null;
@@ -200,6 +225,9 @@ onMounted(() => void load(false));
       >
         {{ t('settings.plugins.catalog.check') }}
       </UButton>
+      <UButton variant="link" data-testid="catalog-auto-update-key" @click="emit('open', AUTO_UPDATE_KEY)">
+        {{ t('settings.plugins.catalog.auto_update_setting') }}
+      </UButton>
     </div>
 
     <p v-if="failure !== null" class="text-sm text-error" role="alert" data-testid="catalog-failure">{{ failure }}</p>
@@ -236,11 +264,11 @@ onMounted(() => void load(false));
           <div class="flex flex-wrap items-center gap-2">
             <span class="font-medium">{{ row.offer.entry.name }}</span>
             <span class="text-muted">{{ row.offer.entry.version }}</span>
-            <UBadge :color="row.severalOrigins ? 'warning' : 'neutral'" variant="subtle" data-testid="catalog-origin">
-              {{ t('settings.plugins.catalog.from', { repository: row.repositoryName }) }}
-            </UBadge>
             <UBadge v-if="row.bundled" color="neutral" variant="subtle" data-testid="catalog-bundled">
-              {{ t('settings.plugins.catalog.bundled') }}
+              {{ t('settings.plugins.catalog.origin_bundle') }}
+            </UBadge>
+            <UBadge v-else :color="row.severalOrigins ? 'warning' : 'neutral'" variant="subtle" data-testid="catalog-origin">
+              {{ t('settings.plugins.catalog.from', { repository: row.repositoryName }) }}
             </UBadge>
             <UBadge v-if="row.installedVersion !== null" color="success" variant="subtle">
               {{ t('settings.plugins.catalog.installed_version', { version: row.installedVersion }) }}
@@ -258,14 +286,17 @@ onMounted(() => void load(false));
         >
           {{ t(row.action === 'install' ? 'settings.plugins.catalog.install' : 'settings.plugins.catalog.update_action') }}
         </UButton>
+        <UButton v-else-if="row.action === 'choose'" :disabled="busy" data-testid="catalog-choose" @click="choose(row, true)">
+          {{ t('settings.plugins.catalog.install_now') }}
+        </UButton>
         <UButton
-          v-else-if="row.action === 'remove'"
+          v-else-if="row.action === 'remove' || row.action === 'unchoose'"
           color="neutral"
           variant="outline"
           :icon="SETTINGS_ICONS.remove"
           :disabled="busy"
           data-testid="catalog-remove"
-          @click="remove(row)"
+          @click="row.action === 'remove' ? remove(row) : choose(row, false)"
         >
           {{ t('settings.plugins.catalog.remove') }}
         </UButton>

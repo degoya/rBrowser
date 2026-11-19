@@ -135,6 +135,65 @@ fn a_cancel_empties_the_waiting_flows() {
     assert!(waiting().is_empty());
 }
 
+#[test]
+fn the_end_of_run_all_counts_its_flows_and_names_the_failed() {
+    // RB-090-84 (RB-090-85's audit): `flows.run_all` says when it ended.
+    let mut tally = Tally::default();
+    let passed = crate::flows::result::RunResult {
+        version: 1,
+        run_id: "r".to_owned(),
+        flow: "login".to_owned(),
+        file: "login.ts".to_owned(),
+        started_at: "2026-11-18T10:00:00Z".to_owned(),
+        duration_ms: 5,
+        passed: true,
+        views: Vec::new(),
+        skipped_breakpoints: Vec::new(),
+        error: None,
+    };
+    let failed = crate::flows::result::RunResult {
+        passed: false,
+        ..passed.clone()
+    };
+    tally.count("login", Some(&Ok(passed)));
+    tally.count("cart", Some(&Ok(failed)));
+    tally.count("search", Some(&Err(FlowError::NothingYet)));
+    tally.count("gone", None);
+    let CoreToShell::Notification(end) = tally.notice(5) else {
+        panic!("a notice");
+    };
+    assert_eq!(end.message_key, ALL_FAILED);
+    assert_eq!(end.level, NotificationLevel::Error);
+    let arg = |name: &str| end.args.get(name).cloned().unwrap_or_default();
+    assert_eq!(
+        [arg("ran"), arg("count"), arg("passed"), arg("failed")],
+        ["4", "5", "1", "3"]
+    );
+    assert_eq!(arg("flows"), "cart, search, gone");
+    let mut clean = Tally::default();
+    clean.count("login", Some(&Ok(failed_free())));
+    let CoreToShell::Notification(end) = clean.notice(1) else {
+        panic!("a notice");
+    };
+    assert_eq!(end.message_key, ALL_DONE);
+    assert_eq!(end.level, NotificationLevel::Info);
+}
+
+fn failed_free() -> crate::flows::result::RunResult {
+    crate::flows::result::RunResult {
+        version: 1,
+        run_id: "r".to_owned(),
+        flow: "login".to_owned(),
+        file: "login.ts".to_owned(),
+        started_at: "2026-11-18T10:00:00Z".to_owned(),
+        duration_ms: 5,
+        passed: true,
+        views: Vec::new(),
+        skipped_breakpoints: Vec::new(),
+        error: None,
+    }
+}
+
 #[tokio::test]
 async fn a_queue_that_stops_early_leaves_no_flow_waiting() {
     set_waiting(names(&["b", "c"]));

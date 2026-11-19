@@ -87,6 +87,17 @@ pub fn download_verified(
     }
 }
 
+/// The verified download of `artifact` in `directory`, when one is there already - another
+/// window's, or an earlier run's: its size and SHA-256 are checked again before it is taken.
+#[must_use]
+pub fn already_downloaded(artifact: &Artifact, directory: &Path) -> Option<PathBuf> {
+    let url = https_url(artifact).ok()?;
+    let target = directory.join(file_name(&url));
+    crate::install::steps::open_checked(&target, &artifact.sha256, artifact.size)
+        .ok()
+        .map(|_| target)
+}
+
 fn https_url(artifact: &Artifact) -> Result<url::Url, UpdateError> {
     let url = url::Url::parse(&artifact.url)
         .map_err(|error| UpdateError::Invalid(format!("artifact URL: {error}")))?;

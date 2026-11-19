@@ -44,19 +44,26 @@ pub fn update_def() -> Result<CommandDef, CommandError> {
     def(UPDATE_ID, Group::View, 'U', UPDATE_OMITTED)
 }
 
+/// Where the shell learns how `sidecar.restart` ended (RB-090-85).
+pub type RestartSink = Arc<dyn Fn(Result<(), SidecarError>) + Send + Sync>;
+
 /// The handler of `sidecar.restart`: restarts on `runtime` and answers at once
-/// `{ "restarting": true }`; a failed start is logged.
+/// `{ "restarting": true }`; the end goes to `on_done`, a failed start is also logged.
 pub fn restart_handler<L: Launcher + 'static>(
     sidecar: Arc<Sidecar<L>>,
     runtime: tokio::runtime::Handle,
+    on_done: RestartSink,
 ) -> Handler {
     Arc::new(move |_args: Value| {
         let sidecar = Arc::clone(&sidecar);
+        let on_done = Arc::clone(&on_done);
         runtime.spawn(async move {
-            if let Err(error) = sidecar.restart().await {
+            let result = sidecar.restart().await;
+            if let Err(error) = &result {
                 let error = rb_diag::redact(&error.to_string());
                 tracing::warn!(target: LOG_TARGET, %error, "the sidecar did not restart");
             }
+            on_done(result);
         });
         Ok(json!({ "restarting": true }))
     })

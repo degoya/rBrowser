@@ -309,6 +309,8 @@ async fn nineteen_pages_in_four_breakpoints_cancelled_at_half_and_resumed_give_7
         .await
         .expect("starts");
     assert_eq!(started.pending, 76);
+    // The start's notice names them (RB-090-83).
+    assert_eq!((started.pages, started.breakpoints), (19, 4));
     let half = harness.ended().await;
     assert_eq!(half.state, RunState::Cancelled);
     assert!(
@@ -368,6 +370,20 @@ async fn nineteen_pages_in_four_breakpoints_cancelled_at_half_and_resumed_give_7
     }
     let status = harness.runs.status(&root, None).expect("the latest");
     assert_eq!(status.run_id, started.run_id);
+    assert_eq!(
+        harness
+            .runs
+            .run_id_or_latest(&root, None)
+            .expect("the latest"),
+        started.run_id
+    );
+    assert_eq!(
+        harness
+            .runs
+            .run_id_or_latest(&root, Some("named"))
+            .expect("named"),
+        "named"
+    );
     let missing = format!("{origin}/missing");
     assert!(
         status

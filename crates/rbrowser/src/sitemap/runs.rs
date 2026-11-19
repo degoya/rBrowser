@@ -198,6 +198,7 @@ impl Runs {
             });
             taken.push(task);
         }
+        let (pages, breakpoints) = (run.pages.len(), run.breakpoints.len());
         let saved = run.clone();
         let saving = store.clone();
         blocking(move || saving.save(&saved)).await??;
@@ -209,6 +210,8 @@ impl Runs {
             run_id: run_id.clone(),
             folder: store.dir().display().to_string(),
             pending: batch.len(),
+            pages,
+            breakpoints,
         };
         let job = Job {
             run_id,
@@ -265,21 +268,33 @@ impl Runs {
                 .ok_or_else(|| RunError::NotFound(run.run_id.clone()))?;
             return Ok(status_of(&run, store.dir(), parallel));
         }
-        let id = match run_id {
-            Some(id) => id.to_owned(),
-            None => match lock(&self.latest).clone() {
-                Some(id) => id,
-                None => rb_visual::sitemap_store::run_ids(root)?
-                    .pop()
-                    .ok_or(RunError::NotFound(String::new()))?,
-            },
-        };
+        let id = self.run_id_or_latest(root, run_id)?;
         let store =
             RunStore::open(root, &id, false)?.ok_or_else(|| RunError::NotFound(id.clone()))?;
         let run = store
             .load()?
             .ok_or_else(|| RunError::NotFound(id.clone()))?;
         Ok(status_of(&run, store.dir(), 1))
+    }
+}
+
+impl Runs {
+    /// `run_id`, else the run started last in this window, else the newest folder below
+    /// `root`.
+    ///
+    /// # Errors
+    ///
+    /// No run was named and there is none, or the folder cannot be listed.
+    pub fn run_id_or_latest(&self, root: &Path, run_id: Option<&str>) -> Result<String, RunError> {
+        if let Some(id) = run_id {
+            return Ok(id.to_owned());
+        }
+        if let Some(id) = lock(&self.latest).clone() {
+            return Ok(id);
+        }
+        rb_visual::sitemap_store::run_ids(root)?
+            .pop()
+            .ok_or(RunError::NotFound(String::new()))
     }
 }
 

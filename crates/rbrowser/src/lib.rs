@@ -30,6 +30,7 @@ pub mod emulation;
 pub mod engines;
 pub mod extensions;
 pub mod features;
+pub mod first_run;
 pub mod fit;
 pub mod flows;
 pub mod force_state;

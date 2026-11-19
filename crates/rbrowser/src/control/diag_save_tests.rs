@@ -103,6 +103,16 @@ async fn saving_asks_where_writes_there_and_says_so() {
     assert_eq!(std::fs::read_to_string(&target).expect("written"), "zip");
     assert!(shell_events(&ui)[1].contains("chosen.zip"));
     assert_eq!(lock(&LAST).as_deref(), Some(target.as_path()));
+    // RB-090-85: the write named its start, then its end.
+    let keys: Vec<String> = core
+        .status_log()
+        .items()
+        .into_iter()
+        .map(|message| message.message_key)
+        .collect();
+    let saving = keys.iter().position(|key| key == SAVING_KEY);
+    let saved = keys.iter().position(|key| key == SAVED_KEY);
+    assert!(saving.is_some() && saving < saved, "{keys:?}");
 }
 
 /// Review 6: the button always hears back - a dialog callback dropped unasked is a cancel, a save

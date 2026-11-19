@@ -157,6 +157,13 @@ pub fn flow_failure(error: &FlowFileError) -> Failure {
 #[must_use]
 pub fn saved_notice(files: &[RecordingExportFile]) -> CoreToShell {
     let paths: Vec<&str> = files.iter().map(|file| file.path.as_str()).collect();
+    saved_paths_notice(&paths)
+}
+
+/// [`saved_notice`] of the files at `paths` - also `recorder.export_flow` and
+/// `recorder.export_spec`'s (RB-090-84).
+#[must_use]
+pub fn saved_paths_notice(paths: &[&str]) -> CoreToShell {
     CoreToShell::Notification(Notification {
         level: NotificationLevel::Info,
         message_key: SAVED_NOTICE.to_owned(),

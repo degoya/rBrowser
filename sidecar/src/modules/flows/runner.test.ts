@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type Connected, type RunnerDeps, runFlow } from './runner.ts';
 import type { JobView, RunJob, ViewResult } from './result.ts';
+import type { StepProgress } from './steps.ts';
 
 const TOKEN = 'c0ffee'.repeat(11);
 const FILE = '/home/dev/site/.rbrowser/flows/smoke.ts';
@@ -49,6 +50,8 @@ function deps(options: { failConnect?: number; screenshotFails?: boolean; closeH
     closed: [] as number[],
     written: [] as string[],
     status: [] as string[],
+    /** Each step's progress, by view (RB-090-84). */
+    steps: [] as { viewId: number; step: StepProgress }[],
     reported: [] as ViewResult[],
     /** Per view: the action and the navigation timeout the runner set. */
     limits: new Map<number, { action?: number; navigation?: number }>(),
@@ -99,6 +102,7 @@ function deps(options: { failConnect?: number; screenshotFails?: boolean; closeH
     },
     onStatus: (viewId, status) => state.status.push(`${viewId}:${status}`),
     onView: (result) => state.reported.push(result),
+    onStep: (viewId, step) => state.steps.push({ viewId, step }),
   };
   return { runner, state };
 }
@@ -214,10 +218,39 @@ describe('runFlow', () => {
       ['Step 3: click', 'failed'],
     ]);
     expect(timedOut?.error?.step).toBe('Step 3: click');
+    // RB-090-84: the recording's step id and the first line, so the panel parses nothing.
+    expect(timedOut?.error).toMatchObject({ stepId: 3, summary: 'the flow ran longer than 100 ms' });
     // The step that ends after the timeout adds nothing to the result.
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(timedOut?.steps).toHaveLength(2);
     expect(results.get(2)?.steps.map((s) => s.status)).toEqual(['passed', 'passed']);
+  });
+
+  it("reports each step's start and end with the recording's step id and a failure's reason", async () => {
+    const { runner, state } = deps();
+    const source = [
+      'await step("Step 2: hover", () => 1);',
+      `await step("Step 5: fill", () => { throw new Error("locator.fill: no field\\nExpected: \\"secret\\" Bearer ${TOKEN}"); });`,
+    ].join('\n');
+    await runFlow(job(source, { views: [view(1, 'Mobile')] }), runner);
+    expect(state.steps).toEqual([
+      { viewId: 1, step: { name: 'Step 2: hover', id: 2, state: 'running' } },
+      { viewId: 1, step: { name: 'Step 2: hover', id: 2, state: 'passed' } },
+      { viewId: 1, step: { name: 'Step 5: fill', id: 5, state: 'running' } },
+      { viewId: 1, step: { name: 'Step 5: fill', id: 5, state: 'failed', message: 'locator.fill: no field' } },
+    ]);
+  });
+
+  it('fails the step the timeout cut off, and reports nothing of the view after it', async () => {
+    const { runner, state } = deps();
+    const source = 'await step("Step 3: click", () => page.wait(300));\nawait step("Step 4: fill", () => 1);\n';
+    await runFlow(job(source, { timeoutMs: 50, views: [view(1, 'Mobile')] }), runner);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(state.steps.map(({ step }) => [step.name, step.state])).toEqual([
+      ['Step 3: click', 'running'],
+      ['Step 3: click', 'failed'],
+    ]);
+    expect(state.steps.at(-1)?.step.message).toBe('the flow ran longer than 50 ms');
   });
 
   it('reports a step whose error the flow caught once, and names the step still running', async () => {

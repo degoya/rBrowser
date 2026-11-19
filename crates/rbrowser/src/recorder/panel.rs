@@ -168,10 +168,16 @@ pub fn newest_first(entries: &mut [RecordingEntry]) {
 fn get(core: &Core, name: &str) -> Result<CoreToShell, Failure> {
     let store = glue::store_of(core.host()).map_err(|error| internal(&error))?;
     let recording = store.load(name).map_err(store_failure)?;
+    // The pauses Play waits, from the exporter (RB-090-84); the recording shows without them.
+    let pauses = super::export::recorded_pauses(core, &recording).unwrap_or_else(|error| {
+        tracing::debug!(%error, "the recording's pauses are not known");
+        Vec::new()
+    });
     let recording = serde_json::to_value(&recording).map_err(|error| internal(&error))?;
     Ok(CoreToShell::Recording {
         name: name.to_owned(),
         recording,
+        pauses,
     })
 }
 

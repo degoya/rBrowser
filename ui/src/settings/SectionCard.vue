@@ -2,6 +2,7 @@
 // One section of the settings as a card (RB-080-13): one `SectionHeader` (the category as the
 // eyebrow, the section as the heading), reset for the section, and its keys in one column divided
 // by hairlines. In the search the card names where it lives and opens it there ("Show in ...").
+// An area link (a notice's settings target, RB-090-85) rings the card it opens.
 // The grid (`layout`) gets its preview beside it; the device presets list follows in the slot,
 // the plugin list stands above the keys in the slot `before`. The CDP proxy's and the MCP
 // server's commands stand under their switches (`AutomationActions`, RB-090-63).
@@ -37,6 +38,8 @@ const props = defineProps<{
   section: SectionView;
   hasProject: boolean;
   highlighted: string | null;
+  /** Whether an area link opened this section (RB-090-85). */
+  sectionHighlighted?: boolean;
   searching: boolean;
 }>();
 const emit = defineEmits<{ open: [key: string] }>();
@@ -93,8 +96,10 @@ function pickerFor(def: SettingDef): (kind: PathKind) => Promise<string | null> 
     as="section"
     variant="soft"
     class="scroll-mt-4 overflow-clip"
+    :class="sectionHighlighted ? 'ring-1 ring-primary' : ''"
     :ui="{ header: 'px-4 py-3 sm:px-4', body: 'px-2 py-1 sm:px-2 sm:py-1' }"
     :data-section="`${category.id}.${section.id}`"
+    :data-highlighted="sectionHighlighted ? 'true' : undefined"
   >
     <template #header>
       <div class="flex flex-wrap items-start justify-between gap-2">

@@ -39,6 +39,8 @@ fn extra_entries_match_the_path_the_testid_or_the_name() {
         role: "textbox".into(),
         name: "One-time code".into(),
         nth: 0,
+        visible_nth: None,
+        within: None,
         path: "#f > input".into(),
     });
     assert!(is_secret(false, &role, &extra("one-time CODE")));
@@ -60,6 +62,8 @@ fn the_name_comes_from_the_field() {
         role: "textbox".into(),
         name: "One-time code!".into(),
         nth: 0,
+        visible_nth: None,
+        within: None,
         path: "#x".into(),
     });
     assert_eq!(secret_name(&role), "one-time-code");

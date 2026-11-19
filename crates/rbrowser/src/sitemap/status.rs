@@ -28,6 +28,9 @@ pub enum RunError {
     /// The plugin's `discover` failed: its code and parameters.
     #[error("sitemap.error.discover: {0}")]
     Discover(String),
+    /// The run has no gallery yet (RB-090-83).
+    #[error("sitemap.error.no_gallery: the sitemap capture {0} has no gallery yet")]
+    NoGallery(String),
     /// The sources gave no page.
     #[error("sitemap.error.no_pages: the sitemap gave no page to capture")]
     NoPages,
@@ -48,6 +51,7 @@ impl RunError {
         match self {
             Self::Busy => "sitemap.error.busy",
             Self::NotFound(_) => "sitemap.error.not_found",
+            Self::NoGallery(_) => "sitemap.error.no_gallery",
             Self::Plan(error) => error.code(),
             Self::Discover(_) => "sitemap.error.discover",
             Self::NoPages => "sitemap.error.no_pages",

@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use rb_engine::{EngineKind, ViewId, ViewInfo};
 use rb_mcp::testing::view;
 
@@ -77,4 +79,27 @@ fn the_head_picks_views_by_breakpoint_or_label() {
         plan(&grid(), None, &["watch".to_owned()], target),
         Err(FlowError::NoViews(_))
     ));
+}
+
+#[test]
+fn a_view_the_layout_hides_is_skipped_with_the_reason() {
+    // RB-090-84, the owner's decision: the run plays in the views shown.
+    let planned = plan(&grid(), None, &[], target).expect("plans");
+    let planned = without_hidden(planned, &BTreeSet::from([ViewId(2)]));
+    let (run, skipped) = ids(&planned);
+    assert_eq!(run, [1]);
+    assert!(
+        skipped.contains(&(2, HIDDEN_REASON.to_owned())),
+        "{skipped:?}"
+    );
+    assert_eq!(planned.skipped.len(), 4);
+}
+
+#[test]
+fn the_breakpoints_a_flow_names_that_no_view_shows_are_named() {
+    // Focus mode shows one breakpoint: the recording's others are no view at all.
+    let views = vec![view(1, "w1600", "https://a.test/")];
+    let names = ["w1600".to_owned(), "mobile".to_owned(), "Tablet".to_owned()];
+    assert_eq!(missing_breakpoints(&views, &names), ["mobile", "Tablet"]);
+    assert!(missing_breakpoints(&views, &[]).is_empty());
 }

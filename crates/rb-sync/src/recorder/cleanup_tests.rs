@@ -1,6 +1,6 @@
 use crate::event::{ChangeData, MOD_ALT, MOD_CTRL, MouseButton, MouseData, SyncEvent};
 use crate::recorder::model::{Action, Recording};
-use crate::recorder::record::RecorderOptions;
+use crate::recorder::record::{HoverCapture, RecorderOptions};
 use crate::recorder::testing::*;
 
 fn record(options: RecorderOptions, events: Vec<SyncEvent>) -> Recording {
@@ -9,6 +9,14 @@ fn record(options: RecorderOptions, events: Vec<SyncEvent>) -> Recording {
         feed(&mut recorder, DESKTOP, &[MOBILE], 10 * i as u64, event);
     }
     recorder.stop().expect("stops")
+}
+
+/// `recordHover: all`: the recorder's guess keeps a hover too, not only the agent's menu hover.
+fn every_hover() -> RecorderOptions {
+    RecorderOptions {
+        record_hover: HoverCapture::All,
+        ..RecorderOptions::default()
+    }
 }
 
 fn kinds(recording: &Recording) -> Vec<String> {
@@ -135,7 +143,7 @@ fn the_hover_that_opened_a_menu_stays_other_moves_go() {
     let products = role("link", "Products", "#products");
     let item = testid("product-alpha", "#desktop-menu > li.dropdown > ul > li > a");
     let recording = record(
-        RecorderOptions::default(),
+        every_hover(),
         vec![
             hover(css("main > p")),
             hover(products),
@@ -162,7 +170,7 @@ fn a_hover_on_the_clicked_element_or_with_hover_off_is_dropped() {
     );
     assert_eq!(kinds(&recording), ["click #save"]);
     let off = RecorderOptions {
-        record_hover: false,
+        record_hover: HoverCapture::Off,
         ..RecorderOptions::default()
     };
     let products = role("link", "Products", "#products");
@@ -174,7 +182,7 @@ fn a_hover_on_the_clicked_element_or_with_hover_off_is_dropped() {
 fn a_hover_without_a_click_is_no_step() {
     let products = role("link", "Products", "#products");
     let recording = record(
-        RecorderOptions::default(),
+        every_hover(),
         vec![hover(products), input(css("#q"), "x", false)],
     );
     assert_eq!(kinds(&recording), ["fill #q"]);
@@ -236,7 +244,7 @@ fn a_hover_on_the_element_clicked_before_is_dropped() {
         "#nav > li:nth-child(2) > ul > li:nth-child(2) > a",
     );
     let recording = record(
-        RecorderOptions::default(),
+        every_hover(),
         vec![
             hover(careers.clone()),
             click(trainees.clone()),
@@ -258,7 +266,7 @@ fn a_hover_on_the_element_clicked_before_is_dropped() {
     // The same link after a navigation has another path but the same role and name.
     let again = role("link", "Trainees", "#nav > li:nth-child(3) > a");
     let recording = record(
-        RecorderOptions::default(),
+        every_hover(),
         vec![click(trainees), hover(again), click(css("#next"))],
     );
     assert_eq!(
@@ -335,23 +343,81 @@ fn the_menu_entry_clicked_before_still_opens_its_submenu() {
         "Experienced",
         "#nav > li:nth-child(2) > ul > li:nth-child(2) > a",
     );
-    let recording = record(
-        RecorderOptions::default(),
-        vec![
-            click(careers.clone()),
-            hover(careers.clone()),
-            hover(experienced.clone()),
-            menu_hover(careers),
-            click(experienced),
-        ],
+    for options in [RecorderOptions::default(), every_hover()] {
+        let recording = record(
+            options,
+            vec![
+                click(careers.clone()),
+                hover(careers.clone()),
+                hover(experienced.clone()),
+                menu_hover(careers.clone()),
+                click(experienced.clone()),
+            ],
+        );
+        assert_eq!(
+            kinds(&recording),
+            [
+                "click #nav > li:nth-child(2) > a",
+                "hover #nav > li:nth-child(2) > a",
+                "click #nav > li:nth-child(2) > ul > li:nth-child(2) > a",
+            ]
+        );
+    }
+}
+
+// RB-090-81: the pointer on its way through a navigation - over the entries, a heading, the
+// entry whose dropdown it opens - and the agent's menu hover at the press into the dropdown.
+fn through_the_navigation() -> Vec<SyncEvent> {
+    let about = role("link", "About us", "#nav > li:nth-child(1) > a");
+    let sustainability = role("link", "Sustainability", "#nav > li:nth-child(2) > a");
+    let careers = role("link", "Careers", "#nav > li:nth-child(3) > a");
+    let heading = role("heading", "Welcome", "main > h1");
+    let experienced = role(
+        "link",
+        "Experienced",
+        "#nav > li:nth-child(3) > ul > li:nth-child(2) > a",
     );
+    vec![
+        hover(heading),
+        hover(about),
+        hover(sustainability),
+        hover(careers.clone()),
+        hover(experienced.clone()),
+        menu_hover(careers),
+        click(experienced),
+    ]
+}
+
+#[test]
+fn by_default_only_the_agents_menu_hover_is_a_step() {
+    let recording = record(RecorderOptions::default(), through_the_navigation());
     assert_eq!(
         kinds(&recording),
         [
-            "click #nav > li:nth-child(2) > a",
-            "hover #nav > li:nth-child(2) > a",
-            "click #nav > li:nth-child(2) > ul > li:nth-child(2) > a",
+            "hover #nav > li:nth-child(3) > a",
+            "click #nav > li:nth-child(3) > ul > li:nth-child(2) > a",
         ]
+    );
+    // A move the agent did not mark is never a step, even on a named element.
+    let products = role("link", "Products", "#products");
+    let item = testid("product-alpha", "#products + ul > li > a");
+    let recording = record(
+        RecorderOptions::default(),
+        vec![hover(products), hover(item.clone()), click(item)],
+    );
+    assert_eq!(kinds(&recording), ["click #products + ul > li > a"]);
+}
+
+#[test]
+fn record_hover_off_keeps_not_even_the_menu_hover() {
+    let off = RecorderOptions {
+        record_hover: HoverCapture::Off,
+        ..RecorderOptions::default()
+    };
+    let recording = record(off, through_the_navigation());
+    assert_eq!(
+        kinds(&recording),
+        ["click #nav > li:nth-child(3) > ul > li:nth-child(2) > a"]
     );
 }
 
@@ -374,7 +440,7 @@ fn only_the_agents_menu_hover_is_kept_on_the_element_clicked_before() {
     let careers = role("link", "Careers", "#nav > li:nth-child(2) > a");
     let search = role("button", "Search", "#search");
     let recording = record(
-        RecorderOptions::default(),
+        every_hover(),
         vec![
             click(careers.clone()),
             hover(careers),

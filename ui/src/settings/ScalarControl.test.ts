@@ -138,3 +138,21 @@ describe('the other string kinds', () => {
     expect(wrapper.emitted('update')).toEqual([[null]]);
   });
 });
+
+// RB-090-84: `automation.flows.runLayout` - a string whose choices come from the `layouts` source.
+describe('a string with the values of a source', () => {
+  it('offers the source values as suggestions', async () => {
+    const { wrapper } = await mountPage(ScalarControl, {
+      schema: { type: 'string', 'x-options': 'layouts' },
+      value: 'grid',
+      kind: 'string',
+      label: 'Run layout',
+      inputId: 'l',
+      dynamic: { options: [{ value: 'grid', label: 'grid' }, { value: 'review', label: 'review' }] },
+    });
+    current = wrapper;
+    const menu = wrapper.findComponent(UInputMenu);
+    const items = (menu.props() as Record<string, unknown>).items as { value: string }[];
+    expect(items.map((item) => item.value)).toEqual(['grid', 'review']);
+  });
+});

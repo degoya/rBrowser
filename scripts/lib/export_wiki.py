@@ -113,7 +113,8 @@ def type_of(schema):
         return "one of " + ", ".join(f"`{json.dumps(v)}`" for v in values)
     for branches in ("anyOf", "oneOf"):
         if branches in schema:
-            kinds = [type_of(b) for b in schema[branches] if b.get("type") != "null"]
+            kinds = [type_of(b) for b in schema[branches]
+                     if b.get("type") != "null" and b.get("deprecated") is not True]
             return " or ".join(dict.fromkeys(kinds))
     kinds = schema.get("type")
     if kinds is None:

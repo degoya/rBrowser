@@ -219,6 +219,7 @@ pub fn snapshot(host: &Host) -> StateSnapshot {
             focus: shell.focus,
             modes: crate::layout::ipc::mode_state(host, &shell.modes),
             hidden: crate::layout::view_edit::addable(host),
+            minimap: shell.modes.minimap,
         },
         // The SyncHub's state (RB-020-02); the project's switches before it runs.
         sync: shell.sync.unwrap_or_else(|| SyncState {

@@ -1,6 +1,6 @@
 //! The MCP tools of sitemap capture (RB-050-05): `sitemap_capture` (finds the pages, starts the
-//! run in the background and answers its `runId`), `sitemap_status` and `sitemap_cancel` - core
-//! tools, their names, descriptions, arguments and answers. `rb-mcp` (`tools/sitemap.rs`) hands
+//! run in the background and answers its `runId`), `sitemap_status`, `sitemap_cancel` and
+//! `sitemap_gallery` (RB-090-83) - core tools, their names, descriptions, arguments and answers. `rb-mcp` (`tools/sitemap.rs`) hands
 //! them to the host, which runs [`super::app`]; the commands `sitemap.capture`, `sitemap.cancel`
 //! and `panels.sitemap` take the same arguments. The plugin's own tools
 //! `sitemapcapture_discover` and `sitemapcapture_gallery` come from its manifest.
@@ -35,6 +35,13 @@ pub const CANCEL_TOOL: &str = "sitemap_cancel";
 pub const CANCEL_DESCRIPTION: &str = "Cancel a running sitemap capture (runId; the latest \
 running one when absent). What was captured stays; sitemap_capture with resume: runId takes the \
 rest without capturing a page twice.";
+
+/// The gallery tool's name (RB-090-83).
+pub const GALLERY_TOOL: &str = "sitemap_gallery";
+/// The gallery tool's description for the agent.
+pub const GALLERY_DESCRIPTION: &str = "Open the gallery (index.html) of a sitemap capture \
+(runId; the latest run when absent) for the person in a window of rBrowser's own - never in the \
+system browser or the grid's views. Answers the runId, the gallery's path and where it opened.";
 
 /// The most pages a run takes.
 pub const MAX_PAGES: usize = 100_000;
@@ -156,6 +163,13 @@ pub struct CaptureStarted {
     pub folder: String,
     /// Pages times breakpoints still to take.
     pub pending: usize,
+    /// The run's pages (RB-090-83: the start's notice names them); 0 from an instance that
+    /// does not send them.
+    #[serde(default)]
+    pub pages: usize,
+    /// The run's breakpoints; 0 from an instance that does not send them.
+    #[serde(default)]
+    pub breakpoints: usize,
 }
 
 /// The arguments of `sitemap_status` and `sitemap_cancel`.

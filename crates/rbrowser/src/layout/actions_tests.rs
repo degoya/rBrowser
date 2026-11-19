@@ -119,10 +119,17 @@ async fn the_minimap_switch_flips_for_the_session() {
         json!(false)
     );
     assert_eq!(core.host().shell_state().modes.minimap, Some(false));
+    // The state tells the shell the session's switch in every mode: the main menu's check mark
+    // follows it, not the setting (RB-090-82).
+    assert_eq!(
+        crate::ipc::snapshot(core.host()).layout.minimap,
+        Some(false)
+    );
     assert_eq!(
         run_ok(core, MINIMAP_TOGGLE, Value::Null)["minimap"],
         json!(true)
     );
+    assert_eq!(crate::ipc::snapshot(core.host()).layout.minimap, Some(true));
 }
 
 #[tokio::test]

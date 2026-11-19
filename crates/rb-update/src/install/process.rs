@@ -7,7 +7,7 @@
 
 use std::ffi::OsStr;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 
 use anyhow::{Context, Result};
@@ -20,8 +20,8 @@ pub const UPDATER_DIR: &str = "updater";
 /// Inside `<data>/update`: what the updater writes to its output.
 pub const UPDATER_LOG: &str = "updater.log";
 
-/// The updater's file name: not `rbrowser(.exe)`, so nothing that looks for the program by its
-/// image name takes the updater for it.
+/// The updater's file name, beside the program and as its copy: not `rbrowser(.exe)`, so nothing
+/// that looks for the program by its image name takes the updater for it.
 #[must_use]
 pub fn updater_file_name() -> &'static str {
     if cfg!(windows) {
@@ -76,23 +76,31 @@ pub fn spawn_detached<S: AsRef<OsStr>>(
     }
 }
 
-/// Copies the running executable to `<data>/update/updater/` and starts the copy as
-/// `apply-update --journal <journal>`: a program cannot replace its own running file on Windows,
-/// and outside the program folder (or inside the portable `data/`, which the switch never moves)
-/// the copy is never part of what the switch moves.
+/// The updater beside the program in `install_dir`, as the package ships it.
+#[must_use]
+pub fn shipped_updater(install_dir: &Path) -> PathBuf {
+    install_dir.join(updater_file_name())
+}
+
+/// Copies the updater the package ships beside the program ([`shipped_updater`]) to
+/// `<data>/update/updater/` and starts the copy as `apply-update --journal <journal>`: the switch
+/// replaces the program folder, the updater's own file included, and a running `.exe` cannot be
+/// replaced on Windows; outside the program folder (or inside the portable `data/`, which the
+/// switch never moves) the copy is never part of what the switch moves. Not a copy of the app:
+/// `rbrowser.exe` is CEF's sandbox bootstrap and runs only beside its DLL and the CEF runtime.
 ///
 /// # Errors
 ///
 /// When the copy or the start fails; the journal then still says `handed`.
 pub fn launch_updater(journal: &Journal) -> Result<()> {
-    let current = std::env::current_exe().context("locate the running executable")?;
+    let shipped = shipped_updater(&journal.plan.install_dir);
     let update = update_dir(&journal.plan.data_dir);
     let directory = update.join(UPDATER_DIR);
     remove_any(&directory)?;
     fs::create_dir_all(&directory).with_context(|| format!("create {}", directory.display()))?;
     let copy = directory.join(updater_file_name());
-    fs::copy(&current, &copy)
-        .with_context(|| format!("copy {} to {}", current.display(), copy.display()))?;
+    fs::copy(&shipped, &copy)
+        .with_context(|| format!("copy {} to {}", shipped.display(), copy.display()))?;
     let journal_path = Journal::path(&journal.plan.data_dir);
     let args = [
         OsStr::new(APPLY_COMMAND),

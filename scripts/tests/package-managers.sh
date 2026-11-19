@@ -76,6 +76,17 @@ expect "the cask installs the bundle and its command" \
     'app "rBrowser.app" binary "#{appdir}/rBrowser.app/Contents/MacOS/rbrowser"' \
     "$(grep -E '^  (app|binary) ' "$cask" | sed 's/^  //' | tr '\n' ' ' | sed 's/ $//')"
 expect "the cask explains Gatekeeper" "1" "$(grep -c 'signed ad hoc, not notarised' "$cask")"
+# RB-090-80: the cask holds to the bundle - its minimum system (LSMinimumSystemVersion 13.0 is
+# Ventura), the archive names scripts/package-macos.sh writes and the folders the app keeps.
+expect "the cask asks for the bundle's minimum system" '  depends_on macos: ">= :ventura"' \
+    "$(grep '^  depends_on macos' "$cask")"
+expect "the bundle's minimum system is the one the cask names" "1" \
+    "$(grep -c '^RB_MACOS_MINIMUM_SYSTEM="13.0"$' "$ROOT/scripts/lib/macos-bundle.sh")"
+expect "package-macos.sh names its archives as the cask downloads them" "1" \
+    "$(grep -c '^NAME="rbrowser-$version-macos-$arch"$' "$ROOT/scripts/package-macos.sh")"
+expect "zap removes the settings and the state folder the app writes" \
+    '"~/.config/rbrowser", "~/.local/state/rBrowser",' \
+    "$(sed -n '/^  zap trash: \[$/,/^  \]$/p' "$cask" | grep '^    "' | sed 's/^ *//' | tr '\n' ' ' | sed 's/ $//')"
 expect "formula, Linux x64: its archive and its hash" "  sha256 \"$(hash_of b)\"" \
     "$(line_after "$formula" "url \"$base/rbrowser-1.1.0-linux-x64.tar.gz\"")"
 expect "the formula is Linux only" "1" "$(grep -c '^  depends_on :linux$' "$formula")"
@@ -141,6 +152,17 @@ expect "the tap's README installs cask and formula from the tap" \
 expect "the bucket's README adds the bucket" \
     "scoop bucket add rbrowser https://github.com/degoya/scoop-rbrowser" \
     "$(grep '^scoop bucket add' "$out/scoop/README.md")"
+
+# RB-090-80: a release with the Windows ZIP and both macOS ZIPs, no Linux archive yet.
+grep -v 'linux-x64' "$SCRATCH/SHA256SUMS" > "$SCRATCH/windows-macos"
+run_status render 1.1.0 "$SCRATCH/windows-macos" "$SCRATCH/windows-macos-out"
+expect_status "a release with Windows and macOS renders" 0
+expect "the cask moves, the formula waits for its archive" \
+    "homebrew/Casks/rbrowser.rb homebrew/README.md scoop/README.md scoop/bucket/rbrowser.json winget/degoya.rBrowser.installer.yaml winget/degoya.rBrowser.locale.en-US.yaml winget/degoya.rBrowser.yaml" \
+    "$(files_of "$SCRATCH/windows-macos-out")"
+expect_output "the formula is skipped with a note" "skip the Homebrew formula: the release has no Linux archive"
+expect "the same cask as with every archive" "" \
+    "$(diff "$cask" "$SCRATCH/windows-macos-out/homebrew/Casks/rbrowser.rb")"
 
 # A fork and a local fixture.
 all_sums 1.1.1-beta.1 > "$SCRATCH/beta-sums"

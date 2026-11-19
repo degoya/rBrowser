@@ -35,6 +35,8 @@ mod fetch;
 mod install;
 #[path = "repository_prepare.rs"]
 mod prepare;
+#[path = "repository_select.rs"]
+mod select;
 #[path = "repository_store.rs"]
 mod store;
 #[path = "repository_types.rs"]
@@ -48,6 +50,8 @@ pub use fetch::{
 };
 pub use install::{Consent, Installed, PinnedKey, download, install, remove};
 pub use prepare::{KeyReview, Prepared, prepare};
+pub use select::{Reachability, Shipped, UNREACHABLE_FOR, newer_than, replacement};
+pub(crate) use store::write_atomic;
 pub use store::{CatalogStore, FLOORS_FILE, INSTALLS_FILE, InstallRecord};
 pub use types::{
     MAX_USER_REPOSITORIES, OFFICIAL_INDEX_URL, OFFICIAL_REPOSITORY, Repository, RepositoryError,

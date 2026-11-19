@@ -1,15 +1,16 @@
 [package]
 name = "rb-update"
-description = "rBrowser's self-update, prepared and inactive in phase 1: the signed update manifest per channel, the verified https download, the journalled switch of the program folder with its roll-back, and the rb-pack publishing tool (RB-090-02)"
+description = "rBrowser's self-update: the signed update manifest per channel, where it is published, the offer, the verified https download, the journalled switch of the program folder with its roll-back, the rbrowser-updater program and the rb-pack publishing tool (RB-090-02, RB-090-14)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
 
-# A leaf on purpose: the app links it only with the Cargo feature `self-update` of `rbrowser`
-# (off in phase 1), and the updater runs it before the new version is known to start, so nothing
-# here pulls in CEF, the config or the plugin host. Adapted from rCommander's `crates/rc-update/`.
+# A leaf on purpose: the app links it with the Cargo feature `self-update` of `rbrowser` (on by
+# default since RB-090-14), and the updater runs it before the new version is known to start, so
+# nothing here pulls in CEF, the config or the plugin host. Adapted from rCommander's
+# `crates/rc-update/`.
 
 [lib]
 path = "src/lib.rs"
@@ -19,6 +20,12 @@ path = "src/lib.rs"
 [[bin]]
 name = "rb-pack"
 path = "src/pack/main.rs"
+
+# The updater the app starts to switch the program folder (RB-090-14): rb-update and nothing of
+# the browser, so a copy runs outside the program folder; it ships beside rbrowser.exe.
+[[bin]]
+name = "rbrowser-updater"
+path = "src/updater/main.rs"
 
 [dependencies]
 anyhow.workspace = true

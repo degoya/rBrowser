@@ -17,6 +17,8 @@ fn by_role(role: &str, name: &str) -> Locator {
                 role: role.to_owned(),
                 name: name.to_owned(),
                 nth: 0,
+                visible_nth: None,
+                within: None,
             },
             Selector::Css {
                 path: format!("#{}", name.to_lowercase().replace(' ', "-")),
@@ -136,15 +138,15 @@ fn a_navigation_after_a_click_in_every_breakpoint_needs_no_goto() {
 fn the_hover_on_the_menu_entry_comes_before_the_click_into_its_dropdown() {
     let text = flow();
     let hover = text
-        .find("getByRole('link', { name: 'Careers', exact: true }).hover()")
+        .find("getByRole('link', { name: 'Careers', exact: true }).filter({ visible: true }).first().hover()")
         .expect("the hover");
     let click = text
-        .find("getByRole('link', { name: 'Experienced', exact: true }).click()")
+        .find("getByRole('link', { name: 'Experienced', exact: true }).filter({ visible: true }).first().click()")
         .expect("the click");
     assert!(hover < click, "{text}");
 }
 
-const TOGGLE: &str = "getByRole('checkbox', { name: 'Open the navigation', exact: true })";
+const TOGGLE: &str = "getByRole('checkbox', { name: 'Open the navigation', exact: true }).filter({ visible: true }).first()";
 
 #[test]
 fn a_legacy_checkbox_fill_before_its_check_is_left_out() {
@@ -225,4 +227,53 @@ fn every_flow_step_names_itself_for_the_result() {
     // Step 5, the legacy fill, is left out.
     assert_eq!(text.matches("\n});\n").count(), 5, "{text}");
     assert!(!spec().contains("await step("));
+}
+
+#[test]
+fn the_recorded_pace_waits_before_each_step_and_after_a_menu_hover() {
+    // RB-090-84: the menu's hover carries the time of the click it was reported with.
+    let mut steps = recording();
+    for (step, at_ms) in steps.iter_mut().zip([0, 3_000, 3_004, 3_900, 5_000, 5_000]) {
+        step.at_ms = at_ms;
+    }
+    let mut context = Context::new(Guard::Breakpoint, LocatorPreference::Auto, None)
+        .paced(crate::pace::Pace::Recorded);
+    let text = render(&steps, &mut context, 0).expect("rendered");
+    for (id, wait) in [(2, 2_504), (3, 500), (4, 896)] {
+        assert!(
+            text.contains(&format!(
+                "await step('Step {id}: {}', async () => {{\n  await page.waitForTimeout({wait});\n",
+                ["hover", "click", "waitForUrl"][id - 2]
+            )),
+            "step {id}: {text}"
+        );
+    }
+    // Step 5 is left out, step 6 waits the time since step 4.
+    assert!(
+        text.contains(
+            "await step('Step 6: check', async () => {\n  await page.waitForTimeout(1100);\n"
+        ),
+        "{text}"
+    );
+    assert_eq!(text.matches("waitForTimeout").count(), 4, "{text}");
+}
+
+#[test]
+fn the_least_pause_holds_before_every_step_but_the_first() {
+    let mut steps = recording();
+    for (step, at_ms) in steps.iter_mut().zip([0, 3_000, 3_004, 3_900, 5_000, 5_000]) {
+        step.at_ms = at_ms;
+    }
+    let mut context = Context::new(Guard::Breakpoint, LocatorPreference::Auto, None)
+        .paced(crate::pace::Pace::Recorded)
+        .least_pause(1_000);
+    let text = render(&steps, &mut context, 0).expect("rendered");
+    // Hover 3 s; click and waitForUrl 1 s each (the click 4 ms after the hover); check 1.1 s.
+    for wait in [3_000, 1_000, 1_100] {
+        assert!(
+            text.contains(&format!("await page.waitForTimeout({wait});")),
+            "{wait}: {text}"
+        );
+    }
+    assert_eq!(text.matches("waitForTimeout").count(), 4, "{text}");
 }

@@ -562,6 +562,22 @@
               "type": "integer",
               "format": "uint32",
               "minimum": 0
+            },
+            "visibleNth": {
+              "description": "The match's index among the visible ones (RB-090-81): the export takes that one in\nevery view. Absent in a recording made before, and for a hidden element.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "within": {
+              "description": "The CSS selector of an ancestor inside which the role and name match the element\nalone (RB-090-84): the page showed the name more than once.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,
@@ -592,6 +608,22 @@
               "type": "integer",
               "format": "uint32",
               "minimum": 0
+            },
+            "visibleNth": {
+              "description": "The match's index among the visible ones (RB-090-81).",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "within": {
+              "description": "The ancestor inside which the text matches the element alone (RB-090-84).",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,

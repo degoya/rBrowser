@@ -7,11 +7,12 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use rb_config::RecordHover;
 use rb_engine::{ViewEvent, ViewHost, ViewId};
 use rb_ipc::{RecorderPhase, RecorderStatus};
 use rb_sync::recorder::{
-    RecordedBreakpoint, Recorder, RecorderOptions, RecorderState, RecordingStore, RecordingView,
-    StartInfo, StoreError, check_name,
+    HoverCapture, RecordedBreakpoint, Recorder, RecorderOptions, RecorderState, RecordingStore,
+    RecordingView, StartInfo, StoreError, check_name,
 };
 use rb_sync::{EventMessage, Observer, ReplayOutcome, Route, SyncEvent, SyncSwitches};
 use tokio::runtime::Handle;
@@ -151,7 +152,8 @@ impl HostRecorder {
         if let Some(reason) = uncaptured(switches, excluded, has_leader) {
             return Err(RecorderFailure::NotCaptured(reason));
         }
-        let not_captured = missing_kinds(switches, config.record_hover, config.record_scroll);
+        let records_hover = config.record_hover != RecordHover::Off;
+        let not_captured = missing_kinds(switches, records_hover, config.record_scroll);
         if let Some(view) = target {
             host.set_active_view(view)
                 .map_err(|error| RecorderFailure::View(error.to_string()))?;
@@ -179,8 +181,9 @@ impl HostRecorder {
             let mut recorder = lock(&self.recorder);
             recorder.set_options(RecorderOptions {
                 record_scroll: config.record_scroll,
-                record_hover: config.record_hover,
+                record_hover: hover_capture(config.record_hover),
                 secret_fields: config.secret_fields,
+                record_autofill: config.record_autofill,
             });
             recorder.start(info)?;
         }
@@ -247,6 +250,14 @@ impl HostRecorder {
         lock(&self.recorder).add_check(source, action, views, now_ms())?;
         tracing::info!("check step recorded");
         Ok(self.publish())
+    }
+
+    /// The form autofill set `fill` (RB-090-78, [`super::autofill`]): its fields are steps while
+    /// a recording runs with `automation.recorder.recordAutofill`.
+    pub fn on_autofill(&self, fill: &rb_sync::recorder::AutofillView) {
+        if lock(&self.recorder).on_autofill(fill, now_ms()) {
+            self.publish();
+        }
     }
 
     /// The state now.
@@ -373,6 +384,16 @@ pub fn uncaptured(
         )
     } else {
         None
+    }
+}
+
+/// The recorder's hover capture for `automation.recorder.recordHover` (RB-090-81). A function,
+/// not a `From`: neither type is this crate's, and neither crate depends on the other.
+pub fn hover_capture(choice: RecordHover) -> HoverCapture {
+    match choice {
+        RecordHover::Menu => HoverCapture::Menu,
+        RecordHover::All => HoverCapture::All,
+        RecordHover::Off => HoverCapture::Off,
     }
 }
 

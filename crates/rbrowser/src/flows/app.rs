@@ -98,6 +98,8 @@ pub fn setup(core: &Core) -> Result<Setup, FlowError> {
         .iter()
         .filter_map(|view| host.target_id(view.id).map(|target| (view.id, target)))
         .collect();
+    let hidden = views.iter().map(|view| view.id);
+    let hidden = hidden.filter(|id| host.is_off_screen(*id)).collect();
     let config = host.config();
     let environment = host.shell_state().environment;
     let env = environment
@@ -114,6 +116,7 @@ pub fn setup(core: &Core) -> Result<Setup, FlowError> {
         settings: core.user_settings().automation.flows,
         views,
         targets,
+        hidden,
         env,
         trust_store: crate::trust::store_path(core),
         started_at: crate::trust::rfc3339(SystemTime::now()),
@@ -239,15 +242,21 @@ fn begin(
     ));
     core.send(&CoreToShell::FlowRunChanged);
     core.runtime().clone().spawn(async move {
-        let (progress, mut statuses) = mpsc::unbounded_channel::<Value>();
-        let follow = tokio::spawn(async move {
-            while let Some(status) = statuses.recv().await {
-                record_status(&status);
-            }
-        });
+        let (progress, statuses) = mpsc::unbounded_channel::<Value>();
+        let follow = super::step_progress::follow(&core, &request, statuses, record_status);
+        // `automation.flows.hiddenViews: layout` shows the run's layout first (RB-090-84).
+        let shown = super::run_layout::show(&core).await;
+        let setup = if shown.switched() {
+            self::setup(&core).unwrap_or(setup)
+        } else {
+            setup
+        };
         let outcome = execute_recorded(&setup, &request, &deps, cancelled, progress).await;
         follow.abort();
         finish(&core, &setup, &request, &outcome);
+        if let Some(replaced) = shown.into_restore() {
+            super::run_layout::restore(&core, replaced);
+        }
         let _ = sender.send(outcome);
     });
     Ok(Started { run_id: id, done })
@@ -287,6 +296,9 @@ fn finish(
     request: &RunRequest,
     outcome: &Result<RunResult, FlowError>,
 ) {
+    super::report::log(&request.name, outcome, |view| {
+        super::report::shown_now(core, view)
+    });
     {
         let mut state = lock(&STATE);
         state.running = None;
@@ -329,6 +341,9 @@ fn finish(
         ),
     };
     core.notify(message);
+    for skipped in outcome.iter().flat_map(super::report::skip_notices) {
+        core.notify(skipped);
+    }
     core.send(&CoreToShell::FlowRunChanged);
 }
 

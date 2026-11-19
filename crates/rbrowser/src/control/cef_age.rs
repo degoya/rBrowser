@@ -10,10 +10,6 @@ use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 const RELEASE_DATE: &str = env!("RB_CEF_RELEASE_DATE");
 /// The pinned CEF build's version, `156.0.26+g...+chromium-...` (from `RB_CEF_ARCHIVE`).
 const BUILD_VERSION: &str = env!("RB_CEF_BUILD_VERSION");
-/// The self-update is prepared but off in phase 1 (RB-090-02), so the notice is never silenced
-/// by it.
-const SELF_UPDATE_ACTIVE: bool = false;
-
 /// The CEF build this binary was made with.
 pub fn embedded_build() -> CefBuild {
     CefBuild {
@@ -23,13 +19,14 @@ pub fn embedded_build() -> CefBuild {
 }
 
 /// The warning for `build` on day `today` (days since the epoch) under the user's
-/// `updates.cefAgeWarning`; `None` when the build is young enough or the notice is off.
+/// `updates.cefAgeWarning`; `None` when the build is young enough, the notice is off, or updates
+/// are checked by themselves (RB-090-14: the next release brings the new CEF).
 pub fn notification(build: &CefBuild, today: i64, user: &UserSettings) -> Option<CoreToShell> {
     let notice = cef_age_notice(
         build,
         today,
         user.updates.cef_age_warning,
-        SELF_UPDATE_ACTIVE,
+        crate::updates::checks_by_itself(crate::updates::SELF_UPDATE_BUILT, user),
     )?;
     Some(CoreToShell::Notification(Notification {
         level: NotificationLevel::Warning,

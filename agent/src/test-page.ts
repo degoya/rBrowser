@@ -16,9 +16,17 @@ export function loadPage(html: string = syncPage): void {
   document.body.innerHTML = parsed.body.innerHTML;
 }
 
-/** Sets the viewport (CSS pixels); media queries follow. */
+/**
+ * Sets the viewport (CSS pixels); media queries follow. happy-dom keeps computed styles until the
+ * styles change, not when the viewport does, so a style sheet comes and goes to drop them - as a
+ * browser recomputes styles on a resize (a selector that looked at visibility before the resize
+ * would read the old layout, RB-090-84).
+ */
 export function setViewport(width: number, height = 800): void {
   (window as unknown as HappyWindow).happyDOM?.setViewport({ width, height });
+  const nudge = document.createElement('style');
+  document.head.append(nudge);
+  nudge.remove();
 }
 
 /** Every element gets the box `rect` (default 100 x 40 at 10, 20). */

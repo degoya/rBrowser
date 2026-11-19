@@ -18,9 +18,9 @@
 # `winget` GITHUB_TOKEN and GH_TOKEN (the WINGET_TOKEN) - never from the command line, and
 # nothing here prints one. komac and nfpm are pinned in scripts/lib/tool-versions.sh. A channel
 # whose secret is missing (a fork, or before the owner set it) is skipped with a notice, and so
-# is the tap while no release carries a macOS or Linux archive (scripts/package-managers.sh
-# renders no Homebrew files then; RB-110-01, RB-110-02); the release is out by then, so the jobs
-# continue on error and never fail it.
+# is the tap while a release carries neither the macOS archives (RB-090-80) nor the Linux one
+# (RB-110-01): scripts/package-managers.sh renders only the cask or the formula whose archives
+# are there. The release is out by then, so the jobs continue on error and never fail it.
 set -euo pipefail
 
 # shellcheck source=lib/tool-versions.sh

@@ -23,6 +23,10 @@ pub struct SitemapConfig {
     /// The longest one page may take, from navigation to screenshot, in seconds (5 to 300).
     #[schemars(range(min = 5, max = 300))]
     pub timeout_sec: u32,
+    /// The longest one screenshot may take, in seconds (5 to 120); the reason of a shot that
+    /// failed is in the log and in run.json (RB-090-83).
+    #[schemars(range(min = 5, max = 120))]
+    pub shot_timeout_sec: u32,
     /// Capture the whole page, not only the viewport.
     pub full_page: bool,
     /// Scroll each page to its end and back first, so lazy-loaded content is there.
@@ -66,6 +70,7 @@ impl Default for SitemapConfig {
             wait_selector: String::new(),
             delay_ms: 0,
             timeout_sec: 30,
+            shot_timeout_sec: 15,
             full_page: true,
             auto_scroll: true,
             include: Vec::new(),

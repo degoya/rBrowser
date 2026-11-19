@@ -159,3 +159,60 @@ async fn a_plugin_command_without_a_panel_reports_its_end_and_a_check_opens_the_
         "only a check opens the findings window"
     );
 }
+
+/// RB-090-85: a check of a plugin (Lighthouse, the accessibility check, SEO) runs for a while
+/// before its end is named, so its start is named at once; a command of another group, which
+/// answers at once, says nothing before its end.
+#[tokio::test]
+async fn a_plugin_check_names_its_start_in_the_status_bar() {
+    let (_ui, core) = core();
+    report_started(
+        &core,
+        "lighthouse",
+        "plugin.lighthouse.commands.run",
+        Group::Checks,
+    );
+    let items = core.status_log().items();
+    let last = items.last().expect("a status message");
+    assert_eq!(last.message_key, COMMAND_STARTED_KEY);
+    assert_eq!(last.level, rb_ipc::NotificationLevel::Info);
+    assert_eq!(last.args["command"], "plugin.lighthouse.commands.run");
+    let before = core.status_log().items().len();
+    report_started(
+        &core,
+        "overlays",
+        "plugin.overlays.commands.outlines",
+        Group::Overlays,
+    );
+    assert_eq!(core.status_log().items().len(), before);
+}
+
+/// RB-090-82: a plugin's panel command (the Panels group - ≡ › Panels, the palette, its
+/// shortcut; no MCP tool runs it) is a person's ask and opens the dock folded to its rail at the
+/// panel, as the core panels' commands do (RB-090-71). Kept folded, the page only marked the
+/// panel in the rail: "Show the colour picker panel" marked the entry, the panel stayed shut. A
+/// panel another command opens on the side keeps the fold.
+#[tokio::test]
+async fn a_panel_command_opens_the_folded_dock_and_a_side_effect_keeps_the_fold() {
+    use crate::panel_dock::PanelSide;
+    use crate::panel_dock::tests::{docks, setup_with};
+    let args = json!({ "plugin": "color-picker", "panel": "picker" });
+    for (group, collapsed) in [(Group::Panels, false), (Group::Devtools, true)] {
+        let mut user = rb_config::UserSettings::default();
+        user.panels.dock = rb_config::PanelDock::Left;
+        user.panels.dock_state = rb_config::PanelDockState::Rail;
+        let docked = setup_with(user);
+        open_asked(&docked.core, &args, group);
+        let dock = docks(&docked.ui).last().cloned().flatten().expect("docked");
+        assert_eq!(
+            (dock.side, dock.collapsed),
+            (PanelSide::Left, collapsed),
+            "{group:?}"
+        );
+        assert!(
+            dock.url.ends_with("#/panels/color-picker.picker"),
+            "{}",
+            dock.url
+        );
+    }
+}

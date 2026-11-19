@@ -1,5 +1,6 @@
 //! The client of a window a grid page opened (`window.open`, `target=_blank`): only the guard
-//! that keeps the shell's pages out of it. UI thread.
+//! that keeps the shell's pages out of it - the render views' browsers take the same guard
+//! (`render_views.rs`). UI thread.
 
 use std::os::raw::c_int;
 
@@ -22,7 +23,7 @@ wrap_client! {
 }
 
 wrap_request_handler! {
-    struct PopupRequests {}
+    pub(super) struct PopupRequests {}
 
     impl RequestHandler {
         fn on_before_browse(

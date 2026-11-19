@@ -208,7 +208,11 @@ async fn an_old_cef_build_is_shown_once_the_shell_is_ready() {
         version: "156.0.26+g8ea0c73+chromium-156.0.8078.88".to_owned(),
         date: "2000-01-01".to_owned(),
     };
+    // Updates not checked by themselves, or the notice stays silent (RB-090-14).
+    let mut unchecked = UserSettings::default();
+    unchecked.updates.check = rb_config::UpdateCheck::Off;
     let (ui, core) = core_with(CoreSetup {
+        user: unchecked,
         cef_build: Some(old.clone()),
         ..CoreSetup::default()
     });
@@ -430,4 +434,49 @@ async fn an_edited_binding_is_sent_to_the_shell() {
         .and_then(|all| all.iter().find(|command| command["id"] == "view.back"))
         .expect("view.back");
     assert_eq!(back["bindings"], json!(["Ctrl+Shift+Space V J"]));
+}
+
+/// RB-090-82: the plugin commands of ≡ › Plugins open Settings > Plugins, where the list is and a
+/// plugin is installed, switched, removed and trusted: the rows ask with `{"show": true}`.
+/// `plugins.list` answered its rows only, which no menu shows, and the others were not
+/// implemented: their rows did nothing. Without the flag nothing changes - no window opens.
+#[tokio::test]
+async fn the_plugin_commands_of_the_menu_open_the_plugin_list() {
+    let (ui, core) = core();
+    let page = UiCall::SettingsWindow("rbrowser://ui/settings.html#/settings/plugins".to_owned());
+    let protected = [
+        "plugins.install",
+        "plugins.enable",
+        "plugins.disable",
+        "plugins.remove",
+        "plugins.trust_key",
+    ];
+    for id in std::iter::once("plugins.list").chain(protected) {
+        let before = ui.calls().len();
+        assert_eq!(
+            core.run_command(id, json!({ "show": true })).expect(id),
+            Value::Null
+        );
+        assert!(ui.calls()[before..].contains(&page), "{id}");
+    }
+    let before = ui.calls().len();
+    for id in protected {
+        for args in [
+            Value::Null,
+            json!({ "id": "seo" }),
+            json!({ "show": false }),
+        ] {
+            assert!(
+                matches!(
+                    core.run_command(id, args.clone()),
+                    Err(CommandError::NotImplemented)
+                ),
+                "{id} {args}"
+            );
+        }
+    }
+    assert!(
+        !ui.calls()[before..].contains(&page),
+        "only a row asks to show"
+    );
 }

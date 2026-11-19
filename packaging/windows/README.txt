@@ -59,7 +59,20 @@ rBrowser does not need Firefox. Firefox views use the Firefox installed on this
 machine; without one, those views are simply unavailable.
 
 
-5. When something goes wrong
+5. Updates
+----------
+rBrowser looks for a new version at every start and shows it in the status bar
+with its size and notes. "Install and restart" downloads it, checks its
+signature and SHA-256, replaces the program folder (your own files and the
+portable "data" folder stay) and starts the new version; if that does not
+start, the previous version comes back by itself. Settings > General > Updates
+turns the check off, picks the channel, or installs a downloaded update when
+you quit. Keep rbrowser-updater.exe next to rbrowser.exe: it does the switch.
+Installed with Scoop or winget, update with "scoop update rbrowser" or
+"winget upgrade degoya.rBrowser" instead.
+
+
+6. When something goes wrong
 ----------------------------
 Create a diagnostics ZIP and send it to the rBrowser team:
 
@@ -71,7 +84,7 @@ secrets masked. Nothing is uploaded anywhere - crash dumps stay on this machine
 and you decide whom to send the ZIP to.
 
 
-6. Licences
+7. Licences
 -----------
 rBrowser is licensed under the GNU General Public License v3.0 or later
 (LICENSE). It bundles the Chromium Embedded Framework, Chromium and Node.js;

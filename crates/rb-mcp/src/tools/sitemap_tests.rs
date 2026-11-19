@@ -63,6 +63,33 @@ async fn status_and_cancel_name_the_run_or_none() {
     );
 }
 
+#[tokio::test]
+async fn sitemap_gallery_names_the_run_or_none() {
+    let fake = Arc::new(FakeBackend::default());
+    fake.answer(
+        &format!("{HOST_TOOL_PREFIX}sitemap_gallery"),
+        Ok(json!({ "runId": "r1", "gallery": "g", "openedIn": "window" })),
+    );
+    let server = server(&fake);
+    let (error, answer) = answer_json(
+        &server
+            .sitemap_gallery(Parameters(SitemapRunParams {
+                run_id: Some("r1".to_owned()),
+            }))
+            .await
+            .expect("answer"),
+    );
+    assert!(!error, "{answer}");
+    assert_eq!(answer["openedIn"], "window");
+    assert_eq!(
+        fake.calls(),
+        [(
+            format!("{HOST_TOOL_PREFIX}sitemap_gallery"),
+            json!({ "runId": "r1" })
+        )]
+    );
+}
+
 #[test]
 fn unknown_arguments_are_refused() {
     let refused = serde_json::from_value::<SitemapCaptureParams>(json!({ "target": "all" }));

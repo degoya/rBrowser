@@ -92,6 +92,7 @@ fn the_state_snapshot_shape() {
             focus: None,
             modes: None,
             hidden: Vec::new(),
+            minimap: None,
         },
         sync: SyncState {
             enabled: true,

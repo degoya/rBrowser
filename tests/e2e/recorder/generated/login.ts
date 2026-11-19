@@ -14,13 +14,13 @@ await step('Step 1: navigate', async () => {
 // Step 2: click - Open the mobile menu (only in mobile)
 await step('Step 2: click - Open the mobile menu', async () => {
   if (['mobile'].includes(view.breakpoint)) {
-    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Menu', exact: true }).filter({ visible: true }).first().click();
   }
 });
 // Step 3: assert visible (only in mobile)
 await step('Step 3: assert visible', async () => {
   if (['mobile'].includes(view.breakpoint)) {
-    await expect(page.getByRole('link', { name: 'About', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'About', exact: true }).filter({ visible: true }).first()).toBeVisible();
   }
 });
 // Step 4: press
@@ -45,11 +45,11 @@ await step('Step 8: select', async () => {
 });
 // Step 9: check
 await step('Step 9: check', async () => {
-  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).filter({ visible: true }).first().check();
 });
 // Step 10: uncheck
 await step('Step 10: uncheck', async () => {
-  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).filter({ visible: true }).first().uncheck();
 });
 // Step 11: hover
 await step('Step 11: hover', async () => {
@@ -57,7 +57,7 @@ await step('Step 11: hover', async () => {
 });
 // Step 12: assert visible
 await step('Step 12: assert visible', async () => {
-  await expect(page.getByText('We never share your email.', { exact: true })).toBeVisible();
+  await expect(page.getByText('We never share your email.', { exact: true }).filter({ visible: true }).first()).toBeVisible();
 });
 // Step 13: dblclick
 await step('Step 13: dblclick', async () => {

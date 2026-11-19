@@ -48,12 +48,23 @@ export const MOD_SHIFT = 8;
  * How an element is found again in another view, tried in this order when it is made:
  * `data-testid`, ARIA role and accessible name, tag and text, CSS path. `nth` picks among
  * several matches (document order, omitted for the first); `path` is the CSS path, the
- * fallback of every other kind.
+ * fallback of every other kind. A role or text selector with an `nth` carries `visibleNth`,
+ * its index among the visible matches, when the element is shown (RB-090-81). `within` is the
+ * CSS selector of an ancestor inside which a role or text selector names the element alone,
+ * when the page shows the name more than once (RB-090-84); the whole page where it is missing.
  */
 export type ElementSelector =
   | { kind: 'testid'; testid: string; nth?: number; path: string }
-  | { kind: 'role'; role: string; name: string; nth?: number; path: string }
-  | { kind: 'text'; tag: string; text: string; nth?: number; path: string }
+  | {
+      kind: 'role';
+      role: string;
+      name: string;
+      nth?: number;
+      visibleNth?: number;
+      within?: string;
+      path: string;
+    }
+  | { kind: 'text'; tag: string; text: string; nth?: number; visibleNth?: number; within?: string; path: string }
   | { kind: 'css'; path: string };
 
 /** A point in an element: its selector, the open shadow hosts above it and the offset. */

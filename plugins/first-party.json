@@ -1,0 +1,110 @@
+{
+  "a11y-axe": {
+    "category": "checks",
+    "recommended": true
+  },
+  "breakpoint-analyzer": {
+    "category": "tools",
+    "recommended": true
+  },
+  "color-picker": {
+    "category": "overlays",
+    "recommended": true
+  },
+  "console": {
+    "category": "devtools",
+    "recommended": true
+  },
+  "coverage": {
+    "category": "checks",
+    "recommended": false
+  },
+  "error-report": {
+    "category": "checks",
+    "recommended": true
+  },
+  "fonts": {
+    "category": "checks",
+    "recommended": false
+  },
+  "form-autofill": {
+    "category": "tools",
+    "recommended": true
+  },
+  "framework-devtools": {
+    "category": "devtools",
+    "recommended": false
+  },
+  "image-overlay": {
+    "category": "overlays",
+    "recommended": true
+  },
+  "json-xml-viewer": {
+    "category": "devtools",
+    "recommended": true
+  },
+  "lighthouse": {
+    "category": "checks",
+    "recommended": true
+  },
+  "network-panel": {
+    "category": "devtools",
+    "recommended": true
+  },
+  "outline": {
+    "category": "checks",
+    "recommended": false
+  },
+  "overlays": {
+    "category": "overlays",
+    "recommended": true
+  },
+  "peek": {
+    "category": "overlays",
+    "recommended": true
+  },
+  "pwa-check": {
+    "category": "checks",
+    "recommended": false
+  },
+  "recorder-export": {
+    "category": "capture",
+    "recommended": true
+  },
+  "rulers-guides": {
+    "category": "overlays",
+    "recommended": true
+  },
+  "screenshot-editor": {
+    "category": "capture",
+    "recommended": true
+  },
+  "seo": {
+    "category": "checks",
+    "recommended": true
+  },
+  "simulators": {
+    "category": "overlays",
+    "recommended": false
+  },
+  "sitemap-capture": {
+    "category": "capture",
+    "recommended": true
+  },
+  "snippets": {
+    "category": "tools",
+    "recommended": false
+  },
+  "storage-panel": {
+    "category": "devtools",
+    "recommended": true
+  },
+  "todo": {
+    "category": "tools",
+    "recommended": false
+  },
+  "visual-regression": {
+    "category": "checks",
+    "recommended": true
+  }
+}

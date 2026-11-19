@@ -147,6 +147,15 @@ impl Host {
         self.state().grid_area
     }
 
+    /// Whether a layout mode placed `view` outside the grid area, not shown (focus mode's other
+    /// views); `false` for an unknown view. The flow log names it (RB-090-84).
+    pub fn is_off_screen(&self, view: ViewId) -> bool {
+        self.state()
+            .views
+            .get(&view)
+            .is_some_and(|entry| entry.off_screen)
+    }
+
     /// The breakpoint size of each view of the spec in effect, in its order.
     pub fn mode_sizes(&self) -> Vec<Item> {
         sizes(&self.state())

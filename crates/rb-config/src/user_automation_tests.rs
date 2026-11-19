@@ -13,6 +13,24 @@ fn defaults_run_every_view_for_thirty_seconds_with_screenshots_and_without_sync(
     assert_eq!(settings.action_timeout_ms, 10_000);
     assert!(!settings.sync_during_run);
     assert!(settings.screenshot_on_failure);
+    // RB-090-84, the owner's decision: a run skips the views the layout hides by default.
+    assert_eq!(settings.hidden_views, HiddenViews::Skip);
+    assert_eq!(settings.run_layout, "grid");
+}
+
+#[test]
+fn a_run_can_show_a_layout_of_its_own() {
+    let settings: AutomationSettings = serde_json::from_value(json!({
+        "flows": { "hiddenViews": "layout", "runLayout": "horizontal" }
+    }))
+    .expect("reads");
+    assert_eq!(settings.flows.hidden_views, HiddenViews::Layout);
+    assert_eq!(settings.flows.run_layout, "horizontal");
+    assert!(
+        serde_json::from_value::<AutomationSettings>(json!({ "flows": { "hiddenViews": "show" } }))
+            .is_err()
+    );
+    assert_eq!(RUN_LAYOUTS, ["grid", "horizontal", "split", "canvas"]);
 }
 
 #[test]

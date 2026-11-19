@@ -46,9 +46,10 @@ fn a_shut_gate_makes_no_request_and_writes_nothing() {
     }
 }
 
-/// Phase 1 ships the placeholder root: even an open gate makes no request.
+/// The shipped root is the owner's key (RB-090-14): an open gate asks once, and a manifest a
+/// test key signed is refused without storing a floor.
 #[test]
-fn an_open_gate_without_a_root_is_not_configured_and_makes_no_request() {
+fn an_open_gate_checks_against_the_shipped_root_and_refuses_a_test_key() {
     let data = tempfile::tempdir().expect("tempdir");
     let fetcher = served(1);
     let gate = Gate {
@@ -56,9 +57,10 @@ fn an_open_gate_without_a_root_is_not_configured_and_makes_no_request() {
         enabled: true,
     };
     let error =
-        check(gate, &fetcher, BASE, Channel::Stable, data.path(), at(1)).expect_err("no root");
-    assert_eq!(error.code(), "update.not_configured");
-    assert!(fetcher.requests().is_empty());
+        check(gate, &fetcher, BASE, Channel::Stable, data.path(), at(1)).expect_err("test key");
+    assert_eq!(error.code(), "update.bad_signature", "{error}");
+    assert_eq!(fetcher.requests().len(), 1);
+    assert_eq!(Floors::load(data.path()).get(Channel::Stable), None);
 }
 
 #[test]

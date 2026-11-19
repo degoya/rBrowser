@@ -160,6 +160,16 @@ type Seen = Arc<Mutex<Vec<(String, String)>>>;
 /// A runtime serving plugin `status-test` from `source`, granted `status` or not; what reached
 /// the status bar (plugin, text) and the host (plugin, action).
 fn serve(answer: &Value, source: PluginSource, status: bool) -> (Seen, Seen, Arc<PluginRuntime>) {
+    serve_as("status-test", answer, source, status)
+}
+
+/// [`serve`] for the plugin `id`.
+fn serve_as(
+    id: &str,
+    answer: &Value,
+    source: PluginSource,
+    status: bool,
+) -> (Seen, Seen, Arc<PluginRuntime>) {
     register();
     let (_fake, router) = FakeBrowser::connect();
     let (notices, actions): (Seen, Seen) = (Arc::default(), Arc::default());
@@ -174,7 +184,7 @@ fn serve(answer: &Value, source: PluginSource, status: bool) -> (Seen, Seen, Arc
         lock(&into).push((plugin.to_owned(), action));
     });
     let plugin = Plugin {
-        id: "status-test".to_owned(),
+        id: id.to_owned(),
         source,
         component: Arc::new(Fixed {
             answer: answer.to_string(),
@@ -290,6 +300,41 @@ async fn a_host_post_runs_only_from_a_bundled_plugins_command() {
             .expect("answers");
         assert!(lock(&actions).is_empty(), "{source:?}");
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_form_autofills_fill_report_runs_from_its_tool_too_but_never_from_a_page_request() {
+    // RB-090-78: a fill from the panel or MCP is recorded as one from the command; recording
+    // asks no one and opens nothing. A page request still runs no host post.
+    let answer = posting(
+        "host",
+        json!({ "action": "record_fill", "view": 1, "fields": [] }),
+    );
+    let (_, actions, runtime) = serve_as("form-autofill", &answer, PluginSource::Bundled, false);
+    use crate::plugins::pages::Inbox as _;
+    runtime
+        .request("form-autofill", rb_engine::ViewId(2), json!({}))
+        .await
+        .expect("answers");
+    assert!(lock(&actions).is_empty());
+    runtime
+        .call_tool("form-autofill", "fill", &json!({}))
+        .await
+        .expect("answers");
+    runtime
+        .run_command("form-autofill", "fill_valid", &json!({}))
+        .await
+        .expect("answers");
+    let seen = ("form-autofill".to_owned(), "record_fill".to_owned());
+    assert_eq!(lock(&actions).clone(), vec![seen.clone(), seen]);
+    // Not from a plugin of the same id a user installed.
+    let (_, actions, runtime) = serve_as("form-autofill", &answer, PluginSource::User, false);
+    runtime.set_enabled(&std::collections::BTreeSet::new(), true);
+    runtime
+        .call_tool("form-autofill", "fill", &json!({}))
+        .await
+        .expect("answers");
+    assert!(lock(&actions).is_empty());
 }
 
 /// The bundled plugins' folder: `plugins/` of the checkout.

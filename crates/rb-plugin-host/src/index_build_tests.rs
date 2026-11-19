@@ -34,3 +34,33 @@ fn an_entry_describes_the_verified_package_and_signs_into_an_index_that_verifies
     let verified = super::super::verify(&bytes, &roots(), None, now()).expect("verify");
     assert_eq!(verified.plugins, [entry]);
 }
+
+/// RB-091-04: the index keeps the newest version of each plugin per contract it no longer
+/// builds for; what the release builds replaces its own contract's entries.
+#[test]
+fn the_index_carries_the_last_version_of_every_other_contract() {
+    use super::super::fixtures::entry;
+    let absolute = |id: &str, version: &str, api: &str| {
+        let mut entry = entry(id, version);
+        entry.api_version = api.to_owned();
+        entry.url = format!("https://example.com/plugins-v{version}/{id}-{version}.rbplugin");
+        entry
+    };
+    let current = vec![absolute("axe", "2.0.0", "2.0.0")];
+    let previous = vec![
+        absolute("axe", "1.0.0", "1.0.0"),
+        absolute("axe", "1.1.0", "1.0.0"),
+        absolute("axe", "1.9.0", "2.0.0"),
+        absolute("todo", "1.0.0", "1.0.0"),
+        entry("relative", "1.0.0"),
+    ];
+    let index = super::carry_over(&previous, current);
+    let listed: Vec<(&str, &str)> = index
+        .iter()
+        .map(|entry| (entry.id.as_str(), entry.version.as_str()))
+        .collect();
+    assert_eq!(
+        listed,
+        [("axe", "2.0.0"), ("axe", "1.1.0"), ("todo", "1.0.0")]
+    );
+}

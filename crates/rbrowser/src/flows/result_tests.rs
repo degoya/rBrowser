@@ -27,6 +27,7 @@ fn run(views: Vec<ViewResult>) -> RunResult {
         duration_ms: 20,
         passed: !RunResult::failed(&views),
         views,
+        skipped_breakpoints: Vec::new(),
         error: None,
     }
 }

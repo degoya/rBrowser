@@ -2,7 +2,7 @@
 // beside `protocol.ts`, which re-exports it. `getRecordings` and `saveRecording` are answered
 // with `recordings`, `getRecording` with `recording`, `exportRecording` with `recordingExport`
 // (a preview when `write` is false) and `getFlowRun` with `flowRun`; `recordingsChanged` and
-// `flowRunChanged` tell the panels to ask again.
+// `flowRunChanged` tell the panels to ask again; `flowStep` pushes each step of a run (RB-090-84).
 
 import type { Recording } from '../recorder/recording';
 
@@ -83,6 +83,10 @@ export interface FlowViewResult {
     message: string;
     stack?: string;
     step?: string | null;
+    /** The step's id in the recording, for a name `Step <id>: ...` (RB-090-84). */
+    stepId?: number | null;
+    /** The message's first line, masked: what the Recorder panel shows. */
+    summary?: string | null;
     line?: number | null;
     column?: number | null;
     file?: string;
@@ -103,7 +107,30 @@ export interface FlowRunResult {
   durationMs: number;
   passed: boolean;
   views: FlowViewResult[];
+  /** The breakpoints the flow names that no view showed, so the run skipped them (RB-090-84). */
+  skippedBreakpoints?: string[];
   error?: string;
+}
+
+/** The pause before a step at the pace "As recorded", as the exporter writes it (RB-090-84). */
+export interface StepPause {
+  step: number;
+  ms: number;
+}
+
+/** A step of the flow run going on started or ended (RB-090-84). */
+export interface FlowStep {
+  runId: string;
+  /** The flow; a played recording's name. */
+  flow: string;
+  view: number;
+  /** The step's name (`Step 3: click` in a played recording). */
+  name: string;
+  /** The recording's step id, for a name `Step <id>: ...`. */
+  stepId?: number;
+  state: 'running' | 'passed' | 'failed';
+  /** Why a failed step failed: its error's first line, masked. */
+  message?: string;
 }
 
 /** The run going on and the last one's result. */
@@ -134,8 +161,9 @@ export type RecordingRequest =
 /** The answers and events. */
 export type RecordingEvent =
   | ({ type: 'recordings' } & RecordingList)
-  | { type: 'recording'; name: string; recording: Recording }
+  | { type: 'recording'; name: string; recording: Recording; pauses?: StepPause[] }
   | ({ type: 'recordingExport' } & RecordingExport)
   | { type: 'recordingsChanged' }
   | ({ type: 'flowRun' } & FlowRunState)
-  | { type: 'flowRunChanged' };
+  | { type: 'flowRunChanged' }
+  | ({ type: 'flowStep' } & FlowStep);

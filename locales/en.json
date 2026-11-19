@@ -105,6 +105,7 @@
   },
   "capture": {
     "notice": {
+      "capturing": "Taking the screenshot...",
       "countdown": "Taking the screenshot in {seconds} s.",
       "delay": "Screenshot delay: {seconds} s.",
       "failed": "The screenshot failed: {error}",
@@ -163,7 +164,8 @@
       "about": "About rBrowser",
       "command_palette": "Command palette",
       "open_link": "Open a link (the handbook when none is given)",
-      "reload_config": "Reload the project config"
+      "reload_config": "Reload the project config",
+      "setup_wizard": "Set up rBrowser..."
     },
     "bookmarks": {
       "add": "Bookmark this page",
@@ -425,7 +427,8 @@
     },
     "sitemap": {
       "cancel": "Cancel the sitemap capture",
-      "capture": "Capture the sitemap in every breakpoint"
+      "capture": "Capture the sitemap in every breakpoint",
+      "gallery": "Open the sitemap gallery"
     },
     "status": {
       "history": "Show the message history",
@@ -470,6 +473,10 @@
       "vitals_bar": {
         "toggle": "Show or hide the vitals bar under every view"
       }
+    },
+    "update": {
+      "check": "Check for rBrowser updates",
+      "install": "Install the rBrowser update and restart"
     },
     "view": {
       "add": "Add a view…",
@@ -738,7 +745,8 @@
     },
     "save_failed": "The diagnostics ZIP could not be saved: {reason}",
     "save_title": "Save diagnostics",
-    "saved": "Diagnostics ZIP saved to {path}. It stays on this machine; attach it to your bug report by hand."
+    "saved": "Diagnostics ZIP saved to {path}. It stays on this machine; attach it to your bug report by hand.",
+    "saving": "Saving the diagnostics ZIP..."
   },
   "emulation": {
     "extras": {
@@ -844,7 +852,8 @@
       "cancelled": "Environment comparison cancelled after {done} of {shots, plural, one {# shot} other {# shots}}. What was taken is in {folder}.",
       "failed": "The environment comparison did not start: {error}",
       "finished": "Environment comparison done: {differing} of {diffs, plural, one {# comparison} other {# comparisons}} differ. Report in {folder}.",
-      "report_failed": "The environment comparison report could not be opened: {error}"
+      "report_failed": "The environment comparison report could not be opened: {error}",
+      "started": "Environment comparison started: {shots, plural, one {# shot} other {# shots}} to take. The report follows when it is done."
     },
     "report": {
       "breakpoint": "Breakpoint",
@@ -873,6 +882,7 @@
       "added": "Extension {name} added. It loads into the Chromium views at the next start of rBrowser.",
       "added_recommended": "{count} recommended extension(s) added. They load into the Chromium views at the next start of rBrowser.",
       "added_recommended_partly": "{added} recommended extension(s) added, {failed} not - the first: {first}. What was added loads into the Chromium views at the next start of rBrowser.",
+      "checking": "Checking {count, plural, one {# extension} other {# extensions}} for updates in the Chrome Web Store...",
       "installed": "Extension {name} {version} was installed from the Chrome Web Store. It loads into the Chromium views at the next start of rBrowser.",
       "nothing_installed": "No extension is installed from the Chrome Web Store.",
       "nothing_recommended": "The project recommends no extension folder that is not in your list already.",
@@ -974,11 +984,198 @@
     "title": "Findings",
     "view_id": "View {id}"
   },
+  "firstrun": {
+    "back": "Back",
+    "basics": {
+      "applied": "Applied.",
+      "apply": "Apply",
+      "error": {
+        "failed": "The project config could not be changed: {message}",
+        "no_project": "There is no project to write the layout and sync into."
+      },
+      "failed": "The basics could not be applied.",
+      "intro": "Each of these starts at its default; change what you like.",
+      "layout": {
+        "canvas": "Canvas",
+        "canvas_hint": "Views placed freely, with snapping and a minimap.",
+        "grid": "Grid",
+        "grid_hint": "Every view in a cell of the grid.",
+        "label": "Layout"
+      },
+      "no_project": "Layout and sync belong to a project: set one up in the step before, or open one.",
+      "project_target": "For the project in {root}.",
+      "sync": {
+        "hint": "Scrolling, clicks, input, keyboard and hover follow the active view in every view.",
+        "label": "Sync",
+        "off": "Off",
+        "on": "On"
+      },
+      "theme": {
+        "dark": "Dark",
+        "label": "Theme",
+        "light": "Light",
+        "system": "System"
+      }
+    },
+    "close": "Close",
+    "done": {
+      "again": "This setup opens again from the command palette (Set up rBrowser...) or Ctrl+Shift+Space, Comma, W.",
+      "layout": {
+        "canvas": "The project starts on the canvas.",
+        "grid": "The project starts in the grid."
+      },
+      "nothing": "Nothing was changed; rBrowser runs with its defaults.",
+      "plugins": "{count, plural, one {# plugin installed; it loads at the next start.} other {# plugins installed; they load at the next start.}}",
+      "plugins_failed": "{count, plural, one {# plugin failed to install.} other {# plugins failed to install.}}",
+      "plugins_removed": "{count, plural, one {# plugin removed.} other {# plugins removed.}}",
+      "project": "Project config written: {path}",
+      "sync_off": "Sync is off.",
+      "sync_on": "Sync is on.",
+      "theme": {
+        "dark": "Theme: dark.",
+        "light": "Theme: light.",
+        "system": "Theme: follows Windows."
+      },
+      "where": {
+        "plugins": "Plugins > Catalog",
+        "project": "Project > Start URL",
+        "theme": "General > Theme",
+        "wizard": "General > Start > Setup wizard"
+      },
+      "where_title": "Where to change it later"
+    },
+    "error": {
+      "off": "The setup wizard is switched off (Settings > General > Start)."
+    },
+    "finish": "Finish",
+    "hint": {
+      "action": "Set up project",
+      "project": "{project} has no rBrowser config yet."
+    },
+    "next": "Next",
+    "off": {
+      "text": "Settings > General > Start > Setup wizard switches it on again.",
+      "title": "The setup wizard is switched off"
+    },
+    "plugins": {
+      "all": "All",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "category": {
+        "all": "All categories",
+        "capture": "Capture",
+        "checks": "Checks",
+        "devtools": "DevTools panels",
+        "label": "Category",
+        "overlays": "Overlays",
+        "tools": "Tools"
+      },
+      "confirm": "Install",
+      "confirm_remove": "{count, plural, one {# installed plugin is removed: {names}. It does not come back at a later start.} other {# installed plugins are removed: {names}. They do not come back at a later start.}}",
+      "confirm_text": "Signed with rBrowser's built-in key. Together they may use: {grants}.",
+      "confirm_title": "{count, plural, one {Install # first-party plugin?} other {Install # first-party plugins?}}",
+      "done": "{count, plural, one {# plugin installed.} other {# plugins installed.}}",
+      "failed": "The plugins could not be listed.",
+      "failed_hint": "Try again, or skip this step and install plugins later in Settings > Plugins > Catalog.",
+      "install_failed": "{name} was not installed.",
+      "install_failed_unknown": "The install failed; try it again in Settings > Plugins > Catalog.",
+      "installed_badge": "Installed",
+      "intro": "Choose the plugins rBrowser loads. The recommended ones are ticked; untick what you do not want, an installed one included. Everything else stays in Settings > Plugins > Catalog. Skipping this step keeps the recommended set.",
+      "loading": "Loading the plugins...",
+      "no_grants": "no extra rights",
+      "no_match": "No plugin matches the search.",
+      "none": "There are no plugins to install.",
+      "none_button": "None",
+      "offline": "The plugin catalog cannot be reached: the plugins install from the copy in the package.",
+      "origin": {
+        "bundle": "From the package",
+        "repository": "From the repository"
+      },
+      "progress": "{done} of {total}: {name}",
+      "recommended": "Recommended",
+      "removed": "{count, plural, one {# plugin removed.} other {# plugins removed.}}",
+      "restart": "They load at the next start of rBrowser.",
+      "retry": "Retry",
+      "search": "Search plugins",
+      "size": "{mb} MB",
+      "total": "{count, plural, one {# plugin to install} other {# plugins to install}}, {mb} MB.",
+      "total_remove": " {count, plural, one {# installed plugin to remove.} other {# installed plugins to remove.}}"
+    },
+    "project": {
+      "config_label": "The config as it will be written",
+      "device_kind": {
+        "desktop": "Desktop",
+        "mobile": "Mobile",
+        "tablet": "Tablet"
+      },
+      "error": {
+        "exists": "There is a config in {path} already; this setup never writes over a config.",
+        "invalid": "The config does not pass its checks (at {path}).",
+        "needs_url": "The analyser needs the dev server's address.",
+        "no_devices": "Tick at least one device.",
+        "no_proposal": "Preview the config again; only the config shown last is written.",
+        "not_folder": "{path} is not a folder.",
+        "unknown": "The project step failed; try again.",
+        "unknown_device": "There is no device preset {device}.",
+        "url": "Not a start address: {message}",
+        "write": "The config could not be written: {message}"
+      },
+      "fell_back": "The analyser found no breakpoints at the address; the preview has a mobile and a desktop view instead.",
+      "folder": "Project folder",
+      "folder_hint": "A folder on Windows or in WSL (\\\\wsl.localhost\\...).",
+      "intro": "Set up a project: rBrowser writes .rbrowser/config.json into its folder, as rbrowser init does. You see the config before it is written.",
+      "no_folder": "No folder chosen",
+      "open": "Open project",
+      "open_hint": "Starts rBrowser on the project; it is in the recent projects too.",
+      "pick": "Choose folder...",
+      "pick_first": "Choose a folder first.",
+      "pick_title": "Choose the project folder",
+      "preview": "Preview",
+      "reloaded": "The open project uses the new config now.",
+      "size": "{width} x {height}",
+      "size_device": "sized by {device}",
+      "size_unknown": "size not set",
+      "template": {
+        "analyzer": "The breakpoint analyser's proposal",
+        "analyzer_hint": "Reads the site's stylesheets at the address and proposes a view per breakpoint.",
+        "default": "Mobile and desktop",
+        "default_hint": "One mobile and one desktop view.",
+        "devices": "Chosen devices",
+        "devices_hint": "One view per device preset you tick.",
+        "label": "Breakpoints"
+      },
+      "url": "Dev server address",
+      "url_hint": "Where your dev server runs; every view opens it first. Optional, except for the analyser's proposal.",
+      "views": "{count, plural, one {# view} other {# views}}",
+      "write": "Write config",
+      "write_hint": "Into {root}",
+      "written": "Written: {path}"
+    },
+    "skip": "Skip setup",
+    "step": {
+      "basics": "Basics",
+      "done": "Done",
+      "plugins": "Plugins",
+      "project": "Project",
+      "welcome": "Welcome"
+    },
+    "title": "Set up rBrowser",
+    "welcome": {
+      "just_start": "Just start",
+      "optional": "Every step is optional, and rBrowser works fully without any of it. You can open this setup again from the command palette or Settings > General > Start.",
+      "setup": "Set up",
+      "text": "rBrowser shows every breakpoint of your site at once. This short setup picks the plugins you want, sets up a project and the basics."
+    }
+  },
   "flows": {
     "notice": {
+      "all_done": "Run all ended: {ran} of {count, plural, one {# flow} other {# flows}} ran, {passed} passed.",
+      "all_failed": "Run all ended: {ran} of {count, plural, one {# flow} other {# flows}} ran, {passed} passed, {failed} failed ({flows}). Ctrl+Shift+Space F O shows the last results.",
       "error": "Flow {flow} did not run: {error}",
       "failed": "Flow {flow}: {failed} failed ({views}), {passed} passed, {skipped} skipped. Ctrl+Shift+Space F O shows the results.",
+      "hidden": "Flow {flow} did not run in {breakpoints}: the layout hides them. The setting Hidden views can show a layout for the run instead.",
       "none": "This project has no flows yet. Put them in {dir}/<name>.ts.",
+      "not_in_grid": "Flow {flow} did not run in {breakpoints}: no view of the grid shows them. Add a view of each to run the flow there.",
       "passed": "Flow {flow}: {passed} passed, {skipped} skipped. Results in {dir}.",
       "pick": "Which flow? This project has {flows}. Run one from the command palette, with flow_run or rbrowser flow run <name>.",
       "queue_stopped": "Run all stopped: {flow} did not start ({error}). Not run: {flows}.",
@@ -1224,6 +1421,13 @@
       "untrusted": "Trust this workspace first: adding a design writes into the project's .rbrowser/designs/ folder.",
       "wait": "The file dialog was just cancelled; choose Add design again in a moment."
     },
+    "bundle": {
+      "error": {
+        "invalid": "Name between 1 and 256 plugins by their ids.",
+        "offline": "The plugin is only in the plugin catalog, which cannot be reached now. Try again when you are online.",
+        "unknown": "Neither rBrowser nor the official catalog has this plugin."
+      }
+    },
     "capability": {
       "cdp": "Use DevTools protocol domains in the views",
       "console-logs": "Read the views' console messages, errors and network requests",
@@ -1241,11 +1445,11 @@
     "catalog": {
       "error": {
         "bad_signature": "The repository's index was changed after it was signed.",
-        "bundled": "This plugin ships with rBrowser; it is updated with rBrowser, not from the catalog.",
         "checksum": "The downloaded package does not match the index's SHA-256; nothing was installed.",
         "consent_mismatch": "The package asks for other capabilities than the ones you confirmed; nothing was installed.",
         "download": "The download failed.",
         "expired": "The repository's index has expired.",
+        "foreign_bundled": "This package has the id of a plugin that ships with rBrowser but is signed by another key; nothing was installed.",
         "from_the_future": "The repository's index is dated in the future; check the computer's clock.",
         "incompatible": "The plugin does not run on this rBrowser.",
         "invalid": "The repository's index breaks the index rules.",
@@ -1268,7 +1472,9 @@
         "would_overwrite": "A plugin with this id that was not installed from the catalog is in the plugin folder; nothing was replaced."
       },
       "notice": {
+        "auto_updated": "{count} plugin updates were installed; they load at the next start",
         "check_failed": "The plugin catalog could not be checked. Settings > Plugins > Catalog names the repository that failed.",
+        "checking": "Checking the plugin catalog for updates...",
         "no_updates": "The plugins from the catalog are up to date",
         "updates": "{count} plugin updates in the catalog"
       }
@@ -1317,6 +1523,9 @@
     },
     "notice": {
       "command_done": "{command}: done",
+      "command_started": "{command}: running...",
+      "missing": "This project uses plugins that are not installed: {plugins}",
+      "missing_install": "Install",
       "none_paused": "No plugin is paused.",
       "plugin_status": "{plugin}: {text}",
       "restart_for_project_plugins": "The project is trusted now. Its plugins load at the next start of rBrowser.",
@@ -1518,10 +1727,15 @@
       "start": "Start recording",
       "step": {
         "down": "Move step {n} down",
+        "failed": "Failed: {reason}",
+        "failed_plain": "Failed",
         "name": "Name of step {n}",
         "name_placeholder": "Name (optional)",
         "only_in": "Only in",
+        "pause": "+{seconds} s",
+        "pause_hint": "The pause before this step as it was recorded (at most 10 s, at least the least pause of the settings). Play waits it at the pace As recorded.",
         "remove": "Delete step {n}",
+        "running": "Playing now",
         "secret": "Secret: read from RB_SECRET_* when the export runs",
         "up": "Move step {n} up",
         "value": "Value of step {n}"
@@ -1546,6 +1760,10 @@
       "tooManyFolders": "The project has too many folders to watch. Ignore generated folders in .rbrowser/ignore.",
       "watchFailed": "The project cannot be watched. See the log for details.",
       "watchLimit": "The system limit of file watches is reached. Ignore more folders in .rbrowser/ignore, or raise fs.inotify.max_user_watches."
+    },
+    "notice": {
+      "resumed": "Hot reload resumed",
+      "resumedState": "Hot reload resumed ({state})"
     },
     "status": {
       "failed": "Watch failed",
@@ -1656,6 +1874,11 @@
       "unpublished": "not yet published",
       "updates": "Updates",
       "updates_disabled": "Updates are disabled in this build.",
+      "updates_state": {
+        "manual": "rBrowser updates itself; it looks for an update only when you ask (General > Updates > Check now).",
+        "off": "Updates are switched off (General > Updates).",
+        "onStart": "rBrowser updates itself and looks for an update at every start."
+      },
       "version": "Version",
       "version_copied": "Version info copied to the clipboard.",
       "version_line": "{name} {version} (commit {commit}, built {built}, {platform})"
@@ -1770,10 +1993,20 @@
             "help": "Where the project's flows live, as a folder below .rbrowser/, which workspace trust covers. Example: .rbrowser/flows. Flows outside it are not run.",
             "label": "Flows folder"
           },
+          "hiddenViews": {
+            "description": "What a flow run does with the views the layout hides: skip them and name them, or show a layout for the run.",
+            "help": "Focus mode shows one breakpoint and horizontal mode scrolls views out of sight; the browser holds back hidden pages, so a flow's actions wait in vain there. Skip runs in the views shown and names the others in the result and a notice. Show a layout switches to the layout of Run layout while the run goes on and back after it.",
+            "label": "Hidden views"
+          },
           "parallel": {
             "description": "How many views run a flow at the same time; 0 runs all views at once.",
             "help": "How many views run a flow at the same time; 0 runs it in every view at once. Lower it to 1 or 2 when a flow hits a rate-limited server.",
             "label": "Views at once"
+          },
+          "runLayout": {
+            "description": "The layout a flow run shows when Hidden views is set to show a layout: grid, horizontal, split or canvas over the preset shown, or a preset's id.",
+            "help": "A layout mode applies to the preset shown (a focus preset gives way to the main layout); a preset's id shows that preset. A focus preset or an unknown id shows the grid.",
+            "label": "Run layout"
           },
           "screenshotOnFailure": {
             "description": "Save a screenshot of each view whose flow failed or timed out, beside result.json.",
@@ -1797,15 +2030,30 @@
             "help": "Where recordings are saved, relative to the project root: inside .rbrowser/ and outside the folders workspace trust protects (flows, snippets, plugins, mocks, scripts). An existing recording is never overwritten.",
             "label": "Recordings folder"
           },
+          "followPlayback": {
+            "description": "While a recording plays, the Recorder panel marks the step each view runs, a failed step in red with its reason, and scrolls the running step into sight.",
+            "help": "The steps are marked either way. Off, the step list stays where it is while a recording plays, so you can read or edit another part of it.",
+            "label": "Follow the playback"
+          },
+          "minPauseMs": {
+            "description": "The least pause, in milliseconds, before each step but the first when a recording plays or exports at the pace As recorded. 0 keeps the pauses as recorded.",
+            "help": "At the pace As recorded each step waits the pause it was recorded with, at most 10 seconds. A pause shorter than this one waits this long instead, so what a click or a navigation does can be watched. The Recorder panel shows each step's pause beside it.",
+            "label": "Least pause between steps"
+          },
           "playbackPace": {
             "description": "How Play runs a recording and how its export waits: fast, or with the pauses as recorded.",
             "help": "Fast runs the steps back to back, each waiting only for its element. As recorded keeps the pause before each step as it was recorded, at most 10 seconds each - in Play and in the exported flow and test. The choice beside Play in the Recorder panel starts here.",
             "label": "Playback pace"
           },
+          "recordAutofill": {
+            "description": "Record what Form autofill fills while a recording runs: each field as a fill, check or select step with the value set, in the views it filled. Password and secret fields are recorded as placeholders.",
+            "help": "Form autofill fills by script, which the recorder does not capture as input. On, each field it fills during a recording becomes a step with the value it set, so a flow made from the recording fills the form the same way. Password fields and the secret fields are recorded as placeholders, as with typing.",
+            "label": "Record form autofill"
+          },
           "recordHover": {
-            "description": "Keep a hover as a step when it opened what the next click hits, such as a menu. Other pointer moves are never recorded.",
-            "help": "Keep a hover as a step when it opened what the next click hits, such as a menu, so the replay can open it too. Other pointer moves are never recorded.",
-            "label": "Record menu hovers"
+            "description": "Which hovers become steps: only the one that opened a menu the next click goes into, every one that seems to reveal what the next click hits, or none.",
+            "help": "Only menu hovers keeps the hover on a menu entry that opened the submenu the next click goes into, so the replay opens it too; the pointer's way across the page is never a step. All also keeps a hover the recorder guesses revealed what the next click hits. Off records no hover.",
+            "label": "Record hovers"
           },
           "recordScroll": {
             "description": "Record scrolling as steps, consecutive scrolls of the page or an element as one.",
@@ -2639,10 +2887,25 @@
       },
       "plugins": {
         "catalog": {
+          "autoUpdate": {
+            "description": "Install plugin updates by themselves when they need no new permission.",
+            "help": "When the update check finds a newer version of a plugin that ships with rBrowser or came from the catalog, signed by the same key and asking for nothing more, it is installed by itself and loads at the next start. An update that asks for more waits in the catalog for your click.",
+            "label": "Update plugins automatically"
+          },
           "checkOnStart": {
             "description": "Look for updates of the plugins from the catalog at every start.",
             "help": "At every start rBrowser fetches the signed indexes of the official catalog and your repositories and says in the status bar when a plugin installed from the catalog has an update. Nothing is installed by itself.",
             "label": "Check for plugin updates at start"
+          },
+          "missingNotice": {
+            "description": "Say in the status bar when the project uses a plugin that is not installed.",
+            "help": "When the project's .rbrowser/config.json has settings of a plugin that is not installed, the status bar says which, with a button to the plugin catalog. Off, nothing is said.",
+            "label": "Name missing project plugins"
+          },
+          "preferRepository": {
+            "description": "Install a chosen plugin from the official catalog when it has a newer version.",
+            "help": "Every plugin rBrowser ships is in the package. On, a plugin you choose comes from the official catalog when it offers a newer version than the shipped one, signed by the same key and asking for nothing more; without a network it comes from the package. Off, every chosen plugin comes from the package and nothing reaches the network.",
+            "label": "Prefer the plugin catalog"
           },
           "repositories": {
             "description": "Repositories besides the official catalog: the address of the index and its public key.",
@@ -2894,6 +3157,11 @@
           "help": "Capture the whole scrolled page of each sitemap entry, not only the viewport. Off is faster and gives uniform images.",
           "label": "Full page"
         },
+        "galleryOpensIn": {
+          "description": "Where the gallery of a sitemap capture opens: a window of rBrowser's own or your browser.",
+          "help": "window opens the gallery in a window of rBrowser's own, beside the main window, which loads only the files of the run's folder and runs no script; system opens it in the default browser of Windows. It never opens in the views of the grid, and an agent over MCP always opens the window. This setting is yours, not the project's.",
+          "label": "Open the gallery in"
+        },
         "hideSelectors": {
           "description": "Deprecated, kept so older configs work: more elements to hide before each capture, as CSS selectors. Use Settings > Capture > Cookie-banner hiding > More elements to hide (capture.hideSelectors) instead; these join that list.",
           "help": "Deprecated: extra CSS selectors hidden before each sitemap capture. Use Capture > Cookie banners > More elements to hide instead; entries here still join that list.",
@@ -2943,6 +3211,11 @@
           "description": "How often a failed page is tried again in a run (0 to 5); a resumed run tries the failed ones again.",
           "help": "How often a failed page is tried again within a run (0 to 5). A resumed run tries the failed ones again either way.",
           "label": "Retries"
+        },
+        "shotTimeoutSec": {
+          "description": "The longest one screenshot may take, in seconds (5 to 120).",
+          "help": "The longest a page's screenshot may take once the page is ready, in seconds (5 to 120). A shot that takes longer fails with its reason in the log and in run.json, and is retried as the retries say.",
+          "label": "Screenshot timeout"
         },
         "timeoutSec": {
           "description": "The longest one page may take from loading to its screenshot, in seconds (5 to 300).",
@@ -3148,6 +3421,11 @@
           "help": "local names them in the time of your system, daylight saving time included; utc in Coordinated Universal Time. Folders and recordings already made keep their names, and the lists sort them by when they were made. The times stored inside the files are always UTC.",
           "label": "Time in file names"
         },
+        "firstRunWizard": {
+          "description": "The setup wizard opens by itself at the very first start, and a project folder without a config says \"Set up project\" once in the status bar.",
+          "help": "Off: neither happens, and the command that opens the wizard (Ctrl+Shift+Space, Comma, W) does nothing - for a team that rolls out its own setup. rBrowser works fully without the wizard.",
+          "label": "Setup wizard"
+        },
         "followWindowsTextSize": {
           "description": "rBrowser's own windows grow with the Windows text size (Accessibility > Text size, 100 to 225 %) and follow a change at once. Off keeps them at 100 %. The pages in the views are not affected.",
           "help": "Follows the Windows setting Settings > Accessibility > Text size: the toolbar, the status bar, the label strips and breakpoint bars, the settings, the palette and the panel dock grow with it, and the views move to make room. A change in Windows applies at once, without a restart. Off keeps rBrowser at 100 %. The pages in the views keep their size; zoom them with the page zoom.",
@@ -3284,23 +3562,23 @@
           "label": "Install updates automatically"
         },
         "cefAgeWarning": {
-          "description": "Show a notice when the built-in Chromium (CEF) is older than six weeks and self-update is not active.",
-          "help": "Shows a notice when the built-in Chromium (CEF) is older than six weeks and self-update is not active, so you know the engine is behind. Off never warns.",
+          "description": "Show a notice when the built-in Chromium (CEF) is older than six weeks and updates are not checked by themselves.",
+          "help": "Shows a notice when the built-in Chromium (CEF) is older than six weeks and updates are not checked at the start, so you know the engine is behind. Off never warns.",
           "label": "Warn about an old browser engine"
         },
         "channel": {
-          "description": "Stable releases or pre-releases.",
-          "help": "Which releases self-update offers: stable only, or pre-releases too for early testing.",
+          "description": "Automatic, stable releases only, or pre-releases too.",
+          "help": "Which releases self-update offers. Automatic (the default) follows the build: a pre-release build reads the pre-releases, a release build the stable releases. Stable or Beta chooses for good.",
           "label": "Update channel"
         },
         "check": {
           "description": "When rBrowser looks for a newer version: off, or once at every start.",
-          "help": "When rBrowser looks for a newer version: off, or once at every start. A found update is only announced, never installed by this setting alone.",
+          "help": "When rBrowser looks for a newer version: off, or once at every start. A found update is shown with its Install and restart button; it installs only when you click it or, with Install updates automatically on quit, when rBrowser closes.",
           "label": "Check for updates"
         },
         "enabled": {
           "description": "Let rBrowser update itself from signed releases. Off: nothing is fetched and nothing installed.",
-          "help": "Lets rBrowser update itself from signed releases. Off, nothing is fetched or installed; update by unpacking the new ZIP. Inactive in this build until the move to GitHub.",
+          "help": "Lets rBrowser update itself from signed releases. Off, nothing is fetched or installed; update by unpacking the new ZIP.",
           "label": "Self-update"
         }
       },
@@ -3428,10 +3706,21 @@
         }
       },
       "automation": {
+        "flows": {
+          "hiddenViews": {
+            "layout": "Show a layout for the run",
+            "skip": "Skip them and name them"
+          }
+        },
         "recorder": {
           "playbackPace": {
             "fast": "Fast",
             "recorded": "As recorded (pauses up to 10 s)"
+          },
+          "recordHover": {
+            "all": "All that reveal the next click",
+            "menu": "Only menu hovers",
+            "off": "Off"
           }
         },
         "recorderExport": {
@@ -3697,6 +3986,12 @@
           "manual": "Manual (on command only)"
         }
       },
+      "sitemap": {
+        "galleryOpensIn": {
+          "system": "Your browser",
+          "window": "A window of rBrowser"
+        }
+      },
       "sync": {
         "scrollMode": {
           "anchor": "Anchor (same content at the top)",
@@ -3768,6 +4063,7 @@
           "onQuit": "When rBrowser closes"
         },
         "channel": {
+          "auto": "Automatic (beta for a pre-release, stable otherwise)",
           "beta": "Beta (pre-releases)",
           "stable": "Stable"
         },
@@ -3833,7 +4129,7 @@
     "plugins": {
       "catalog": {
         "api_version": "Built for plugin API {version}",
-        "bundled": "Bundled with rBrowser; updates come with rBrowser",
+        "auto_update_setting": "Automatic updates",
         "cancel": "Cancel",
         "capabilities": "It may",
         "check": "Check for updates",
@@ -3843,6 +4139,7 @@
         "failed": "The catalog could not be read.",
         "from": "From {repository}",
         "install": "Install...",
+        "install_now": "Install",
         "installed": "{name} was installed.",
         "installed_version": "Installed {version}",
         "key_changed": "The installed version was signed by another key. A changed key can mean the plugin was taken over. Cancel unless the publisher announced the new key.",
@@ -3865,6 +4162,7 @@
         "none_loaded": "No repository has been loaded yet. Check for updates to fetch the catalog.",
         "not_loaded": "Not loaded yet",
         "official": "Official catalog",
+        "origin_bundle": "Ships with rBrowser",
         "publisher": "Signed by",
         "remove": "Remove",
         "removed": "{name} was removed.",
@@ -4197,7 +4495,7 @@
       "s": "s"
     },
     "updates": {
-      "inactive": "Updates are inactive until rBrowser moves to GitHub (version 1.1). Until then, update by unpacking the new ZIP."
+      "inactive": "This build carries no self-update. Update by unpacking the new ZIP."
     },
     "value": {
       "empty": "(empty)",
@@ -4706,13 +5004,23 @@
       "alreadyInstalled": "{browser} {version} is installed already.",
       "done": "{browser} {version} is installed.",
       "progress": "Downloading {browser}: {percent}%"
+    },
+    "notice": {
+      "restarted": "The Node sidecar restarted.",
+      "restarting": "Restarting the Node sidecar...",
+      "updating": "Downloading the WebKit browser for Playwright..."
     }
   },
   "sitemap": {
+    "gallery": {
+      "title": "Sitemap gallery - {runId}"
+    },
     "notice": {
+      "busy": "A sitemap capture is running already: its progress is in the sitemap bar.",
       "cancelled": "Sitemap capture cancelled at {done} of {total, plural, one {# shot} other {# shots}}; resume run {runId} to take the rest.",
       "failed": "The sitemap capture did not start: {error}",
-      "finished": "Sitemap capture done: {done} of {total, plural, one {# shot} other {# shots}}, {failed} failed. Gallery in {folder}."
+      "finished": "Sitemap capture done: {done} of {total, plural, one {# shot} other {# shots}}, {failed} failed. Gallery in {folder}.",
+      "started": "Sitemap capture started: {pages, plural, one {# page} other {# pages}} × {breakpoints, plural, one {# breakpoint} other {# breakpoints}}, {pending, plural, one {# shot} other {# shots}}."
     }
   },
   "sizes": {
@@ -4867,6 +5175,34 @@
       "title": "Workspace trust"
     }
   },
+  "update": {
+    "error": {
+      "busy": "An update is being installed already.",
+      "disabled": "Updates are off: switch them on in Settings > General > Updates.",
+      "download": "The update download failed or did not match its signed digest; nothing was installed.",
+      "failed": "The update did not go ahead; the log names the reason.",
+      "noSpace": "There is not enough free space for the update.",
+      "notWritable": "rBrowser's program folder cannot be written; update by unpacking the new ZIP.",
+      "refused": "An update was refused: it is not what rBrowser's release key signed; nothing was installed.",
+      "unreachable": "The update check could not reach the release server.",
+      "updaterMissing": "This package has no rbrowser-updater; update by unpacking the new ZIP."
+    },
+    "notice": {
+      "available": "rBrowser {version} is available ({size}). {notes}",
+      "availableCommand": "rBrowser {version} is available. Update it with: {command}. {notes}",
+      "availableDownload": "rBrowser {version} is available: {url}",
+      "checking": "Checking for a newer rBrowser than {version}...",
+      "download": "Open the download page",
+      "downloading": "Downloading rBrowser {version} ({size})...",
+      "install": "Install and restart",
+      "installed": "rBrowser {version} is installed.",
+      "installing": "Installing rBrowser {version}; rBrowser restarts.",
+      "mcpAsks": "An MCP client asks to install rBrowser {version} ({size}). Nothing installs unless you click.",
+      "otherWindows": "{count, plural, one {Close the other rBrowser window first, then click Install and restart again. The update to rBrowser {version} needs every window closed.} other {Close the # other rBrowser windows first, then click Install and restart again. The update to rBrowser {version} needs every window closed.}}",
+      "readyOnQuit": "rBrowser {version} is downloaded and installs when you quit.",
+      "upToDate": "rBrowser {version} is up to date."
+    }
+  },
   "video": {
     "notice": {
       "convert_done": "{target} is ready beside {name}.",
@@ -4988,12 +5324,14 @@
     },
     "notice": {
       "compared": "{regressions} of {count} view(s) differ from their baselines. Diff images: {folder}",
+      "comparing": "Comparing {count, plural, one {# view} other {# views}} with their baselines...",
       "failed": "The visual comparison failed: {error}",
       "lfs_done": "Git LFS now stores .rbrowser/baselines. Commit .gitattributes with the baselines.",
       "lfs_failed": "Git LFS could not be set up: {error}",
       "lfs_missing": "The baselines are not stored with Git LFS: .gitattributes lacks the line for .rbrowser/baselines, or git lfs is not installed. Run \"Visual regression: set up Git LFS for the baselines\" to add the line and run git lfs install --local.",
       "unreliable": "{count} comparison(s) are unreliable: the baseline was taken with another DPI, engine version, viewport or full-page setting.",
-      "updated": "{count} baseline(s) saved under .rbrowser/baselines, {failed} failed."
+      "updated": "{count} baseline(s) saved under .rbrowser/baselines, {failed} failed.",
+      "updating": "Saving {count, plural, one {# view} other {# views}} as baselines..."
     }
   },
   "vitals": {
@@ -5026,6 +5364,10 @@
       },
       "protocolMismatch": "The WSL helper speaks protocol {helper}, this rBrowser protocol {app}. Install rBrowser again so both come from the same package.",
       "timeout": "WSL did not answer in time."
+    },
+    "notice": {
+      "restarted": "WSL watch helper restarted: {state}.",
+      "restarting": "Restarting the WSL watch helper..."
     }
   }
 }

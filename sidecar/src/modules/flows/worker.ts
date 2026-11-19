@@ -3,7 +3,8 @@
 // connects to each view's endpoint with Playwright's `connectOverCDP`, runs the flow with
 // `expect` of @playwright/test and writes one JSON line per event on stdout:
 // `{"type":"status","viewId":1,"status":"running"}`, `{"type":"view","view":{...}}` as each view
-// ends (kept by the sidecar if this worker is stopped), and finally `{"type":"result","views":[...]}`.
+// ends (kept by the sidecar if this worker is stopped), `{"type":"step","viewId":1,"step":{...}}` as
+// each step starts and ends (RB-090-84), and finally `{"type":"result","views":[...]}`.
 // Console output of the flow goes to stderr, which ends in rBrowser's log.
 
 import { writeFile } from 'node:fs/promises';
@@ -46,6 +47,7 @@ async function deps(): Promise<RunnerDeps> {
     writeFile: (path, data) => writeFile(path, data),
     onStatus: (viewId, status) => void emit({ type: 'status', viewId, status }),
     onView: (view) => void emit({ type: 'view', view }),
+    onStep: (viewId, step) => void emit({ type: 'step', viewId, step }),
   };
 }
 

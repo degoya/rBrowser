@@ -5,33 +5,15 @@
 
 import type { ElementSelector, ElementTarget, ResolveResult } from './protocol';
 import { matchAll, type Root } from './selector';
+import { isVisible } from './visible';
+
+export { isVisible };
 
 /** Why no element was found. */
 export type Miss = 'not_found' | 'not_visible';
 
 function round(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-/** The parent of `node` across a shadow boundary. */
-function composedParent(node: Element): Element | null {
-  if (node.parentElement) return node.parentElement;
-  const root = node.getRootNode();
-  return root instanceof ShadowRoot ? root.host : null;
-}
-
-/** Whether `element` is rendered and has a box: no `display:none` above it, not hidden. */
-export function isVisible(element: Element): boolean {
-  if (!element.isConnected) return false;
-  const view = element.ownerDocument.defaultView;
-  if (!view) return false;
-  for (let node: Element | null = element; node; node = composedParent(node)) {
-    if (view.getComputedStyle(node).display === 'none') return false;
-  }
-  const visibility = view.getComputedStyle(element).visibility;
-  if (visibility === 'hidden' || visibility === 'collapse') return false;
-  const rect = element.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0;
 }
 
 /** The matches of `selector` in `root`; the CSS path when the primary kind finds nothing. */

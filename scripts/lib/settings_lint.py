@@ -9,7 +9,9 @@ plugin); a key defined twice; a local-only key whose x-scope is not ["local"]; a
 missing i18n key - the label, description and help text of every key, the title of every
 category and section; a path key without x-input, an x-input that is not "file" or "folder" or
 sits on no string, an x-options that is no list of strings (RB-080-20); an option of a choice
-without its name in the catalogue, a plugin key named `option` (RB-090-16, settings_options.py). It reads the core schemas (schema/*.json, schema/parts/*.json) and the settings schemas
+without its name in the catalogue, a plugin key named `option` (RB-090-16, settings_options.py);
+a notice's settings target or an `openSettings` key that opens no place in the window - no key,
+category, section or key prefix (RB-090-85, settings_targets.py). It reads the core schemas (schema/*.json, schema/parts/*.json) and the settings schemas
 of the bundled plugins (plugins/*/manifest.toml); the rules are crates/rb-settings's
 (settings_schema.py). Exit 2 when the categories do not read. Compiles nothing: it runs in
 scripts/check.sh --preflight through scripts/check-settings.sh.
@@ -22,6 +24,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_options  # noqa: E402
 import settings_schema  # noqa: E402
+import settings_targets  # noqa: E402
 from settings_schema import DataError  # noqa: E402
 
 
@@ -49,12 +52,14 @@ def lint(root: Path) -> tuple[list[str], str]:
                 problems.append(f"{setting.source}: {setting.key}: missing i18n key {i18n_key}")
         for problem in settings_options.problems(setting, setting.root, known):
             problems.append(f"{setting.source}: {setting.key}: {problem}")
+    target_problems, target_count = settings_targets.problems(root, settings, cats)
+    problems += target_problems
     core = sum(1 for setting in settings if setting.plugin is None)
     plugin_ids = {setting.plugin for setting in settings if setting.plugin is not None}
     summary = (
         f"settings lint: {len(settings)} keys ({core} core, {len(settings) - core} from "
         f"{len(plugin_ids)} plugin{'' if len(plugin_ids) == 1 else 's'}), "
-        f"{len(cats)} categories"
+        f"{len(cats)} categories, {target_count} notice targets"
     )
     return problems, summary
 

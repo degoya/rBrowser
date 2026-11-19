@@ -19,7 +19,8 @@ pub fn spec(request: &ExportRequest) -> Result<String, StepError> {
         request.options.locator_preference,
         base_url(request),
     )
-    .paced(request.options.pace);
+    .paced(request.options.pace)
+    .least_pause(request.options.min_pause_ms);
     let body = render(&recording.steps, &mut context, 1)?;
     let mut out = format!(
         "// Exported by rBrowser (recorder-export) from the recording \"{}\".\n\

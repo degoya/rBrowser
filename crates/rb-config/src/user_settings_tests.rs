@@ -30,7 +30,7 @@ fn logs_and_the_cef_age_warning_read_in_camel_case() {
     }"#;
     let settings: UserSettings = serde_json::from_str(json).expect("parses");
     assert!(!settings.updates.cef_age_warning);
-    assert_eq!(settings.updates.channel, UpdateChannel::Stable);
+    assert_eq!(settings.updates.channel, UpdateChannel::Auto);
     assert_eq!(settings.logs.level, "debug");
     assert_eq!(settings.logs.max_file_size_mb, 20);
     assert_eq!(settings.logs.max_files, 2);
@@ -87,20 +87,26 @@ fn the_new_view_modifier_is_shift_or_ctrl_never_alt() {
     assert!(parse("Win").is_err());
 }
 
-/// Self-update is off until a person switches it on (RB-090-02); the file reads the new keys.
+/// Self-update is on and checks at every start (RB-090-14); installing by itself waits for a
+/// person's choice. The file reads the keys back.
 #[test]
-fn self_update_is_off_by_default_and_its_keys_read_back() {
+fn self_update_checks_at_start_by_default_and_its_keys_read_back() {
     let settings = UserSettings::default();
-    assert!(!settings.updates.enabled);
-    assert_eq!(settings.updates.check, UpdateCheck::Off);
+    assert!(settings.updates.enabled);
+    assert_eq!(settings.updates.check, UpdateCheck::OnStart);
     assert_eq!(settings.updates.auto_install, UpdateAutoInstall::Off);
     let read: UserSettings = serde_json::from_value(serde_json::json!({
-        "updates": { "enabled": true, "check": "onStart", "autoInstall": "onQuit" }
+        "updates": { "enabled": false, "check": "off", "autoInstall": "onQuit", "channel": "stable" }
     }))
     .expect("reads");
-    assert!(read.updates.enabled);
-    assert_eq!(read.updates.check, UpdateCheck::OnStart);
+    assert!(!read.updates.enabled);
+    assert_eq!(read.updates.check, UpdateCheck::Off);
     assert_eq!(read.updates.auto_install, UpdateAutoInstall::OnQuit);
+    assert_eq!(
+        read.updates.channel,
+        UpdateChannel::Stable,
+        "a chosen channel stays chosen"
+    );
     assert!(read.updates.cef_age_warning, "the rest defaults");
 }
 
@@ -254,4 +260,14 @@ fn the_shell_follows_windows_text_size_by_default_and_can_stop() {
         serde_json::from_str(r#"{ "version": 1, "ui": { "followWindowsTextSize": false } }"#)
             .expect("parses");
     assert!(!off.ui.follow_windows_text_size);
+}
+
+#[test]
+fn the_setup_wizard_is_on_by_default_and_a_team_switches_it_off() {
+    let settings: UserSettings = serde_json::from_str(r#"{ "version": 1 }"#).expect("parses");
+    assert!(settings.ui.first_run_wizard);
+    let off: UserSettings =
+        serde_json::from_str(r#"{ "version": 1, "ui": { "firstRunWizard": false } }"#)
+            .expect("parses");
+    assert!(!off.ui.first_run_wizard);
 }

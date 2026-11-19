@@ -1,35 +1,32 @@
 //! Sitemap capture in the window: the commands, the MCP host tools' entry points and the shell.
-//! A run gets the bundled plugin `sitemap-capture` ([`BundledTools`]), render views as hidden
-//! targets of the app's CDP connection (`super::backend`) and the window as its follower
-//! ([`ShellEvents`]: the toolbar's progress through the shell state after every shot, one notice
-//! when it ends). Everything runs on the core's runtime; the grid's views are not touched, so the
-//! grid stays usable during a run.
+//! A run gets the bundled plugin `sitemap-capture` ([`BundledTools`]), render views as windowless
+//! browsers of the window driven over the app's CDP connection (`super::render_views`) and the
+//! window as its follower ([`ShellEvents`]: the toolbar's progress through the shell state after
+//! every shot, one notice when it ends); a start says so (`super::feedback`). Everything runs on
+//! the core's runtime; the grid's views are not touched, so the grid stays usable during a run.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock, Weak};
 
 use rb_commands::CommandError;
-use rb_config::EngineKind;
-use rb_engine::ViewHost as _;
 use rb_ipc::{CoreToShell, Notification, NotificationLevel, SitemapRunState, SitemapStatus};
 use rb_visual::sitemap::{Progress, RunState};
 use rb_visual::sitemap_store::OUT_DIR;
 use rb_visual::{BaselineStore, DiffOptions};
 use serde_json::{Value, json};
 
-use super::backend::CdpRenderBackend;
-use super::defs::{CANCEL, CAPTURE, PANEL};
+use super::defs::{CANCEL, CAPTURE, GALLERY, PANEL};
 use super::plan::{self, PlanError};
 use super::runs::{Ended, NewRun, PluginTools, RunError, RunEvents, Runs, Services, Setup, Start};
 use super::settings::Effective;
 use super::sink::CompareWith;
 use super::tool::{
-    CANCEL_TOOL, CAPTURE_TOOL, CancelAnswer, CaptureArgs, CaptureStarted, RunArgs, STATUS_TOOL,
-    StatusAnswer,
+    CANCEL_TOOL, CAPTURE_TOOL, CancelAnswer, CaptureArgs, CaptureStarted, GALLERY_TOOL, RunArgs,
+    STATUS_TOOL, StatusAnswer,
 };
+use super::{feedback, gallery};
 use crate::control::Core;
-use crate::host::Host;
 
 /// The plugin that finds the pages and renders the gallery.
 pub const PLUGIN_ID: &str = "sitemap-capture";
@@ -159,7 +156,8 @@ impl RunEvents for ShellEvents {
     }
 }
 
-fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> CoreToShell {
+/// A notice of sitemap capture, linked to its settings.
+pub(super) fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> CoreToShell {
     CoreToShell::Notification(Notification {
         level,
         message_key: key.to_owned(),
@@ -171,20 +169,9 @@ fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> CoreT
     })
 }
 
-/// A grid view's target showing a session, for the render views' browser context.
-fn session_target(host: &Arc<Host>) -> super::backend::SessionTarget {
-    let host = Arc::downgrade(host);
-    Box::new(move |session| {
-        let host = host.upgrade()?;
-        host.views()
-            .into_iter()
-            .filter(|view| view.engine == EngineKind::Chromium && view.session == session)
-            .find_map(|view| host.target_id(view.id))
-    })
-}
-
 /// Starts (or, with `resume`, continues) a capture: the MCP tool `sitemap_capture` and the
-/// command `sitemap.capture`. Answers once the pages are found.
+/// command `sitemap.capture`. Answers once the pages are found; the person sees the start
+/// (`super::feedback`).
 ///
 /// # Errors
 ///
@@ -262,15 +249,18 @@ pub async fn capture(core: &Arc<Core>, args: CaptureArgs) -> Result<CaptureStart
     let services = Services {
         tools: Arc::new(BundledTools),
         backend: Arc::new(
-            CdpRenderBackend::new(host.cdp().clone(), session_target(&host))
-                .with_clean(crate::capture::clean_plan(core, clean)),
+            super::render_views::backend_for(&host)
+                .with_clean(crate::capture::clean_plan(core, clean))
+                .with_shot_timeout(effective.shot_timeout),
         ),
         events: Arc::new(ShellEvents {
             core: Arc::downgrade(core),
             root,
         }),
     };
-    runs().start(setup, start, services).await
+    let started = runs().start(setup, start, services).await?;
+    feedback::started(core, &started);
+    Ok(started)
 }
 
 /// The status of a run: the MCP tool `sitemap_status`.
@@ -304,7 +294,7 @@ fn failed(error: &RunError) -> CommandError {
 
 /// Runs the command `id` (registered by `super::defs`). `sitemap.capture` answers at once and
 /// goes on on the core's runtime (a command may come from the CEF UI thread); a start that fails
-/// is a notice.
+/// is a notice, a start while a capture runs shows that one (`super::feedback::busy`).
 pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
     match id {
         CAPTURE => {
@@ -314,10 +304,14 @@ pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
                 .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
             let runtime = core.runtime().clone();
             runtime.spawn(async move {
-                if let Err(error) = capture(&core, args).await {
-                    tracing::warn!(code = error.code(), "a sitemap capture did not start");
-                    let args = [("error", error.to_string())];
-                    core.notify(notice(NotificationLevel::Error, FAILED_KEY, &args));
+                match capture(&core, args).await {
+                    Ok(_) => {}
+                    Err(RunError::Busy) => feedback::busy(&core),
+                    Err(error) => {
+                        tracing::warn!(code = error.code(), "a sitemap capture did not start");
+                        let args = [("error", error.to_string())];
+                        core.notify(notice(NotificationLevel::Error, FAILED_KEY, &args));
+                    }
                 }
             });
             Ok(json!({ "started": true }))
@@ -325,6 +319,11 @@ pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
         CANCEL => {
             let args = RunArgs::parse(args).map_err(CommandError::InvalidArgs)?;
             to_value(&cancel(core, &args).map_err(|error| failed(&error))?)
+        }
+        GALLERY => {
+            let args = RunArgs::parse(args).map_err(CommandError::InvalidArgs)?;
+            let opened = gallery::open(core, &args, gallery::Caller::Person);
+            to_value(&opened.map_err(|error| failed(&error))?)
         }
         PANEL => {
             core.send(&CoreToShell::UiCommand {
@@ -367,7 +366,7 @@ pub fn capture_blocking(core: &Arc<Core>, args: CaptureArgs) -> Result<Value, St
 }
 
 /// The MCP tools the host runs here.
-pub const TOOLS: [&str; 3] = [CAPTURE_TOOL, STATUS_TOOL, CANCEL_TOOL];
+pub const TOOLS: [&str; 4] = [CAPTURE_TOOL, STATUS_TOOL, CANCEL_TOOL, GALLERY_TOOL];
 
 fn invalid(message: String) -> rb_mcp::ToolFailure {
     rb_mcp::ToolFailure::new("invalid_arguments", message)
@@ -407,6 +406,11 @@ pub async fn host_tool(
         CANCEL_TOOL => {
             let args = RunArgs::parse(&args).map_err(invalid)?;
             tool_answer(&cancel(core, &args).map_err(|error| tool_failure(&error))?)
+        }
+        GALLERY_TOOL => {
+            let args = RunArgs::parse(&args).map_err(invalid)?;
+            let opened = gallery::open(core, &args, gallery::Caller::Agent);
+            tool_answer(&opened.map_err(|error| tool_failure(&error))?)
         }
         other => Err(rb_mcp::ToolFailure::new(
             "unknown_tool",

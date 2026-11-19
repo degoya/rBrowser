@@ -82,10 +82,14 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
             args.file.unwrap_or_default(),
         )?));
     }
-    let view = args
-        .view
-        .or_else(|| host.active_view())
-        .ok_or_else(|| CommandError::InvalidArgs("no view is active".to_owned()))?;
+    // The menus' engine pick (no engine) takes the first view while none is active, as the other
+    // view commands do (RB-090-82); a switch to an engine names its view or the active one.
+    let view = match (args.view, args.engine) {
+        (Some(view), _) => Some(view),
+        (None, None) => host.active_or_first().ok(),
+        (None, Some(_)) => host.active_view(),
+    };
+    let view = view.ok_or_else(|| CommandError::InvalidArgs("no view is active".to_owned()))?;
     if host.view(view).is_none() {
         return Err(CommandError::InvalidArgs(format!("unknown view {view}")));
     }

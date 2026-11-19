@@ -14,6 +14,9 @@
 //! | `rbrowser flow list` and `rbrowser flow run` | [`cli`] |
 //! | The flows in the command palette (`listFlows`, RB-060-11) | [`palette`] |
 //! | The Flows panel's run state (`getFlowRun`, `panels.flows`, RB-090-60) | [`panel`] |
+//! | What a run leaves in the log: its end, each failed view's step and reason (RB-090-84) | [`report`] |
+//! | Each step of a run going on pushed to the shell (`flowStep`, RB-090-84) | [`step_progress`] |
+//! | The layout a run shows when the one shown hides views (`hiddenViews: layout`) | [`run_layout`] |
 //! | The run in Node: a worker process per run under Node's permission model | `sidecar/src/modules/flows/` |
 //!
 //! The commands: `flows.run` (`Leader F R`), `flows.run_all` (`Leader F A`), `flows.rerun_last`
@@ -32,9 +35,12 @@ pub mod palette;
 pub mod panel;
 pub mod plan;
 pub mod queue;
+pub mod report;
 pub mod result;
 pub mod run;
+pub mod run_layout;
 pub mod scope;
+pub mod step_progress;
 pub mod sync_pause;
 
 use std::sync::Arc;

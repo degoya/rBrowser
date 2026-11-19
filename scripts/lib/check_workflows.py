@@ -25,10 +25,12 @@ import sys
 from pathlib import Path
 
 # (workflow file, job, permission) that may be `write`: the release's publish job writes the
-# GitHub release and signs SHA256SUMS keylessly with the job's OIDC token.
+# GitHub release and signs SHA256SUMS keylessly with the job's OIDC token; plugin-release writes
+# the plugin release and the official plugin index (RB-090-79) and holds no key.
 WRITE_ALLOWED = {
     ("release.yml", "publish", "contents"),
     ("release.yml", "publish", "id-token"),
+    ("release.yml", "plugin-release", "contents"),
 }
 
 LATEST = re.compile(r"\b((?:ubuntu|windows|macos)-latest)\b")

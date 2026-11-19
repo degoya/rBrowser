@@ -13,12 +13,16 @@
 //! an error - the same outcomes that desync it) drops out, and a view the hub did not replay
 //! into (desynced, excluded, loading) never was in. A step that ran in every breakpoint of the
 //! recording has no `onlyIn`.
+//!
+//! The form autofill fills by script, which the agent does not capture; its report of what it set
+//! comes in through [`Recorder::on_autofill`] ([`super::autofill`], RB-090-78).
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use rb_engine::ViewId;
 use serde::Serialize;
 
+use super::autofill::{AutofillView, Echoes, MAX_FIELDS, action_of};
 use super::cleanup::{Builder, Capture, Trail};
 use super::keys::shown;
 use super::model::{Action, RECORDING_VERSION, RecordedBreakpoint, Recording};
@@ -50,18 +54,45 @@ pub enum RecorderState {
 pub struct RecorderOptions {
     /// `recordScroll`: scrolls are steps.
     pub record_scroll: bool,
-    /// `recordHover`: a hover that reveals what the next click hits is a step.
-    pub record_hover: bool,
+    /// `recordHover`: which hovers are steps (RB-090-81).
+    pub record_hover: HoverCapture,
     /// `secretFields`: further fields whose values are never recorded.
     pub secret_fields: Vec<String>,
+    /// `recordAutofill`: the form autofill's fills are steps (RB-090-78).
+    pub record_autofill: bool,
 }
 
 impl Default for RecorderOptions {
     fn default() -> Self {
         Self {
             record_scroll: true,
-            record_hover: true,
+            record_hover: HoverCapture::Menu,
             secret_fields: Vec::new(),
+            record_autofill: true,
+        }
+    }
+}
+
+/// `automation.recorder.recordHover` (RB-090-81): which hovers the recorder keeps.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum HoverCapture {
+    /// Only the agent's hover on a menu entry (`HoverData::menu`), sent at a press into its
+    /// submenu: the pointer's way across a page is never a step.
+    #[default]
+    Menu,
+    /// Also a hover the clean-up guesses revealed what the next click hits.
+    All,
+    /// No hover.
+    Off,
+}
+
+impl HoverCapture {
+    /// Whether a hover - the agent's menu hover when `menu` - waits for the next click.
+    pub fn keeps(self, menu: bool) -> bool {
+        match self {
+            Self::Menu => menu,
+            Self::All => true,
+            Self::Off => false,
         }
     }
 }
@@ -116,6 +147,7 @@ pub struct Recorder {
     leader: Option<ViewId>,
     last_url: Option<String>,
     steps: Builder,
+    echoes: Echoes,
 }
 
 impl Recorder {
@@ -155,6 +187,7 @@ impl Recorder {
             return Err(RecorderError::AlreadyRecording);
         }
         self.steps = Builder::default();
+        self.echoes = Echoes::default();
         self.names.clear();
         self.started_ms = info.now_ms;
         self.leader = info.leader;
@@ -293,16 +326,44 @@ impl Recorder {
         } else {
             message.frame.as_deref()
         };
+        let at_ms = self.offset(now_ms);
         let capture = Capture {
             view: &view,
             frame,
             views,
-            at_ms: self.offset(now_ms),
+            at_ms,
             record_hover: self.options.record_hover,
             record_scroll: self.options.record_scroll,
             secret_fields: &self.options.secret_fields,
         };
+        let last = |steps: &Builder| steps.entries.last().map(|entry| entry.step.id);
+        let before = last(&self.steps);
         self.steps.event(&capture, &event);
+        if self.echoes.any() && last(&self.steps) != before {
+            self.echoes.after(&mut self.steps, at_ms);
+        }
+    }
+
+    /// The form autofill set `fill`'s fields in its view (RB-090-78): each a step, or joined with
+    /// the same step of the fill's post for another view before it. Only while recording, with
+    /// `recordAutofill`. Answers whether the steps changed.
+    pub fn on_autofill(&mut self, fill: &AutofillView, now_ms: u64) -> bool {
+        if self.state != RecorderState::Recording || !self.options.record_autofill {
+            return false;
+        }
+        let at_ms = self.offset(now_ms);
+        let name = self.name_of(fill.view);
+        let mut changed = false;
+        for field in fill.fields.iter().take(MAX_FIELDS) {
+            if self.steps.entries.len() >= MAX_STEPS {
+                break;
+            }
+            let action = action_of(field, &self.options.secret_fields);
+            changed |= self
+                .steps
+                .autofill(action, &name, fill.view, at_ms, &mut self.echoes);
+        }
+        changed
     }
 
     /// The replay of `event` into `view` ended with `outcome`.
@@ -357,7 +418,7 @@ impl Recorder {
         };
         let trail = Trail {
             views,
-            origins: Vec::new(),
+            ..Trail::default()
         };
         let at = self.offset(now_ms);
         self.steps.push(action, &view, at, trail);
@@ -379,7 +440,7 @@ impl Recorder {
             .unwrap_or_default();
         let trail = Trail {
             views: self.names.keys().copied().collect(),
-            origins: Vec::new(),
+            ..Trail::default()
         };
         let at = self.offset(now_ms);
         self.steps.push(action, &view, at, trail);

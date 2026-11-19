@@ -416,6 +416,26 @@ async fn set_engine_without_an_engine_opens_the_menu_and_refuses_bad_arguments()
     ));
 }
 
+/// RB-090-82: the menus' row (≡ › View, no arguments) before a person clicked a view: the engine
+/// menu opens for the first view, as the other view commands take it; a switch to an engine
+/// still names its view.
+#[tokio::test]
+async fn set_engine_without_an_active_view_opens_the_menu_of_the_first_view() {
+    let setup = setup(config());
+    let core = &setup.core;
+    let ids = view_ids(&setup);
+    assert_eq!(core.host().active_view(), None, "no view clicked yet");
+    assert_eq!(run(core, &Value::Null).expect("runs"), Value::Null);
+    assert_eq!(
+        setup.ui.calls().last(),
+        Some(&UiCall::EnginePick(ids[0], None))
+    );
+    assert!(matches!(
+        run(core, &json!({ "engine": "firefox" })),
+        Err(CommandError::InvalidArgs(_))
+    ));
+}
+
 #[tokio::test]
 async fn the_badge_switch_reaches_the_window() {
     let setup = setup(config());

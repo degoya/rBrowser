@@ -26,6 +26,10 @@ const RADIO_GROUP: i32 = 1;
 /// `native_menu::MAX_TOTAL` rows with every submenu's, below the page context menu's 27 900).
 const FIRST_ID: i32 = 27_100;
 
+/// How long after `menu_closed` the close is told: `execute_command` of the row chosen arrives
+/// within it, whichever order CEF calls them in.
+const CLOSE_DELAY_MS: u32 = 50;
+
 wrap_menu_model_delegate! {
     // The rows: row `FIRST_ID` + index.
     struct ShellMenu {
@@ -47,8 +51,19 @@ wrap_menu_model_delegate! {
             }
         }
 
-        fn menu_closed(&self, _menu_model: Option<&mut MenuModel>) {
-            self.pending.close();
+        fn menu_closed(&self, menu_model: Option<&mut MenuModel>) {
+            // A submenu closing - the pointer moved on to another row, or a row in it was
+            // chosen - is no close of the menu: told as one, it ended the menu before its row
+            // arrived, and every row in a submenu did nothing (owner, 2026-11-18, diag23: the
+            // top level's rows ran, a submenu's never).
+            if menu_model.is_some_and(|model| model.is_sub_menu() != 0) {
+                return;
+            }
+            // CEF 156.0.30 may tell the close before the row chosen (`execute_command` after
+            // `menu_closed`): the close is told a moment later on the UI thread, so a choice
+            // that follows the close still arrives.
+            let pending = self.pending.clone();
+            super::task::on_ui_after(CLOSE_DELAY_MS, move || pending.close());
         }
     }
 }

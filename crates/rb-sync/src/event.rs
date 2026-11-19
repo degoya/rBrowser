@@ -41,7 +41,10 @@ fn is_false(value: &bool) -> bool {
 }
 
 /// How an element is found again in another view. `nth` picks among several matches
-/// (document order, 0 is omitted); `path` is the CSS path, the fallback of every other kind.
+/// (document order, 0 is omitted); `path` is the CSS path, the fallback of every other kind. A
+/// later role or text match of a shown element carries `visibleNth`, its index among the
+/// visible matches (RB-090-81); a role or text shown more than once carries `within`, the
+/// ancestor that makes it unique (RB-090-84).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum ElementSelector {
@@ -64,6 +67,16 @@ pub enum ElementSelector {
         /// The match to take.
         #[serde(default, skip_serializing_if = "is_zero")]
         nth: u32,
+        /// The match's index among the visible ones, when it is a later match and shown.
+        #[serde(
+            default,
+            rename = "visibleNth",
+            skip_serializing_if = "Option::is_none"
+        )]
+        visible_nth: Option<u32>,
+        /// An ancestor's CSS selector inside which it names the element alone (RB-090-84).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        within: Option<String>,
         /// The CSS path.
         path: String,
     },
@@ -76,6 +89,16 @@ pub enum ElementSelector {
         /// The match to take.
         #[serde(default, skip_serializing_if = "is_zero")]
         nth: u32,
+        /// The match's index among the visible ones, when it is a later match and shown.
+        #[serde(
+            default,
+            rename = "visibleNth",
+            skip_serializing_if = "Option::is_none"
+        )]
+        visible_nth: Option<u32>,
+        /// An ancestor's CSS selector inside which it names the element alone (RB-090-84).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        within: Option<String>,
         /// The CSS path.
         path: String,
     },

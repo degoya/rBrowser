@@ -16,11 +16,11 @@ test('login', async ({ page }) => {
   await page.goto('/recorder.html');
   // Step 2: click - Open the mobile menu (only in mobile)
   if (['mobile'].includes(test.info().project.name)) {
-    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Menu', exact: true }).filter({ visible: true }).first().click();
   }
   // Step 3: assert visible (only in mobile)
   if (['mobile'].includes(test.info().project.name)) {
-    await expect(page.getByRole('link', { name: 'About', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'About', exact: true }).filter({ visible: true }).first()).toBeVisible();
   }
   // Step 4: press
   await page.keyboard.press('Escape');
@@ -33,13 +33,13 @@ test('login', async ({ page }) => {
   // Step 8: select
   await page.locator('#plan').selectOption('pro');
   // Step 9: check
-  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).filter({ visible: true }).first().check();
   // Step 10: uncheck
-  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Remember me', exact: true }).filter({ visible: true }).first().uncheck();
   // Step 11: hover
   await page.getByTestId('help').hover();
   // Step 12: assert visible
-  await expect(page.getByText('We never share your email.', { exact: true })).toBeVisible();
+  await expect(page.getByText('We never share your email.', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   // Step 13: dblclick
   await page.getByTestId('counter').dblclick();
   // Step 14: assert text

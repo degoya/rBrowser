@@ -117,3 +117,34 @@ async fn the_views_are_read_after_the_delay() {
         EngineError::Invalid(format!("view {} is not attached yet", ViewId(3))).to_string();
     assert_eq!(error.to_string(), expected);
 }
+
+/// RB-090-85: a command's capture names its start unless the countdown of a delay or the pick
+/// of an element already does.
+#[test]
+fn a_capture_names_its_start_once() {
+    use std::time::Duration;
+
+    let request = |mode: CaptureMode, delay_ms: u64| ScreenshotRequest {
+        target: Some(Target::All),
+        mode,
+        selector: None,
+        padding: 0,
+        overview: false,
+        delay: Duration::from_millis(delay_ms),
+        save: true,
+        views: None,
+        folder: None,
+        clean: rb_visual::CleanOverrides::default(),
+        at: None,
+    };
+    let Some(CoreToShell::Notification(started)) =
+        capturing_notice(&request(CaptureMode::FullPage, 0))
+    else {
+        panic!("a notification");
+    };
+    assert_eq!(started.message_key, CAPTURING_KEY);
+    assert_eq!(started.level, NotificationLevel::Info);
+    assert!(capturing_notice(&request(CaptureMode::Viewport, 0)).is_some());
+    assert!(capturing_notice(&request(CaptureMode::Viewport, 3000)).is_none());
+    assert!(capturing_notice(&request(CaptureMode::Element, 0)).is_none());
+}

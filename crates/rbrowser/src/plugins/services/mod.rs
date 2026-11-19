@@ -281,7 +281,9 @@ impl HostServices for AppServices {
 
     fn active_view(&self) -> Option<u32> {
         self.core()
-            .and_then(|core| page::Views::active_view(&**core.host()))
+            // The active view, else the first (RB-090-82): before a person clicked a view none
+            // is active, and a plugin's call on "the active view" failed.
+            .and_then(|core| core.host().active_or_first().ok())
             .map(|view| view.0)
     }
 

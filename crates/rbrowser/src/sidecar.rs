@@ -1,7 +1,8 @@
 //! The Node sidecar in the app (RB-040-03): one `rb_sidecar::Sidecar` per process, made when the
 //! core starts and started only on the first request; changed user settings reach it at once
 //! (the timeout) or at its next start (the paths, `sidecar.restart`); the commands
-//! `sidecar.restart` and `engines.update`; stopped when the app quits; its versions in the
+//! `sidecar.restart` and `engines.update`, each naming its start and its end in the status bar
+//! (RB-090-85); stopped when the app quits; its versions in the
 //! diagnostics ZIP when it runs (the diagnostics never start Node).
 
 use std::collections::BTreeMap;
@@ -28,6 +29,12 @@ const VERSIONS_WAIT: Duration = Duration::from_secs(2);
 const SHUTDOWN_WAIT: Duration = Duration::from_secs(5);
 /// A download's progress is shown in steps of this many percent.
 const PROGRESS_STEP: u8 = 25;
+/// The notice that `sidecar.restart` started (RB-090-85).
+pub const RESTARTING_KEY: &str = "sidecar.notice.restarting";
+/// The notice that the sidecar restarted.
+pub const RESTARTED_KEY: &str = "sidecar.notice.restarted";
+/// The notice that `engines.update` started (RB-090-85).
+pub const UPDATING_KEY: &str = "sidecar.notice.updating";
 
 /// The sidecar of this process and the runtime its tasks run on.
 struct Running {
@@ -72,15 +79,20 @@ pub fn register(registry: &mut CommandRegistry, core: &Arc<Core>) -> Vec<Command
                 runtime: runtime.clone(),
             });
             let weak = Arc::downgrade(core);
-            let restart = restart_handler(Arc::clone(&sidecar), runtime.clone());
+            let restart = restart_handler(
+                Arc::clone(&sidecar),
+                runtime.clone(),
+                restarted_sink(weak.clone()),
+            );
+            let restart = announced(weak.clone(), RESTARTING_KEY, restart);
             let last = Arc::new(AtomicU8::new(u8::MAX));
             let update = update_handler(
                 sidecar,
                 runtime,
                 progress_sink(weak.clone(), Arc::clone(&last)),
-                done_sink(weak),
+                done_sink(weak.clone()),
             );
-            let update = fresh_progress(last, update);
+            let update = announced(weak, UPDATING_KEY, fresh_progress(last, update));
             (restart, update)
         }
         Err(error) => {
@@ -190,6 +202,58 @@ fn fresh_progress(last: Arc<AtomicU8>, handler: Handler) -> Handler {
     })
 }
 
+/// `handler` that first names its start in the status bar (`key`): a restart or a download
+/// runs for a while before its end is named (RB-090-85).
+fn announced(core: Weak<Core>, key: &'static str, handler: Handler) -> Handler {
+    Arc::new(move |args| {
+        if let Some(core) = core.upgrade() {
+            core.notify(notification(
+                NotificationLevel::Info,
+                key,
+                BTreeMap::new(),
+                None,
+            ));
+        }
+        handler(args)
+    })
+}
+
+/// The end of `sidecar.restart` in the status bar: restarted, or why not (RB-090-85).
+fn restarted_sink(core: Weak<Core>) -> rb_sidecar::command::RestartSink {
+    Arc::new(move |result: Result<(), SidecarError>| {
+        if let Some(core) = core.upgrade() {
+            core.notify(restarted_notice(&result));
+        }
+    })
+}
+
+fn restarted_notice(result: &Result<(), SidecarError>) -> CoreToShell {
+    match result {
+        Ok(()) => notification(
+            NotificationLevel::Success,
+            RESTARTED_KEY,
+            BTreeMap::new(),
+            None,
+        ),
+        Err(error) => error_notice(error),
+    }
+}
+
+/// `error` as a notice: its own text, linked to the setting that fixes it.
+fn error_notice(error: &SidecarError) -> CoreToShell {
+    let args = error
+        .i18n_args()
+        .into_iter()
+        .map(|(name, value)| (name.to_owned(), value))
+        .collect();
+    notification(
+        NotificationLevel::Error,
+        error.i18n_key(),
+        args,
+        error.settings_key(),
+    )
+}
+
 fn progress_sink(core: Weak<Core>, last: Arc<AtomicU8>) -> rb_sidecar::command::ProgressSink {
     Arc::new(move |progress: InstallProgress| {
         if !next_step(&last, progress.percent) {
@@ -230,17 +294,7 @@ fn done_sink(core: Weak<Core>) -> rb_sidecar::command::DoneSink {
             Err(error) => {
                 let detail = rb_diag::redact(&error.to_string());
                 tracing::warn!(error = %detail, "the engines update failed");
-                let args = error
-                    .i18n_args()
-                    .into_iter()
-                    .map(|(name, value)| (name.to_owned(), value))
-                    .collect();
-                notification(
-                    NotificationLevel::Error,
-                    error.i18n_key(),
-                    args,
-                    error.settings_key(),
-                )
+                error_notice(&error)
             }
         };
         core.notify(message);

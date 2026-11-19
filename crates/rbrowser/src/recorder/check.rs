@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use rb_commands::CommandError;
 use rb_engine::{EngineError, ViewHost as _, ViewId};
+use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use rb_sync::ElementTarget;
 use rb_sync::recorder::{Action, Assertion, Locator};
 use serde::Deserialize;
@@ -32,6 +33,18 @@ const DESCRIBE: &str = "function () {
   var text = (this.innerText || this.textContent || '').replace(/\\s+/g, ' ').trim();
   return { target: globalThis.__rbAgent.targetOf(this), text: text };
 }";
+
+/// The notice while a check waits for the click that picks its element: the capture's pick
+/// hint (`capture.notice.pick`).
+#[must_use]
+pub fn pick_notice() -> CoreToShell {
+    CoreToShell::Notification(Notification {
+        level: NotificationLevel::Info,
+        message_key: crate::capture::PICK_KEY.to_owned(),
+        args: std::collections::BTreeMap::new(),
+        settings_key: None,
+    })
+}
 
 /// What a check step checks.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
@@ -159,6 +172,10 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
         .collect();
     let cdp = host.cdp().clone();
     let point = args.point;
+    if point.is_none() {
+        // The pick waits for a click: say so, as a capture's pick does (RB-090-84).
+        core.notify(pick_notice());
+    }
     let (target, text, views) = crate::analyzer::plugins::block_on(async move {
         let backend = match point {
             Some((point, dip)) => {

@@ -1,16 +1,20 @@
 name: Release
 
 # A version tag builds, packages and publishes rBrowser (RB-090-04, after rCommander's
-# release.yml; prepared, inactive until the move to GitHub, RB-090-12): the bundled plugins
-# signed with the release key, the Windows package built natively with them
-# (scripts/package-windows.sh), SHA256SUMS over the assets and its keyless Sigstore signature, and
-# the GitHub release, whose text is the version's section of CHANGELOG.md. Two steps stay off
+# release.yml; prepared, inactive until the move to GitHub, RB-090-12): the first-party plugins
+# signed with the release key (release-plugins.yml), the Windows package and the macOS packages
+# for Apple Silicon and Intel built natively with them (scripts/package-windows.sh,
+# scripts/package-macos.sh, RB-090-80), SHA256SUMS over the assets and its keyless Sigstore
+# signature, and the GitHub release, whose text is the version's section of CHANGELOG.md and the
+# downloads (scripts/release-assets.sh notes|downloads). Two steps stay off
 # until the owner sets their repository variable to `true` (docs/release.md): code signing of the
 # Windows binaries after the build, in a step that compiles nothing (RB_CODESIGN, RB-090-03,
 # RB-110-06) and the signed update manifests
 # (RB_SELF_UPDATE, RB-090-02, RB-110-05). After the release, the package channels follow it
 # (RB-090-13, RB-110-04): the Scoop bucket, winget, the Homebrew tap and the apt and dnf
-# repository, each only with its secret set. The only workflow that reads a secret.
+# repository, each only with its secret set; the plugins as a release of their own,
+# `plugins-vX.Y.Z`, and the official plugin index (RB-090-79). With release-plugins.yml the only
+# workflow that reads a secret.
 on:
   push:
     tags:
@@ -36,50 +40,16 @@ env:
 # release build.
 
 jobs:
-  # The bundled plugins, signed with the release key rbrowser-plugin-v1 (docs/plugins.md). The key
-  # is written to a file only this job's runner sees, never echoed, and removed after the step.
+  # The first-party plugins, signed with the release key rbrowser-plugin-v1 (docs/plugins.md),
+  # and the official catalogue's signed index: release-plugins.yml, the only job that reads the
+  # plugin key. Its artifacts `plugins` and `plugin-index` are what `windows`, `macos` and
+  # `plugin-release` download.
   plugins:
-    runs-on: ubuntu-24.04
     permissions:
       contents: read
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The tag is the workspace version
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: scripts/set-version.sh "${REF_NAME#v}" --check
-      - uses: ./.github/actions/setup-rust
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
-        with:
-          tool: wasm-tools@1.261.0
-      # Compiled without the key first: cargo runs the build scripts and proc macros of every
-      # dependency here, and none of them may find the signing key. The signed run below finds
-      # everything built and compiles nothing.
-      - name: Build the bundled plugins
-        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
-      - name: Sign the bundled plugins
-        env:
-          RBROWSER_PLUGIN_SIGNING_KEY: ${{ secrets.RBROWSER_PLUGIN_SIGNING_KEY }}
-        run: |
-          if [[ -z "${RBROWSER_PLUGIN_SIGNING_KEY}" ]]; then
-            echo "::error::RBROWSER_PLUGIN_SIGNING_KEY is not set; a release ships signed plugins only"
-            exit 1
-          fi
-          key="${RUNNER_TEMP}/plugin-signing.pem"
-          trap 'rm -f "${key}"' EXIT
-          (umask 077 && printf '%s\n' "${RBROWSER_PLUGIN_SIGNING_KEY}" > "${key}")
-          RB_PLUGIN_SIGNING_KEY="${key}" scripts/build-plugins.sh
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: plugins
-          path: artifacts/plugins/*.rbplugin
-          if-no-files-found: error
-          retention-days: 3
+    uses: ./.github/workflows/release-plugins.yml
+    secrets:
+      RBROWSER_PLUGIN_SIGNING_KEY: ${{ secrets.RBROWSER_PLUGIN_SIGNING_KEY }}
 
   # The Windows package, built natively with MSVC from the signed plugins above (downloaded into
   # the ignored artifacts/plugins/, so the tree stays clean and VERSION.txt names the tag's
@@ -144,8 +114,57 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  # The macOS packages (RB-090-80): rBrowser.app for Apple Silicon and for Intel, each built
+  # natively on the runners of ci.yml's `macos` job from the signed plugins above, signed ad hoc
+  # and checked by scripts/package-macos.sh before anything is packed (the structure test and
+  # `codesign --verify --deep --strict`), a ZIP and a DMG each. Not notarised (RB-110-06): the
+  # release text says how Gatekeeper lets the app start. The app does not replace itself on macOS
+  # (crates/rbrowser/src/updates/flow.rs): it offers the release page, so no update manifest names
+  # these packages.
+  macos:
+    needs: plugins
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            os: macos-15
+          - arch: x86_64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The scripts want bash 4 or later (macOS ships 3.2); CEF's wrapper builds with Ninja.
+      - name: Install bash and ninja
+        run: brew install bash ninja
+      - uses: ./.github/actions/setup-rust
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plugins
+          path: artifacts/plugins
+      - name: scripts/package-macos.sh
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: scripts/package-macos.sh --arch "${ARCH}" --plugins artifacts/plugins
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-macos-${{ matrix.arch }}
+          path: |
+            artifacts/macos/*.zip
+            artifacts/macos/*.dmg
+          if-no-files-found: error
+          retention-days: 3
+
   publish:
-    needs: [plugins, windows]
+    needs: [plugins, windows, macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -157,10 +176,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Every package artifact (package-windows-x64, package-macos-*) into one flat folder.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: package-windows-x64
+          pattern: package-*
           path: release-assets
+          merge-multiple: true
+      - name: Every package of the release is there
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-assets.sh complete release-assets "${REF_NAME#v}"
       - name: Generate SHA-256 checksums
         run: scripts/release-assets.sh sums release-assets
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
@@ -173,8 +198,9 @@ jobs:
       - name: Build rb-pack
         if: vars.RB_SELF_UPDATE == 'true'
         run: cargo build --release --locked -p rb-update --bin rb-pack
-      # The signed update manifest of this release's channel, from the ZIP above; signed itself
-      # and therefore not in SHA256SUMS. The key is written to a file only this runner sees, and
+      # The signed update manifest of this release's channel, from the Windows ZIP above - the
+      # only package that replaces itself; macOS offers the release page (RB-090-80). Signed
+      # itself and therefore not in SHA256SUMS. The key is written to a file only this runner sees, and
       # scripts/sign-update.sh runs the rb-pack built above (RB_PACK), compiling nothing.
       - name: Sign the update manifest
         if: vars.RB_SELF_UPDATE == 'true'
@@ -192,14 +218,19 @@ jobs:
           channel=stable
           [[ "${REF_NAME}" != *-* ]] || channel=beta
           mkdir -p artifacts/windows
-          cp release-assets/*.zip artifacts/windows/
+          cp release-assets/rbrowser-*-windows-x64.zip artifacts/windows/
           RB_PACK=target/release/rb-pack RB_UPDATE_SIGNING_KEY="${key}" \
             scripts/sign-update.sh "${channel}"
           cp artifacts/update/rbrowser-update-*.json release-assets/
       - name: Write the release text
         env:
           REF_NAME: ${{ github.ref_name }}
-        run: scripts/release-assets.sh notes "${REF_NAME#v}" > "${RUNNER_TEMP}/release-notes.md"
+        run: |
+          version="${REF_NAME#v}"
+          {
+            scripts/release-assets.sh notes "${version}"
+            scripts/release-assets.sh downloads "${version}"
+          } > "${RUNNER_TEMP}/release-notes.md"
       # A vX.Y.Z-beta.N tag is a pre-release: GitHub's `latest` stays on the newest plain release.
       - name: Publish the GitHub release
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
@@ -208,14 +239,75 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: release-assets/*
 
+  # The plugins as a release of their own (RB-090-79), after the application's, so the two never
+  # mix in the release list: `plugins-vX.Y.Z` "rBrowser plugins X.Y.Z" on the tag's commit with
+  # every first-party package but a test-only one and their own SHA256SUMS
+  # (scripts/release-plugins.sh assets; no offline bundle - the package's own plugins are that);
+  # a pre-release with a beta tag and never `latest`, which stays the application's. Then the
+  # official catalogue's index replaces the asset of the fixed release `plugin-index`, the address
+  # the app reads - for the newest plain tag only (scripts/release-plugins.sh gate): the index
+  # cannot tell a beta from a stable channel, so a pre-release leaves it on the last release. No
+  # key here: the packages and the index were signed in `plugins`.
+  plugin-release:
+    needs: [plugins, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      # The plugin release and the asset of the release `plugin-index`.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plugins
+          path: plugin-packages
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plugin-index
+          path: plugin-index
+      - name: Stage the plugin release and write its text
+        id: stage
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${REF_NAME#v}"
+          scripts/release-plugins.sh assets plugin-packages plugin-assets
+          scripts/release-plugins.sh notes "${version}" > "${RUNNER_TEMP}/plugin-release.md"
+          echo "name=rBrowser plugins ${version}" >> "${GITHUB_OUTPUT}"
+      # Its tag `plugins-vX.Y.Z` comes from the run's token, which starts no workflow (and the
+      # trigger's `v*.*.*` would not match it).
+      - name: Publish the plugin release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          tag_name: plugins-${{ github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.stage.outputs.name }}
+          body_path: ${{ runner.temp }}/plugin-release.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: false
+          files: plugin-assets/*
+      - name: Decide whether the official plugin index moves
+        id: gate
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: scripts/release-plugins.sh gate
+      - name: Replace the official plugin index
+        if: steps.gate.outputs.index == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/release-plugins.sh publish-index plugin-index/rbrowser-plugin-index.json
+
   # The package channels (RB-090-13, RB-110-04), after the release is published: each job moves
   # its channel to this release, and only for the newest plain vX.Y.Z tag
   # (scripts/release-channels.sh gate),
   # so a re-run of an older tag or a pre-release moves nothing back. The release is out by then, so
   # nothing here may fail it - a failed channel shows as a failed job of the run. Each job gets the
   # secret it reads and nothing else, and nothing prints one; a job whose secret is not set ends
-  # with a notice. The Homebrew tap and the apt and dnf repository wait for the macOS and Linux
-  # packages (RB-110-01, RB-110-02): until a release carries them, their jobs end with a notice.
+  # with a notice. The tap's cask follows the macOS packages (RB-090-80); its Linux formula and the
+  # apt and dnf repository wait for the Linux packages (RB-110-01): until a release carries them,
+  # the formula is not written and the repository's job ends with a notice.
   #
   # The tap and the bucket are pushed with a write deploy key of their own repository,
   # <owner>/homebrew-rbrowser and <owner>/scoop-rbrowser (HOMEBREW_TAP_DEPLOY_KEY,

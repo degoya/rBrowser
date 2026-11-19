@@ -5,7 +5,7 @@
 //! file of the flows folder - a stored recording played back (RB-090-66) - comes in memory
 //! ([`InlineFlow`]) and runs the same way, behind the same trust gate.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -18,7 +18,9 @@ use tokio::sync::{mpsc, watch};
 use super::FlowError;
 use super::catalog;
 use super::gate;
-use super::plan::{Runnable, engine_name, plan};
+use super::plan::{
+    Runnable, engine_name, missing_breakpoints, nothing_to_play, plan, without_hidden,
+};
 use super::result::{
     ErrorInfo, RESULT_VERSION, RunResult, ViewResult, ViewStatus, run_dir, valid_run_id, write,
 };
@@ -49,6 +51,8 @@ pub struct Setup {
     pub views: Vec<ViewInfo>,
     /// The page target of each view that has one.
     pub targets: BTreeMap<ViewId, String>,
+    /// The views a layout mode placed off screen: skipped (RB-090-84).
+    pub hidden: BTreeSet<ViewId>,
     /// The `env` global: the active environment's URL, else the start URL.
     pub env: Option<String>,
     /// The trust store (`trust.json`).
@@ -82,6 +86,9 @@ pub struct InlineFlow {
     pub file: String,
     /// The breakpoints it runs in when no views are asked for and its text names none.
     pub views: Vec<String>,
+    /// How long the flow waits on purpose - a recording played at the `recorded` pace waits its
+    /// pauses (RB-090-84): added to the flow's timeout, so the waits take no time from its steps.
+    pub pause_ms: u64,
 }
 
 /// The flow a run takes: its text, its file as errors and as `result.json` name it, and the
@@ -170,6 +177,11 @@ pub fn budget(views: usize, parallel: u32, timeout_ms: u32) -> Duration {
         + RUN_GRACE
 }
 
+/// A flow's `timeout_ms` with the `pause_ms` it waits on purpose on top, at most `u32::MAX`.
+fn with_pauses(timeout_ms: u32, pause_ms: u64) -> u32 {
+    u32::try_from(u64::from(timeout_ms).saturating_add(pause_ms)).unwrap_or(u32::MAX)
+}
+
 /// Runs `request` in `setup` and writes its `result.json`; `cancel` turning `true` ends it.
 ///
 /// # Errors
@@ -208,8 +220,24 @@ pub async fn execute(
         }
         (error, _) => error,
     })?;
+    // RB-090-84: the views a layout hides are skipped, the breakpoints no view shows named; views
+    // asked for by id or name play even when hidden.
+    let (planned, skipped_breakpoints) = match &request.views {
+        Some(_) => (planned, Vec::new()),
+        None => (
+            without_hidden(planned, &setup.hidden),
+            missing_breakpoints(&setup.views, &flow.head.views),
+        ),
+    };
+    // A run with no view to play fails; it never passes having played nothing.
+    if planned.run.is_empty() {
+        return Err(FlowError::NoViews(nothing_to_play(&planned.skipped)));
+    }
     announce(&progress, &planned.run, &planned.skipped);
-    let timeout_ms = flow.head.timeout_ms.unwrap_or(setup.settings.timeout_ms);
+    let timeout_ms = with_pauses(
+        flow.head.timeout_ms.unwrap_or(setup.settings.timeout_ms),
+        request.inline.as_ref().map_or(0, |inline| inline.pause_ms),
+    );
     let dir = run_dir(&setup.root, &request.run_id);
     let file = flow.display.clone();
     let ran = if planned.run.is_empty() {
@@ -253,6 +281,7 @@ pub async fn execute(
         duration_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
         passed: !RunResult::failed(&views),
         views,
+        skipped_breakpoints,
         error: None,
     };
     write(&dir, &result)?;
@@ -298,6 +327,7 @@ pub async fn execute_recorded(
                 duration_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
                 passed: false,
                 views: Vec::new(),
+                skipped_breakpoints: Vec::new(),
                 error: Some(rb_diag::redact(&error.to_string())),
             };
             if let Err(written) = write(&dir, &result) {
@@ -401,6 +431,8 @@ fn failed(runnable: &Runnable, message: &str, file: &str) -> ViewResult {
         message: message.to_owned(),
         stack: String::new(),
         step: None,
+        step_id: None,
+        summary: None,
         line: None,
         column: None,
         file: file.to_owned(),
@@ -411,3 +443,7 @@ fn failed(runnable: &Runnable, message: &str, file: &str) -> ViewResult {
 #[cfg(test)]
 #[path = "run_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "run_hidden_tests.rs"]
+mod hidden_tests;

@@ -143,6 +143,7 @@ fn setup(root: &Path, settings: &Path) -> Setup {
         settings: rb_config::FlowSettings::default(),
         views,
         targets,
+        hidden: std::collections::BTreeSet::new(),
         env: Some("https://a.test".to_owned()),
         trust_store: Some(settings.join(rb_config::trust::TRUST_FILE)),
         started_at: "2026-11-11T10:15:00Z".to_owned(),

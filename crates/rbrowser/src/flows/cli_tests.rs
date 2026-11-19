@@ -31,6 +31,7 @@ fn result(views: Vec<ViewResult>) -> RunResult {
         duration_ms: 1200,
         passed: !RunResult::failed(&views),
         views,
+        skipped_breakpoints: Vec::new(),
         error: None,
     }
 }
@@ -86,6 +87,8 @@ fn the_text_names_each_view_its_error_line_step_and_screenshot() {
         message: "expect(received).toBe(expected)\n\nExpected: 2".to_owned(),
         stack: String::new(),
         step: Some("check".to_owned()),
+        step_id: None,
+        summary: None,
         line: Some(3),
         column: Some(5),
         file: "/home/u/site/.rbrowser/flows/login.ts".to_owned(),

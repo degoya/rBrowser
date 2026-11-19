@@ -20,11 +20,14 @@ RESERVED = "option"
 
 
 def options_of(node: dict):
-    """The allowed values of an `enum` or a `oneOf` of constants; `None` when the node is none."""
+    """The allowed values of an `enum` or a `oneOf` of constants; `None` when the node is none.
+    A branch marked `deprecated` - an earlier form the schema still accepts - is no option."""
     values = node.get("enum")
     if isinstance(values, list):
         return values
     branches = node.get("oneOf")
+    if isinstance(branches, list):
+        branches = [b for b in branches if not (isinstance(b, dict) and b.get("deprecated") is True)]
     if (
         isinstance(branches, list) and branches
         and all(isinstance(branch, dict) and "const" in branch for branch in branches)

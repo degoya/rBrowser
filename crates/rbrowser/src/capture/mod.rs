@@ -63,6 +63,8 @@ pub const COUNTDOWN_KEY: &str = "capture.notice.countdown";
 pub const PICK_KEY: &str = "capture.notice.pick";
 /// The notice after `capture.delay_cycle`; placeholder `{seconds}`.
 pub const DELAY_KEY: &str = "capture.notice.delay";
+/// The notice that a capture without a delay started (RB-090-85).
+pub const CAPTURING_KEY: &str = "capture.notice.capturing";
 /// The settings section the notices link to.
 const SETTINGS_KEY: &str = "capture";
 
@@ -181,7 +183,8 @@ fn cycle_delay(core: &Core) -> Value {
     json!({ "delaySeconds": next.secs() })
 }
 
-/// Starts the capture of a command and answers at once; the result comes as a notification.
+/// Starts the capture of a command and answers at once; its start (RB-090-85) and its result
+/// come as notifications.
 fn start(core: &Core, args: &Value, preset: &ScreenshotArgs) -> Result<Value, CommandError> {
     let args: ScreenshotArgs = match args {
         Value::Null => ScreenshotArgs::default(),
@@ -201,6 +204,9 @@ fn start(core: &Core, args: &Value, preset: &ScreenshotArgs) -> Result<Value, Co
         .arc()
         .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
     let delay_ms = u64::try_from(request.delay.as_millis()).unwrap_or(u64::MAX);
+    if let Some(started) = capturing_notice(&request) {
+        core.notify(started);
+    }
     let runtime = core.host().runtime().clone();
     runtime.spawn(async move {
         match screenshot(&core, &request).await {
@@ -224,6 +230,14 @@ fn start(core: &Core, args: &Value, preset: &ScreenshotArgs) -> Result<Value, Co
         }
     });
     Ok(json!({ "started": true, "delayMs": delay_ms }))
+}
+
+/// The notice that a command's capture started, so a full page of every view does not run
+/// unseen (RB-090-85); none where another notice names the start - the countdown of a delay,
+/// the pick of an element.
+fn capturing_notice(request: &ScreenshotRequest) -> Option<CoreToShell> {
+    let named = !request.delay.is_zero() || matches!(request.mode, CaptureMode::Element);
+    (!named).then(|| notice(NotificationLevel::Info, CAPTURING_KEY, &[]))
 }
 
 /// Captures what `request` asks for and waits for it: the MCP tool, the CLI and the commands.

@@ -1,10 +1,11 @@
-//! The render views of a sitemap capture over the app's own CDP connection
-//! ([`CdpRenderBackend`], `rb_engine::chromium::hidden::RenderBackend`): each view is a hidden
-//! Chromium target (`Target.createTarget { hidden: true }`, a background target where hidden
-//! ones are refused, as the analyser's page), so it never shows in the grid, takes no input and
-//! is never seen by an outer CDP client - its id is registered with the app's hidden targets at
-//! once. A named session's target is made in that session's browser context, found through a
-//! grid view showing the session; a session no view shows is refused, never swapped for the
+//! The render views of a sitemap capture and an environment comparison over the app's own CDP
+//! connection ([`CdpRenderBackend`], `rb_engine::chromium::hidden::RenderBackend`): each view is
+//! a windowless Chromium browser the window makes at the view's marker URL
+//! (`super::render_views`, RB-090-83) - it paints, so `Page.captureScreenshot` gets its frames,
+//! but it never shows in the grid and takes no input. Its target is found by that URL among
+//! `Target.getTargets` and registered with the app's hidden targets at once, so no outer CDP
+//! client sees it; it closes through its browser's host. A named session's view lives in that
+//! session's request context; a session no grid view shows is refused, never swapped for the
 //! default one.
 //!
 //! A view gets its breakpoint's emulation once (device metrics at scale 1, then the calls of
@@ -14,7 +15,8 @@
 //! still captured), a selector, scrolling to the end and back for lazy content, a further delay.
 //! The screenshot is `crate::capture::cdp::capture` on the view's session, on a page prepared
 //! by `crate::capture::clean` as the run's [`CleanPlan`] says (RB-080-12: banners hidden,
-//! animations frozen, undone right after).
+//! animations frozen, undone right after), within its own deadline ([`SHOT_TIMEOUT`], the
+//! setting `sitemap.shotTimeoutSec`) instead of the router's 30 s.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -29,6 +31,9 @@ use serde_json::{Value, json};
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::broadcast::error::RecvError;
 
+use super::render_views::{
+    FIND_DEADLINE, RenderView, RenderViews, find_target, forget_when_closed, next_marker,
+};
 use super::scripts;
 use crate::capture::cdp::{CaptureTarget, Shot, capture};
 use crate::capture::clean;
@@ -44,8 +49,11 @@ pub const NETWORK_IDLE_MAX: Duration = Duration::from_secs(10);
 const SELECTOR_POLL: Duration = Duration::from_millis(100);
 /// The session of the grid's default browser context.
 pub const DEFAULT_SESSION: &str = "default";
+/// The longest one screenshot may take (`sitemap.shotTimeoutSec`'s default).
+pub const SHOT_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Finds a grid view's target showing `session`, for its browser context.
+/// A grid view's target showing a session: its render views live in that view's browser
+/// context, and a target in any other is never taken for one.
 pub type SessionTarget = Box<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
 /// Where a page's load stands, kept from `navigate` for `wait`.
@@ -58,6 +66,8 @@ struct Navigation {
 
 /// One open render view.
 struct View {
+    /// The URL its browser started at: how the window closes it.
+    marker: String,
     target: String,
     session: String,
     metrics: Value,
@@ -68,13 +78,15 @@ struct View {
     navigation: Option<Navigation>,
 }
 
-/// Render views as hidden targets of `cdp`.
+/// Render views as windowless browsers of `window`, driven over `cdp`.
 pub struct CdpRenderBackend {
     cdp: Arc<CdpRouter>,
     session_target: SessionTarget,
+    window: Arc<dyn RenderViews>,
     views: Mutex<BTreeMap<RenderId, Arc<tokio::sync::Mutex<View>>>>,
     next: AtomicU32,
     clean: CleanPlan,
+    shot_timeout: Duration,
 }
 
 fn invalid(text: impl Into<String>) -> EngineError {
@@ -105,14 +117,21 @@ pub fn render_metrics(emulation: &Emulation) -> Value {
 }
 
 impl CdpRenderBackend {
-    /// Render views on `cdp`; `session_target` names a grid view's target per session.
-    pub fn new(cdp: Arc<CdpRouter>, session_target: SessionTarget) -> Self {
+    /// Render views made by `window`, driven over `cdp`; `session_target` names a grid view's
+    /// target per session.
+    pub fn new(
+        cdp: Arc<CdpRouter>,
+        session_target: SessionTarget,
+        window: Arc<dyn RenderViews>,
+    ) -> Self {
         Self {
             cdp,
             session_target,
+            window,
             views: Mutex::new(BTreeMap::new()),
             next: AtomicU32::new(1),
             clean: CleanPlan::default(),
+            shot_timeout: SHOT_TIMEOUT,
         }
     }
 
@@ -123,6 +142,13 @@ impl CdpRenderBackend {
         self
     }
 
+    /// The same backend, each screenshot given up after `timeout`.
+    #[must_use]
+    pub fn with_shot_timeout(mut self, timeout: Duration) -> Self {
+        self.shot_timeout = timeout;
+        self
+    }
+
     fn view(&self, id: RenderId) -> Result<Arc<tokio::sync::Mutex<View>>, EngineError> {
         lock(&self.views)
             .get(&id)
@@ -130,42 +156,64 @@ impl CdpRenderBackend {
             .ok_or(EngineError::Closed)
     }
 
-    /// The browser context of `session`: none for the default one.
+    /// The browser context `session`'s render views must be in: that of a grid view showing
+    /// it. A named session no view shows is refused; the default one without a view is held to
+    /// no context (its random marker and no opener still are).
     async fn context(&self, session: &str) -> Result<Option<String>, EngineError> {
-        if session == DEFAULT_SESSION {
-            return Ok(None);
-        }
-        let target = (self.session_target)(session)
-            .ok_or_else(|| invalid(format!("no view shows the session {session}")))?;
+        let Some(grid) = (self.session_target)(session) else {
+            if session == DEFAULT_SESSION {
+                return Ok(None);
+            }
+            return Err(invalid(format!("no view shows the session {session}")));
+        };
         let info = self
             .cdp
-            .call("Target.getTargetInfo", json!({ "targetId": target }), None)
+            .call("Target.getTargetInfo", json!({ "targetId": grid }), None)
             .await?;
-        text_of(&info, "/targetInfo/browserContextId")
-            .map(Some)
-            .ok_or_else(|| invalid(format!("the session {session} has no browser context")))
+        match text_of(&info, "/targetInfo/browserContextId") {
+            Some(context) => Ok(Some(context)),
+            None if session == DEFAULT_SESSION => Ok(None),
+            None => Err(invalid(format!(
+                "the session {session} has no browser context"
+            ))),
+        }
     }
 
-    /// A hidden target at `marker`, in `context`.
-    async fn create(&self, marker: &str, context: Option<&str>) -> Result<String, EngineError> {
-        let with = |mut params: Value| {
-            if let Some(context) = context {
-                params["browserContextId"] = json!(context);
-            }
-            params
+    /// Has the window make `spec`'s browser at `marker` and finds its target by that URL in
+    /// the session's context; the browser is closed again when it is not found.
+    async fn create(&self, marker: &str, spec: &RenderSpec) -> Result<String, EngineError> {
+        let context = self.context(&spec.session).await?;
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let view = RenderView::new(
+            marker,
+            &spec.session,
+            spec.emulation.width,
+            spec.emulation.height,
+        );
+        self.window.open(
+            view,
+            Box::new(move |made| {
+                // The open gave up already: nothing waits for the answer.
+                let _ = sender.send(made);
+            }),
+        );
+        let made = match tokio::time::timeout(FIND_DEADLINE, receiver).await {
+            Ok(Ok(made)) => made,
+            Ok(Err(_)) => Err("the window dropped the render view".to_owned()),
+            Err(_) => Err("the window made no render view in time".to_owned()),
         };
-        let hidden = with(json!({ "url": marker, "hidden": true, "background": true }));
-        let created = match self.cdp.call("Target.createTarget", hidden, None).await {
-            Ok(created) => created,
+        if let Err(error) = made {
+            // A browser made after the deadline goes again.
+            self.window.close(marker.to_owned());
+            return Err(invalid(error));
+        }
+        match find_target(&self.cdp, marker, context.as_deref()).await {
+            Ok(target) => Ok(target),
             Err(error) => {
-                tracing::info!(%error, "no hidden target; the render view is a background one");
-                let background = with(json!({ "url": marker, "background": true }));
-                self.cdp
-                    .call("Target.createTarget", background, None)
-                    .await?
+                self.window.close(marker.to_owned());
+                Err(error)
             }
-        };
-        text_of(&created, "/targetId").ok_or_else(|| invalid("createTarget gave no targetId"))
+        }
     }
 
     /// Attaches `target` and gives it `spec`'s emulation; its session.
@@ -202,15 +250,11 @@ impl CdpRenderBackend {
         Ok(session)
     }
 
-    async fn close_target(&self, target: &str) {
-        match self
-            .cdp
-            .call("Target.closeTarget", json!({ "targetId": target }), None)
-            .await
-        {
-            Ok(_) => crate::devtools::hidden::forget(target),
-            Err(error) => tracing::warn!(%error, "a render view was not closed"),
-        }
+    /// Closes the browser started at `marker`; its target `target` is forgotten as hidden
+    /// once it is gone.
+    async fn close_view(&self, marker: &str, target: &str) {
+        self.window.close(marker.to_owned());
+        forget_when_closed(&self.cdp, target).await;
     }
 
     async fn evaluate(&self, session: &str, expression: &str) -> Result<Value, EngineError> {
@@ -292,18 +336,18 @@ fn loaded_of(answer: &Value, asked: &str) -> Loaded {
 impl RenderBackend for CdpRenderBackend {
     async fn open(&self, spec: &RenderSpec) -> Result<RenderId, EngineError> {
         let id = RenderId(self.next.fetch_add(1, Ordering::Relaxed));
-        let context = self.context(&spec.session).await?;
-        let marker = format!("{MARKER_PREFIX}{}", id.0);
-        let target = self.create(&marker, context.as_deref()).await?;
+        let marker = next_marker()?;
+        let target = self.create(&marker, spec).await?;
         crate::devtools::hidden::register(&target);
         let session = match self.prepare(&target, spec).await {
             Ok(session) => session,
             Err(error) => {
-                self.close_target(&target).await;
+                self.close_view(&marker, &target).await;
                 return Err(error);
             }
         };
         let view = View {
+            marker,
             target,
             session,
             metrics: render_metrics(&spec.emulation),
@@ -321,6 +365,15 @@ impl RenderBackend for CdpRenderBackend {
         let mut view = view.lock().await;
         let session = view.session.clone();
         view.navigation = None;
+        // Every page starts at the breakpoint's size, whatever a shot before left (one given up
+        // mid-way keeps a full page's height).
+        self.cdp
+            .call(
+                "Emulation.setDeviceMetricsOverride",
+                view.metrics.clone(),
+                Some(&session),
+            )
+            .await?;
         let events = self.cdp.subscribe();
         let answer = self
             .cdp
@@ -395,7 +448,26 @@ impl RenderBackend for CdpRenderBackend {
         };
         let metrics = view.metrics.clone();
         let restore = move || Some(metrics.clone());
-        let shot = capture(&self.cdp, &target, &shot, 1.0, &restore);
+        let deadline = self.shot_timeout;
+        let shot = async {
+            let captured = capture(&self.cdp, &target, &shot, 1.0, &restore);
+            match tokio::time::timeout(deadline, captured).await {
+                Ok(result) => result,
+                Err(_) => {
+                    // Dropped mid-way, the capture did not put the breakpoint's size back.
+                    let back = Some(view.session.as_str());
+                    let metrics = view.metrics.clone();
+                    if let Err(error) = self
+                        .cdp
+                        .call("Emulation.setDeviceMetricsOverride", metrics, back)
+                        .await
+                    {
+                        tracing::debug!(%error, "a render view kept a shot's size");
+                    }
+                    Err(invalid(format!("no frame within {} s", deadline.as_secs())))
+                }
+            }
+        };
         clean::around(&self.cdp, &view.session, &self.clean, &view.media, shot).await
     }
 
@@ -403,8 +475,11 @@ impl RenderBackend for CdpRenderBackend {
         let Some(view) = lock(&self.views).remove(&view) else {
             return;
         };
-        let target = view.lock().await.target.clone();
-        self.close_target(&target).await;
+        let (marker, target) = {
+            let view = view.lock().await;
+            (view.marker.clone(), view.target.clone())
+        };
+        self.close_view(&marker, &target).await;
     }
 }
 

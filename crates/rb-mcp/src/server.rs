@@ -68,6 +68,7 @@ impl RbMcpServer {
             + Self::plugin_catalogue_router()
             + Self::page_zoom_router()
             + Self::force_state_router()
+            + Self::updates_router()
     }
 
     /// The names of every tool, sorted: what the coverage test holds the commands against.

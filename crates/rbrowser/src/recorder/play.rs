@@ -11,7 +11,9 @@
 //! - `recorder.play`: `{ recordingId?, views?, pace? }` - the last saved recording when
 //!   `recordingId` is absent; `views` as `flows.run` takes them (view ids, breakpoint ids or
 //!   labels); `pace` (`fast` or `recorded`) as `automation.recorder.playbackPace`, whose value
-//!   it is when absent - `recorded` waits the pauses as they were recorded, each at most 10 s. The
+//!   it is when absent - `recorded` waits the pauses as they were recorded, each at most 10 s,
+//!   and the run's timeout grows by them (the exporter's, [`export::recorded_pauses`],
+//!   RB-090-84). The
 //!   recording is read and rendered off the calling thread (a WSL project's disk is a network
 //!   share, the plugin call blocks); what goes wrong before the run starts is a notice.
 //! - `recorder_play` (a host tool): `{ recordingId?, views?, pace?, wait? }`, the result as `flow_run`
@@ -77,6 +79,23 @@ pub fn args(args: &Value) -> Result<PlayArgs, CommandError> {
         .map_err(|error| CommandError::InvalidArgs(error.to_string()))
 }
 
+/// [`inline_flow`] waiting `pause_ms` on purpose - the exporter's pauses at the `recorded`
+/// pace ([`export::recorded_pauses`]), 0 at `fast` -, which the run adds to its timeout.
+///
+/// # Errors
+///
+/// Those of [`inline_flow`].
+pub fn played_flow(
+    recording: &Recording,
+    files: Vec<(String, String)>,
+    file: String,
+    pause_ms: u64,
+) -> Result<InlineFlow, CommandError> {
+    let mut flow = inline_flow(recording, files, file)?;
+    flow.pause_ms = pause_ms;
+    Ok(flow)
+}
+
 /// The flow `recording` plays as: the plugin's flow among `files` (the `.ts` that is no
 /// Playwright test), named `file` in results, run in the recording's breakpoints.
 ///
@@ -106,6 +125,7 @@ pub fn inline_flow(
             .iter()
             .map(|breakpoint| breakpoint.id.clone())
             .collect(),
+        pause_ms: 0,
     })
 }
 
@@ -139,8 +159,18 @@ pub fn prepare(
         |_| format!("{id}.json"),
         |path| export::relative(&root, &path),
     );
-    let files = export::render_recording_at(core, &recording, None, ExportFormat::Flow, pace)?;
-    let flow = inline_flow(&recording, files, file)?;
+    let config = core.host().config();
+    let pace = export::pace_of(pace, &config);
+    let files =
+        export::render_recording_at(core, &recording, None, ExportFormat::Flow, Some(pace))?;
+    let pause_ms = match pace {
+        PlaybackPace::Recorded => export::recorded_pauses(core, &recording)?
+            .iter()
+            .map(|pause| pause.ms)
+            .sum(),
+        PlaybackPace::Fast => 0,
+    };
+    let flow = played_flow(&recording, files, file, pause_ms)?;
     Ok((id, flow))
 }
 
@@ -176,6 +206,10 @@ pub fn run(core: &Core, raw: &Value) -> Result<Value, CommandError> {
             Err(error) => Some(error.to_string()),
         };
         if let Some(error) = failed {
+            tracing::warn!(
+                error = crate::flows::report::reason(&error).as_str(),
+                "a recording could not be played"
+            );
             core.notify(failed_notice(asked_for.as_deref(), &error));
         }
     });

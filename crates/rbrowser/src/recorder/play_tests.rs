@@ -112,3 +112,16 @@ fn a_play_that_did_not_start_names_its_recording_or_the_last() {
         Some("no recording yet")
     );
 }
+
+#[test]
+fn a_flow_played_as_recorded_carries_the_exporters_pauses() {
+    // RB-090-84: the pauses come from the exporter (`export::recorded_pauses`), the one rule;
+    // the run adds them to its timeout.
+    let recording = recording(json!([]));
+    let file = || "x.json".to_owned();
+    let fast = played_flow(&recording, files(), file(), 0).expect("a flow");
+    assert_eq!(fast.pause_ms, 0);
+    let recorded = played_flow(&recording, files(), file(), 31_000).expect("a flow");
+    assert_eq!(recorded.pause_ms, 31_000);
+    assert_eq!(recorded.source, fast.source);
+}

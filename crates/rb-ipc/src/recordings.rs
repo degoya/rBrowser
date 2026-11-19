@@ -1,7 +1,8 @@
 //! The Recorder and Flows panels' payloads (RB-090-60): the stored recordings (`getRecordings`,
 //! `saveRecording`), an export's files (`exportRecording`, a preview when nothing is written)
 //! and the flow run going on with the last result (`getFlowRun`). `recordingsChanged` and
-//! `flowRunChanged` tell the panels to ask again. TypeScript mirror: `ui/src/ipc/recordings.ts`.
+//! `flowRunChanged` tell the panels to ask again; `flowStep` pushes each step of a run as it
+//! starts and ends (RB-090-84). TypeScript mirror: `ui/src/ipc/recordings.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -121,4 +122,39 @@ pub struct FlowViewStatus {
     pub view: u32,
     /// Its status.
     pub status: String,
+}
+
+/// A step of a flow run started or ended (RB-090-84): the runner's `step(name, ...)` as the
+/// sidecar reports it, pushed so the Recorder panel follows a played recording.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowStep {
+    /// The run's id.
+    pub run_id: String,
+    /// The flow; a played recording's name.
+    pub flow: String,
+    /// The view it runs in.
+    pub view: u32,
+    /// The step's name (`Step 3: click` in a played recording).
+    pub name: String,
+    /// The recording's step id, for a name `Step <id>: ...`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_id: Option<u32>,
+    /// `running`, `passed` or `failed`.
+    pub state: String,
+    /// Why a failed step failed: its error's first line, masked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+/// The pause before a step of a recording at the pace `recorded` (RB-090-84), as the
+/// `recorder-export` plugin writes it into the flow: `getRecording` answers them with the
+/// recording, so the Recorder panel shows what Play waits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StepPause {
+    /// The step's id.
+    pub step: u32,
+    /// The pause before it, in ms.
+    pub ms: u64,
 }

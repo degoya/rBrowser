@@ -13,12 +13,14 @@
 //! - [`perform`], [`script`]: the work in the views over CDP.
 //! - [`interval`]: the interval reload's schedule.
 //! - [`service`]: all of it for one window.
+//! - [`helper_notice`]: the start and the end of `wsl.restart_helper` in the status bar.
 //! - [`mcp`], [`status`]: the tool `reload`, the watcher's state for the toolbar and
 //!   `project_info`.
 
 pub mod classify;
 #[cfg(test)]
 mod fake_host;
+pub mod helper_notice;
 pub mod interval;
 pub mod mcp;
 pub mod options;
@@ -69,7 +71,6 @@ fn current() -> Option<HotReload> {
 /// otherwise. A full `reload.all` is navigation sync's (RB-020-06: the coupled views), and
 /// before [`on_start`] `reload.all` is left to the core's own handler.
 pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, CommandError>> {
-    let _ = core;
     let forced = match id {
         RELOAD_ALL if ReloadArgs::is_full(args) => return None,
         RELOAD_ALL => None,
@@ -78,13 +79,17 @@ pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, 
             let Some(service) = current() else {
                 return Some(Err(not_started()));
             };
-            return Some(Ok(json!({ "paused": service.toggle_pause() })));
+            let paused = service.toggle_pause();
+            core.notify(pause_notice(&service.info()));
+            return Some(Ok(json!({ "paused": paused })));
         }
         RESTART_HELPER => {
             let Some(service) = current() else {
                 return Some(Err(not_started()));
             };
-            return Some(run_restart_helper(&service));
+            // The start and the end in the status bar (RB-090-85).
+            let restarted = helper_notice::follow(core, &service, || service.restart_helper());
+            return Some(run_restart_helper(restarted));
         }
         _ => return None,
     };
@@ -111,12 +116,50 @@ fn run_reload(
     serde_json::to_value(answer).map_err(|error| CommandError::Failed(error.to_string()))
 }
 
-fn run_restart_helper(service: &HotReload) -> Result<Value, CommandError> {
-    if service.restart_helper() {
+/// The answer of `wsl.restart_helper`: restarted, or the project is not watched through the
+/// WSL helper.
+fn run_restart_helper(restarted: bool) -> Result<Value, CommandError> {
+    if restarted {
         Ok(json!({ "restarted": true }))
     } else {
         Err(CommandError::Failed(NO_HELPER_KEY.to_owned()))
     }
+}
+
+/// The notice of a paused hot reload.
+pub const PAUSED_KEY: &str = "reload.status.paused";
+/// The notice of a resumed hot reload watching as usual.
+pub const RESUMED_KEY: &str = "reload.notice.resumed";
+/// The notice of a resumed hot reload whose watch is not the usual one; `{state}`.
+pub const RESUMED_STATE_KEY: &str = "reload.notice.resumedState";
+
+/// The notice after `reload.toggle_pause`: "Hot reload paused" or "Hot reload resumed", the
+/// watch state beside it only when it is not the plain watch (off, starting, polling, failed).
+/// No control shows the state, so the menu row, the palette and the shortcut said nothing
+/// (RB-090-82).
+pub fn pause_notice(info: &WatcherInfo) -> rb_ipc::CoreToShell {
+    let (key, args) = if info.paused {
+        (PAUSED_KEY, std::collections::BTreeMap::new())
+    } else if matches!(
+        info.status,
+        WatcherStatus::Native { .. } | WatcherStatus::Helper { .. }
+    ) {
+        (RESUMED_KEY, std::collections::BTreeMap::new())
+    } else {
+        (
+            RESUMED_STATE_KEY,
+            std::collections::BTreeMap::from([(
+                "state".to_owned(),
+                rb_i18n::t(info.status.label_key()),
+            )]),
+        )
+    };
+    rb_ipc::CoreToShell::Notification(rb_ipc::Notification {
+        level: rb_ipc::NotificationLevel::Info,
+        message_key: key.to_owned(),
+        args,
+        settings_key: None,
+    })
 }
 
 fn not_started() -> CommandError {

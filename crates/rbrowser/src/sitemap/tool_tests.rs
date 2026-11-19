@@ -46,17 +46,24 @@ fn run_args_take_an_optional_id() {
 #[test]
 fn the_tools_have_their_names() {
     assert_eq!(
-        [CAPTURE_TOOL, STATUS_TOOL, CANCEL_TOOL],
-        ["sitemap_capture", "sitemap_status", "sitemap_cancel"]
+        [CAPTURE_TOOL, STATUS_TOOL, CANCEL_TOOL, GALLERY_TOOL],
+        [
+            "sitemap_capture",
+            "sitemap_status",
+            "sitemap_cancel",
+            "sitemap_gallery"
+        ]
     );
     let started = serde_json::to_value(CaptureStarted {
         run_id: "r".to_owned(),
         folder: "f".to_owned(),
         pending: 76,
+        pages: 19,
+        breakpoints: 4,
     })
     .expect("serialises");
     assert_eq!(
         started,
-        json!({ "runId": "r", "folder": "f", "pending": 76 })
+        json!({ "runId": "r", "folder": "f", "pending": 76, "pages": 19, "breakpoints": 4 })
     );
 }

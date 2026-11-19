@@ -295,6 +295,18 @@ pub enum Selector {
         /// The match to take.
         #[serde(default, skip_serializing_if = "is_zero")]
         nth: u32,
+        /// The match's index among the visible ones (RB-090-81): the export takes that one in
+        /// every view. Absent in a recording made before, and for a hidden element.
+        #[serde(
+            default,
+            rename = "visibleNth",
+            skip_serializing_if = "Option::is_none"
+        )]
+        visible_nth: Option<u32>,
+        /// The CSS selector of an ancestor inside which the role and name match the element
+        /// alone (RB-090-84): the page showed the name more than once.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        within: Option<String>,
     },
     /// Tag and normalised text.
     Text {
@@ -305,6 +317,16 @@ pub enum Selector {
         /// The match to take.
         #[serde(default, skip_serializing_if = "is_zero")]
         nth: u32,
+        /// The match's index among the visible ones (RB-090-81).
+        #[serde(
+            default,
+            rename = "visibleNth",
+            skip_serializing_if = "Option::is_none"
+        )]
+        visible_nth: Option<u32>,
+        /// The ancestor inside which the text matches the element alone (RB-090-84).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        within: Option<String>,
     },
     /// The CSS path.
     Css {
@@ -327,12 +349,16 @@ pub fn candidates(selector: &ElementSelector) -> Vec<Selector> {
             role,
             name,
             nth,
+            visible_nth,
+            within,
             path,
         } => vec![
             Selector::Role {
                 role: role.clone(),
                 name: name.clone(),
                 nth: *nth,
+                visible_nth: *visible_nth,
+                within: within.clone(),
             },
             Selector::Css { path: path.clone() },
         ],
@@ -340,12 +366,16 @@ pub fn candidates(selector: &ElementSelector) -> Vec<Selector> {
             tag,
             text,
             nth,
+            visible_nth,
+            within,
             path,
         } => vec![
             Selector::Text {
                 tag: tag.clone(),
                 text: text.clone(),
                 nth: *nth,
+                visible_nth: *visible_nth,
+                within: within.clone(),
             },
             Selector::Css { path: path.clone() },
         ],

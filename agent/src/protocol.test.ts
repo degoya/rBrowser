@@ -33,7 +33,7 @@ const agentToCore: AgentMessage[] = [
       target: {
         hosts: [{ kind: 'css', path: 'app-shell' }],
         element: {
-          kind: 'role', role: 'button', name: 'Save', nth: 1,
+          kind: 'role', role: 'button', name: 'Save', nth: 1, visibleNth: 0,
           path: 'main > button:nth-of-type(2)',
         },
         offset: { x: 0.5, y: 0.5 },

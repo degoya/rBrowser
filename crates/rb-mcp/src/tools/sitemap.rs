@@ -1,9 +1,10 @@
-//! Sitemap capture (RB-050-05): `sitemap_capture`, `sitemap_status` and `sitemap_cancel`, run by
-//! the host (`crates/rbrowser/src/sitemap/app.rs`). A capture is no view tool: its pages load in
+//! Sitemap capture (RB-050-05): `sitemap_capture`, `sitemap_status`, `sitemap_cancel` and
+//! `sitemap_gallery` (RB-090-83), run by the host (`crates/rbrowser/src/sitemap/app.rs`). A capture is no view tool: its pages load in
 //! hidden render views of their own, one per breakpoint, never in the grid - so the tools take
 //! breakpoints, not `target`. `sitemap_capture` answers once the pages are found and the run goes
-//! on in the background; `sitemap_status` follows it. The commands `sitemap.capture`,
-//! `sitemap.cancel` and `panels.sitemap` are covered by these tools.
+//! on in the background; `sitemap_status` follows it; `sitemap_gallery` opens a run's gallery for
+//! the person, never in the grid. The commands `sitemap.capture`, `sitemap.cancel`,
+//! `sitemap.gallery` and `panels.sitemap` are covered by these tools.
 
 use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
@@ -16,6 +17,7 @@ use crate::backend::ToolFailure;
 const CAPTURE_TOOL: &str = "sitemap_capture";
 const STATUS_TOOL: &str = "sitemap_status";
 const CANCEL_TOOL: &str = "sitemap_cancel";
+const GALLERY_TOOL: &str = "sitemap_gallery";
 
 /// `sitemap_capture`.
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
@@ -61,7 +63,7 @@ pub struct SitemapCaptureParams {
     pub freeze_animations: Option<bool>,
 }
 
-/// `sitemap_status` and `sitemap_cancel`.
+/// `sitemap_status`, `sitemap_cancel` and `sitemap_gallery`.
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SitemapRunParams {
@@ -119,6 +121,22 @@ impl RbMcpServer {
         let result = async {
             let args = args_of(&params)?;
             self.backend.host_tool(CANCEL_TOOL, args).await
+        }
+        .await;
+        respond(result)
+    }
+
+    #[tool(
+        description = "Open the gallery (index.html) of a sitemap capture (runId; the latest run when absent) for the person in a window of rBrowser's own - never in the system browser or the grid's views. Answers the runId, the gallery's path and where it opened (window); a run without a gallery yet is the error sitemap.error.no_gallery."
+    )]
+    pub(crate) async fn sitemap_gallery(
+        &self,
+        Parameters(params): Parameters<SitemapRunParams>,
+    ) -> ToolResult {
+        let result = async {
+            let args = args_of(&params)?;
+            let answer = self.backend.host_tool(GALLERY_TOOL, args).await?;
+            Ok(self.backend.mask(&answer))
         }
         .await;
         respond(result)

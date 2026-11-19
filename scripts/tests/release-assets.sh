@@ -3,7 +3,9 @@
 # scripts/release-assets.sh (RB-090-04): `sums` writes SHA256SUMS over a folder's files that
 # `sha256sum -c` accepts and leaves itself and the Sigstore bundle out; `notes` prints a version's
 # section of a CHANGELOG.md, a pre-release falls back to its release's section, and a version
-# without a section fails.
+# without a section fails; `complete` refuses a release folder that lacks one of the packages
+# (Windows, and macOS per architecture as ZIP and DMG, RB-090-80); `downloads` names each
+# package and how macOS lets an app that is not notarised start.
 #
 #   scripts/tests/release-assets.sh
 set -euo pipefail
@@ -62,6 +64,39 @@ expect_output "the release's entry is printed" "- The release (RB-110-03)."
 run_status "$SCRIPT" notes 2.0.0 "$SCRATCH/CHANGELOG.md"
 expect_status "a version without a section fails" 1
 expect_output "the failure names the version" "no section ## [2.0.0]"
+
+# --- complete: every package of the release, RB-090-80 ---
+release="$SCRATCH/release"
+mkdir -p "$release"
+for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip macos-x86_64.dmg; do
+    echo package > "$release/rbrowser-1.1.0-$name"
+done
+run_status "$SCRIPT" complete "$release" 1.1.0
+expect_status "a release with every package is complete" 0
+expect_output "the packages are counted" "5 package(s) of rBrowser 1.1.0"
+rm "$release/rbrowser-1.1.0-macos-x86_64.dmg"
+run_status "$SCRIPT" complete "$release" 1.1.0
+expect_status "a release without a macOS DMG is refused" 1
+expect_output "naming it" "rbrowser-1.1.0-macos-x86_64.dmg"
+run_status "$SCRIPT" complete "$release" 1.2.0
+expect_status "packages of another version do not count" 1
+expect_output "naming the Windows ZIP of the version" "rbrowser-1.2.0-windows-x64.zip"
+run_status "$SCRIPT" complete "$SCRATCH/none" 1.1.0
+expect_status "a folder that does not exist fails" 1
+run_status "$SCRIPT" complete "$release"
+expect_status "complete without a version is a usage error" 2
+
+# --- downloads: the release text's part on the packages ---
+run_status "$SCRIPT" downloads 1.1.0
+expect_status "downloads prints the packages" 0
+expect_output "the Windows ZIP" "\`rbrowser-1.1.0-windows-x64.zip\`"
+expect_output "Apple Silicon" "\`rbrowser-1.1.0-macos-aarch64.dmg\`"
+expect_output "Intel" "\`rbrowser-1.1.0-macos-x86_64.dmg\`"
+expect_output "how Gatekeeper lets the app start" "xattr -dr com.apple.quarantine /Applications/rBrowser.app"
+expect_output "Open Anyway" "Open Anyway"
+expect_output "the checksums" "sha256sum -c SHA256SUMS"
+run_status "$SCRIPT" downloads
+expect_status "downloads without a version is a usage error" 2
 
 run_status "$SCRIPT" unknown
 expect_status "an unknown command is a usage error" 2

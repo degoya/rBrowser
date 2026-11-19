@@ -25,7 +25,7 @@ fn theme_rows() -> Vec<NativeMenuRow> {
 
 #[test]
 fn a_label_keeps_its_ampersand_and_stays_on_one_line() {
-    assert_eq!(menu_label("Docs & Blog"), "Docs && Blog");
+    assert_eq!(menu_label("Docs & Blog"), "Docs & Blog");
     assert_eq!(menu_label("a\tb\nc"), "a b c");
     assert_eq!(menu_label("Dark (current)"), "Dark (current)");
 }
@@ -61,7 +61,7 @@ fn rows_become_entries_with_their_checks() {
         [
             Entry::Heading {
                 index: 0,
-                label: "Docs && more".into()
+                label: "Docs & more".into()
             },
             plain(1, "System", Some(false), true),
             plain(2, "Dark", Some(true), true),
@@ -103,7 +103,7 @@ fn a_submenu_and_its_rows_are_numbered_depth_first() {
     else {
         panic!("a submenu: {shown:?}");
     };
-    assert_eq!((*index, label.as_str()), (1, "Layout && more"));
+    assert_eq!((*index, label.as_str()), (1, "Layout & more"));
     assert!(matches!(
         inner[0],
         Entry::Item {

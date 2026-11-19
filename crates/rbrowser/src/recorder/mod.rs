@@ -15,10 +15,12 @@
 //! | The Recorder panel: list, edit, save, export preview, `panels.recorder` (RB-090-60) | [`panel`] |
 //! | A person's flow export into the flows folder, its trust kept (RB-090-66) | [`flow_file`] |
 //! | Playing a recording through the flows runner, `recorder.play`, MCP `recorder_play` (RB-090-66) | [`play`] |
+//! | The form autofill's fills as steps, its `record_fill` host post (RB-090-78) | [`autofill`] |
 //!
 //! Nothing starts with the app: the window's recorder is made on its first command, on the
 //! core's runtime (never `tokio::spawn` - a command may come from the CEF UI thread).
 
+pub mod autofill;
 pub mod check;
 pub mod export;
 pub mod flow_file;

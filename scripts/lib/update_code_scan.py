@@ -1,7 +1,7 @@
 """Whether a binary carries rb-update, the self-update crate (RB-090-02).
 
 Without the Cargo feature `self-update` the app does not link rb-update (crates/rbrowser/
-Cargo.toml) and does not compile `updates/active.rs`, which holds the release address. What
+Cargo.toml), whose `sources.rs` holds the release address. What
 either would leave in a binary, read as raw bytes - the string list of the binary and the
 symbol list of its PDB:
 
@@ -9,7 +9,7 @@ symbol list of its PDB:
   in its module paths (tracing targets, type names);
 - `crates/rb-update/` and `crates\\rb-update\\`: its sources, as every panic location in it
   names them (built in WSL or on Windows);
-- `releases/latest/download/`: the release address `updates/active.rs` fetches from.
+- `releases/latest/download/`: the release address rb-update's `sources.rs` fetches from.
 
 Each file is read with the PDB beside it (`rbrowser.dll` with `rbrowser.pdb`,
 `rbrowser-console.exe` with `rbrowser_console.pdb`), when there is one: a test package ships its

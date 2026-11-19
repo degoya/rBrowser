@@ -1,5 +1,5 @@
-//! The updater's run: what `rbrowser apply-update --journal <path>` does (the subcommand is
-//! wired with RB-110-05), started hidden from a copy of the program in `<data>/update/updater/`.
+//! The updater's run: what `rbrowser-updater apply-update --journal <path>` does, started hidden
+//! from a copy of the shipped updater in `<data>/update/updater/` (RB-090-14).
 //!
 //! 1. Holds the updater lock for its whole life; waits until no window holds the instance lock
 //!    (at most [`INSTANCE_WAIT_SECS`]) - the app ended as quitting ends it.

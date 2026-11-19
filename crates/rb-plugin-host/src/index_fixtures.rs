@@ -54,6 +54,7 @@ pub(crate) fn entry(id: &str, version: &str) -> IndexEntry {
         description: "A plugin of the index tests.".to_owned(),
         capabilities: vec!["views".to_owned(), "http".to_owned()],
         min_app_version: None,
+        category: None,
         url: format!("{id}-{version}.rbplugin"),
         sha256: SHA256.to_owned(),
         size: 4096,

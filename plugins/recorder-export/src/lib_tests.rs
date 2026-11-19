@@ -9,7 +9,9 @@ use rb_plugin_api::FailureKind;
 use rb_plugin_api::export::{Exporter, valid_file_name};
 use rb_plugin_api::test_support::MemoryHost;
 
-use super::{CONFIG_FILE, FLOW, PLAYWRIGHT_CONFIG, PLUGIN_ID, RecorderExport, SPEC, render};
+use super::{
+    CONFIG_FILE, FLOW, PAUSES, PLAYWRIGHT_CONFIG, PLUGIN_ID, RecorderExport, SPEC, render,
+};
 
 fn e2e_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/e2e/recorder")
@@ -223,13 +225,17 @@ fn paced(pace: &str) -> String {
 #[test]
 fn the_recorded_pace_waits_the_pauses_between_the_steps() {
     // 19 steps, 400 ms apart: a wait before every step but the first, in the flow and the test.
+    // The hover (step 11) rests the dwell of 500 ms before the step after it, 100 ms of it taken
+    // from its own pause (RB-090-84).
     for format in [FLOW, SPEC] {
         let text = render(format, &paced("recorded")).expect("rendered").text;
         assert_eq!(
             text.matches("await page.waitForTimeout(400);").count(),
-            18,
+            16,
             "{text}"
         );
+        assert_eq!(text.matches("await page.waitForTimeout(300);").count(), 1);
+        assert_eq!(text.matches("await page.waitForTimeout(500);").count(), 1);
         assert_eq!(text.matches("waitForTimeout").count(), 18, "{format}");
     }
 }
@@ -242,4 +248,63 @@ fn the_fast_pace_waits_for_elements_only() {
             assert!(!text.contains("waitForTimeout"), "{text}");
         }
     }
+}
+
+#[test]
+fn the_least_pause_of_the_options_lifts_every_pause() {
+    // RB-090-84: `options.minPauseMs` (`automation.recorder.minPauseMs`).
+    let input = paced("recorded").replacen(
+        "\"pace\": \"recorded\"",
+        "\"pace\": \"recorded\", \"minPauseMs\": 1000",
+        1,
+    );
+    for format in [FLOW, SPEC] {
+        let text = render(format, &input).expect("rendered").text;
+        assert_eq!(
+            text.matches("await page.waitForTimeout(1000);").count(),
+            18,
+            "{text}"
+        );
+    }
+}
+
+#[test]
+fn the_pauses_format_answers_what_the_flow_waits() {
+    // RB-090-84: the host's run budget and the Recorder panel read the pauses from here, so
+    // they are the flow's: 19 steps 400 ms apart, the hover (step 11) resting 500 ms.
+    let output = render(PAUSES, &fixture()).expect("rendered");
+    assert!(
+        output.file_name.ends_with(".pauses.json"),
+        "{}",
+        output.file_name
+    );
+    let value: serde_json::Value = serde_json::from_str(&output.text).expect("JSON");
+    let pauses: Vec<(u64, u64)> = value["pauses"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|entry| {
+            (
+                entry["step"].as_u64().unwrap_or(0),
+                entry["ms"].as_u64().unwrap_or(0),
+            )
+        })
+        .collect();
+    assert_eq!(pauses.len(), 19);
+    assert_eq!(pauses[0].1, 0);
+    let flow = render(FLOW, &paced("recorded")).expect("rendered").text;
+    for (_, ms) in pauses.iter().filter(|(_, ms)| *ms > 0) {
+        assert!(
+            flow.contains(&format!("await page.waitForTimeout({ms});")),
+            "{ms}"
+        );
+    }
+    assert_eq!(pauses.iter().map(|(_, ms)| ms).sum::<u64>(), 18 * 400);
+    // Not offered as an export.
+    assert!(
+        !RecorderExport
+            .formats()
+            .iter()
+            .any(|format| format.id == PAUSES)
+    );
 }

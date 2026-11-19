@@ -46,9 +46,10 @@ describe('the plugin catalogue', () => {
     expect(action('future')).toBe('none');
   });
 
-  it('offers a bundled plugin neither as install nor as update (its updates come with the app)', () => {
+  it('shows a plugin the start loaded as installed; its bundled row comes from `bundled` (RB-091-04)', () => {
     const row = rowsOf(parseCatalog(SAMPLE_CATALOG), all).find((candidate) => candidate.offer.entry.id === 'overlays');
-    expect(row?.bundled).toBe(true);
+    expect(row?.bundled).toBe(false);
+    expect(row?.installedVersion).toBe('1.0.0');
     expect(row?.action).toBe('none');
   });
 
@@ -87,6 +88,7 @@ describe('the plugin catalogue', () => {
   it('translates only the failure codes of the plugins', () => {
     expect(failureKey('plugins.catalog.error.checksum')).toBe('plugins.catalog.error.checksum');
     expect(failureKey('plugins.error.signature_invalid')).toBe('plugins.error.signature_invalid');
+    expect(failureKey('plugins.bundle.error.offline')).toBe('plugins.bundle.error.offline');
     expect(failureKey('the window is closed')).toBeNull();
   });
 });

@@ -166,3 +166,21 @@ fn a_file_name_keeps_only_safe_characters() {
     let url = url::Url::parse("https://example.test/").expect("url");
     assert_eq!(file_name(&url), "rbrowser-update.bin");
 }
+
+/// RB-090-14: a verified download already on disk (another window's, an earlier run's) is taken
+/// as it is; one that does not match is not.
+#[test]
+fn a_matching_file_on_disk_is_already_downloaded_and_a_changed_one_is_not() {
+    let directory = tempfile::tempdir().expect("tempdir");
+    let artifact = artifact_for(&body());
+    assert_eq!(already_downloaded(&artifact, directory.path()), None);
+    let fetcher = MemoryFetcher::new();
+    fetcher.serve(URL, body());
+    let path = fetch(&fetcher, &artifact, directory.path()).expect("downloaded");
+    assert_eq!(
+        already_downloaded(&artifact, directory.path()),
+        Some(path.clone())
+    );
+    fs::write(&path, b"changed").expect("write");
+    assert_eq!(already_downloaded(&artifact, directory.path()), None);
+}

@@ -185,6 +185,22 @@ describe('flows.run', () => {
     expect(progress).toEqual([{ runId: '20261111-101500-a1b2', viewId: 1, status: 'running' }]);
   });
 
+  it("forwards each step of a view as progress, nothing a step line should not carry", async () => {
+    const { call, progress } = setup((child) => {
+      child.line({ type: 'step', viewId: 1, step: { name: 'Step 3: click', id: 3, state: 'running', path: 'x' } });
+      child.line({ type: 'step', viewId: 1, step: { name: 'Step 3: click', id: 3, state: 'failed', message: 'boom' } });
+      child.line({ type: 'step', viewId: 1, step: { name: 'Step 3: click', state: 'gone' } });
+      child.line({ type: 'step', viewId: '1', step: { name: 'Step 3: click', state: 'running' } });
+      child.line({ type: 'result', views: [] });
+      child.emit('close', 0);
+    });
+    await call(params());
+    expect(progress).toEqual([
+      { runId: '20261111-101500-a1b2', viewId: 1, step: { name: 'Step 3: click', id: 3, state: 'running' } },
+      { runId: '20261111-101500-a1b2', viewId: 1, step: { name: 'Step 3: click', id: 3, state: 'failed', message: 'boom' } },
+    ]);
+  });
+
   it('kills a worker that outlives the timeout and fails what it did not report', async () => {
     const { call, children } = setup(() => {});
     const answer = (await call(params({ timeoutMs: 20 }))) as { views: { viewId: number; status: string }[] };

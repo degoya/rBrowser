@@ -59,6 +59,38 @@ fn result(png: Result<Vec<u8>, String>, status: u16) -> ShotResult {
     }
 }
 
+#[test]
+fn a_failed_shot_is_logged_without_the_pages_query() {
+    let failed = FailedShot::new(
+        "https://user:secret@www.example.test/shop?token=abc#top",
+        "mobile",
+        "screenshot: no frame within 15 s",
+    );
+    assert_eq!(failed.url, "https://www.example.test/shop");
+    assert_eq!(failed.breakpoint, "mobile");
+    assert_eq!(failed.error, "screenshot: no frame within 15 s");
+}
+
+#[tokio::test]
+async fn a_failed_shot_keeps_its_reason_in_run_json() {
+    let root = tempfile::tempdir().expect("temp");
+    let (run, store, tasks) = setup(root.path());
+    let sink = RunSink::new(run, store.clone(), tasks, None, 4, Box::new(|_| {}));
+    sink.finished(
+        &batch_task(0),
+        result(Err("screenshot: no frame within 15 s".to_owned()), 200),
+    )
+    .await;
+    sink.flush().await.expect("flushes");
+    let saved = store.load().expect("loads").expect("run.json");
+    let shot = &saved.pages[0].shots["mobile"];
+    assert_eq!(shot.state, ShotState::Failed);
+    assert_eq!(
+        shot.error.as_deref(),
+        Some("screenshot: no frame within 15 s")
+    );
+}
+
 #[tokio::test]
 async fn a_shot_is_written_recorded_and_reported() {
     let root = tempfile::tempdir().expect("temp");

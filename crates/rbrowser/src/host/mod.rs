@@ -335,7 +335,9 @@ impl Host {
         Ok(next)
     }
 
-    fn active_or_first(&self) -> Result<ViewId, EngineError> {
+    /// The active view, else the first in grid order (`target_views(None)`, a plugin's
+    /// `views.active`, RB-090-82); [`EngineError::Invalid`] without a view.
+    pub fn active_or_first(&self) -> Result<ViewId, EngineError> {
         let state = self.state();
         state
             .active

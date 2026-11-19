@@ -4,11 +4,11 @@ import type { SitemapStatus } from '../ipc/protocol';
 import {
   cancelMessage,
   captureMessage,
-  fileUrl,
   galleryMessage,
   isRunning,
   resumeMessage,
   sitemapOf,
+  startsShowing,
   stateKey,
   timeLeft,
 } from './sitemap';
@@ -56,16 +56,21 @@ describe('sitemap capture in the shell', () => {
     });
   });
 
-  it('opens the gallery as a file URL in the active view', () => {
-    expect(fileUrl('C:\\work\\my shop\\index.html')).toBe('file:///C:/work/my%20shop/index.html');
-    expect(fileUrl('\\\\wsl.localhost\\Ubuntu\\home\\a\\index.html')).toBe(
-      'file://wsl.localhost/Ubuntu/home/a/index.html',
-    );
-    expect(fileUrl('/home/a/#1/index.html')).toBe('file:///home/a/%231/index.html');
-    expect(galleryMessage('C:\\g\\index.html', 2)).toEqual({
+  it('opens the gallery through sitemap.gallery, never in a view (RB-090-83)', () => {
+    expect(galleryMessage('r1')).toEqual({
       type: 'runCommand',
-      id: 'view.navigate',
-      args: { url: 'file:///C:/g/index.html', target: 2 },
+      id: 'sitemap.gallery',
+      args: { runId: 'r1' },
     });
+  });
+
+  it('opens the bar by itself when a run starts or resumes', () => {
+    expect(startsShowing(running, null)).toBe(true);
+    // A resume is a start too.
+    expect(startsShowing(running, { ...running, state: 'cancelled' })).toBe(true);
+    expect(startsShowing(running, { ...running, done: 37 })).toBe(false);
+    expect(startsShowing({ ...running, runId: 'next' }, running)).toBe(true);
+    expect(startsShowing({ ...running, state: 'finished' }, null)).toBe(false);
+    expect(startsShowing(null, running)).toBe(false);
   });
 });

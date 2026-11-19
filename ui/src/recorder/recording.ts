@@ -4,11 +4,15 @@
 // `saveRecording`, which the core checks against the model before it writes. A secret fill's
 // placeholder is never a value to edit.
 
-/** One way to find an element. */
+/**
+ * One way to find an element; `visibleNth` is a role or text match's index among the visible
+ * ones (RB-090-81); `within` the CSS selector of the ancestor inside which a name the page
+ * showed more than once names the element alone (RB-090-84).
+ */
 export type Selector =
   | { kind: 'testid'; testid: string; nth?: number }
-  | { kind: 'role'; role: string; name: string; nth?: number }
-  | { kind: 'text'; tag: string; text: string; nth?: number }
+  | { kind: 'role'; role: string; name: string; nth?: number; visibleNth?: number; within?: string }
+  | { kind: 'text'; tag: string; text: string; nth?: number; visibleNth?: number; within?: string }
   | { kind: 'css'; path: string };
 
 /** An element: its selector candidates, best first. */
@@ -95,9 +99,9 @@ function selectorText(selector: Selector): string {
     case 'testid':
       return `[data-testid="${selector.testid}"]`;
     case 'role':
-      return `${selector.role} "${selector.name}"`;
+      return `${selector.within ? `${selector.within} ` : ''}${selector.role} "${selector.name}"`;
     case 'text':
-      return `${selector.tag} "${selector.text}"`;
+      return `${selector.within ? `${selector.within} ` : ''}${selector.tag} "${selector.text}"`;
     case 'css':
       return selector.path;
   }

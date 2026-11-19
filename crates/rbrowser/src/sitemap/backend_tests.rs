@@ -1,152 +1,40 @@
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
 
-use base64::Engine as _;
-use rb_engine::chromium::hidden::{RenderBackend, RenderSpec, WaitSpec};
-use rb_engine::{Emulation, EngineError};
+use rb_engine::Emulation;
+use rb_engine::chromium::hidden::{RenderBackend, WaitSpec};
 use serde_json::{Value, json};
 
 use super::{CdpRenderBackend, MARKER_PREFIX, render_metrics, scripts};
-use crate::cdp::{CdpRouter, CdpTransport, lock};
+use crate::cdp::lock;
+use crate::sitemap::render_views::RenderView;
 
-/// A browser that makes hidden targets, loads pages with their lifecycle events and answers
-/// the render view's scripts.
-#[derive(Default)]
-struct Scripted {
-    router: Mutex<Weak<CdpRouter>>,
-    sent: Mutex<Vec<Value>>,
-    refuse_hidden: bool,
-    last_url: Mutex<String>,
-}
+#[path = "backend_fake.rs"]
+mod fake;
 
-impl Scripted {
-    fn deliver(&self, message: Value) {
-        if let Some(router) = lock(&self.router).upgrade() {
-            router.on_message(message);
-        }
-    }
-
-    fn sent(&self, method: &str) -> Vec<Value> {
-        lock(&self.sent)
-            .iter()
-            .filter(|message| message["method"] == method)
-            .cloned()
-            .collect()
-    }
-
-    fn lifecycle(&self, session: &str, name: &str, loader: &str) {
-        self.deliver(json!({
-            "method": "Page.lifecycleEvent",
-            "sessionId": session,
-            "params": { "frameId": "F", "loaderId": loader, "name": name, "timestamp": 1 }
-        }));
-    }
-
-    fn answer(&self, message: &Value) -> Value {
-        let params = &message["params"];
-        match message["method"].as_str().unwrap_or_default() {
-            "Target.createTarget" if self.refuse_hidden && params["hidden"] == true => {
-                json!({ "error": { "code": -32602, "message": "hidden is not supported" } })
-            }
-            "Target.createTarget" => json!({ "result": { "targetId": "R1" } }),
-            "Target.getTargetInfo" => {
-                json!({ "result": { "targetInfo": { "browserContextId": "CTX" } } })
-            }
-            "Target.attachToTarget" => json!({ "result": { "sessionId": "RS1" } }),
-            "Page.navigate" => {
-                let url = params["url"].as_str().unwrap_or_default();
-                *lock(&self.last_url) = url.to_owned();
-                if url.contains("broken") {
-                    json!({ "result": { "frameId": "F", "errorText": "net::ERR_NAME_NOT_RESOLVED" } })
-                } else {
-                    json!({ "result": { "frameId": "F", "loaderId": "L1" } })
-                }
-            }
-            "Runtime.evaluate" => {
-                let expression = params["expression"].as_str().unwrap_or_default();
-                let value = if expression == scripts::NAVIGATION {
-                    json!({ "status": 404, "url": *lock(&self.last_url) })
-                } else if expression.contains("__rbCaptureClean.prepare(") {
-                    json!({ "token": 1 })
-                } else if expression == scripts::READY_STATE {
-                    json!("complete")
-                } else {
-                    json!(true)
-                };
-                json!({ "result": { "result": { "type": "object", "value": value } } })
-            }
-            "Page.getLayoutMetrics" => json!({ "result": {
-                "cssVisualViewport": { "pageX": 0, "pageY": 0 },
-                "cssLayoutViewport": { "pageX": 0, "pageY": 0 },
-                "cssContentSize": { "height": 2000 }
-            } }),
-            "Page.getFrameTree" => json!({ "result": { "frameTree": { "frame": { "id": "F" } } } }),
-            "Page.createIsolatedWorld" => json!({ "result": { "executionContextId": 9 } }),
-            "Page.captureScreenshot" => json!({ "result": {
-                "data": base64::engine::general_purpose::STANDARD.encode(b"PNG")
-            } }),
-            _ => json!({ "result": {} }),
-        }
-    }
-}
-
-impl CdpTransport for Scripted {
-    fn send(&self, frame: Vec<u8>) -> Result<(), EngineError> {
-        let body = frame.strip_suffix(&[0]).unwrap_or(&frame);
-        let message: Value = serde_json::from_slice(body).expect("json");
-        lock(&self.sent).push(message.clone());
-        let mut reply = self.answer(&message);
-        reply["id"] = message["id"].clone();
-        self.deliver(reply);
-        if message["method"] == "Page.navigate" && message["params"]["url"] != "about:blank" {
-            // Another view's load first: it must not count.
-            self.lifecycle("OTHER", "load", "L1");
-            self.lifecycle("RS1", "DOMContentLoaded", "L1");
-            self.lifecycle("RS1", "load", "L1");
-            self.lifecycle("RS1", "networkIdle", "L1");
-        }
-        Ok(())
-    }
-}
-
-fn browser(refuse_hidden: bool) -> (Arc<Scripted>, CdpRenderBackend) {
-    let scripted = Arc::new(Scripted {
-        refuse_hidden,
-        ..Scripted::default()
-    });
-    let router = CdpRouter::new(scripted.clone());
-    *lock(&scripted.router) = Arc::downgrade(&router);
-    let backend = CdpRenderBackend::new(
-        router,
-        Box::new(|session| (session == "staging").then(|| "GRID-T2".to_owned())),
-    );
-    (scripted, backend)
-}
-
-fn spec(session: &str) -> RenderSpec {
-    RenderSpec {
-        breakpoint: "mobile".to_owned(),
-        emulation: Emulation {
-            width: 375,
-            height: 667,
-            dpr: 2.0,
-            mobile: true,
-            ..Emulation::default()
-        },
-        session: session.to_owned(),
-    }
-}
+use fake::{Fixture, Scripted, Window, browser, browser_with, spec};
 
 #[tokio::test]
-async fn a_view_is_a_hidden_target_with_the_breakpoints_metrics() {
-    let (scripted, backend) = browser(false);
+async fn a_view_is_a_windowless_browser_found_by_its_marker_with_the_breakpoints_metrics() {
+    let Fixture {
+        scripted,
+        window,
+        backend,
+        ..
+    } = browser();
     let view = backend.open(&spec("default")).await.expect("opens");
-    let created = scripted.sent("Target.createTarget");
-    assert_eq!(created.len(), 1);
-    assert_eq!(created[0]["params"]["hidden"], true);
-    assert!(created[0]["params"].get("browserContextId").is_none());
-    let marker = created[0]["params"]["url"].as_str().expect("url");
-    assert_eq!(marker, format!("{MARKER_PREFIX}{}", view.0));
+    let marker = lock(&window.opened)[0].marker.clone();
+    assert!(marker.starts_with(MARKER_PREFIX), "{marker}");
+    assert_eq!(
+        *lock(&window.opened),
+        [RenderView::new(&marker, "default", 375, 667)]
+    );
+    // No hidden target any more: the window made the browser, the backend found it.
+    assert!(scripted.sent("Target.createTarget").is_empty());
+    assert_eq!(
+        scripted.sent("Target.attachToTarget")[0]["params"]["targetId"],
+        "R1"
+    );
     assert!(crate::devtools::hidden::is_hidden(
         "R1",
         "https://any.test/"
@@ -166,16 +54,153 @@ async fn a_view_is_a_hidden_target_with_the_breakpoints_metrics() {
             .is_empty()
     );
     backend.close(view).await;
-    assert_eq!(scripted.sent("Target.closeTarget").len(), 1);
+    assert_eq!(*lock(&window.closed), [marker]);
+    assert!(scripted.sent("Target.closeTarget").is_empty());
     assert!(!crate::devtools::hidden::is_hidden(
         "R1",
         "https://any.test/"
     ));
 }
 
+#[tokio::test(start_paused = true)]
+async fn the_marker_is_looked_for_until_the_browser_lists_it() {
+    let Fixture {
+        scripted, backend, ..
+    } = browser_with(
+        Scripted {
+            hide_first: AtomicUsize::new(3),
+            ..Scripted::default()
+        },
+        Window::default(),
+    );
+    backend.open(&spec("default")).await.expect("opens");
+    assert_eq!(scripted.sent("Target.getTargets").len(), 4);
+    assert_eq!(
+        scripted.sent("Target.attachToTarget")[0]["params"]["targetId"],
+        "R1"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_browser_that_never_lists_its_marker_fails_the_open_and_is_closed() {
+    let Fixture {
+        scripted,
+        window,
+        backend,
+        ..
+    } = browser_with(
+        Scripted::default(),
+        Window {
+            lost: true,
+            ..Window::default()
+        },
+    );
+    let error = backend
+        .open(&spec("default"))
+        .await
+        .expect_err("never found");
+    assert!(error.to_string().contains("no CDP target shows"), "{error}");
+    let marker = lock(&window.opened)[0].marker.clone();
+    assert_eq!(*lock(&window.closed), [marker]);
+    assert!(scripted.sent("Target.attachToTarget").is_empty());
+}
+
+#[tokio::test]
+async fn two_backends_never_share_a_marker() {
+    // A sitemap capture and an environment comparison at once: each has a backend of its own.
+    let Fixture {
+        scripted,
+        window,
+        router,
+        backend,
+    } = browser();
+    let other = CdpRenderBackend::new(router, Box::new(|_: &str| None), window.clone());
+    let first = backend.open(&spec("default")).await.expect("opens");
+    let second = other.open(&spec("default")).await.expect("opens");
+    let markers: Vec<String> = lock(&window.opened)
+        .iter()
+        .map(|view| view.marker.clone())
+        .collect();
+    assert_eq!(markers.len(), 2);
+    assert_ne!(markers[0], markers[1]);
+    let attached: Vec<Value> = scripted
+        .sent("Target.attachToTarget")
+        .iter()
+        .map(|message| message["params"]["targetId"].clone())
+        .collect();
+    assert_eq!(attached, [json!("R1"), json!("R2")]);
+    // Closing one leaves the other's browser alone.
+    backend.close(first).await;
+    assert_eq!(*lock(&window.closed), [markers[0].clone()]);
+    other.close(second).await;
+    assert_eq!(*lock(&window.closed), markers);
+}
+
+#[tokio::test]
+async fn a_grid_popup_or_another_context_at_the_marker_is_never_attached() {
+    let Fixture {
+        scripted, backend, ..
+    } = browser_with(
+        Scripted::default(),
+        Window {
+            decoys: true,
+            ..Window::default()
+        },
+    );
+    backend.open(&spec("default")).await.expect("opens");
+    let attached: Vec<Value> = scripted
+        .sent("Target.attachToTarget")
+        .iter()
+        .map(|message| message["params"]["targetId"].clone())
+        .collect();
+    assert_eq!(attached, [json!("R1")]);
+    assert!(!crate::devtools::hidden::is_hidden(
+        "P1",
+        "https://any.test/"
+    ));
+    // The context to hold the target to is the session's grid view's.
+    assert_eq!(
+        scripted.sent("Target.getTargetInfo")[0]["params"]["targetId"],
+        "GRID-T1"
+    );
+}
+
+#[tokio::test]
+async fn a_window_that_cannot_make_the_browser_fails_the_open() {
+    let Fixture {
+        scripted, backend, ..
+    } = browser_with(
+        Scripted::default(),
+        Window {
+            refuse: true,
+            ..Window::default()
+        },
+    );
+    let error = backend.open(&spec("default")).await.expect_err("refused");
+    assert!(
+        error.to_string().contains("no window to make it in"),
+        "{error}"
+    );
+    assert!(scripted.sent("Target.getTargets").is_empty());
+}
+
+#[tokio::test]
+async fn a_named_session_needs_a_grid_view_showing_it() {
+    let Fixture {
+        window, backend, ..
+    } = browser();
+    backend.open(&spec("staging")).await.expect("opens");
+    assert_eq!(lock(&window.opened)[0].session, "staging");
+    let refused = backend.open(&spec("nobody")).await.expect_err("refused");
+    assert!(refused.to_string().contains("nobody"), "{refused}");
+    assert_eq!(lock(&window.opened).len(), 1, "no browser for it");
+}
+
 #[tokio::test]
 async fn a_page_loads_waits_and_is_captured_full_page() {
-    let (scripted, backend) = browser(false);
+    let Fixture {
+        scripted, backend, ..
+    } = browser();
     let view = backend.open(&spec("default")).await.expect("opens");
     let loaded = backend
         .navigate(view, "http://127.0.0.1:9/missing")
@@ -212,9 +237,74 @@ async fn a_page_loads_waits_and_is_captured_full_page() {
     assert!(scripted.sent("Animation.setPlaybackRate").is_empty());
 }
 
+#[tokio::test(start_paused = true)]
+async fn a_screenshot_without_a_frame_fails_at_the_shots_own_deadline() {
+    let Fixture { backend, .. } = browser_with(
+        Scripted {
+            stall_shots: true,
+            ..Scripted::default()
+        },
+        Window::default(),
+    );
+    let backend = backend.with_shot_timeout(Duration::from_secs(15));
+    let view = backend.open(&spec("default")).await.expect("opens");
+    let started = tokio::time::Instant::now();
+    let error = backend.screenshot(view, false).await.expect_err("no frame");
+    assert!(
+        error.to_string().contains("no frame within 15 s"),
+        "{error}"
+    );
+    // The shot's own deadline, not the router's 30 s ("no answer within 30 s").
+    assert!(started.elapsed() >= Duration::from_secs(15));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_full_page_shot_given_up_puts_the_breakpoints_size_back() {
+    let Fixture {
+        scripted, backend, ..
+    } = browser_with(
+        Scripted {
+            stall_shots: true,
+            ..Scripted::default()
+        },
+        Window::default(),
+    );
+    let backend = backend.with_shot_timeout(Duration::from_secs(15));
+    let view = backend.open(&spec("default")).await.expect("opens");
+    backend
+        .navigate(view, "http://127.0.0.1:9/long")
+        .await
+        .expect("loads");
+    backend.screenshot(view, true).await.expect_err("no frame");
+    // The capture grew the view to the page's height and was dropped: the size goes back.
+    let metrics = scripted.sent("Emulation.setDeviceMetricsOverride");
+    // The full-page override sends the height as a float (`capture::cdp::with_height`).
+    assert!(
+        metrics
+            .iter()
+            .any(|call| call["params"]["height"] == 2000.0)
+    );
+    assert_eq!(metrics.last().expect("restored")["params"]["height"], 667);
+    // And every page starts at the breakpoint's size, whatever the shot before left.
+    backend
+        .navigate(view, "http://127.0.0.1:9/next")
+        .await
+        .expect("loads");
+    let order: Vec<Value> = lock(&scripted.sent).clone();
+    let navigate = order
+        .iter()
+        .rposition(|message| message["method"] == "Page.navigate")
+        .expect("navigated");
+    let before = &order[navigate - 1];
+    assert_eq!(before["method"], "Emulation.setDeviceMetricsOverride");
+    assert_eq!(before["params"]["height"], 667);
+}
+
 #[tokio::test]
 async fn a_screenshot_runs_on_a_prepared_page_and_puts_it_back() {
-    let (scripted, backend) = browser(false);
+    let Fixture {
+        scripted, backend, ..
+    } = browser();
     let plan = rb_visual::CleanSettings {
         hide_selectors: vec!["#banner".to_owned()],
         settle_ms: 0,
@@ -261,7 +351,7 @@ async fn a_screenshot_runs_on_a_prepared_page_and_puts_it_back() {
 
 #[tokio::test]
 async fn a_navigation_error_fails_the_load() {
-    let (_scripted, backend) = browser(false);
+    let Fixture { backend, .. } = browser();
     let view = backend.open(&spec("default")).await.expect("opens");
     let error = backend
         .navigate(view, "http://broken.test/")
@@ -271,33 +361,6 @@ async fn a_navigation_error_fails_the_load() {
         error.to_string().contains("ERR_NAME_NOT_RESOLVED"),
         "{error}"
     );
-}
-
-#[tokio::test]
-async fn a_refused_hidden_target_falls_back_to_a_background_one() {
-    let (scripted, backend) = browser(true);
-    backend.open(&spec("default")).await.expect("opens");
-    let created = scripted.sent("Target.createTarget");
-    assert_eq!(created.len(), 2);
-    assert!(created[1]["params"].get("hidden").is_none());
-    assert_eq!(created[1]["params"]["background"], true);
-}
-
-#[tokio::test]
-async fn a_named_session_takes_its_grid_views_context_and_an_unknown_one_is_refused() {
-    let (scripted, backend) = browser(false);
-    backend.open(&spec("staging")).await.expect("opens");
-    assert_eq!(
-        scripted.sent("Target.getTargetInfo")[0]["params"]["targetId"],
-        "GRID-T2"
-    );
-    assert_eq!(
-        scripted.sent("Target.createTarget")[0]["params"]["browserContextId"],
-        "CTX"
-    );
-    let refused = backend.open(&spec("nobody")).await.expect_err("refused");
-    assert!(refused.to_string().contains("nobody"), "{refused}");
-    assert_eq!(scripted.sent("Target.createTarget").len(), 1);
 }
 
 #[test]

@@ -109,6 +109,10 @@ pub const WITHOUT_COMMAND: &[(&str, &str)] = &[
         "video_list",
         "a read: the recorded videos; capture.video.panel shows them to the person",
     ),
+    (
+        "update_status",
+        "a read: the self-update's state; update.check and update.install are the commands",
+    ),
 ];
 
 /// The tools that act on no view and so take no `target`, with what they act on instead.
@@ -169,6 +173,7 @@ pub const UNTARGETED: &[(&str, &str)] = &[
         "sitemap_capture",
         "hidden render views of its own, per breakpoint",
     ),
+    ("sitemap_gallery", "a sitemap capture run's gallery window"),
     ("sitemap_status", "a sitemap capture run"),
     ("status_messages", "the window's message history"),
     ("view_add", "the hidden selection of the views"),
@@ -184,6 +189,9 @@ pub const UNTARGETED: &[(&str, &str)] = &[
     ("checks_cancel", "the check run in progress"),
     ("canvas_zoom", "the canvas camera"),
     ("video_list", "the project's recorded videos"),
+    ("update_check", "the app"),
+    ("update_install", "the app"),
+    ("update_status", "the app"),
 ];
 
 /// The view tools that act on exactly one view: their `target` is a view id or a breakpoint id
@@ -294,6 +302,19 @@ pub const GUARDS: &[Guard] = &[
         setting: None,
         note: "Protected keys (MCP, trust, plugins, the sandbox, paths of programs) are refused \
                with code settings.rejected.protected; only a person changes them.",
+    },
+    Guard {
+        tool: "update_check",
+        setting: Some("updates.enabled"),
+        note: "Off while updates.enabled is off (problem update.disabled); it reaches the \
+               release host and installs nothing.",
+    },
+    Guard {
+        tool: "update_install",
+        setting: Some("updates.enabled"),
+        note: "Off while updates.enabled is off (code update.disabled); on, it installs \
+               nothing: rBrowser shows the offer with its button and only the person's click \
+               installs it; the command update.install is refused to MCP.",
     },
 ];
 

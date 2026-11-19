@@ -54,6 +54,8 @@ fn a_command_is_a_call_with_json() {
                 tag: "span".into(),
                 text: "\"); alert(1); (\"".into(),
                 nth: 0,
+                visible_nth: None,
+                within: None,
                 path: "p > span".into(),
             },
             offset: rb_sync::Offset { x: 0.5, y: 0.5 },

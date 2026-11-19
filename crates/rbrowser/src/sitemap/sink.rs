@@ -1,6 +1,8 @@
 //! Where each finished shot goes: its PNG below the run's folder, its outcome into the run,
 //! with `--compare` its comparison with the visual-regression baseline (the diff image beside
-//! the shot), and the progress to whoever follows the run.
+//! the shot), and the progress to whoever follows the run. A shot that failed says why in
+//! `run.json` and in the log ([`FailedShot`]: the page without its query, the breakpoint, the
+//! reason; RB-090-83).
 //!
 //! The disk and the diff are blocking work: they run on a blocking thread, never on an async
 //! worker, and the PNG is written and compared outside the run's lock. `run.json` is written at
@@ -53,9 +55,42 @@ struct Shared {
     saved: Mutex<Option<Instant>>,
 }
 
+/// A failed shot as the log names it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FailedShot {
+    /// The page loaded, without credentials, query and fragment.
+    pub url: String,
+    pub breakpoint: String,
+    /// The step and its reason (`screenshot: no frame within 15 s`).
+    pub error: String,
+}
+
+impl FailedShot {
+    /// Shot `breakpoint` of `page_url` failed with `error`.
+    #[must_use]
+    pub fn new(page_url: &str, breakpoint: &str, error: &str) -> Self {
+        Self {
+            url: meta::public_url(page_url),
+            breakpoint: breakpoint.to_owned(),
+            error: error.to_owned(),
+        }
+    }
+
+    fn log(&self) {
+        tracing::warn!(
+            url = %self.url,
+            breakpoint = %self.breakpoint,
+            error = %self.error,
+            "a sitemap shot failed"
+        );
+    }
+}
+
 /// What a shot needs of its page and breakpoint, read under the lock and used outside it.
 struct Target {
     slug: String,
+    /// The page loaded (after the environment rewrite).
+    page_url: String,
     /// The URL a baseline is named by: the sitemap's, before the environment rewrite.
     url: String,
     breakpoint: Option<RunBreakpoint>,
@@ -103,6 +138,7 @@ impl Shared {
         let page = run.pages.get(task.page)?;
         Some(Target {
             slug: page.slug.clone(),
+            page_url: page.url.clone(),
             url: page.sitemap_url.clone().unwrap_or_else(|| page.url.clone()),
             breakpoint: run
                 .breakpoints
@@ -195,6 +231,9 @@ impl Shared {
                 .write_shot(&target.slug, &task.breakpoint, png)
                 .map_err(|error| format!("write: {error}"))
         });
+        if let Err(error) = &file {
+            FailedShot::new(&target.page_url, &task.breakpoint, error).log();
+        }
         let compared = match (&file, &result.png) {
             (Ok(_), Ok(png)) => self.compare(task, &target, png),
             _ => None,

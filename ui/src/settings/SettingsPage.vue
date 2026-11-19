@@ -2,7 +2,9 @@
 // The settings (RB-010-08): the categories on the left in their fixed order, the sections of the
 // chosen one on the right with their keys by `x-order`, all generated from the schema. Search
 // over label, key and description; "only changed"; reset per field and per section; the JSON
-// view per scope; a deep link (`#/settings/<key>`) opens the key's category and highlights it.
+// view per scope; a deep link (`#/settings/<key>`) opens the key's category and highlights it, a
+// link to an area (`#/settings/<category>?section=<id>`, RB-090-85) the section's tab with the
+// section highlighted.
 // Each section is a card (`SectionCard`); a category of more than one section shows one section
 // per sub-tab, the tab in the address (`#/settings/layout?tab=grid`, RB-080-13, RB-080-71), unless
 // `settings.sectionTabs` is off. The search and "Only changed" list their hits across every
@@ -49,6 +51,8 @@ const props = defineProps<{
   routeKey: string | null;
   /** The sub-tab of the category the route opens (`?tab=`), RB-080-13. */
   routeTab?: string | null;
+  /** The section the route opens and highlights (`?section=`), RB-090-85. */
+  routeSection?: string | null;
   /** Whether the open project is trusted (Project > workspace trust shows it). */
   trusted?: boolean | null;
 }>();
@@ -65,6 +69,8 @@ const query = ref('');
 const onlyChanged = ref(false);
 const selected = ref('general');
 const highlighted = ref<string | null>(null);
+/** The section an area link highlights, as `<category>.<section>`. */
+const highlightedSection = ref<string | null>(null);
 const showJson = ref(false);
 /** The wanted sub-tab of the selected category; `null` for its first. */
 const tab = ref<string | null>(null);
@@ -177,6 +183,7 @@ function select(id: string, wantedTab: string | null = rememberedTab(id)): void 
   query.value = '';
   onlyChanged.value = false;
   highlighted.value = null;
+  highlightedSection.value = null;
 }
 
 /** Shows sub-tab `id` and puts it in the address, so back and forward walk the tabs and a copied
@@ -189,18 +196,29 @@ function chooseTab(id: string): void {
   window.location.hash = routeHash({ page: 'settings', key: selected.value, tab: id });
 }
 
-async function openAt(key: string | null, wantedTab: string | null = null): Promise<void> {
+/** Opens section `section` of category `category` on its tab and highlights it (RB-090-85). */
+async function openSection(category: string, section: string): Promise<void> {
+  select(category, tabOfSection(category, section));
+  highlightedSection.value = `${category}.${section}`;
+  await nextTick();
+  document.querySelector(`[data-section="${category}.${section}"]`)?.scrollIntoView?.({ block: 'start' });
+}
+
+async function openAt(key: string | null, wantedTab: string | null = null, wantedSection: string | null = null): Promise<void> {
   const current = schema.value;
   if (key === null || current === null) {
     return;
   }
-  const isCategory = current.categories.some((category) => category.id === key);
-  // With a tab the address names the category, also where a key has the same name (`layout`).
-  const def = wantedTab !== null && isCategory ? undefined : findDef(current, key);
+  const category = current.categories.find((each) => each.id === key);
+  // With a tab or a section the address names the category, also where a key has the same
+  // name (`layout`).
+  const def = (wantedTab !== null || wantedSection !== null) && category ? undefined : findDef(current, key);
   if (def === undefined) {
-    // A link to a category opens the tab it names, else the first (`settings.open_plugins`
-    // opens the plugin list).
-    if (isCategory) {
+    if (category && wantedSection !== null && category.sections.includes(wantedSection)) {
+      await openSection(category.id, wantedSection);
+    } else if (category) {
+      // A link to a category opens the tab it names, else the first (`settings.open_plugins`
+      // opens the plugin list).
       select(key, wantedTab);
     }
     return;
@@ -219,8 +237,8 @@ async function openAt(key: string | null, wantedTab: string | null = null): Prom
 }
 
 watch(
-  [() => props.routeKey, () => props.routeTab, schema],
-  ([key, routeTab]) => void openAt(key, routeTab ?? null),
+  [() => props.routeKey, () => props.routeTab, () => props.routeSection, schema],
+  ([key, routeTab, routeSection]) => void openAt(key, routeTab ?? null, routeSection ?? null),
   { immediate: true },
 );
 </script>
@@ -347,6 +365,7 @@ watch(
           :section="section"
           :has-project="hasProject"
           :highlighted="highlighted"
+          :section-highlighted="highlightedSection === `${category.id}.${section.id}`"
           :searching="searching"
           @open="openAt"
         >

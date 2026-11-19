@@ -3,7 +3,8 @@
 // (RB-010-13, `analyzer`); the palette's popup (RB-060-11, `palette`), the plugin panels
 // (RB-060-12, `panels`, with the findings since RB-080-69) and the status bar's message
 // history (RB-080-15, `status-history`) load the same pages in windows of their own; the Portal
-// panel (RB-080-05, `portal`) opens in the pages window. An unknown route shows the settings.
+// panel (RB-080-05, `portal`) and the setup wizard (RB-091-05, `setup`, `setup/project`) open in
+// the pages window. An unknown route shows the settings.
 
 import type { Component } from 'vue';
 import AnalyzerWizard from '../analyzer/AnalyzerWizard.vue';
@@ -11,6 +12,7 @@ import PalettePage from '../palette/PalettePage.vue';
 import PanelsPage from '../panels/PanelsPage.vue';
 import StatusHistory from '../statusbar/StatusHistory.vue';
 import PortalPage from '../portal/PortalPage.vue';
+import SetupWizard from '../firstrun/SetupWizard.vue';
 import TrustPage from '../trust/TrustPage.vue';
 import SettingsPage from './SettingsPage.vue';
 
@@ -22,6 +24,7 @@ export const PAGES: Record<string, Component> = {
   panels: PanelsPage,
   'status-history': StatusHistory,
   portal: PortalPage,
+  setup: SetupWizard,
 };
 
 /** The page of `route`, the settings for an unknown one. */
