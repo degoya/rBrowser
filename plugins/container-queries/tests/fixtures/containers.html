@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Container queries fixture</title>
+<style>
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; }
+  .shell { container-type: inline-size; container-name: shell; width: 1000px; padding: 0; }
+  .card { container-type: inline-size; container-name: card; width: 640px; height: 300px; margin: 20px 0; }
+  .side { container-type: size; width: 300px; height: 250px; }
+  .title { font-size: 1rem; }
+  @container card (min-width: 500px) { .card .title { font-size: 2rem; } }
+  @container card (max-width: 300px) { .card .meta { display: none; } }
+  @container shell (400px <= width < 900px) { .shell .nav { display: flex; } }
+  @container (min-height: 200px) { .side .list { columns: 2; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <nav class="nav"><a href="#a">A</a> <a href="#b">B</a></nav>
+  <article class="card" id="hero" style="color: rgb(20, 20, 20);"><h2 class="title">Title</h2><p class="meta">Meta</p></article>
+  <aside class="side"><ul class="list"><li>One</li><li>Two</li></ul></aside>
+</main>
+</body>
+</html>

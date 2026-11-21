@@ -1,0 +1,27 @@
+meta {
+  name: Create user
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: librarian
+  password: b00ks
+}
+
+body:json {
+  {
+    "name": "Ada",
+    "roles": ["reader"]
+  }
+}
+
+script:post-response {
+  bru.setVar("id", res.body.id);
+}

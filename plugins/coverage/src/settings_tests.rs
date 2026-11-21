@@ -61,3 +61,20 @@ fn third_party_files_are_those_of_another_origin() {
     );
     assert_eq!(origin("data:text/css,a"), None);
 }
+
+#[test]
+fn the_default_port_is_the_same_origin() {
+    // RB-094-10: the app's origin, `:443` and `:80` dropped as `location.origin` drops them.
+    let settings = Settings {
+        third_party: false,
+        ..Settings::default()
+    };
+    let page = "https://shop.test/";
+    assert!(!settings.skips("https://shop.test:443/app.js", page));
+    assert!(!settings.skips("HTTPS://Shop.test/app.css", page));
+    assert!(settings.skips("https://shop.test:8443/app.js", page));
+    assert_eq!(
+        origin("http://a.test:80/x").as_deref(),
+        Some("http://a.test")
+    );
+}

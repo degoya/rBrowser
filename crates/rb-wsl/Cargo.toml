@@ -23,6 +23,8 @@ globset.workspace = true
 notify.workspace = true
 rand.workspace = true
 rb-process = { path = "../rb-process" }
+# Lower-case hex of the nonce (RB-094-10).
+rb-util = { path = "../rb-util" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

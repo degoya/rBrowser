@@ -250,6 +250,7 @@ pub struct FindingsFile {
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FailOn {
+    Info,
     Warning,
     #[default]
     Error,
@@ -262,6 +263,7 @@ impl FailOn {
         match self {
             Self::Error => summary.error > 0,
             Self::Warning => summary.error + summary.warning > 0,
+            Self::Info => summary.total > 0,
         }
     }
 }

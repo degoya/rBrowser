@@ -1,6 +1,7 @@
 //! The model of the page's context menu (RB-080-43): the rBrowser block below Chromium's
 //! entries, built from the core's state at the moment the menu opens - entries, submenus, state
-//! texts (Record/Stop), the DevTools check and what is enabled. Pure: no CEF, no core; the
+//! texts (Record/Stop), the DevTools check and what is enabled. The submenus follow the main
+//! menu's structure ([`groups`], RB-090-92). Pure: no CEF, no core; the
 //! CEF side (`cef_app/context_menu.rs`) renders the items and runs the chosen entry's action
 //! through [`super::run`].
 //!
@@ -132,8 +133,8 @@ pub struct MenuState {
     pub devtools_open: bool,
     /// `devtools.openOnInspect`: off, "Inspect element" needs DevTools open for this view.
     pub open_on_inspect: bool,
-    /// The view's emulation for the Emulation submenu and the top-level "Analyze breakpoints"
-    /// (RB-080-49); `None` with `ui.pageContextMenuEmulation` off.
+    /// The view's emulation for the Emulation submenu (RB-080-49); `None` with
+    /// `ui.pageContextMenuEmulation` off.
     pub emulation: Option<super::emulation::EmulationState>,
     /// The views of the running recording, if one runs (one recording at a time).
     pub recording: Option<Vec<ViewId>>,
@@ -249,30 +250,10 @@ impl Builder<'_> {
         let state = self.state;
         let mut items = Vec::new();
         if state.menu_enabled {
-            // Groups (owner, 2026-11-17): DevTools, capture and runs, the view's layout and
-            // state, the bars - a separator between groups that have entries.
+            // Inspect element and DevTools on top, the submenus as the main menu has them
+            // (RB-090-92), a separator after each.
             let devtools = vec![self.inspect(), self.devtools()];
-            let mut capture = vec![self.screenshot(), self.video()];
-            if state.knows(crate::recorder::CHECK) {
-                capture.push(self.recorder());
-            }
-            if state.knows(crate::flows::RUN) {
-                capture.push(self.flows());
-            }
-            capture.push(self.checks());
-            capture.push(self.panels());
-            let mut view = Vec::new();
-            if let Some(emulation) = &state.emulation {
-                capture.push(self.emulation(emulation));
-                if state.knows(ANALYZE) {
-                    view.push(self.analyze());
-                }
-            }
-            if state.knows(crate::force_state::SET) {
-                view.push(self.force_state(&state.forced));
-            }
-            view.extend(self.view_entries());
-            for group in [devtools, capture, view, self.bars()] {
+            for group in [devtools, self.groups()] {
                 if group.is_empty() {
                     continue;
                 }
@@ -348,7 +329,7 @@ impl Builder<'_> {
             ),
             None => (false, this.clone()),
         };
-        let items = vec![
+        let mut items = vec![
             self.run(
                 "contextmenu.screenshot.this_viewport",
                 attached,
@@ -386,7 +367,18 @@ impl Builder<'_> {
                 json!({}),
             ),
         ];
-        self.submenu(Label::Key("contextmenu.screenshot.menu"), items)
+        // RB-094-03: this view's page and breakpoint in Chromium, Firefox and WebKit.
+        let engines = crate::engine_compare::defs::ENGINES_COMMAND;
+        if self.state.knows(engines) {
+            let view = json!({ "view": self.state.view.0 });
+            items.push(self.run(
+                "contextmenu.screenshot.compare_engines",
+                true,
+                engines,
+                view,
+            ));
+        }
+        self.submenu(Label::Key(KEY_SCREENSHOT), items)
     }
 
     fn video(&mut self) -> Item {
@@ -407,7 +399,7 @@ impl Builder<'_> {
             self.run(this_key, this_enabled, crate::video::defs::TOGGLE, this),
             self.run(all_key, true, crate::video::defs::TOGGLE_ALL, json!({})),
         ];
-        self.submenu(Label::Key("contextmenu.video.menu"), items)
+        self.submenu(Label::Key(KEY_VIDEO), items)
     }
 
     fn checks(&mut self) -> Item {
@@ -431,11 +423,7 @@ impl Builder<'_> {
                 },
             ));
         }
-        // With the Emulation block (RB-080-49) the analyzer is an entry of the menu itself.
-        if state.emulation.is_none() && state.knows(ANALYZE) {
-            items.push(self.analyze());
-        }
-        self.submenu(Label::Key("contextmenu.checks.menu"), items)
+        self.submenu(Label::Key(KEY_CHECKS), items)
     }
 
     /// The analyzer's window, as the chord opens it: only `Null` does (a value is a detection
@@ -477,12 +465,21 @@ impl Builder<'_> {
                 },
             ));
         }
-        self.submenu(Label::Key("contextmenu.panels.menu"), items)
+        self.submenu(Label::Key(KEY_PANELS), items)
     }
 }
 
 #[path = "bars.rs"]
 mod bars;
+
+#[path = "groups.rs"]
+pub mod groups;
+
+pub use groups::{
+    KEY_CAPTURE, KEY_CHECKS, KEY_EMULATION, KEY_ENVIRONMENTS, KEY_FLOWS, KEY_LAYOUT, KEY_PANELS,
+    KEY_RECORDER, KEY_SCREENSHOT, KEY_SESSIONS, KEY_SYNC, KEY_TOOLS, KEY_VIDEO, KEY_VIEW,
+    MAIN_MENU,
+};
 
 #[cfg(test)]
 #[path = "model_tests.rs"]
@@ -495,3 +492,7 @@ mod footer_tests;
 #[cfg(test)]
 #[path = "model_panels_tests.rs"]
 mod panels_tests;
+
+#[cfg(test)]
+#[path = "model_compare_tests.rs"]
+mod compare_tests;

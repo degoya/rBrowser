@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the width sweep (RB-093-01): Settings > Checks > Width sweep; rules on/off and severity in checks.rules",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "integer",
+      "minimum": 120,
+      "maximum": 3840,
+      "default": 320,
+      "description": "The first width a sweep sets, in CSS px.",
+      "x-category": "checks",
+      "x-section": "width-sweep",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "to": {
+      "type": "integer",
+      "minimum": 120,
+      "maximum": 3840,
+      "default": 1920,
+      "description": "The last width a sweep sets, in CSS px.",
+      "x-category": "checks",
+      "x-section": "width-sweep",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    },
+    "step": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 400,
+      "default": 10,
+      "description": "How far apart the widths of the first pass are, in CSS px; around every change the sweep then looks at each pixel.",
+      "x-category": "checks",
+      "x-section": "width-sweep",
+      "x-order": 3,
+      "x-scope": ["project", "local", "user"]
+    },
+    "kinds": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["overflow", "text-clipped", "overlap"] },
+      "uniqueItems": true,
+      "minItems": 1,
+      "default": ["overflow", "text-clipped", "overlap"],
+      "description": "What a sweep looks for: horizontal overflow of the page, text cut off by its box, visible neighbouring elements overlapping.",
+      "x-category": "checks",
+      "x-section": "width-sweep",
+      "x-order": 4,
+      "x-scope": ["project", "local", "user"]
+    },
+    "showSeconds": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 240,
+      "default": 120,
+      "description": "How long \"Show at N px\" on a width sweep finding holds the view at that width, in seconds; Escape or Cancel ends it sooner.",
+      "x-category": "checks",
+      "x-section": "width-sweep",
+      "x-order": 5,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

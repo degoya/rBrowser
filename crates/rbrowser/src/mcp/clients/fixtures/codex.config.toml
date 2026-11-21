@@ -1,0 +1,3 @@
+[mcp_servers.rbrowser]
+command = "C:\\Tools\\rBrowser\\rbrowser.exe"
+args = ["mcp"]

@@ -65,6 +65,10 @@ pub struct ToolsSettings {
     /// rBrowser downloads when you run "Video: download ffmpeg".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ffmpeg_path: Option<String>,
+    /// A cloudflared of your own for the portal's presentation over the internet (RB-096-05):
+    /// the absolute path of the program. Empty uses the build rBrowser downloads after you agreed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cloudflared_path: Option<String>,
 }
 
 #[cfg(test)]

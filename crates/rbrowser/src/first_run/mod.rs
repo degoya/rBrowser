@@ -12,6 +12,10 @@
 //!   ([`lane`]) and answer with the request's number, which the page matches.
 //! - MCP can neither open nor answer it: the command is refused to MCP ([`refuse_mcp`]) and the
 //!   `setup` messages come from the pages window only (`settings_window::guard`).
+//! - RB-091-08: when the very first start opens it while the bundled plugins' choice is open, the
+//!   one load of the plugins waits for the plugin step's answer
+//!   (`crate::plugins::bundle::hold_for_wizard`) - or for the wizard's close
+//!   ([`pages_window_closed`]); a step that panics answers with [`STEP_FAILED_KEY`] ([`guarded`]).
 
 pub mod basics;
 mod lane;
@@ -19,6 +23,7 @@ pub mod project;
 pub mod state;
 
 use std::collections::BTreeMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
 
@@ -60,6 +65,8 @@ pub const SETTING_KEY: &str = "ui.firstRunWizard";
 pub const NO_PROJECT_KEY: &str = "firstrun.basics.error.no_project";
 /// `basics` could not read or write the config.
 pub const BASICS_FAILED_KEY: &str = "firstrun.basics.error.failed";
+/// A step panicked (RB-091-08): it answers with this instead of no answer.
+pub const STEP_FAILED_KEY: &str = "firstrun.error.step_failed";
 
 /// The proposals of the project step; only the last is written.
 static PROPOSALS: Mutex<Proposals> = Mutex::new(Proposals::new());
@@ -151,6 +158,13 @@ pub fn is_setup_request(request: &str) -> bool {
     matches!(parse_request(request), Ok(ShellToCore::Setup { .. }))
 }
 
+/// The folder the wizard wrote a config into since the app started: the MCP setup may write a
+/// client's project file there too (RB-091-09).
+#[must_use]
+pub fn written_root() -> Option<PathBuf> {
+    lock(&WRITTEN).clone()
+}
+
 /// The core is up: the very first start opens the wizard, a project without config is hinted
 /// once ([`state::decide`]). Runs before the open project is recorded as a recent one, so a
 /// settings file that exists was there before this start.
@@ -183,6 +197,8 @@ pub fn on_start(core: &Core) {
     }
     match action {
         state::StartAction::OpenWizard => {
+            // RB-091-08: the plugins load once the plugin step is answered, not empty before.
+            crate::plugins::bundle::hold_for_wizard();
             core.ui()
                 .open_settings_window(crate::shell::page_url(ROUTE));
         }
@@ -221,6 +237,7 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
     Some(match request {
         SetupRequest::Info => Ok(CoreToShell::Setup { answer: info(core) }),
         SetupRequest::Close => {
+            pages_window_closed();
             core.ui().close_settings_window();
             Ok(CoreToShell::Ack)
         }
@@ -253,10 +270,32 @@ fn in_background(core: &Core, request: SetupRequest) -> Result<(), Failure> {
         .ok_or_else(|| (IpcErrorCode::Internal, "the window is closed".to_owned()))?;
     let runtime = core.runtime().clone();
     lane::run_in_order(&runtime, move || {
-        let answer = answer(&core, &request);
+        let answer = guarded(&request, || answer(&core, &request));
         core.send(&CoreToShell::Setup { answer });
     });
     Ok(())
+}
+
+/// The answer `run` gives to `request`; when it panics, a failure with [`STEP_FAILED_KEY`] and the
+/// request's number, so the page never waits for an answer that does not come (RB-091-08).
+pub fn guarded(request: &SetupRequest, run: impl FnOnce() -> SetupAnswer) -> SetupAnswer {
+    catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| {
+        tracing::warn!("a step of the setup wizard panicked; it answers with a failure");
+        let (request_id, step) = match request {
+            SetupRequest::Preview { request_id, .. } => (*request_id, SetupStep::Preview),
+            SetupRequest::Write { request_id, .. } => (*request_id, SetupStep::Write),
+            SetupRequest::Basics { request_id, .. } => (*request_id, SetupStep::Basics),
+            SetupRequest::Info | SetupRequest::Close => (0, SetupStep::Preview),
+        };
+        failed(request_id, step, (STEP_FAILED_KEY, BTreeMap::new()))
+    })
+}
+
+/// The pages window closed, could not be created, or the wizard asked it to close: a plugin
+/// choice the wizard left open no longer holds the plugins' load - it loads with the recommended
+/// set, as a later start would.
+pub fn pages_window_closed() {
+    crate::analyzer::plugins::release();
 }
 
 /// The answer to a `preview`, `write` or `basics` request, on this thread, with its number.
@@ -277,12 +316,14 @@ pub fn answer(core: &Core, request: &SetupRequest) -> SetupAnswer {
                 devices,
             };
             match project::propose(&preview, crate::analyzer::init_config) {
-                Ok((config, source)) => SetupAnswer::Proposal {
+                Ok(proposal) => SetupAnswer::Proposal {
                     request_id: *request_id,
-                    proposal_id: lock(&PROPOSALS).keep(root.clone(), config.clone()),
+                    proposal_id: lock(&PROPOSALS).keep(root.clone(), proposal.config.clone()),
                     root: root.to_string_lossy().into_owned(),
-                    config,
-                    source,
+                    config: proposal.config,
+                    source: proposal.source,
+                    sheets: proposal.sheets,
+                    reason: proposal.reason,
                 },
                 Err(failure) => failed(*request_id, SetupStep::Preview, failure),
             }

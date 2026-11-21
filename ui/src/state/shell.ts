@@ -28,6 +28,7 @@ import {
 } from '../theme/theme';
 import { applyTextScale, parseTextScale } from '../theme/textScale';
 import { changedValues } from './settingsChanged';
+import { EDIT_ADDRESS, addressEditOf, type AddressEdit } from '../canvas/addressEdit';
 
 export interface ShellStatus {
   key: string;
@@ -94,6 +95,8 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
   /** Windows' text size the page is drawn at, in percent (RB-090-26). */
   const textScale = ref(100);
   const focusAddressBarRequest = ref(0);
+  /** The address field open in a decoupled view's label on the canvas board (RB-092-03). */
+  const addressEdit = ref<AddressEdit | null>(null);
   /**
    * The registry's bindings by command id, for tooltips that name a shortcut (RB-080-60): asked
    * for once by the first component that needs them (`loadCommands`), then kept current by the
@@ -103,6 +106,8 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
   /** The registry's commands themselves (titles, groups, plugin commands) for the menus (RB-090-63). */
   const commands = shallowRef<readonly CommandInfo[]>([]);
   let commandsAsked = false;
+  /** The last command this page sent and when: what the person started (the error toast, RB-094-20). */
+  const lastRun = shallowRef<{ at: number; retry: ShellToCore } | null>(null);
   const resolvedTheme = computed(() => resolveTheme(theme.value, systemDark.value));
   /** What Windows uses now, whatever `ui.theme` says: the toolbar's System entry names it. */
   const systemTheme = computed(() => resolveTheme('system', systemDark.value));
@@ -135,6 +140,13 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
           state.value = { ...state.value, metrics: message.metrics };
         }
         break;
+      case 'pluginProgress':
+        // Only the plugins' progress changed (RB-094-10); none is absent, as in the snapshot.
+        if (state.value) {
+          const { pluginProgress: _old, ...rest } = state.value;
+          state.value = message.progress.length > 0 ? { ...rest, pluginProgress: message.progress } : rest;
+        }
+        break;
       case 'canvasLive':
         liveBoard.value = message.board;
         liveSeq.value = message.seq;
@@ -163,6 +175,8 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
         // A shortcut or MCP resolved to a command that lives in the shell.
         if (message.id === 'view.focus_address_bar') {
           focusAddressBar();
+        } else if (message.id === EDIT_ADDRESS) {
+          addressEdit.value = addressEditOf(message.args) ?? addressEdit.value;
         }
         break;
       default:
@@ -197,6 +211,9 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
    * took it - for an input that says at its own place why it was refused (RB-080-46).
    */
   async function refused(message: ShellToCore): Promise<string | null> {
+    if (message.type === 'runCommand') {
+      lastRun.value = { at: Date.now(), retry: message };
+    }
     try {
       await client.request(message);
       return null;
@@ -258,6 +275,11 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
     focusAddressBarRequest.value += 1;
   }
 
+  /** Closes the board's address field: loaded, Escape or a focus elsewhere. */
+  function closeAddressEdit(): void {
+    addressEdit.value = null;
+  }
+
   return {
     state,
     liveBoard,
@@ -268,6 +290,7 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
     systemTheme,
     textScale,
     focusAddressBarRequest,
+    addressEdit,
     start,
     stop,
     send,
@@ -275,9 +298,11 @@ export function createShell(client: IpcClient, env: ShellEnvironment) {
     run,
     report,
     focusAddressBar,
+    closeAddressEdit,
     ask,
     loadCommands,
     bindingOf,
     commands,
+    lastRun,
   };
 }

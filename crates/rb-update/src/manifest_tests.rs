@@ -4,8 +4,8 @@
 
 use std::sync::LazyLock;
 
-use chrono::{DateTime, Duration, Utc};
 use rand::Rng as _;
+use time::{OffsetDateTime, SignedDuration};
 
 use super::*;
 use crate::sign::{SigningKey, StaleError, TrustStore, sign_document};
@@ -33,8 +33,9 @@ pub(crate) fn trust_for(key: &SigningKey) -> TrustStore {
     trust
 }
 
-pub(crate) fn at(days: i64) -> DateTime<Utc> {
-    DateTime::from_timestamp(1_790_000_000, 0).expect("timestamp") + Duration::days(days)
+pub(crate) fn at(days: i64) -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(1_790_000_000).expect("timestamp")
+        + SignedDuration::days(days)
 }
 
 pub(crate) const PREFIX: &str = "https://github.com/degoya/rBrowser/releases/download/";
@@ -80,6 +81,17 @@ fn a_signed_manifest_verifies_and_round_trips() {
     assert_eq!(read.version, "1.1.0");
     assert_eq!(read.sequence, 5);
     assert_eq!(read.artifacts, original.artifacts);
+    assert_eq!(read.issued_at, original.issued_at);
+    assert_eq!(read.not_after, original.not_after);
+}
+
+/// RB-090-77: the times of a manifest are RFC 3339 in UTC with `Z`, as chrono wrote them.
+#[test]
+fn a_manifest_writes_its_times_in_utc() {
+    let json = serde_json::to_value(manifest(Channel::Stable, "1.1.0", 5)).expect("json");
+    assert_eq!(json["issued_at"], "2026-09-21T14:13:20Z");
+    assert_eq!(json["not_after"], "2027-03-20T14:13:20Z");
+    assert_eq!(json["released_at"], "2026-09-21T14:13:20Z");
 }
 
 /// A forged signature (same id, other key) is tampering; a foreign key id is untrusted.

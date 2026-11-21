@@ -1,12 +1,16 @@
 //! `emulation` in the user settings (RB-080-10, Settings > Emulation > Geolocation, time zone
 //! and CPU): the values the shortcuts switch a view to, and the user's own geolocation presets
 //! beside the built-in ones (Berlin, New York, Tokyo, Sydney). A built-in preset is named by
-//! the i18n key `emulation.geolocation.preset.<id>`.
+//! the i18n key `emulation.geolocation.preset.<id>`. The page clock and the animation rates
+//! (RB-094-07, Settings > Emulation > Clock and animations) are `crate::clock_settings`'s.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::Geolocation;
+use crate::clock_settings::{
+    ClockUserSettings, DEFAULT_ANIMATION_STEP_MS, default_animation_rates,
+};
+use crate::{Geolocation, PseudoLocaleSettings};
 
 /// The built-in geolocation presets: id, latitude, longitude.
 const BUILTIN_PRESETS: [(&str, f64, f64); 4] = [
@@ -37,6 +41,19 @@ pub struct EmulationUserSettings {
     /// The CPU throttling factor the shortcut sets on a view without one.
     #[schemars(range(min = 1.0, max = 100.0))]
     pub default_cpu_throttling: f64,
+    /// The pseudo-localisation of the page's texts (RB-092-02).
+    pub pseudo_locale: PseudoLocaleSettings,
+    /// The page clock the clock shortcut sets in every view (RB-094-07).
+    pub clock: ClockUserSettings,
+    /// The animation rates the animations shortcut steps through: 0 stops them, 1 is normal.
+    #[schemars(extend(
+        "uniqueItems" = true,
+        "items" = { "type": "number", "enum": [0.0, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0] }
+    ))]
+    pub animation_rates: Vec<f64>,
+    /// How far one step moves stopped animations on, in milliseconds.
+    #[schemars(range(min = 1, max = 10000))]
+    pub animation_step_ms: u32,
 }
 
 impl Default for EmulationUserSettings {
@@ -46,6 +63,10 @@ impl Default for EmulationUserSettings {
             geolocation_presets: Vec::new(),
             default_timezone: DEFAULT_TIMEZONE.to_owned(),
             default_cpu_throttling: DEFAULT_CPU_THROTTLING,
+            pseudo_locale: PseudoLocaleSettings::default(),
+            clock: ClockUserSettings::default(),
+            animation_rates: default_animation_rates(),
+            animation_step_ms: DEFAULT_ANIMATION_STEP_MS,
         }
     }
 }

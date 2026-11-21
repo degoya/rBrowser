@@ -1,7 +1,10 @@
 // The ARIA role and accessible name of an element, enough of both to find a control again in
 // another view: the explicit `role`, the implicit role of the common elements, and the name
 // from aria-labelledby, aria-label, the labels, alt, value, the content or title/placeholder.
-// Not the full accname algorithm; what it does not know falls through to text or CSS path.
+// Not the full accname algorithm; what it does not know falls through to text or CSS path. The
+// texts are the originals behind a pseudo-localisation (RB-092-02).
+
+import { originalText } from './locale/originals';
 
 /** Names longer than this are no selector. */
 export const MAX_NAME = 120;
@@ -87,7 +90,7 @@ function byIds(element: Element, ids: string): string {
   return normalize(
     ids
       .split(/\s+/)
-      .map((id) => (id ? root.getElementById?.(id)?.textContent : '') ?? '')
+      .map((id) => (id ? originalText(root.getElementById?.(id)) : ''))
       .join(' '),
   );
 }
@@ -98,11 +101,7 @@ function labelText(element: Element): string {
   if (!labels || labels.length === 0) return '';
   return normalize(
     Array.from(labels)
-      .map((label) => {
-        const copy = label.cloneNode(true) as Element;
-        copy.querySelectorAll('input, select, textarea').forEach((field) => field.remove());
-        return copy.textContent;
-      })
+      .map((label) => originalText(label, 'input, select, textarea'))
       .join(' '),
   );
 }
@@ -130,7 +129,7 @@ export function nameOf(element: Element, role: string | null = roleOf(element)):
     if (alt) return alt;
   }
   if (role && NAME_FROM_CONTENT.has(role)) {
-    const text = normalize(element.textContent);
+    const text = normalize(originalText(element));
     if (text) return text;
   }
   return normalize(element.getAttribute('title') ?? element.getAttribute('placeholder'));

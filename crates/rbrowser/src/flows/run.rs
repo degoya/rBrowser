@@ -104,6 +104,9 @@ impl Source {
     fn of(setup: &Setup, request: &RunRequest) -> Result<Self, FlowError> {
         if let Some(inline) = &request.inline {
             let mut head = catalog::parse_head(&inline.source);
+            // Only a flow file on disk may load a login state: a recording's rendered text is no
+            // trusted flow (security review w28).
+            head.storage_state = None;
             if head.views.is_empty() {
                 head.views.clone_from(&inline.views);
             }
@@ -145,6 +148,12 @@ pub trait FlowDeps: Send + Sync {
 
     /// Stops syncing input for `views` until the guard drops.
     fn pause_sync(&self, views: &[ViewId]) -> Box<dyn Send + Sync>;
+
+    /// Loads the login state file `name` (`// @storageState`, under `.rbrowser/out/`) into the
+    /// sessions of `views` (RB-094-08).
+    async fn load_state(&self, _name: &str, _views: &[ViewId]) -> Result<(), FlowError> {
+        Ok(())
+    }
 
     /// The sidecar's `flows.run` with `params`, its `$/progress` sent to `progress`.
     async fn run_flow(
@@ -234,6 +243,10 @@ pub async fn execute(
         return Err(FlowError::NoViews(nothing_to_play(&planned.skipped)));
     }
     announce(&progress, &planned.run, &planned.skipped);
+    // The activity bar's "step n/m" (RB-090-68): `super::step_progress::TOTAL_STEPS`.
+    if let Some(total) = super::run_steps::total_steps(&flow.text) {
+        let _ = progress.send(json!({ "totalSteps": total }));
+    }
     let timeout_ms = with_pauses(
         flow.head.timeout_ms.unwrap_or(setup.settings.timeout_ms),
         request.inline.as_ref().map_or(0, |inline| inline.pause_ms),
@@ -246,6 +259,9 @@ pub async fn execute(
         let targets: Vec<String> = setup.targets.values().cloned().collect();
         let endpoints = deps.open_endpoints(&planned.run, &targets)?;
         let ids: Vec<ViewId> = planned.run.iter().map(|run| run.view.id).collect();
+        if let Some(name) = &flow.head.storage_state {
+            deps.load_state(name, &ids).await?;
+        }
         let _sync = (!setup.settings.sync_during_run).then(|| deps.pause_sync(&ids));
         let params = params(
             setup,
@@ -447,3 +463,7 @@ mod tests;
 #[cfg(test)]
 #[path = "run_hidden_tests.rs"]
 mod hidden_tests;
+
+#[cfg(test)]
+#[path = "run_state_tests.rs"]
+mod state_tests;

@@ -34,6 +34,13 @@ pub enum CoreToShell {
         /// Per view, as [`StateSnapshot::metrics`]; empty when none are shown.
         metrics: Vec<crate::ViewMetrics>,
     },
+    /// The plugin calls' progress alone: pushed instead of the whole state when nothing else
+    /// changed (RB-094-10; a plugin reports up to 4 times a second); the shell puts it into the
+    /// state it holds.
+    PluginProgress {
+        /// As [`StateSnapshot::plugin_progress`]; empty when no call reports progress.
+        progress: Vec<crate::PluginProgress>,
+    },
     /// Setting values, and the schema when asked.
     Settings {
         /// Every key's value and origin.
@@ -230,6 +237,16 @@ pub enum CoreToShell {
     FlowRunChanged,
     /// A step of the flow run going on started or ended (RB-090-84).
     FlowStep(crate::FlowStep),
+    /// The steps of the recording that runs, as they are taken (RB-090-89).
+    RecordingSteps(crate::RecordingSteps),
+    /// The element "Pick in view" picked for the Recorder panel's editor (RB-092-01).
+    RecorderElementPicked(crate::PickedElement),
+    /// A recording editor's command came without its step (RB-092-01: a shortcut such as
+    /// `Leader F N`): the Recorder panel runs it on the step in focus.
+    RecorderStepCommand {
+        /// The command's id (`recorder.step_add`, `recorder.step_try`, ...).
+        command: String,
+    },
     /// A native menu the shell asked for (`nativeMenu`, RB-090-41) closed: `item` is the id of
     /// the row chosen, none when it closed without a choice (Esc, a click elsewhere).
     NativeMenuClosed {
@@ -239,9 +256,23 @@ pub enum CoreToShell {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         item: Option<String>,
     },
+    /// A sitemap capture's run for the gallery page (RB-090-86): the answer to
+    /// `getSitemapGallery`.
+    SitemapGallery(crate::SitemapGalleryPage),
     /// The setup wizard's answer or event (RB-091-05).
     Setup {
         /// The answer.
         answer: crate::SetupAnswer,
+    },
+    /// The bug report's answers (RB-093-04): the report waiting in the preview, a saved
+    /// report's masked Markdown for the status bar's copy button.
+    BugReport {
+        /// The answer.
+        answer: crate::BugReportAnswer,
+    },
+    /// The MCP setup's answer (RB-091-09).
+    McpSetup {
+        /// The answer.
+        answer: crate::McpSetupAnswer,
     },
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_STATE, NARROW_PAGE, STRIP, folded, iconsOnly, panelArgs, railSide, stateOf } from './dock';
+import { DEFAULT_STATE, KEEP_FRAMES_SETTING, NARROW_PAGE, STRIP, folded, iconsOnly, panelArgs, railSide, stateOf } from './dock';
 
 const value = (key: string, v: unknown) => ({ key, value: v as never, origin: 'user' as const });
 
@@ -20,6 +20,7 @@ describe('the panels dock state', () => {
       shown: 'hidden',
       collapsed: true,
       sidebar: 'icons',
+      keepFrames: 3,
     });
     expect(stateOf([value('panels.dockState', 'open')]).collapsed).toBe(false);
   });
@@ -72,5 +73,15 @@ describe('the panels dock state', () => {
     expect(panelArgs('nodot')).toEqual({});
     expect(panelArgs('.x')).toEqual({});
     expect(panelArgs('x.')).toEqual({});
+  });
+
+  // RB-090-38: how many hidden panels stay loaded, a whole number up to 10.
+  it('reads how many hidden frames stay loaded, the default for an odd value', () => {
+    expect(DEFAULT_STATE.keepFrames).toBe(3);
+    expect(stateOf([value(KEEP_FRAMES_SETTING, 0)]).keepFrames).toBe(0);
+    expect(stateOf([value(KEEP_FRAMES_SETTING, 5)]).keepFrames).toBe(5);
+    expect(stateOf([value(KEEP_FRAMES_SETTING, 99)]).keepFrames).toBe(10);
+    expect(stateOf([value(KEEP_FRAMES_SETTING, 1.5)]).keepFrames).toBe(3);
+    expect(stateOf([value(KEEP_FRAMES_SETTING, 'many')]).keepFrames).toBe(3);
   });
 });

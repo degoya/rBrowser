@@ -9,16 +9,23 @@ fn performance_defaults_throttle_hidden_views_and_warn_at_the_k3_budget() {
     assert!(user.performance.throttle_hidden);
     assert_eq!(user.performance.inactive_fps, 0);
     assert_eq!(user.performance.memory_warning_mb, 3072);
+    assert!(
+        user.performance.counters,
+        "the timing counters record by default"
+    );
     assert!(!user.extra.contains_key("performance"));
 }
 
 #[test]
 fn performance_reads_its_section_in_camel_case() {
     let user: UserSettings = serde_json::from_value(json!({
-        "performance": { "throttleHidden": false, "inactiveFps": 30, "memoryWarningMb": 0 }
+        "performance": {
+            "throttleHidden": false, "inactiveFps": 30, "memoryWarningMb": 0, "counters": false
+        }
     }))
     .expect("settings");
     assert!(!user.performance.throttle_hidden);
+    assert!(!user.performance.counters);
     assert_eq!(user.performance.inactive_fps, 30);
     assert_eq!(user.performance.memory_warning_mb, 0);
 }
@@ -29,6 +36,7 @@ fn performance_clamps_what_a_hand_edited_file_puts_out_of_range() {
         throttle_hidden: true,
         inactive_fps: 500,
         memory_warning_mb: 10_000_000,
+        counters: true,
     };
     let clamped = settings.clamped();
     assert_eq!(clamped.inactive_fps, crate::MAX_INACTIVE_FPS);

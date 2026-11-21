@@ -115,7 +115,7 @@ impl Drop for Claim {
     }
 }
 
-pub(super) async fn blocking<T: Send + 'static>(
+pub(crate) async fn blocking<T: Send + 'static>(
     job: impl FnOnce() -> T + Send + 'static,
 ) -> Result<T, RunError> {
     tokio::task::spawn_blocking(job)
@@ -125,6 +125,16 @@ pub(super) async fn blocking<T: Send + 'static>(
 
 /// A run id from `now_unix` not taken below `root`, and its folder.
 fn fresh_store(root: &Path, now_unix: u64) -> Result<(String, RunStore), RunError> {
+    fresh_store_in(root, &OUT_DIR, now_unix)
+}
+
+/// A run id from `now_unix` not taken in `out` below `root`, and its folder (the engine
+/// comparison's runs too, RB-094-03).
+pub(crate) fn fresh_store_in(
+    root: &Path,
+    out: &[&str],
+    now_unix: u64,
+) -> Result<(String, RunStore), RunError> {
     let base = rb_visual::sitemap_store::run_id(&crate::local_time::stamp_at(now_unix));
     for n in 1..100 {
         let id = if n == 1 {
@@ -132,8 +142,8 @@ fn fresh_store(root: &Path, now_unix: u64) -> Result<(String, RunStore), RunErro
         } else {
             format!("{base}-{n}")
         };
-        if RunStore::open_in(root, &OUT_DIR, &id, false)?.is_none() {
-            let store = RunStore::open_in(root, &OUT_DIR, &id, true)?
+        if RunStore::open_in(root, out, &id, false)?.is_none() {
+            let store = RunStore::open_in(root, out, &id, true)?
                 .ok_or_else(|| RunError::Failed("the run's folder was not made".to_owned()))?;
             return Ok((id, store));
         }

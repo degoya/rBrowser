@@ -1,12 +1,23 @@
 //! The key table of the user settings (`settings.json`), moved out of `annotate` and
-//! re-exported there.
+//! re-exported there; the keys of the shell's strips (activity bar, view footer, label strips)
+//! are `user_keys_shell.rs`, joined in at compile time.
 
 use rb_settings::Category;
 
 use super::{KeyDef, key, protected};
 
-/// The keys of the user settings (`settings.json`).
-pub const USER_KEYS: &[KeyDef] = &[
+#[path = "user_keys_shell.rs"]
+mod shell;
+use shell::{SHELL_KEYS, concat};
+
+/// The keys of the user settings (`settings.json`): these, then the shell's strips
+/// ([`SHELL_KEYS`]), in this order - a section's `x-order` follows it.
+pub const USER_KEYS: &[KeyDef] = &ALL;
+
+const ALL: [KeyDef; BASE_KEYS.len() + SHELL_KEYS.len()] = concat(BASE_KEYS, SHELL_KEYS);
+
+/// The keys before the shell's strips.
+const BASE_KEYS: &[KeyDef] = &[
     key("ui.language", Category::General, "language"),
     key("ui.theme", Category::General, "appearance"),
     // `project_open` opens one of them: MCP may not add a folder of its choice.
@@ -16,6 +27,8 @@ pub const USER_KEYS: &[KeyDef] = &[
     key("startup.focusOnOpen", Category::General, "startup"),
     // The setup wizard at the first start and the "Set up project" hint (RB-091-05).
     key("ui.firstRunWizard", Category::General, "startup"),
+    // The pages of the last session or the start URL (RB-092-04).
+    key("startup.restore", Category::General, "startup"),
     // Zoom and focus mode of the grid (RB-010-12).
     key("grid.fitToWindow", Category::Layout, "zoom"),
     key("grid.defaultZoom", Category::Layout, "zoom"),
@@ -46,7 +59,7 @@ pub const USER_KEYS: &[KeyDef] = &[
     key("popOut.keepPlaceholder", Category::Layout, "pop-out"),
     key("popOut.fitToScreen", Category::Layout, "pop-out"),
     key("popOut.rememberBounds", Category::Layout, "pop-out"),
-    // Throttling and the memory warning (RB-020-09).
+    // Throttling, the memory warning (RB-020-09) and the timing counters (RB-090-32).
     key("performance.throttleHidden", Category::Layout, "grid"),
     key("performance.inactiveFps", Category::Layout, "grid"),
     key(
@@ -54,6 +67,7 @@ pub const USER_KEYS: &[KeyDef] = &[
         Category::Advanced,
         "experimental",
     ),
+    key("performance.counters", Category::Advanced, "diagnostics"),
     // Self-update (RB-090-02): every key widens what reaches the network or replaces the
     // program, so none is MCP's to set.
     protected("updates.enabled", Category::General, "updates"),
@@ -71,10 +85,15 @@ pub const USER_KEYS: &[KeyDef] = &[
     protected("mcp.consoleLogLimit", Category::Automation, "mcp"),
     protected("mcp.networkRequestLimit", Category::Automation, "mcp"),
     protected("mcp.errorLimit", Category::Automation, "mcp"),
+    protected("mcp.collectNetwork", Category::Automation, "mcp"),
     protected("mcp.maxAnswerBytes", Category::Automation, "mcp"),
     // `rbrowser mcp` and the audit notice (RB-030-02, RB-030-03).
     protected("mcp.stdioAutoStart", Category::Automation, "mcp"),
     protected("mcp.notifyOnSettingChange", Category::Automation, "mcp"),
+    protected("mcp.prompts", Category::Automation, "mcp"),
+    protected("mcp.resources", Category::Automation, "mcp"),
+    // The AI client the MCP setup shows first (RB-091-09).
+    protected("mcp.client", Category::Automation, "mcp"),
     protected("mcp.allowEvaluate", Category::Security, "evaluate"),
     // The portal (RB-080-05): every key widens what reaches the LAN, so none is MCP's to set.
     protected("portal.enabled", Category::Security, "portal"),
@@ -120,6 +139,18 @@ pub const USER_KEYS: &[KeyDef] = &[
     ),
     key(
         "automation.flows.runLayout",
+        Category::Automation,
+        "playwright",
+    ),
+    // RB-090-89: a played recording's hidden view brought into sight.
+    key(
+        "automation.flows.revealRecording",
+        Category::Automation,
+        "playwright",
+    ),
+    // RB-090-91: the Flows panel asks before it deletes a flow.
+    key(
+        "automation.flows.confirmDelete",
         Category::Automation,
         "playwright",
     ),
@@ -196,17 +227,6 @@ pub const USER_KEYS: &[KeyDef] = &[
     key("resources.enabled", Category::Devtools, "web-vitals"),
     key("resources.ramWarnMb", Category::Devtools, "web-vitals"),
     key("resources.cpuWarnPercent", Category::Devtools, "web-vitals"),
-    // The Vue and React DevTools backends in the views' pages (RB-080-24).
-    key(
-        "frameworkDevtools.vue",
-        Category::Devtools,
-        "framework-devtools",
-    ),
-    key(
-        "frameworkDevtools.react",
-        Category::Devtools,
-        "framework-devtools",
-    ),
     key("reload.pollingFallback", Category::Reload, "polling"),
     key("reload.pollIntervalMs", Category::Reload, "polling"),
     key("reload.intervalPauseSec", Category::Reload, "interval"),
@@ -270,14 +290,49 @@ pub const USER_KEYS: &[KeyDef] = &[
         Category::Emulation,
         "geo-time-cpu",
     ),
-    // Logging and diagnostics (RB-010-10, `rb_diag::LogSettings`).
-    // A raised level would write MCP payloads to the log: never over MCP.
+    // The pseudo-localisation of the page (RB-092-02).
+    key(
+        "emulation.pseudoLocale.factor",
+        Category::Emulation,
+        "text-direction",
+    ),
+    key(
+        "emulation.pseudoLocale.accents",
+        Category::Emulation,
+        "text-direction",
+    ),
+    key(
+        "emulation.pseudoLocale.rtl",
+        Category::Emulation,
+        "text-direction",
+    ),
+    // The page clock and the animation rates (RB-094-07).
+    key(
+        "emulation.clock.default",
+        Category::Emulation,
+        "clock-animations",
+    ),
+    key(
+        "emulation.clock.speed",
+        Category::Emulation,
+        "clock-animations",
+    ),
+    key(
+        "emulation.animationRates",
+        Category::Emulation,
+        "clock-animations",
+    ),
+    key(
+        "emulation.animationStepMs",
+        Category::Emulation,
+        "clock-animations",
+    ),
+    // Logging (RB-010-10, `rb_diag::LogSettings`): a raised level logs MCP payloads, not MCP's.
     protected("logs.level", Category::Advanced, "log-level"),
     key("logs.crashDumpsInBundle", Category::Advanced, "diagnostics"),
     key("logs.maxFileSizeMb", Category::Security, "logs"),
     key("logs.maxFiles", Category::Security, "logs"),
-    // Plugins (RB-010-03, `docs/plugins.md`): what installs, enables, trusts or widens a plugin
-    // is protected.
+    // Plugins (RB-010-03, `docs/plugins.md`): installing, enabling, trusting, widening protected.
     protected("plugins.disabled", Category::Plugins, "installed"),
     protected("plugins.trustedKeys", Category::Plugins, "installed"),
     protected("plugins.developmentMode", Category::Plugins, "installed"),
@@ -293,6 +348,8 @@ pub const USER_KEYS: &[KeyDef] = &[
     key("plugins.panelsHidden", Category::Plugins, "installed"),
     // Lighthouse beyond the views' sites reads local and LAN pages (RB-090-21): the person's.
     protected("plugins.lighthouseAnyUrl", Category::Plugins, "installed"),
+    // The consent probe beyond public addresses reads local and LAN pages (RB-094-09).
+    protected("plugins.consentProbeAnyUrl", Category::Plugins, "installed"),
     // The plugin panels' message limit (RB-090-44); `plugins.*` is refused to MCP as a root.
     key(
         "plugins.panelMessageMaxBytes",
@@ -302,6 +359,12 @@ pub const USER_KEYS: &[KeyDef] = &[
     // Sessions (RB-020-07): keeping login cookies on disk is the person's decision, never MCP's.
     protected(
         "sessions.persistSessionCookies",
+        Category::Security,
+        "sessions",
+    ),
+    // RB-094-08: what a login state export takes; widening it is the person's decision.
+    protected(
+        "sessions.stateExportAllDomains",
         Category::Security,
         "sessions",
     ),
@@ -391,6 +454,7 @@ pub const USER_KEYS: &[KeyDef] = &[
     // the toolbar (RB-080-79).
     key("panels.dockAtStart", Category::Plugins, "installed"),
     key("panels.closeTo", Category::Plugins, "installed"),
+    key("panels.keepFrames", Category::Plugins, "installed"),
     key("ui.toolbar.panelsToggle", Category::General, "appearance"),
     // The portal's button in the toolbar (RB-090-62), beside the toolbar's other switches.
     key("ui.toolbar.portalButton", Category::General, "appearance"),
@@ -420,38 +484,9 @@ pub const USER_KEYS: &[KeyDef] = &[
         Category::Plugins,
         "catalog",
     ),
-    // The activity bar while something runs (RB-090-67), beside the toolbar's switches.
-    key("ui.activityBar.position", Category::General, "appearance"),
-    key("ui.activityBar.mode", Category::General, "appearance"),
-    key("ui.activityBar.show.video", Category::General, "appearance"),
-    key(
-        "ui.activityBar.show.recorder",
-        Category::General,
-        "appearance",
-    ),
-    key("ui.activityBar.show.flows", Category::General, "appearance"),
-    key(
-        "ui.activityBar.show.checks",
-        Category::General,
-        "appearance",
-    ),
-    key(
-        "ui.activityBar.show.portal",
-        Category::General,
-        "appearance",
-    ),
-    key(
-        "ui.activityBar.show.desync",
-        Category::General,
-        "appearance",
-    ),
-    // The vitals bar under every view (RB-090-71, the label strip's vitals of RB-090-27 before),
-    // beside the breakpoint bar's keys; what the label strips show beside the name (RB-090-27).
-    key("ui.viewFooter.vitals", Category::Layout, "grid"),
-    // The Lighthouse bar below the vitals bar (RB-090-73).
-    key("ui.viewFooter.lighthouse", Category::Layout, "grid"),
-    key("ui.cellLabel.engineStatus", Category::Layout, "grid"),
-    key("ui.cellLabel.address", Category::Layout, "grid"),
-    // The time zone of the names a person reads (RB-090-69), beside the language.
-    key("ui.fileNameTime", Category::General, "language"),
+    key("plugins.catalog.newNotice", Category::Plugins, "catalog"),
+    // Where a bug report goes and the look at its texts first (RB-093-04): the person's, and no
+    // MCP caller's - a report holds the page's state, and the preview is a privacy condition.
+    protected("report.folder", Category::Capture, "report"),
+    protected("report.preview", Category::Capture, "report"),
 ];

@@ -141,6 +141,9 @@ pub struct AboutInfo {
     /// Playwright's WebKit build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub webkit: Option<String>,
+    /// The installed Safari's version, macOS only (RB-095-03).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safari: Option<String>,
     /// The Node runtime.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node: Option<String>,
@@ -232,7 +235,7 @@ pub struct PluginGrantDetails {
     pub http_rate_per_second: Option<u32>,
     /// What the dialog highlights: `evaluate`, `cdp:<Domain>` for a domain that controls the
     /// page or reads its traffic, and the capabilities `network-rules`, `console-logs`,
-    /// `sidecar` and `project-write`.
+    /// `sidecar`, `project-write` and `consent-probe`.
     pub risky: Vec<String>,
 }
 

@@ -409,7 +409,7 @@ pub fn trusted() -> bool {
 /// The rows of this process's plugins once they are loaded; `None` while the load runs. Never
 /// waits for the load.
 pub fn current() -> Option<Vec<PluginRow>> {
-    crate::analyzer::plugins::loaded().map(|loaded| rows(loaded, trusted()))
+    crate::analyzer::plugins::loaded().map(|loaded| rows(&loaded, trusted()))
 }
 
 #[cfg(test)]

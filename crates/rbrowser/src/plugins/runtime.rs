@@ -1,7 +1,8 @@
 //! [`PluginRuntime`]: a window's feature plugins at run time (RB-060-12) - their components'
 //! answers to commands, tools and page scripts, and the posts those answers carry, delivered to
 //! the page scripts ([`PluginPages`]), the panels (the shell) and the status bar (RB-080-64,
-//! [`super::status`]).
+//! [`super::status`]). The plugins served are swapped whole by a live change (RB-092-06,
+//! [`PluginRuntime::replace_plugins`]); a call takes them as they are when it starts.
 
 use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,8 +11,8 @@ use std::sync::{Arc, Mutex, Weak};
 use async_trait::async_trait;
 use rb_engine::ViewId;
 use rb_plugin_host::{
-    BUSY, LoadedEntry, LoadedPlugin, MAX_MESSAGE_BYTES, MAX_PENDING, PageBridge, PageLog,
-    PluginSource, Post, PostTarget, split_posts,
+    BUSY, LoadedEntry, MAX_MESSAGE_BYTES, PageBridge, PageLog, PluginSource, Post, PostTarget,
+    split_posts,
 };
 use rb_plugin_types::{Failure, FailureKind, PluginKind, codes};
 use serde_json::{Value, json};
@@ -23,64 +24,11 @@ pub use super::status::{HostSink, NoticeSink, Sinks};
 use crate::cdp::{CdpRouter, lock};
 use crate::network_rules::state::Rules;
 
-/// What the runtime asks of a plugin's component; [`LoadedPlugin`] in the app, a fake in tests.
-#[async_trait]
-pub trait Component: Send + Sync {
-    /// A request of its page script in `view`.
-    async fn page_message(&self, view: u32, message: &Value) -> Result<String, Failure>;
-    /// A command of its manifest.
-    async fn run_command(&self, command: &str, args: &str) -> Result<String, Failure>;
-    /// A tool of its manifest.
-    async fn call_tool(&self, tool: &str, args: &str) -> Result<String, Failure>;
-    /// The host gave a page request up without an answer (review of RB-080-66, 5): counts as
-    /// the plugin's failure, so a plugin that hangs is suspended in the end.
-    fn gave_up(&self) {}
-    /// Whether a call now would wait for a running one (RB-080-90).
-    fn busy(&self) -> bool {
-        false
-    }
-    /// Its network rules (`@rules`, RB-070-02); only a plugin granted `network-rules` has any.
-    async fn network_rules(&self, args: &str) -> Result<String, Failure> {
-        let _ = args;
-        Err(Failure::coded(
-            FailureKind::NotSupported,
-            codes::UNKNOWN_CONTRIBUTION,
-        ))
-    }
-}
-
-#[async_trait]
-impl Component for LoadedPlugin {
-    async fn page_message(&self, view: u32, message: &Value) -> Result<String, Failure> {
-        LoadedPlugin::page_message(self, view, message).await
-    }
-
-    async fn run_command(&self, command: &str, args: &str) -> Result<String, Failure> {
-        LoadedPlugin::run_command(self, command, args).await
-    }
-
-    async fn call_tool(&self, tool: &str, args: &str) -> Result<String, Failure> {
-        LoadedPlugin::call_tool(self, tool, args).await
-    }
-
-    async fn network_rules(&self, args: &str) -> Result<String, Failure> {
-        LoadedPlugin::network_rules(self, args).await
-    }
-
-    fn busy(&self) -> bool {
-        LoadedPlugin::busy(self)
-    }
-
-    fn gave_up(&self) {
-        if self.health().record_failure() {
-            tracing::warn!(
-                code = codes::SUSPENDED,
-                plugin_id = self.manifest().id.as_str(),
-                "a plugin's page requests went unanswered repeatedly; suspended until resumed"
-            );
-        }
-    }
-}
+pub use super::component::Component;
+use super::consent::{self, Call};
+use crate::api_client::protocol::{self as api_protocol, Origin};
+use crate::load_test::call::with_load;
+use crate::load_test::protocol as load_protocol;
 
 /// One feature plugin the runtime serves.
 #[derive(Clone)]
@@ -104,12 +52,17 @@ pub struct Plugin {
 mod runtime_plugins;
 pub use runtime_plugins::{enabled_bridges, may_run, plugins_of, runnable};
 
+#[path = "runtime_swap.rs"]
+mod runtime_swap;
+pub use runtime_swap::keep_bridges;
+
 /// What hands a panel event to the shell: the plugin and the event's JSON.
 pub type PanelSink = Arc<dyn Fn(&str, Value) + Send + Sync>;
 
 /// The feature plugins of one window.
 pub struct PluginRuntime {
-    plugins: Vec<Plugin>,
+    /// The plugins served now, swapped whole ([`PluginRuntime::replace_plugins`]).
+    plugins: Mutex<Arc<Vec<Plugin>>>,
     pages: Arc<PluginPages>,
     sinks: Sinks,
     runtime: Handle,
@@ -135,7 +88,7 @@ impl PluginRuntime {
         Arc::new_cyclic(|me: &Weak<Self>| {
             let inbox: Weak<dyn Inbox> = me.clone();
             Self {
-                plugins,
+                plugins: Mutex::new(Arc::new(plugins)),
                 pages: PluginPages::new(cdp, runtime.clone(), inbox),
                 sinks,
                 runtime,
@@ -151,9 +104,9 @@ impl PluginRuntime {
         &self.pages
     }
 
-    /// The plugins served.
-    pub fn plugins(&self) -> &[Plugin] {
-        &self.plugins
+    /// The plugins served now; a live change after this leaves the list taken as it is.
+    pub fn plugins(&self) -> Arc<Vec<Plugin>> {
+        Arc::clone(&lock(&self.plugins))
     }
 
     /// The page scripts that run from now on: those [`enabled_bridges`] gives; and whether the
@@ -162,7 +115,7 @@ impl PluginRuntime {
         self.project_trusted
             .store(project_trusted, Ordering::Release);
         self.pages
-            .set_plugins(enabled_bridges(&self.plugins, off, project_trusted));
+            .set_plugins(enabled_bridges(&self.plugins(), off, project_trusted));
     }
 
     /// Runs command `command` of plugin `plugin`: its answer without its posts, which are
@@ -189,8 +142,8 @@ impl PluginRuntime {
         args: &Value,
     ) -> Result<(Value, bool), Failure> {
         let component = self.component(plugin)?;
-        let args = self.fed(plugin, args);
-        let raw = component.run_command(command, &args.to_string()).await;
+        let args = self.fed(plugin, args, Origin::Command);
+        let raw = with_load(&*component, Call::Command(command), &args).await;
         self.sync_network(plugin).await;
         self.answered_noted(plugin, raw, Answer::Command)
     }
@@ -206,9 +159,21 @@ impl PluginRuntime {
         tool: &str,
         args: &Value,
     ) -> Result<Value, Failure> {
+        self.call_tool_from(plugin, tool, args, Origin::Tool).await
+    }
+
+    /// [`PluginRuntime::call_tool`] for a caller `origin`: what the API client lets it do
+    /// (RB-096-01, `crate::api_client::protocol`).
+    async fn call_tool_from(
+        &self,
+        plugin: &str,
+        tool: &str,
+        args: &Value,
+        origin: Origin,
+    ) -> Result<Value, Failure> {
         let component = self.component(plugin)?;
-        let args = self.fed(plugin, args);
-        let raw = component.call_tool(tool, &args.to_string()).await;
+        let args = self.fed(plugin, args, origin);
+        let raw = with_load(&*component, Call::Tool(tool), &args).await;
         self.sync_network(plugin).await;
         self.answered(plugin, raw, Answer::Tool)
     }
@@ -243,7 +208,10 @@ impl PluginRuntime {
         limit: usize,
     ) -> Result<Value, Failure> {
         self.say_waiting(plugin);
-        super::panel_limit::bounded(self.call_tool(plugin, tool, args).await?, limit)
+        let answer = self
+            .call_tool_from(plugin, tool, args, Origin::Panel)
+            .await?;
+        super::panel_limit::bounded(answer, limit)
     }
 
     /// RB-080-90: a panel's call that waits for a running one of the same plugin (a check run,
@@ -258,16 +226,23 @@ impl PluginRuntime {
         }
     }
 
-    /// `args` with the views' buffers for a plugin granted `console-logs` and the `$network`
-    /// state for one granted `network-rules`; as they are else.
-    fn fed(&self, plugin: &str, args: &Value) -> Value {
-        let Some(served) = self.plugins.iter().find(|served| served.id == plugin) else {
-            return args.clone();
+    /// `args` with the views' buffers for a plugin granted `console-logs`, the `$network`
+    /// state for one granted `network-rules`, the probe offered to one granted `consent-probe`
+    /// and the API work to one granted `api-client` (for `origin`), the load test to one granted
+    /// `load-test` (RB-096-07); a caller's `$consent`, `$apiResult` and `$loadResult` dropped for
+    /// every plugin ([`consent::offered`], [`api_protocol::offered`], [`load_protocol::offered`]).
+    fn fed(&self, plugin: &str, args: &Value, origin: Origin) -> Value {
+        let Some(served) = self.served(plugin) else {
+            let args = api_protocol::offered(&consent::offered(args, false), false, origin);
+            return load_protocol::offered(&args, false, origin);
         };
+        let args = consent::offered(args, served.component.consent_probe());
+        let args = api_protocol::offered(&args, served.component.api_client(), origin);
+        let args = load_protocol::offered(&args, served.component.load_test(), origin);
         let mut args = if served.console {
-            super::console::with_feed(args, super::console::current())
+            super::console::with_feed(&args, super::console::current())
         } else {
-            args.clone()
+            args
         };
         if served.network
             && let Some(rules) = self.network_rules()
@@ -291,7 +266,7 @@ impl PluginRuntime {
     /// Asks every plugin granted `network-rules` for its rules again (trust or settings changed).
     pub async fn sync_all_network(&self) {
         let ids: Vec<String> = self
-            .plugins
+            .plugins()
             .iter()
             .filter(|plugin| plugin.network)
             .map(|plugin| plugin.id.clone())
@@ -305,11 +280,7 @@ impl PluginRuntime {
     /// [`may_run`]; a plugin that may not run loses its rules (review finding M2 of Charge 7). A
     /// project plugin's rules are all project rules, whatever origin they declare.
     async fn sync_network(&self, plugin: &str) {
-        let Some(served) = self
-            .plugins
-            .iter()
-            .find(|served| served.id == plugin && served.network)
-        else {
+        let Some(served) = self.served(plugin).filter(|served| served.network) else {
             return;
         };
         let Some(rules) = self.network_rules() else {
@@ -325,7 +296,7 @@ impl PluginRuntime {
 
     /// Whether a project plugin is among the plugins served.
     pub fn has_project_plugins(&self) -> bool {
-        self.plugins
+        self.plugins()
             .iter()
             .any(|plugin| plugin.source == PluginSource::Project)
     }
@@ -338,14 +309,7 @@ impl PluginRuntime {
 
     /// The component of plugin `plugin` when it is served and [`may_run`].
     fn component(&self, plugin: &str) -> Result<Arc<dyn Component>, Failure> {
-        let served = self
-            .plugins
-            .iter()
-            .find(|served| served.id == plugin)
-            .ok_or_else(|| {
-                Failure::coded(FailureKind::NotFound, codes::NOT_AVAILABLE)
-                    .with_param("service", plugin)
-            })?;
+        let served = self.served(plugin).ok_or_else(|| not_available(plugin))?;
         if !may_run(served.source, self.project_trusted.load(Ordering::Acquire)) {
             return Err(
                 Failure::coded(FailureKind::AccessDenied, codes::UNTRUSTED_WORKSPACE)
@@ -373,6 +337,10 @@ impl PluginRuntime {
         raw: Result<String, Failure>,
         from: Answer,
     ) -> Result<(Value, bool), Failure> {
+        // RB-092-06: the plugin was removed while the call ran; its answer and posts are dropped.
+        if self.served(plugin).is_none() {
+            return Err(not_available(plugin));
+        }
         let answer: Value = serde_json::from_str(&raw?)
             .map_err(|_| Failure::coded(FailureKind::BadData, codes::BAD_OUTPUT))?;
         let (answer, posts, dropped) = split_posts(answer);
@@ -391,7 +359,7 @@ impl PluginRuntime {
     /// bar and the host at once; whether a notice was shown.
     fn deliver(&self, plugin: &str, posts: Vec<Post>, from: Answer) -> bool {
         let (mut to_pages, mut noted) = (Vec::new(), false);
-        let served = self.plugins.iter().find(|served| served.id == plugin);
+        let served = self.served(plugin);
         for post in posts {
             match post.target {
                 PostTarget::Panel => {
@@ -400,7 +368,9 @@ impl PluginRuntime {
                 PostTarget::All => to_pages.push((None, post.message)),
                 PostTarget::View(view) => to_pages.push((Some(ViewId(view)), post.message)),
                 // `status` and `host`.
-                side => noted |= side_post(served, &self.sinks, side, &post.message, from),
+                side => {
+                    noted |= side_post(served.as_ref(), &self.sinks, side, &post.message, from);
+                }
             }
         }
         if to_pages.is_empty() {
@@ -414,35 +384,6 @@ impl PluginRuntime {
             }
         });
         noted
-    }
-}
-
-/// Counts a page request of a plugin while it waits.
-struct PendingSlot<'a> {
-    pending: &'a Mutex<HashMap<String, usize>>,
-    plugin: String,
-}
-
-impl Drop for PendingSlot<'_> {
-    fn drop(&mut self) {
-        if let Some(count) = lock(self.pending).get_mut(&self.plugin) {
-            *count = count.saturating_sub(1);
-        }
-    }
-}
-
-impl PluginRuntime {
-    fn take_slot(&self, plugin: &str) -> Option<PendingSlot<'_>> {
-        let mut pending = lock(&self.pending);
-        let count = pending.entry(plugin.to_owned()).or_default();
-        if *count >= MAX_PENDING {
-            return None;
-        }
-        *count += 1;
-        Some(PendingSlot {
-            pending: &self.pending,
-            plugin: plugin.to_owned(),
-        })
     }
 }
 
@@ -478,6 +419,11 @@ fn bounded(answer: Value) -> Result<Value, Failure> {
     } else {
         Ok(answer)
     }
+}
+
+/// Plugin `plugin` is not served (`plugins.error.not_available`).
+fn not_available(plugin: &str) -> Failure {
+    Failure::coded(FailureKind::NotFound, codes::NOT_AVAILABLE).with_param("service", plugin)
 }
 
 /// A failure's code for a page script: the plugin's own key or `plugins.error.*`.

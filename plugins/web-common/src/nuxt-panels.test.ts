@@ -12,7 +12,7 @@ const PLUGINS = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (...path: string[]): string => readFileSync(join(PLUGINS, ...path), 'utf8');
 
 /** The panels on Nuxt UI (RB-080-83 … RB-080-86). */
-const NUXT_PANELS = ['lighthouse', 'fonts', 'image-overlay', 'rulers-guides', 'overlays', 'simulators', 'form-autofill', 'screenshot-editor', 'color-picker', 'coverage', 'console', 'error-report', 'network-panel', 'snippets', 'storage-panel', 'seo', 'pwa-check', 'outline'];
+const NUXT_PANELS = ['lighthouse', 'fonts', 'image-overlay', 'rulers-guides', 'overlays', 'simulators', 'form-autofill', 'screenshot-editor', 'color-picker', 'coverage', 'console', 'error-report', 'network-panel', 'snippets', 'storage-panel', 'seo', 'pwa-check', 'outline', 'container-queries'];
 
 describe.each(NUXT_PANELS)('the %s panel on Nuxt UI', (plugin) => {
   it('loads its built stylesheet and script, nothing else', () => {

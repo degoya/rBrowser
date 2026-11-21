@@ -50,7 +50,7 @@ pub trait Entry {
 fn fields<T: Serialize>(entry: &T) -> Value {
     let mut value = serde_json::to_value(entry).unwrap_or(Value::Null);
     if let Value::Object(map) = &mut value {
-        for name in ["selector", "path", "hidden", "visible", "box"] {
+        for name in ["selector", "path", "hidden", "visible", "box", "order"] {
             map.remove(name);
         }
     }

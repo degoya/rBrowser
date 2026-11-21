@@ -213,3 +213,35 @@ fn a_view_is_listed_with_its_engine_breakpoint_and_size() {
     assert!((view.dpr - 3.0).abs() < f32::EPSILON);
     assert_eq!(view.url, "https://site.test/");
 }
+
+/// RB-094-13 (owner, diag33): `Page.getResourceContent` failed with "Agent is not enabled" in
+/// every view - the host turns the Page domain on in the view's session first.
+#[tokio::test]
+async fn resource_content_turns_the_page_domain_on_first() {
+    let fake = Fake::new(json!({}));
+    cdp(
+        &fake,
+        ViewId(1),
+        "Page.getResourceContent",
+        r#"{"frameId":"F","url":"https://example.com/"}"#,
+        Duration::from_secs(1),
+    )
+    .await
+    .expect("sent");
+    let methods: Vec<String> = fake
+        .calls()
+        .into_iter()
+        .map(|(_, method, _)| method)
+        .collect();
+    assert_eq!(methods, ["Page.enable", "Page.getResourceContent"]);
+    cdp(
+        &fake,
+        ViewId(1),
+        "DOM.getDocument",
+        "",
+        Duration::from_secs(1),
+    )
+    .await
+    .expect("sent");
+    assert_eq!(fake.calls().len(), 3, "no other method turns a domain on");
+}

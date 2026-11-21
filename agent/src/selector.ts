@@ -5,8 +5,11 @@
 // styled-components); it is also the fallback of every other kind. Open shadow roots are
 // walked: the hosts above an element come with its target. A later role or text match also
 // carries its index among the visible matches (`visibleNth`, RB-090-81), which a recording's
-// export uses: the breakpoints differ in what they hide, not in what a person picked.
+// export uses: the breakpoints differ in what they hide, not in what a person picked. Texts and
+// names are read as the page had them before a pseudo-localisation (RB-092-02,
+// `locale/originals.ts`), so a pseudo-localised view keeps the sync.
 
+import { originalText } from './locale/originals';
 import type { ElementSelector, ElementTarget } from './protocol';
 import { MAX_NAME, nameOf, normalize, roleOf } from './role';
 import { isVisible } from './visible';
@@ -158,7 +161,7 @@ export function matchAll(selector: ElementSelector, root: Root): Element[] {
       }
       case 'text':
         return Array.from(scope.querySelectorAll(CSS.escape(selector.tag))).filter(
-          (element) => normalize(element.textContent) === selector.text,
+          (element) => normalize(originalText(element)) === selector.text,
         );
       case 'css':
         return Array.from(root.querySelectorAll(selector.path));
@@ -243,7 +246,7 @@ export function makeSelector(element: Element): ElementSelector {
   }
   // A stable unique id says more than a text that may change with the content.
   if (path.startsWith('#') && !path.includes(' ')) return { kind: 'css', path };
-  const text = normalize(element.textContent);
+  const text = normalize(originalText(element));
   const tag = element.localName;
   if (
     text &&

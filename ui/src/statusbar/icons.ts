@@ -9,6 +9,8 @@ export const STATUS_ICONS = {
   statusClose: 'i-lucide-x',
   statusHistory: 'i-lucide-history',
   statusCopy: 'i-lucide-copy',
+  // A saved bug report's Markdown is on the clipboard (RB-093-04, `StatusCopyButton.vue`).
+  statusCopied: 'i-lucide-check',
   // The canvas zoom's buttons (RB-080-94).
   canvasZoomOut: 'i-lucide-minus',
   canvasZoomIn: 'i-lucide-plus',

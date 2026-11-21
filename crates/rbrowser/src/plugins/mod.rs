@@ -3,7 +3,8 @@
 //! posts ([`runtime`]), their panels in the panels window ([`panels`], [`ipc`]), their commands
 //! in the one registry ([`commands`], a command's `$open` in [`open`]) and their MCP tools
 //! ([`mcp`]); the host services behind their imports ([`services`], Charge 6); the `$console`
-//! feed ([`console`]) with what the page scripts log ([`page_log`], RB-080-66) and the network
+//! feed ([`console`]) with what the page scripts log ([`page_log`], RB-080-66), the `$consent`
+//! probe of the plugins granted `consent-probe` ([`consent`], RB-094-09) and the network
 //! rules of the plugins granted `network-rules` ([`network`], RB-070-02); the list of the
 //! installed plugins for Settings > Plugins and MCP ([`list`], RB-080-51); their notices in the
 //! status bar ([`status`], RB-080-64); the shell pages told when the panels offered change
@@ -18,19 +19,23 @@
 //! once they are there and binds the services to the window. A project plugin runs only under
 //! workspace trust - page scripts, commands, MCP tools, panels, checks and the services they
 //! reach stop when it is revoked or goes stale. `plugins.pageScriptsDisabled` and
-//! `plugins.panelsHidden` switch a plugin's page scripts and panels off without a restart. A
-//! project trusted after the start loads its plugins at the next start; a notice says so.
+//! `plugins.panelsHidden` switch a plugin's page scripts and panels off without a restart. An
+//! install, update or removal and a project trusted after the start take effect at once: the
+//! plugins load again and the window follows ([`live`], RB-092-06).
 
 pub mod bundle;
 pub mod bundle_install;
 pub mod bundle_offer;
 pub mod catalog;
 pub mod commands;
+pub mod component;
+pub mod consent;
 pub mod console;
 pub mod first_party;
 pub mod host_actions;
 pub mod ipc;
 pub mod list;
+pub mod live;
 pub mod mcp;
 pub mod network;
 pub mod open;
@@ -57,6 +62,7 @@ use rb_plugin_host::PluginSource;
 use rb_plugin_types::codes;
 use tokio::sync::broadcast::error::RecvError;
 
+use crate::analyzer::plugins::LoadedPlugins;
 use crate::cdp::lock;
 use crate::control::Core;
 use crate::host::Host;
@@ -69,6 +75,8 @@ struct Entry {
     runtime: Arc<PluginRuntime>,
     /// What its panels offered depended on when the shell pages were told last (RB-080-97).
     panels: Option<panel_list::Inputs>,
+    /// The plugins it serves: the snapshot it started with or last followed (RB-092-06).
+    followed: Arc<LoadedPlugins>,
 }
 
 fn registry() -> &'static Mutex<Vec<Entry>> {
@@ -86,7 +94,8 @@ pub fn for_host(host: &Host) -> Option<Arc<PluginRuntime>> {
         .map(|entry| entry.runtime.clone())
 }
 
-/// Starts the runtime of `core`'s window off the UI thread, once the bundled plugins are loaded.
+/// Starts the runtime of `core`'s window off the UI thread, once the bundled plugins are loaded
+/// (at the very first start: once the first-run wizard's plugin choice is answered, RB-091-08).
 pub fn on_start(core: &Core) {
     let Some(core) = core.arc() else {
         return;
@@ -100,16 +109,26 @@ pub fn on_start(core: &Core) {
     runtime.spawn_blocking(move || start(&core));
 }
 
-/// The notice that a project trusted after the start loads its plugins at the next start.
+/// The notice that a project trusted after the start loads its plugins at the next start - only
+/// when they cannot load live (RB-092-06).
 pub const RESTART_NOTICE_KEY: &str = "plugins.notice.restart_for_project_plugins";
 
 fn start(core: &Arc<Core>) {
+    // At the very first start the load waits for the wizard's plugin choice; then everything
+    // below runs as at any start, live (RB-091-08).
+    drop(crate::analyzer::plugins::bundled_when_answered());
+    // Never beside a live change (RB-092-06): the snapshot taken under the lock is the one the
+    // window follows from.
+    let _following = lock(&live::FOLLOWING);
     let loaded = crate::analyzer::plugins::bundled();
     services::shared().bind(core);
     let plugins = runtime::plugins_of(&loaded.report.loaded);
     if plugins.iter().any(|plugin| plugin.console) {
         console::start(core);
     }
+    consent::follow(core, &plugins);
+    crate::api_client::follow(core, &plugins);
+    crate::load_test::follow(core, &plugins);
     let weak = Arc::downgrade(core);
     let panels: PanelSink = Arc::new(move |plugin, event| {
         if let Some(core) = weak.upgrade() {
@@ -144,6 +163,7 @@ fn start(core: &Arc<Core>) {
             host: Arc::downgrade(host),
             runtime: runtime.clone(),
             panels: None,
+            followed: Arc::clone(&loaded),
         });
     }
     let panels = apply_switches(core, &runtime);
@@ -152,12 +172,39 @@ fn start(core: &Arc<Core>) {
     announce_panels(core, panels);
     // RB-091-04: a plugin the project names that is not installed is said, not missing silently.
     bundle::notice_missing(core);
+    // RB-094-13: the bundled plugins new in this version are named once.
+    bundle::notice_new(core);
     follow_views(core, runtime.pages());
-    if runtime.plugins().iter().any(|plugin| plugin.network) {
-        let rules = crate::network_rules::start(core);
-        core.runtime()
-            .spawn(async move { runtime.set_network_rules(rules).await });
+    follow_network(core, runtime);
+}
+
+/// The plugins granted `network-rules` get the window's interception rules: started with the
+/// first such plugin - at the start or with a live change (RB-092-06) - and asked again after.
+fn follow_network(core: &Core, runtime: Arc<PluginRuntime>) {
+    if !runtime.plugins().iter().any(|plugin| plugin.network) {
+        return;
     }
+    if runtime.has_network_rules() {
+        resync_network(core, runtime);
+        return;
+    }
+    let rules = crate::network_rules::start(core);
+    core.runtime()
+        .spawn(async move { runtime.set_network_rules(rules).await });
+}
+
+/// The runtime of `core`'s window and the plugins it followed so far, which `now` replaces;
+/// `None` before its runtime started.
+fn take_followed(
+    core: &Core,
+    now: &Arc<LoadedPlugins>,
+) -> Option<(Arc<PluginRuntime>, Arc<LoadedPlugins>)> {
+    let mut entries = lock(registry());
+    let entry = entries
+        .iter_mut()
+        .find(|entry| std::ptr::eq(entry.host.as_ptr(), Arc::as_ptr(core.host())))?;
+    let before = std::mem::replace(&mut entry.followed, Arc::clone(now));
+    Some((entry.runtime.clone(), before))
 }
 
 /// Shows a plugin's checked notice in the status bar: at most one per plugin a second, the
@@ -209,8 +256,7 @@ pub fn on_user_settings_changed(core: &Core) {
 
 /// The project or its trust changed: the project plugins follow the trust, a trusted project's
 /// origins are the local ones a plugin may fetch, project network rules (mocks) follow the trust
-/// at once, and project plugins refused at the start for want of trust are named for the next
-/// start.
+/// at once, and project plugins refused for want of trust load now (RB-092-06).
 pub fn on_config_changed(core: &Core) {
     services::shared().project_changed(core);
     if let Some(rules) = crate::network_rules::current() {
@@ -218,7 +264,7 @@ pub fn on_config_changed(core: &Core) {
     }
     on_user_settings_changed(core);
     if core.host().shell_state().trusted && refused_for_trust() {
-        notify_restart_once(core);
+        live::reload_for_trust(core);
     }
     bundle::notice_missing(core);
 }
@@ -271,12 +317,14 @@ fn apply_switches(core: &Core, runtime: &PluginRuntime) -> panel_list::Inputs {
         .collect();
     let trusted = runtime.has_project_plugins() && core.host().shell_state().trusted;
     runtime.set_enabled(&off, trusted);
-    let stopped = runtime.plugins().iter().filter(|plugin| {
+    let plugins = runtime.plugins();
+    let stopped = plugins.iter().filter(|plugin| {
         user.plugins.disabled.iter().any(|id| id.0 == plugin.id)
             || !runtime::may_run(plugin.source, trusted)
     });
     services::shared().reset_cdp(stopped.map(|plugin| plugin.id.as_str()));
-    panel_list::Inputs::of(&user, trusted)
+    // The plugins' generation too: a live change is news for the panels (RB-092-06).
+    panel_list::Inputs::of(&user, trusted).at(crate::analyzer::plugins::generation())
 }
 
 /// Tells the shell pages that the panels offered changed when `now` is news for `core`'s window

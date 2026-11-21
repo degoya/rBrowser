@@ -3,7 +3,7 @@
 //! and which plugin the catalogue installed from which repository.
 //!
 //! Adapted from rb-update's `floors.rs` and rDownloader's repository cache. Every file is written
-//! to a `.partial` beside it and renamed over, so a crash leaves the old file or the new one. A
+//! whole (`rb_util::fs::write_atomic`), so a crash leaves the old file or the new one. A
 //! file that does not read is treated as absent - the floors then start again from the cached
 //! indexes, which are verified again at every start.
 
@@ -140,20 +140,13 @@ impl CatalogStore {
     }
 }
 
-/// Writes `bytes` to a `.partial` beside `path` and renames it over `path`.
+/// Writes `bytes` to `path` whole ([`rb_util::fs::write_atomic`]).
 ///
 /// # Errors
 ///
 /// The file cannot be written or renamed.
 pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), RepositoryError> {
-    let mut staging = path.as_os_str().to_owned();
-    staging.push(".partial");
-    let staging = PathBuf::from(staging);
-    std::fs::write(&staging, bytes)?;
-    std::fs::rename(&staging, path).map_err(|error| {
-        let _ = std::fs::remove_file(&staging);
-        RepositoryError::from(error)
-    })
+    Ok(rb_util::fs::write_atomic(path, bytes)?)
 }
 
 #[cfg(test)]

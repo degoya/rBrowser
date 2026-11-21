@@ -2,10 +2,10 @@
 //! the list (`pluginPanel` `list`) as it loads - since the icon rail (RB-080-93) at the start,
 //! while the plugins still load and the list is refused with `plugins.error.not_available`. The
 //! window's plugin runtime, once started, and every change of what the panels offered depend on
-//! since - the hidden panels (`plugins.panelsHidden`) and the project plugins' trust; a window
-//! loads its plugins once - send the `pluginPanel` event [`changed_message`] to every shell page;
-//! a panels page asks for the list again. What was told last lives beside the window's runtime
-//! (`plugins::registry`).
+//! since - the hidden panels (`plugins.panelsHidden`), the project plugins' trust and the plugins
+//! loaded again by a live change (RB-092-06, their generation) - send the `pluginPanel` event
+//! [`changed_message`] to every shell page; a panels page asks for the list again. What was told
+//! last lives beside the window's runtime (`plugins::registry`).
 
 use std::collections::BTreeSet;
 
@@ -23,6 +23,8 @@ pub fn changed_message() -> Value {
 pub struct Inputs {
     hidden: BTreeSet<String>,
     project_trusted: bool,
+    /// The plugins' generation (`crate::analyzer::plugins::generation`).
+    generation: u64,
 }
 
 impl Inputs {
@@ -37,7 +39,14 @@ impl Inputs {
                 .map(|id| id.0.clone())
                 .collect(),
             project_trusted,
+            generation: 0,
         }
+    }
+
+    /// These inputs for the plugins of `generation`.
+    #[must_use]
+    pub fn at(self, generation: u64) -> Self {
+        Self { generation, ..self }
     }
 }
 

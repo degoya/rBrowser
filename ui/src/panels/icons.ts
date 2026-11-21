@@ -6,6 +6,7 @@
 
 /** The icons the bundled plugins' panels name, sorted. */
 export const PANEL_ICON_NAMES: readonly string[] = [
+  'activity',
   'atom',
   'bug',
   'camera',
@@ -24,6 +25,8 @@ export const PANEL_ICON_NAMES: readonly string[] = [
   'pipette',
   'ruler',
   'search-check',
+  'send',
+  'shield-check',
   'smartphone',
   'terminal',
   'text-cursor-input',

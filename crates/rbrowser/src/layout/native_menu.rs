@@ -41,8 +41,10 @@ pub const MAX_MENU: usize = 64;
 /// The pulldowns that may ask for a native menu: the toolbar's theme (RB-090-41), environment,
 /// layout preset, bookmarks and overflow (RB-090-45), the portal's button (RB-090-62), the
 /// always-visible main menu `≡` and the split buttons DevTools, Screenshot, Video and Checks
-/// (RB-090-63). The shell names each instance `<kind>-<n>` (`ui/src/toolbar/nativeMenu.ts`).
-pub const PULLDOWNS: [&str; 11] = [
+/// (RB-090-63), and the toolbar's "+" with the devices (RB-094-20). The shell names each
+/// instance `<kind>-<n>` (`ui/src/toolbar/nativeMenu.ts`).
+pub const PULLDOWNS: [&str; 12] = [
+    "add",
     "theme",
     "environment",
     "layout",
@@ -181,12 +183,24 @@ fn bounded(label: &str) -> Result<(), &'static str> {
 
 /// Whether `menu` names a pulldown of [`PULLDOWNS`]: its kind alone or `<kind>-<n>`.
 pub fn is_pulldown(menu: &str) -> bool {
-    let kind = match menu.rsplit_once('-') {
-        Some((kind, n)) if !n.is_empty() && n.bytes().all(|byte| byte.is_ascii_digit()) => kind,
-        Some(_) => return false,
-        None => menu,
-    };
-    PULLDOWNS.contains(&kind)
+    kind_of(menu).is_some_and(|kind| PULLDOWNS.contains(&kind))
+}
+
+/// The kind of `<kind>-<n>` or of a bare kind; `None` for a malformed name.
+fn kind_of(menu: &str) -> Option<&str> {
+    match menu.rsplit_once('-') {
+        Some((kind, n)) if !n.is_empty() && n.bytes().all(|byte| byte.is_ascii_digit()) => {
+            Some(kind)
+        }
+        Some(_) => None,
+        None => Some(menu),
+    }
+}
+
+/// The menus that list the devices (RB-094-20): the main menu and the toolbar's "+". Opening
+/// one takes the device list again in the background, for the next opening.
+pub fn lists_devices(menu: &str) -> bool {
+    matches!(kind_of(menu), Some("menu" | "add"))
 }
 
 /// The shell's request (`crate::features` through the board's and the view menus' chain);
@@ -227,6 +241,9 @@ fn open(
             }
         }),
     );
+    if lists_devices(menu) {
+        crate::engines::android::menu::refresh(core);
+    }
     Ok(())
 }
 

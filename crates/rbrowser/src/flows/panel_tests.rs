@@ -36,14 +36,17 @@ fn the_run_going_on_lists_its_views_statuses() {
             FlowViewStatus {
                 view: 1,
                 status: "running".to_owned(),
+                step: None,
             },
             FlowViewStatus {
                 view: 2,
                 status: "passed".to_owned(),
+                step: None,
             },
         ],
         started_at_ms: 1_794_910_500_000,
         queued: vec!["cart".to_owned()],
+        total_steps: None,
     };
     let state = state_of(true, Some(running), None);
     assert!(state.project);
@@ -60,11 +63,13 @@ fn the_run_going_on_lists_its_views_statuses() {
         vec![
             FlowViewStatus {
                 view: 1,
-                status: "running".to_owned()
+                status: "running".to_owned(),
+                step: None,
             },
             FlowViewStatus {
                 view: 2,
-                status: "passed".to_owned()
+                status: "passed".to_owned(),
+                step: None,
             },
         ]
     );

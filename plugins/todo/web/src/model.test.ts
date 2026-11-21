@@ -31,6 +31,12 @@ const FILE = {
 };
 
 describe('the todo answers', () => {
+  it('take no array for an object: a tag that is a list is no tag (RB-094-10)', () => {
+    const file = readFile({ ...FILE, items: [{ ...(item(2, {}) as object), tags: [['high'], { name: 'low', value: null }] }] });
+    expect(file?.items[0]?.tags).toEqual([{ name: 'low', value: null }]);
+    expect(readFile(['TODO.todo'])).toBeNull();
+  });
+
   it('read files and refuse what is no file', () => {
     const listing = readListing({ files: [FILE, { path: 'bad.todo', error: 'plugin.todo.errors.encoding', params: { path: 'bad.todo' } }, 7], truncated: true });
     expect(listing.truncated).toBe(true);

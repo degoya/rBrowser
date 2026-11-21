@@ -26,7 +26,15 @@ fn the_commands_sit_on_leader_f_and_name_their_mcp_tool_or_why_not() {
     let keys: Vec<&str> = rows.iter().map(|(id, _, _)| id.as_str()).collect();
     assert_eq!(
         keys,
-        [RUN, RUN_ALL, RERUN_LAST, CANCEL, OPEN_RESULTS, PANEL]
+        [
+            RUN,
+            RUN_ALL,
+            RERUN_LAST,
+            CANCEL,
+            OPEN_RESULTS,
+            PANEL,
+            DELETE
+        ]
     );
     assert!(rows[0].1.contains("'F'") && rows[0].1.contains("'R'"));
     assert!(rows[1].1.contains("'A'"));
@@ -40,6 +48,9 @@ fn the_commands_sit_on_leader_f_and_name_their_mcp_tool_or_why_not() {
         assert_eq!(mcp, "covered(flow_run)", "{id}");
     }
     assert!(rows[3].2.starts_with("omitted(cancelling"));
+    // RB-090-91: `F D` deletes a flow; an agent never deletes project files.
+    assert!(rows[6].1.contains("'F'") && rows[6].1.contains("'D'"));
+    assert_eq!(rows[6].2, format!("omitted({DELETE_OMITTED})"));
     assert!(
         defs.iter()
             .all(|def| def.group == rb_commands::Group::Flows)

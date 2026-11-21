@@ -96,8 +96,8 @@
         },
         "anchor": {
           "label": "Position",
-          "description": "document: the design is pinned to the page and scrolls with it. viewport: it stays fixed in the view.",
-          "help": "document pins the design to the page so it scrolls with it; viewport keeps it fixed in the view for sticky headers."
+          "description": "Pinned to the page: the design scrolls with the page. Fixed in the view: it stays in place in the view.",
+          "help": "Pinned to the page lets the design scroll with the page; Fixed in the view keeps it in place, for sticky headers."
         },
         "autoScaleDpr": {
           "label": "Scale @2x and @3x exports",

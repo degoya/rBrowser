@@ -6,6 +6,7 @@ use rb_plugin_api::{Failure, FailureKind, PluginHost, ViewId};
 use serde_json::{Value, json};
 
 use crate::context::{Context, Settings};
+use crate::endpoint_settings::EndpointSettings;
 use crate::requests::{self, Filter};
 use crate::{bad_args, coded, har, har_import, store};
 
@@ -15,6 +16,8 @@ pub const LIMIT: (usize, usize) = (150, 500);
 pub const ROWS_BUDGET: usize = 48 * 1024;
 /// The most body text the preview answers.
 pub const BODY_PREVIEW: usize = 32 * 1024;
+/// The longest endpoint key the list filters by (method, origin and a path of 2048 bytes).
+pub const MAX_ENDPOINT_KEY: usize = 2400;
 
 fn filter(args: &Value) -> Result<Filter, Failure> {
     let search = match &args["search"] {
@@ -43,16 +46,23 @@ fn filter(args: &Value) -> Result<Filter, Failure> {
         Some(status @ ("ok" | "error" | "failed")) => Some(status.to_owned()),
         Some(_) => return Err(bad_args("status")),
     };
+    let endpoint = match &args["endpoint"] {
+        Value::Null => None,
+        Value::String(key) if !key.is_empty() && key.len() <= MAX_ENDPOINT_KEY => Some(key.clone()),
+        _ => return Err(bad_args("endpoint")),
+    };
     Ok(Filter {
         search,
         types,
         status,
         differences: args["differences"] == Value::Bool(true),
+        endpoint,
+        templates: Vec::new(),
     })
 }
 
 /// The views with their engine and whether the host intercepts them.
-fn views(host: &mut dyn PluginHost, context: &Context) -> Vec<Value> {
+pub(crate) fn views(host: &mut dyn PluginHost, context: &Context) -> Vec<Value> {
     host.views()
         .unwrap_or_default()
         .into_iter()
@@ -72,7 +82,10 @@ fn views(host: &mut dyn PluginHost, context: &Context) -> Vec<Value> {
 ///
 /// Arguments that do not read.
 pub fn list(host: &mut dyn PluginHost, args: &Value) -> Result<Value, Failure> {
-    let filter = filter(args)?;
+    let mut filter = filter(args)?;
+    if filter.endpoint.is_some() {
+        filter.templates = EndpointSettings::read(host).templates;
+    }
     let limit = match &args["limit"] {
         Value::Null => LIMIT.0,
         value => value

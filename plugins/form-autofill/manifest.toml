@@ -45,8 +45,10 @@ schema = "settings.schema.json"
 
 # MCP `autofill_fill`: fills the targeted views and answers per view and field the kind, the value
 # set, whether the field accepts it and how an invalid run broke it; per view the page's forms (a
-# selector and a name each), per field its form and whether it is required. Beside the answer, the
-# fields set go to the core as `host` posts `record_fill` for a running recording (RB-090-78).
+# selector and a name each) and the scope it filled (the selector's element, else the page but
+# its navigation, search forms and menu toggles; the focus narrows nothing, RB-090-86),
+# per field its form and whether it is required. Beside the answer, the fields it changed go to
+# the core as `host` posts `record_fill` for a running recording (RB-090-78).
 [[tools]]
 name = "fill"
 description = "plugin.form-autofill.tools.fill"

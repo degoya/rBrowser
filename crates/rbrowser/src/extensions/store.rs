@@ -24,7 +24,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use base64::Engine as _;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 
 use super::crx3::Verified;
@@ -32,6 +32,7 @@ use super::folder::{FolderError, check};
 use super::manifest::MANIFEST_FILE;
 use super::webstore::is_id;
 use crate::cdp::lock;
+use crate::versioned_dir::{activate, prune, read_pointer};
 
 mod alive;
 mod unpack;
@@ -43,7 +44,7 @@ use unpack::unpack;
 /// The staging folder below the root.
 pub const STAGING: &str = ".staging";
 /// The pointer file in an extension's folder.
-pub const POINTER: &str = "current.json";
+pub use crate::versioned_dir::POINTER;
 
 /// The extension folders an install is under way for (process-wide: one store per process).
 static IN_PROGRESS: Mutex<BTreeSet<PathBuf>> = Mutex::new(BTreeSet::new());
@@ -166,12 +167,6 @@ impl InstallError {
     }
 }
 
-/// The pointer file.
-#[derive(Debug, Deserialize, Serialize)]
-struct Pointer {
-    version: String,
-}
-
 /// The folder of the Web Store extensions.
 #[derive(Clone, Debug)]
 pub struct ExtensionStore {
@@ -215,16 +210,15 @@ impl ExtensionStore {
             return None;
         }
         let dir = self.root.join(id);
-        let text = fs::read_to_string(dir.join(POINTER)).ok()?;
-        let pointer: Pointer = serde_json::from_str(&text).ok()?;
-        if !super::manifest::is_valid_version(&pointer.version) {
+        let version = read_pointer(&dir)?;
+        if !super::manifest::is_valid_version(&version) {
             return None;
         }
-        let folder = dir.join(&pointer.version);
+        let folder = dir.join(&version);
         let found = check(&folder.to_string_lossy()).ok()?;
         Some(InstalledExtension {
             id: id.to_owned(),
-            version: pointer.version,
+            version,
             name: found.manifest.name,
             folder,
         })
@@ -283,41 +277,18 @@ impl ExtensionStore {
 
         let dir = self.root.join(&verified.id);
         fs::create_dir_all(&dir).map_err(io)?;
-        let target = dir.join(&version);
         if self
             .installed_one(&verified.id)
             .is_some_and(|installed| installed.version == version)
         {
             return Ok(InstalledExtension {
                 id: verified.id.clone(),
+                folder: dir.join(&version),
                 version,
                 name: found.manifest.name,
-                folder: target,
             });
         }
-        // A folder of this version that is not active goes aside by rename, so nothing is
-        // deleted before the new folder is in place.
-        let aside = dir.join(format!(".retired-{version}-{attempt}"));
-        let retired = if target.exists() {
-            fs::rename(&target, &aside).map_err(io)?;
-            true
-        } else {
-            false
-        };
-        let restore = || {
-            if retired {
-                let _ = fs::rename(&aside, &target);
-            }
-        };
-        if let Err(error) = fs::rename(staging, &target) {
-            restore();
-            return Err(io(error));
-        }
-        if let Err(error) = write_pointer(&dir, &version) {
-            let _ = fs::remove_dir_all(&target);
-            restore();
-            return Err(error);
-        }
+        let target = activate(&dir, &version, staging, attempt).map_err(io)?;
         prune(&dir, &version);
         Ok(InstalledExtension {
             id: verified.id.clone(),
@@ -429,37 +400,6 @@ fn write_key(dir: &Path, key: &[u8], id: &str) -> Result<String, InstallError> {
         .map_err(|error| InstallError::Io(error.to_string()))?;
     fs::write(&path, text).map_err(io)?;
     Ok(version)
-}
-
-/// Points `dir` at `version`: written beside, then renamed over the pointer.
-fn write_pointer(dir: &Path, version: &str) -> Result<(), InstallError> {
-    let text = serde_json::to_string(&Pointer {
-        version: version.to_owned(),
-    })
-    .map_err(|error| InstallError::Io(error.to_string()))?;
-    let temporary = dir.join(format!("{POINTER}.new"));
-    fs::write(&temporary, text).map_err(io)?;
-    if let Err(error) = fs::rename(&temporary, dir.join(POINTER)) {
-        let _ = fs::remove_file(&temporary);
-        return Err(io(error));
-    }
-    Ok(())
-}
-
-/// Removes every folder in `dir` but `keep`; what cannot go stays.
-fn prune(dir: &Path, keep: &str) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir()
-            && entry.file_name() != keep
-            && let Err(error) = fs::remove_dir_all(&path)
-        {
-            tracing::warn!(%error, "an old extension version stays: {}", path.display());
-        }
-    }
 }
 
 fn io(error: std::io::Error) -> InstallError {

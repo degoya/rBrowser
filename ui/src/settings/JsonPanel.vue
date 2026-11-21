@@ -60,6 +60,8 @@ async function copy(): Promise<void> {
     <pre
       class="max-h-96 overflow-auto rounded-md bg-elevated p-3 font-mono text-xs text-default"
       tabindex="0"
+      role="region"
+      :aria-label="t('settings.json.title')"
       data-testid="json-text"
     ><template v-if="highlight"><template v-for="(line, row) in lines" :key="row"><template v-for="(token, column) in line" :key="column"><span v-if="token.kind !== 'space'" :class="JSON_TOKEN_CLASSES[token.kind]">{{ token.text }}</span><template v-else>{{ token.text }}</template></template>{{ '\n' }}</template></template><template v-else>{{ text }}</template></pre>
   </section>

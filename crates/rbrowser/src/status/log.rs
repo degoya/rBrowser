@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rb_config::StatusBarSettings;
-use rb_ipc::{Notification, NotificationLevel, StatusAction, StatusMessage};
+use rb_ipc::{Notification, NotificationLevel, StatusAction, StatusCopy, StatusMessage};
 
 use crate::cdp::lock;
 
@@ -71,14 +71,27 @@ impl StatusLog {
     /// [`Self::push`] with a button that runs `action`'s command (RB-090-71).
     pub fn push_with(
         &self,
+        notification: Notification,
+        action: Option<StatusAction>,
+        at: u64,
+    ) -> StatusMessage {
+        self.push_with_copy(notification, action, None, at)
+    }
+
+    /// [`Self::push_with`] and a button that copies a saved bug report's Markdown (RB-093-04).
+    pub fn push_with_copy(
+        &self,
         mut notification: Notification,
         action: Option<StatusAction>,
+        copy: Option<StatusCopy>,
         at: u64,
     ) -> StatusMessage {
         cut_values(&mut notification);
         let mut inner = lock(&self.inner);
         inner.last_id += 1;
-        let message = StatusMessage::new(inner.last_id, at, notification).with_action(action);
+        let message = StatusMessage::new(inner.last_id, at, notification)
+            .with_action(action)
+            .with_copy(copy);
         inner.items.push_back(message.clone());
         inner.trim();
         message

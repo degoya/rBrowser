@@ -34,6 +34,8 @@ const SECRET_NAMES: &[&str] = &[
     "authorization",
     "client_secret",
     "cookie",
+    // `breakpoints[].iosDevice`: a device's UDID identifies the device (RB-095-04).
+    "iosdevice",
     "key",
     "passphrase",
     "passwd",

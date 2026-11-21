@@ -1,12 +1,12 @@
 <script setup lang="ts">
 // The status bar at the bottom of the main window (RB-080-15, `status-bar.html`, its own CEF
 // view below the grid, never over a browser view): on the left the message the feed shows
-// (`feed.ts`) with its button when it carries a command (RB-090-71), a link to its setting and a
-// close button; on the right the history button
-// with the number of unread messages, before it the canvas zoom while the canvas is shown
-// (RB-080-94, `CanvasZoom.vue`). Errors are announced at once (`role="alert"`), the rest
-// politely (`role="status"`); both regions are always there, so a screen reader hears each new
-// message.
+// (`feed.ts`) with its button when it carries a command (RB-090-71) and its copy button
+// (RB-093-04, `StatusCopyButton.vue`), a link to its setting and a close button; on the right
+// the history button with the number of unread messages, before it the canvas zoom while the
+// canvas is shown (RB-080-94, `CanvasZoom.vue`). Errors are announced at once
+// (`role="alert"`), the rest politely (`role="status"`); both regions are always there, so a
+// screen reader hears each new message.
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -17,6 +17,7 @@ import { STATUS_ICONS } from './icons';
 import { levelOf } from './level';
 import StatusLine from './StatusLine.vue';
 import CanvasZoom from './CanvasZoom.vue';
+import StatusCopyButton from './StatusCopyButton.vue';
 
 const props = defineProps<{ client: IpcClient }>();
 const { t } = useI18n();
@@ -84,6 +85,8 @@ onBeforeUnmount(() => feed.stop());
         data-testid="status-action"
         @click="runAction(current)"
       />
+      <!-- A saved bug report's message copies its Markdown (RB-093-04). -->
+      <StatusCopyButton v-if="current !== null && current.copy !== undefined" :client="client" :copy="current.copy" />
       <!-- A notice about a setting links to it (RB-010-08, `rbrowser://settings/<key>`). -->
       <UButton
         v-if="setting !== null"

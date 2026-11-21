@@ -1,6 +1,6 @@
 [package]
 name = "rb-util"
-description = "The small helpers every crate and plugin writes once: lower-case hex, a poison-tolerant mutex lock, the origin and host of a URL, the JSON pointer escape (RB-080-28)"
+description = "The small helpers every crate and plugin writes once: lower-case hex, a poison-tolerant mutex lock, the origin and host of a URL and whether it is a web page, the JSON pointer escape, a whole-file write, a text cut, timing counters (RB-080-28, RB-094-10, RB-090-32)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

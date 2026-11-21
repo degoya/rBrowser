@@ -1,6 +1,6 @@
 use super::*;
 use crate::gzip::gunzip;
-use crate::robots::Robots;
+use crate::robots::{Robots, TOKEN};
 use crate::sitemap::{Parsed, parse_xml};
 
 const PAGES: &[u8] = include_bytes!("../../../tests/fixtures/sitemap/sitemap-pages.xml");
@@ -200,7 +200,11 @@ fn every_nth_and_max_sample_the_rest() {
 fn robots_leaves_out_what_it_disallows_when_respected() {
     let mut found = fixture();
     let base = Url::parse("https://www.example.test/robots.txt").expect("base");
-    found.robots = Some(Robots::parse("User-agent: *\nDisallow: /shop/\n", &base));
+    found.robots = Some(Robots::parse(
+        "User-agent: *\nDisallow: /shop/\n",
+        &base,
+        TOKEN,
+    ));
     let respect = Selection {
         respect_robots: true,
         ..Selection::default()

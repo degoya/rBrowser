@@ -184,6 +184,25 @@
           "x-section": "overlays",
           "x-order": 17,
           "x-scope": ["user", "project"]
+        },
+        "readingOrder": {
+          "type": "string",
+          "enum": ["off", "beside", "instead"],
+          "default": "off",
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 18,
+          "x-scope": ["user", "project"]
+        },
+        "readingTolerancePx": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "default": 4,
+          "x-category": "devtools",
+          "x-section": "overlays",
+          "x-order": 19,
+          "x-scope": ["user", "project"]
         }
       }
     }

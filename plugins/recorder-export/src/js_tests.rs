@@ -1,4 +1,4 @@
-use super::{SECRET_HELPER, Secrets, comment, number, relative_url, secret, string};
+use super::{SECRET_HELPER, Secrets, comment, number, relative_url, secret, string, whole_text};
 
 #[test]
 fn a_string_is_single_quoted_with_every_breaking_character_escaped() {
@@ -92,4 +92,35 @@ fn another_origin_or_a_base_with_a_path_keeps_the_url() {
     assert_eq!(relative_url(url, Some("http://127.0.0.1:8000/app")), url);
     assert_eq!(relative_url(url, Some("not a url")), url);
     assert_eq!(relative_url(url, None), url);
+}
+
+/// RB-090-93: an element's whole text as Playwright reads it (raw, white space kept) and the
+/// agent compares it (white space collapsed and trimmed, `normalize` in `agent/src/role.ts`).
+#[test]
+fn a_whole_text_is_an_anchored_expression_free_in_its_white_space() {
+    assert_eq!(whole_text("Menu"), r"/^\s*Menu\s*$/");
+    assert_eq!(
+        whole_text(" Read  more\n now "),
+        r"/^\s*Read\s+more\s+now\s*$/"
+    );
+    assert_eq!(
+        whole_text("sep\u{2028}nbsp\u{a0}ideo\u{3000}end"),
+        r"/^\s*sep\s+nbsp\s+ideo\s+end\s*$/"
+    );
+    assert_eq!(whole_text(" \t"), r"/^\s*$/");
+}
+
+#[test]
+fn a_whole_text_escapes_what_the_expression_or_its_literal_would_read() {
+    assert_eq!(
+        whole_text(r"a.b*c+d?e^f$g|h\i/j-k"),
+        r"/^\s*a\.b\*c\+d\?e\^f\$g\|h\\i\/j-k\s*$/"
+    );
+    assert_eq!(whole_text("(x)[y]{z}"), r"/^\s*\(x\)\[y\]\{z\}\s*$/");
+    // Not white space in JavaScript: a literal character, controls as escapes.
+    assert_eq!(
+        whole_text("bell\u{7}nel\u{85}"),
+        r"/^\s*bell\x07nel\x85\s*$/"
+    );
+    assert_eq!(whole_text("Gr\u{fc}\u{df}e"), "/^\\s*Gr\u{fc}\u{df}e\\s*$/");
 }

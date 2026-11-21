@@ -1,0 +1,66 @@
+{
+  "plugin": {
+    "live-css": {
+      "commands": {
+        "panel": "Show Live CSS",
+        "toggle": "Switch Live CSS on or off"
+      },
+      "errors": {
+        "bad_args": "Live CSS got arguments it cannot read: {reason}",
+        "braces": "The braces of block {block} do not balance, so it would not stay within its breakpoints; close every opening brace.",
+        "control": "Block {block} has a control character other than a tab or a line break; remove it.",
+        "no_project": "No project is open, so Live CSS has nowhere to keep its draft; open a project first.",
+        "too_long": "The draft is too long for the views: at most {limit, plural, one {# byte} other {# bytes}} of CSS. Shorten it.",
+        "too_many_blocks": "The draft has more than {limit, plural, one {# block} other {# blocks}}; join some of them.",
+        "unknown_breakpoint": "The grid has no breakpoint \"{id}\"; choose one of its views' breakpoints.",
+        "untrusted": "Live CSS keeps its draft in the project's .rbrowser/out/live-css/, which needs workspace trust; trust the workspace first."
+      },
+      "name": "Live CSS",
+      "panel": {
+        "add": "Add a block",
+        "allViews": "Every view",
+        "block": "Block {n}",
+        "breakpoint": "{label} ({width} px)",
+        "confirmRemove": "Remove block {n}? Its CSS goes; the other blocks stay.",
+        "copied": "Copied block {n}.",
+        "copy": "Copy as media query",
+        "copyFailed": "The clipboard refused the copy; select the CSS and copy it by hand.",
+        "copyNothing": "Block {n} has nothing to copy: it has no CSS, or none of its breakpoints is in the grid.",
+        "css": "CSS of block {n}",
+        "empty": "No CSS yet. Add a block and type: it applies in the views as you type.",
+        "enabled": "Apply",
+        "file": "Kept in {file}, the whole draft as one stylesheet.",
+        "keep": "Keep",
+        "loading": "Reading the draft...",
+        "missing": "{id} (not in the grid)",
+        "noProject": "No project is open: Live CSS keeps its draft in the project's .rbrowser/out/live-css/.",
+        "notApplied": "Not applied: {reason}",
+        "nowhere": "No view: none of its breakpoints is in the grid.",
+        "remove": "Remove block {n}",
+        "removeConfirm": "Remove",
+        "retry": "Retry",
+        "scope": "Breakpoints",
+        "scopeHint": "None chosen: every view. Chosen: inside the media query of their widths, as Copy as media query gives it.",
+        "untrusted": "Live CSS keeps its draft in the project's .rbrowser/out/live-css/, which needs workspace trust: trust the workspace to edit it."
+      },
+      "panels": {
+        "editor": "Live CSS"
+      },
+      "settings": {
+        "applyOnNavigate": {
+          "description": "A new document in a view - a navigation or a reload - gets the Live CSS draft at once. Off: it starts without it until you change the draft or switch it on again.",
+          "help": "A new document in a view, after a navigation or a reload, gets the Live CSS draft at once. Off: the page shows as it is until you change the draft or switch it on again, for instance to compare a page with and without the draft.",
+          "label": "Apply after a navigation"
+        }
+      },
+      "status": {
+        "off": "Off: the views show the page as it is; the draft is kept.",
+        "on": "On: the draft applies in the views."
+      },
+      "tools": {
+        "clear": "Removes every block of the Live CSS draft, so the views show the page as it is. Only in a trusted workspace.",
+        "set": "Sets the Live CSS draft, which applies in every view at once: css (one block) with breakpoints (breakpoint ids of the grid; none for every view - a block for chosen breakpoints applies inside the media query of their widths), or blocks (the whole draft, each with css and breakpoints); either switches the draft on unless enabled is false. enabled alone switches it on or off and keeps the blocks. Without arguments it answers the draft: each block's media query and the text Copy as media query gives, and the grid's breakpoints with their widths. Only in a trusted workspace and, over MCP, only while evaluate over MCP is allowed in the settings, since CSS can read page data out; kept in .rbrowser/out/live-css/ (draft.json, and draft.css as one stylesheet)."
+      }
+    }
+  }
+}

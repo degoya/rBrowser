@@ -48,6 +48,10 @@ pub const HTTP_URL_DENIED: &str = "plugins.error.http_url_denied";
 /// A Lighthouse run (`lighthouse.start`) on an address outside the sites of the views, while the
 /// person has not allowed any address (`plugins.lighthouseAnyUrl`, RB-090-21); `url` names it.
 pub const SIDECAR_URL_DENIED: &str = "plugins.error.sidecar_url_denied";
+/// A consent probe (capability `consent-probe`, RB-094-09) of an address that is not public and
+/// not the trusted project's own, while the person has not allowed any address
+/// (`plugins.consentProbeAnyUrl`); `url` names it.
+pub const PROBE_URL_DENIED: &str = "plugins.error.probe_url_denied";
 /// The request failed on the way (no answer, broken connection).
 pub const HTTP_FAILED: &str = "plugins.error.http_failed";
 /// No backend is wired for the service (views, CDP, sidecar) in this process.
@@ -87,6 +91,9 @@ pub const SETTINGS_ANNOTATION: &str = "plugins.error.settings_annotation";
 /// A project plugin in a workspace the person has not trusted.
 pub const UNTRUSTED_WORKSPACE: &str = "plugins.error.untrusted_workspace";
 
+/// Another plugin has the view at a width of its own (a width lease, RB-093-01); `view` names it.
+pub const VIEW_LEASED: &str = "plugins.error.view_leased";
+
 /// A notice, not a refusal: a plugin's default shortcut is reserved or taken; the command stays
 /// unbound and reachable through the leader and the palette. `command` and `binding` name them.
 pub const SHORTCUT_UNBOUND: &str = "plugins.notice.shortcut_unbound";
@@ -112,6 +119,7 @@ pub const ALL: &[&str] = &[
     TOO_LARGE,
     HTTP_URL_DENIED,
     SIDECAR_URL_DENIED,
+    PROBE_URL_DENIED,
     HTTP_FAILED,
     NOT_AVAILABLE,
     UNKNOWN_CONTRIBUTION,
@@ -130,5 +138,6 @@ pub const ALL: &[&str] = &[
     SETTINGS_SECTION,
     SETTINGS_ANNOTATION,
     UNTRUSTED_WORKSPACE,
+    VIEW_LEASED,
     SHORTCUT_UNBOUND,
 ];

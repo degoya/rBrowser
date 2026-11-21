@@ -140,3 +140,77 @@ fn following_the_playback_can_be_switched_off() {
     assert!(!config.recorder.follow_playback);
     assert_eq!(config.recorder.min_pause_ms, 1_500);
 }
+
+#[test]
+fn the_live_steps_show_by_default_and_can_be_switched_off() {
+    // RB-090-89: the Recorder panel shows each step while it is recorded.
+    let config: AutomationConfig = serde_json::from_value(json!({})).expect("defaults");
+    assert!(config.recorder.show_live_steps);
+    let config: AutomationConfig =
+        serde_json::from_value(json!({ "recorder": { "showLiveSteps": false } })).expect("parses");
+    assert!(!config.recorder.show_live_steps);
+}
+
+#[test]
+fn deleting_a_recording_asks_first_by_default_and_can_be_switched_off() {
+    // RB-090-91: "Delete" in the Recorder panel asks in the panel before the file goes.
+    let config: AutomationConfig = serde_json::from_value(json!({})).expect("defaults");
+    assert!(config.recorder.confirm_delete);
+    let config: AutomationConfig =
+        serde_json::from_value(json!({ "recorder": { "confirmDelete": false } })).expect("parses");
+    assert!(!config.recorder.confirm_delete);
+}
+
+#[test]
+fn a_menu_hover_rests_250_ms_and_the_pointer_path_follows_menus_by_default() {
+    let config: AutomationConfig = serde_json::from_value(json!({})).expect("defaults");
+    assert_eq!(config.recorder.hover_dwell_ms, 250);
+    assert_eq!(config.recorder.record_pointer, RecordPointer::Menu);
+}
+
+#[test]
+fn the_dwell_and_the_pointer_path_are_set_in_camel_case() {
+    for (value, expected) in [
+        ("menu", RecordPointer::Menu),
+        ("all", RecordPointer::All),
+        ("off", RecordPointer::Off),
+    ] {
+        let config: AutomationConfig = serde_json::from_value(
+            json!({ "recorder": { "hoverDwellMs": 400, "recordPointer": value } }),
+        )
+        .expect("parses");
+        assert_eq!(config.recorder.hover_dwell_ms, 400);
+        assert_eq!(config.recorder.record_pointer, expected);
+        let written = serde_json::to_value(&config.recorder).expect("writes");
+        assert_eq!(written["recordPointer"], value);
+        assert_eq!(written["hoverDwellMs"], 400);
+    }
+    assert!(
+        serde_json::from_value::<AutomationConfig>(
+            json!({ "recorder": { "recordPointer": "some" } })
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn the_dwell_schema_is_bounded() {
+    let schema = serde_json::to_value(schemars::schema_for!(RecorderConfig)).expect("schema");
+    assert_eq!(schema["properties"]["hoverDwellMs"]["default"], 250);
+    assert_eq!(
+        schema["properties"]["hoverDwellMs"]["maximum"].as_f64(),
+        Some(5_000.0)
+    );
+    assert_eq!(schema["properties"]["recordPointer"]["default"], "menu");
+}
+
+#[test]
+fn a_step_added_in_the_editor_waits_half_a_second_by_default() {
+    // RB-092-01: the pause before a step added in the Recorder panel's editor.
+    let config: AutomationConfig = serde_json::from_value(json!({})).expect("defaults");
+    assert_eq!(config.recorder.inserted_step_pause_ms, 500);
+    let config: AutomationConfig =
+        serde_json::from_value(json!({ "recorder": { "insertedStepPauseMs": 0 } }))
+            .expect("parses");
+    assert_eq!(config.recorder.inserted_step_pause_ms, 0);
+}

@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "rbrowser",
+      "name": "rBrowser's own collection: the element ids and classes and the cookie names the consent managers document or ship, gathered by hand (the banner selectors as in crates/rb-visual/data/hide-selectors.json)",
+      "licence": "GPL-3.0-or-later"
+    }
+  ],
+  "cmps": [
+    {
+      "id": "onetrust",
+      "name": "OneTrust",
+      "source": "rbrowser",
+      "banner": ["#onetrust-banner-sdk"],
+      "reject": ["#onetrust-reject-all-handler"],
+      "cookies": ["OptanonConsent", "OptanonAlertBoxClosed"]
+    },
+    {
+      "id": "cookiebot",
+      "name": "Cookiebot",
+      "source": "rbrowser",
+      "banner": ["#CybotCookiebotDialog"],
+      "reject": ["#CybotCookiebotDialogBodyButtonDecline"],
+      "cookies": ["CookieConsent"]
+    },
+    {
+      "id": "usercentrics",
+      "name": "Usercentrics",
+      "source": "rbrowser",
+      "banner": ["#usercentrics-root", "#usercentrics-cmp-ui"],
+      "reject": ["[data-testid=\"uc-deny-all-button\"]"],
+      "cookies": ["uc_user_interaction"]
+    },
+    {
+      "id": "didomi",
+      "name": "Didomi",
+      "source": "rbrowser",
+      "banner": ["#didomi-notice", "#didomi-popup"],
+      "reject": ["#didomi-notice-disagree-button"],
+      "cookies": ["didomi_token", "euconsent-v2"]
+    },
+    {
+      "id": "borlabs",
+      "name": "Borlabs Cookie",
+      "source": "rbrowser",
+      "banner": ["#BorlabsCookieBox"],
+      "reject": ["[data-cookie-refuse]", "._brlbs-refuse-btn"],
+      "cookies": ["borlabs-cookie"]
+    },
+    {
+      "id": "klaro",
+      "name": "Klaro",
+      "source": "rbrowser",
+      "banner": ["#klaro .cookie-notice", "#klaro .cookie-modal"],
+      "reject": ["#klaro .cn-decline", "#klaro .cm-btn-decline"],
+      "cookies": ["klaro"]
+    },
+    {
+      "id": "cookieyes",
+      "name": "CookieYes",
+      "source": "rbrowser",
+      "banner": [".cky-consent-container"],
+      "reject": [".cky-btn-reject"],
+      "cookies": ["cookieyes-consent"]
+    },
+    {
+      "id": "cookie-law-info",
+      "name": "GDPR Cookie Consent",
+      "source": "rbrowser",
+      "banner": ["#cookie-law-info-bar"],
+      "reject": ["#cookie_action_close_header_reject"],
+      "cookies": ["viewed_cookie_policy", "cookielawinfo-checkbox-*"]
+    },
+    {
+      "id": "complianz",
+      "name": "Complianz",
+      "source": "rbrowser",
+      "banner": ["#cmplz-cookiebanner-container", ".cmplz-cookiebanner"],
+      "reject": [".cmplz-deny"],
+      "cookies": ["cmplz_*"]
+    },
+    {
+      "id": "quantcast",
+      "name": "Quantcast Choice",
+      "source": "rbrowser",
+      "banner": ["#qc-cmp2-container"],
+      "reject": ["#qc-cmp2-ui button[mode=\"secondary\"]"],
+      "cookies": ["euconsent-v2", "addtl_consent"]
+    },
+    {
+      "id": "trustarc",
+      "name": "TrustArc",
+      "source": "rbrowser",
+      "banner": ["#truste-consent-track"],
+      "reject": ["#truste-consent-required"],
+      "cookies": ["notice_preferences", "notice_gdpr_prefs"]
+    },
+    {
+      "id": "generic",
+      "name": "Cookie banner",
+      "source": "rbrowser",
+      "banner": [
+        "[id*=\"cookie-banner\" i]",
+        "[class*=\"cookie-banner\" i]",
+        "[id*=\"cookie-notice\" i]",
+        "[class*=\"cookie-notice\" i]",
+        "[id*=\"consent-banner\" i]",
+        "[class*=\"consent-banner\" i]"
+      ],
+      "reject": [],
+      "cookies": []
+    }
+  ],
+  "rejectTexts": [
+    "reject all",
+    "reject",
+    "decline all",
+    "decline",
+    "deny",
+    "only necessary",
+    "only essential",
+    "alle ablehnen",
+    "ablehnen",
+    "nur notwendige",
+    "nur essenzielle",
+    "tout refuser",
+    "refuser",
+    "rechazar todo",
+    "rechazar"
+  ],
+  "essentialCookies": [
+    "PHPSESSID",
+    "JSESSIONID",
+    "ASP.NET_SessionId",
+    "ASPSESSIONID*",
+    "csrftoken",
+    "XSRF-TOKEN",
+    "_csrf",
+    "__cf_bm",
+    "cf_clearance",
+    "wordpress_test_cookie"
+  ]
+}

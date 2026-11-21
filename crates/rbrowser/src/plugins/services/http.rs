@@ -2,7 +2,8 @@
 //! (`http`/`https`, no credentials) and the rate already. Only `GET` and `HEAD` go out, with the
 //! plugin's `Accept` and `Accept-Language` and no other header (no cookie, no authorization), no
 //! proxy, a redirect is answered and never followed, at most `max_response_bytes` of the body
-//! are read, and the answer carries only the headers [`RESPONSE_HEADERS`] names.
+//! are read, and the answer carries only the headers [`RESPONSE_HEADERS`] names (a `Set-Cookie`
+//! without its value).
 //!
 //! The names are resolved by [`GuardedResolver`]: every address of a name outside the project's
 //! own origins must be public ([`super::net`]), and the connection goes only to an address it
@@ -21,9 +22,10 @@ use ureq::unversioned::transport::{DefaultConnector, NextTimeout};
 use super::net::{Origin, is_public};
 use crate::sitemap::http::{TIMEOUT, outgoing};
 
-/// The answer headers a plugin sees, lower-case: what a crawler and the SEO checks read, never
-/// a cookie.
-pub const RESPONSE_HEADERS: [&str; 8] = [
+/// The answer headers a plugin sees, lower-case: what a crawler and the SEO checks read, and the
+/// security headers the security-headers check reads (RB-093-03). `set-cookie` passes without its
+/// value ([`passed_value`]); a `cookie` never.
+pub const RESPONSE_HEADERS: [&str; 18] = [
     "content-encoding",
     "content-language",
     "content-length",
@@ -32,7 +34,62 @@ pub const RESPONSE_HEADERS: [&str; 8] = [
     "link",
     "location",
     "x-robots-tag",
+    "content-security-policy",
+    "strict-transport-security",
+    "x-frame-options",
+    "x-content-type-options",
+    "referrer-policy",
+    "permissions-policy",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+    "date",
+    "set-cookie",
 ];
+
+/// A header's value as a plugin gets it: a `Set-Cookie` line keeps its name and the attributes it
+/// knows, each value checked against its form, and loses its value (`sid=SECRET; Secure` ->
+/// `sid=; Secure`; a line without `=` passes as empty). What does not fit - a folded second
+/// cookie, an unknown token, a quoted value split at its `;` - is left out, so no fragment of a
+/// value reaches the plugin. Every other header passes as it came.
+#[must_use]
+pub fn passed_value(name: &str, value: &str) -> String {
+    if name != "set-cookie" {
+        return value.to_owned();
+    }
+    let mut parts = value.split(';');
+    let Some((cookie, _)) = parts.next().and_then(|pair| pair.split_once('=')) else {
+        return String::new();
+    };
+    let mut line = format!("{}=", cookie.trim());
+    for attribute in parts.filter_map(known_attribute) {
+        line.push_str("; ");
+        line.push_str(&attribute);
+    }
+    line
+}
+
+/// `token` as a known `Set-Cookie` attribute whose value has its form, else `None`.
+fn known_attribute(token: &str) -> Option<String> {
+    let token = token.trim();
+    let (key, value) = token.split_once('=').map_or((token, None), |(key, value)| {
+        (key.trim(), Some(value.trim()))
+    });
+    let fits = |allowed: fn(char) -> bool, max: usize| {
+        value.is_some_and(|value| {
+            !value.is_empty() && value.len() <= max && value.chars().all(allowed)
+        })
+    };
+    let ok = match key.to_ascii_lowercase().as_str() {
+        "secure" | "httponly" | "partitioned" => value.is_none(),
+        "samesite" | "priority" => fits(|c| c.is_ascii_alphabetic(), 16),
+        "max-age" => fits(|c| c.is_ascii_digit() || c == '-', 20),
+        "domain" => fits(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-', 253),
+        "path" => fits(|c| c.is_ascii_graphic() && c != ',' && c != ';', 1024),
+        "expires" => fits(|c| c.is_ascii_alphanumeric() || " ,:-".contains(c), 40),
+        _ => false,
+    };
+    ok.then(|| token.to_owned())
+}
 
 /// The origins the plugins may reach on a non-public address: the open project's own.
 pub type LocalOrigins = Arc<RwLock<Vec<Origin>>>;
@@ -157,7 +214,8 @@ pub fn fetch_blocking(
         .iter()
         .filter(|(name, _)| RESPONSE_HEADERS.contains(&name.as_str()))
         .filter_map(|(name, value)| {
-            Some((name.as_str().to_owned(), value.to_str().ok()?.to_owned()))
+            let value = passed_value(name.as_str(), value.to_str().ok()?);
+            Some((name.as_str().to_owned(), value))
         })
         .collect();
     let body = if request.method.eq_ignore_ascii_case("HEAD") {

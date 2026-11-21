@@ -30,6 +30,7 @@ export const recordingShellMessages = [
   { type: 'saveRecording', name: 'login', recording: RECORDING },
   { type: 'exportRecording', name: 'login', format: 'both', exportName: 'login-flow', write: true, overwrite: true },
   { type: 'getFlowRun' },
+  { type: 'resendRecordingSteps' }, // RB-090-89
 ] satisfies ShellToCore[];
 
 export const recordingCoreMessages = [
@@ -62,9 +63,10 @@ export const recordingCoreMessages = [
     running: {
       runId: '20261117-101500-a1b2c3',
       flow: 'login',
-      views: [{ view: 1, status: 'running' }],
+      views: [{ view: 1, status: 'running', step: { number: 2, name: 'Step 2: waitFor' } }],
       startedAtMs: 1794910500000,
       queued: ['checkout'],
+      totalSteps: 3,
     },
     last: {
       version: 1,
@@ -99,7 +101,40 @@ export const recordingCoreMessages = [
     stepId: 2,
     state: 'failed',
     message: 'locator.waitFor: Timeout 10000ms exceeded.',
+    number: 2,
+    total: 3,
   },
+  // RB-090-89
+  {
+    type: 'recordingSteps',
+    name: 'checkout',
+    from: 1,
+    steps: [
+      {
+        id: 2,
+        action: { type: 'hover', target: { selectors: [{ kind: 'css', path: '#menu' }] } },
+        view: 'mobile',
+        atMs: 1800,
+        path: [{ x: 10, y: 20, t: 0 }],
+      },
+    ],
+    state: 'recording',
+    continueAfter: 1, // RB-092-01
+  },
+  {
+    type: 'recorderElementPicked',
+    view: 2,
+    locator: {
+      selectors: [
+        { kind: 'role', role: 'button', name: 'Filter' },
+        { kind: 'css', path: 'aside > button' },
+      ],
+    },
+    text: 'Filter',
+    onlyIn: ['tablet', 'desktop'],
+    options: [{ value: '42', label: 'Size 42' }],
+  },
+  { type: 'recorderStepCommand', command: 'recorder.step_add' }, // RB-092-01
 ] satisfies CoreToShell[];
 
 /** Every request type of the panels once; a new one in `recordings.ts` fails the type check. */
@@ -109,6 +144,7 @@ export const RECORDING_SHELL_TYPES: Record<RecordingRequest['type'], true> = {
   saveRecording: true,
   exportRecording: true,
   getFlowRun: true,
+  resendRecordingSteps: true,
 };
 
 /** Every answer and event type of the panels once. */
@@ -120,4 +156,7 @@ export const RECORDING_CORE_TYPES: Record<RecordingEvent['type'], true> = {
   flowRun: true,
   flowRunChanged: true,
   flowStep: true,
+  recordingSteps: true,
+  recorderElementPicked: true,
+  recorderStepCommand: true,
 };

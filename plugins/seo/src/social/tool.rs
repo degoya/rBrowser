@@ -1,7 +1,8 @@
 //! The MCP tool `seo_social_preview` (the SEO panel calls it too): the cards of every platform
 //! the settings name for a page (`url`, else the target view's), and each share image's real
 //! format and size - as a `data:` URI while the answer stays within its `budget`. Each card's
-//! layout follows its platform's rule with the image's real size (RB-080-99).
+//! layout follows its platform's rule with the image's real size (RB-080-99). `serp` is the
+//! page's search result with its favicon, inlined before the share images (RB-090-95).
 
 use rb_plugin_api::{Failure, FailureKind, PluginHost};
 use scraper::Html;
@@ -12,6 +13,7 @@ use crate::config::Config;
 use crate::fetch::{self, MAX_HOPS};
 use crate::page;
 use crate::rules::short;
+use crate::serp::{self, favicon};
 use crate::social::{self, Shape, base64, share};
 use crate::tool::{bad_args, view_of};
 use crate::url::{MAX_URL_CHARS, Url};
@@ -141,10 +143,10 @@ pub fn preview(host: &mut dyn PluginHost, args: &str) -> Result<String, Failure>
     let final_url = response
         .and_then(|response| Url::parse(&response.url))
         .unwrap_or_else(|| start.clone());
-    let facts = response
+    let html = response
         .filter(|response| response.status == 200 && response.is_html())
-        .map(|response| page::facts(&Html::parse_document(&response.text())))
-        .unwrap_or_default();
+        .map(|response| Html::parse_document(&response.text()));
+    let facts = html.as_ref().map(page::facts).unwrap_or_default();
     let mut cards = social::cards(&facts, &final_url, &config.social_platforms);
     let mut urls: Vec<String> = Vec::new();
     for url in cards.iter().filter_map(|card| card.image.clone()) {
@@ -174,7 +176,28 @@ pub fn preview(host: &mut dyn PluginHost, args: &str) -> Result<String, Failure>
         "cards": cards,
         "images": loaded.iter().map(|(entry, _, _)| entry.clone()).collect::<Vec<_>>(),
     });
+    let robots: Vec<&str> = response
+        .map(|response| response.header("x-robots-tag").collect())
+        .unwrap_or_default();
+    let mut result = json!(serp::serp(&facts, &final_url, &robots));
+    // No answer at all (the host refused, a redirect loop): no favicon is asked for either.
+    let icon = response.map(|_| {
+        let (source, url) = favicon::pick(html.as_ref(), &final_url);
+        favicon::load(host, source, &url)
+    });
+    result["favicon"] = icon
+        .as_ref()
+        .map_or(Value::Null, |(entry, _)| entry.clone());
+    answer["serp"] = result;
     let mut size = answer.to_string().len();
+    if let Some((_, Some(data_uri))) = icon {
+        if size + data_uri.len() <= budget {
+            size += data_uri.len();
+            answer["serp"]["favicon"]["dataUri"] = Value::String(data_uri);
+        } else {
+            answer["serp"]["favicon"]["tooLarge"] = Value::Bool(true);
+        }
+    }
     for (index, (_, data_uri, _)) in loaded.into_iter().enumerate() {
         let Some(data_uri) = data_uri else { continue };
         let entry = &mut answer["images"][index];

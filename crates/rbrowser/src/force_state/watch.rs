@@ -1,9 +1,9 @@
 //! Navigation ends forced states (RB-090-53): `DOM.documentUpdated` on rBrowser's session of a
 //! view (a navigation, a reload) - Chromium dropped the nodes and their states - empties the
 //! view's record; `Target.detachedFromTarget` of that session (the view closed) forgets the view.
-//! Either way the status bar says what stays forced. A docked DevTools frontend's own events
-//! come on its session and are not rBrowser's. Started with the first forced state, once per
-//! window.
+//! Either way the activity bar shows what stays forced (RB-094-16). A docked DevTools
+//! frontend's own events come on its session and are not rBrowser's. Started with the first
+//! forced state, once per window.
 
 use std::sync::{Arc, OnceLock, Weak};
 
@@ -59,8 +59,7 @@ fn start(core: &Core) {
                 break;
             };
             tracing::info!(%view, "force state: the page changed; its forced states are gone");
-            let forced = lock(super::registry()).forced_views();
-            core.notify(super::command::status(&core, &forced));
+            super::command::announce(&core);
         }
     });
 }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::url::Url;
 
 const FIXTURE: &str = include_str!("../../../tests/fixtures/sitemap/robots.txt");
 

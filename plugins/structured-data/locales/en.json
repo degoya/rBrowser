@@ -1,0 +1,123 @@
+{
+  "plugin": {
+    "structured-data": {
+      "commands": {
+        "check": "Check the structured data of the active view",
+        "panel": "Show the structured data panel"
+      },
+      "findings": {
+        "jsonld": {
+          "context": "The type {type} has no schema.org context: add \"@context\": \"https://schema.org\".",
+          "invalid": "JSON-LD block {block} is no JSON: {reason}"
+        },
+        "property": {
+          "domain": "{type}: the property {property} is not meant for this type.",
+          "range": "The value \"{value}\" of {property} is not of an expected kind: {expected}.",
+          "superseded": "{property} is superseded by {replacement}.",
+          "unknown": "{type}: schema.org has no property {property}."
+        },
+        "rich": {
+          "recommended": "{type}: the rich result recommends {property}.",
+          "required": "{type}: the rich result needs {property}.",
+          "required_any": "{type}: the rich result needs one of {properties}."
+        },
+        "type": {
+          "missing": "This {syntax} item has no type.",
+          "unknown": "schema.org has no type {type}."
+        }
+      },
+      "name": "Structured data",
+      "panel": {
+        "activeView": "Active view",
+        "block": "Block {index}",
+        "blockError": "Not JSON: {reason}",
+        "cut": "The answer was shortened; MCP structureddata_inspect gives all of it.",
+        "empty": "The page has no structured data.",
+        "finding": "Finding",
+        "findingsAt": "{count, plural, one {# finding} other {# findings}} at this node",
+        "jump": "Show in the tree",
+        "loading": "Reading the page...",
+        "noBlocks": "The page has no JSON-LD block.",
+        "noFindings": "No findings: the structured data meets every rule.",
+        "noView": "No view shows a page.",
+        "rawCut": "The block is longer than shown here.",
+        "rawDropped": "The raw text was left out of the shortened answer.",
+        "refElsewhere": "Points outside the page: {id}",
+        "refTo": "Points to {target}",
+        "refresh": "Read again",
+        "report": "Send to the findings panel",
+        "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
+        "richOff": "Rich results are not checked (Settings > Checks > Structured data).",
+        "sections": {
+          "findings": "Findings",
+          "raw": "JSON-LD",
+          "tree": "Tree"
+        },
+        "severity": {
+          "error": "Error",
+          "info": "Note",
+          "label": "Severity",
+          "warning": "Warning"
+        },
+        "showRef": "Show the node it points to",
+        "summary": "{error, plural, one {# error} other {# errors}}, {warning, plural, one {# warning} other {# warnings}}, {info, plural, one {# note} other {# notes}}",
+        "syntax": {
+          "json-ld": "JSON-LD",
+          "microdata": "Microdata",
+          "rdfa": "RDFa"
+        },
+        "truncated": "The page has more nodes than are read; the last ones are left out.",
+        "untyped": "No type",
+        "view": "View",
+        "vocabulary": "schema.org {version}",
+        "setting_link": "Open the setting"
+      },
+      "panels": {
+        "structured-data": "Structured data"
+      },
+      "rules": {
+        "jsonld": {
+          "context": "A JSON-LD node without the schema.org context",
+          "invalid": "A JSON-LD block is no JSON"
+        },
+        "property": {
+          "domain": "A property not meant for its type",
+          "range": "A value of a kind the property does not expect",
+          "superseded": "A property schema.org has replaced",
+          "unknown": "A property schema.org does not have"
+        },
+        "rich": {
+          "recommended": "A property the rich result recommends is missing",
+          "required": "A property the rich result needs is missing",
+          "required_any": "None of the properties the rich result needs one of"
+        },
+        "type": {
+          "missing": "An item without a type",
+          "unknown": "A type schema.org does not have"
+        }
+      },
+      "settings": {
+        "minSeverity": {
+          "description": "The mildest findings shown and reported: notes, warnings or errors only.",
+          "help": "Findings milder than this are neither shown in the panel nor sent to the findings panel. Example: Warnings hides the notes on superseded properties.",
+          "label": "Mildest finding shown"
+        },
+        "option": {
+          "minSeverity": {
+            "error": "Errors only",
+            "info": "Notes and above",
+            "warning": "Warnings and errors"
+          }
+        },
+        "richResults": {
+          "description": "Check the properties the rich results of Google Search need and recommend.",
+          "help": "Holds Product, Article, BreadcrumbList, Organization, FAQ and their parts to the properties a rich result of Google Search needs (an error when missing) and recommends (a warning). Off checks the schema.org vocabulary only.",
+          "label": "Check rich results"
+        }
+      },
+      "tools": {
+        "inspect": "The schema.org data of the page the target view shows (JSON-LD, Microdata, RDFa) as a tree, the raw JSON-LD blocks and the findings against the schema.org vocabulary and the rich-result needs, each at its node."
+      }
+    }
+  }
+}

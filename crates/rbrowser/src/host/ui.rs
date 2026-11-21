@@ -164,6 +164,11 @@ pub trait UiBackend: Send + Sync {
     fn set_app_theme(&self, theme: rb_config::Theme) {
         let _ = theme;
     }
+    /// The main window's title (`ui.titleBar`, RB-094-19, `crate::launch::window_title`); the
+    /// other windows keep theirs. A host without a main window does nothing.
+    fn set_window_title(&self, title: String) {
+        let _ = title;
+    }
     /// Shows or hides the status bar at the bottom of the window; the grid takes its room
     /// (RB-080-15, `cef_app/status_bar.rs`). A window without one does nothing.
     fn set_status_bar_visible(&self, visible: bool) {
@@ -223,6 +228,12 @@ pub trait UiBackend: Send + Sync {
     /// that changed. A window without strips does nothing.
     fn set_cell_info(&self, infos: Vec<crate::cell_info::CellInfo>) {
         let _ = infos;
+    }
+    /// Opens the address field in the label strip of `view` (RB-092-03,
+    /// `crate::cell_info::edit`) with `url` selected and `name` as its accessible name; Enter runs
+    /// `view.edit_address` with the text. A window without the view's strip does nothing.
+    fn edit_address(&self, view: ViewId, url: String, name: String) {
+        let _ = (view, url, name);
     }
     /// Sets the page zoom of `view`'s browser to Chromium's `level` (0 is 100 %, RB-090-20,
     /// `cef_app/page_zoom.rs`); the zoom badge of its label strip follows. A view without a
@@ -284,6 +295,20 @@ pub trait UiBackend: Send + Sync {
     ) {
         let _ = view;
         made(Err("this window makes no render views".to_owned()));
+    }
+
+    /// Gives the render view's browser that started at `marker` the size `width` x `height` DIP
+    /// and calls `painted` once it painted a frame that tall (RB-090-88, a full-page shot;
+    /// `cef_app/render_views.rs`). A window that cannot answers why.
+    fn resize_render_view(
+        &self,
+        marker: String,
+        width: u32,
+        height: u32,
+        painted: crate::sitemap::render_views::RenderViewMade,
+    ) {
+        let _ = (marker, width, height);
+        painted(Err("this window resizes no render views".to_owned()));
     }
 
     /// Closes the render view's browser that started at `marker`. A window without one does
@@ -388,6 +413,9 @@ pub struct UiCell {
     /// The footer under the view (RB-080-44); `None` without footers.
     pub footer: Option<CellFooter>,
 }
+
+#[path = "place_tickets.rs"]
+pub mod place_tickets;
 
 #[cfg(test)]
 #[path = "ui_recording.rs"]

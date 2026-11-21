@@ -139,7 +139,7 @@ describe('every category of more than one section in tabs (RB-080-71)', () => {
   it('shows Engines one section at a time', async () => {
     const { wrapper } = await open();
     await choose(wrapper, 'engines');
-    expect(tabs(wrapper).map((tab) => tab.text())).toEqual(['Chromium/CEF', 'Firefox', 'WebKit/Playwright', 'Node runtime', 'External windows']);
+    expect(tabs(wrapper).map((tab) => tab.text())).toEqual(['Chromium/CEF', 'Firefox', 'WebKit/Playwright', 'Android devices', 'Safari (macOS)', 'iOS (macOS)', 'Node runtime', 'External windows']);
     expect(sections(wrapper)).toEqual(['engines.chromium']);
   });
 
@@ -176,6 +176,9 @@ describe('every category of more than one section in tabs (RB-080-71)', () => {
       'engines.chromium',
       'engines.firefox',
       'engines.webkit',
+      'engines.android',
+      'engines.safari',
+      'engines.ios',
       'engines.node',
       'engines.external',
     ]);

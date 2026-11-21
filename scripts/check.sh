@@ -350,8 +350,18 @@ plugin_tests() {
         CARGO_BUILD_JOBS="$JOBS" CARGO_TARGET_DIR="${RB_PLUGIN_TARGET_DIR:-$ROOT/target/lanes/plugins}" \
             cargo test --locked --manifest-path "plugins/$id/Cargo.toml" \
             -- --test-threads "$TEST_THREADS" || status=1
-    done < <(scripts/build-plugins.sh --list)
+    done < <(scripts/build-plugins.sh --list; plugin_libraries)
     return "$status"
+}
+
+# The plugins' shared libraries (RB-090-96, plugins/schema-org): a folder of plugins/ with a
+# Cargo.toml and no manifest.toml, built into the plugins that use them; their own tests run here.
+plugin_libraries() {
+    local dir
+    for dir in plugins/*/; do
+        [[ -f "$dir/Cargo.toml" && ! -f "$dir/manifest.toml" ]] && basename "$dir"
+    done
+    return 0
 }
 
 # The WSL helper as the package ships it (RB-030-04): built for x86_64-unknown-linux-musl and

@@ -1,18 +1,24 @@
 // The network panel's state (RB-070-02, on Nuxt UI since RB-080-84): the live list (`list`, asked
 // with the filters), a saved session shown instead of it, the selected request, the tab, the
-// status line and the site-data confirmation, with the debugger's, the mocks' and the sessions'
-// parts. Provided to every component of the panel (`useNetwork()`).
+// status line and the site-data confirmation, with the debugger's, the mocks', the sessions' and
+// the endpoints' parts (RB-096-06) and the way into the API client (RB-096-08). Provided to every
+// component of the panel (`useNetwork()`).
 import { computed, inject, reactive, ref, type InjectionKey } from 'vue';
 import type { Panel } from '../../../../web-common/panel-ui/src/panel';
 import { latestRefresh } from '../../../../web-common/panel-ui/src/refresh';
 import type { StatusLine } from '../../../../web-common/panel-ui/src/status';
+import { MAX_SAVED, createApiHandoff, newestOf, toSave } from './apiHandoff';
 import { createDebug } from './debug';
+import { createEndpoints } from './endpoints';
 import { createMocks } from './mocks';
 import { type Filters, keyOf, listArgs } from './model';
 import { createSessions } from './sessions';
 import type { ListAnswer, ListRow, SessionAnswer } from './types';
 
-export type Tab = 'requests' | 'breakpoints' | 'compose' | 'sessions' | 'mocks';
+export type Tab = 'requests' | 'endpoints' | 'breakpoints' | 'compose' | 'sessions' | 'mocks';
+
+/** The tabs, in their order. */
+export const TABS: readonly Tab[] = ['requests', 'endpoints', 'breakpoints', 'compose', 'sessions', 'mocks'];
 export type NetworkStore = ReturnType<typeof createNetwork>;
 export const NETWORK_KEY: InjectionKey<NetworkStore> = Symbol('network');
 
@@ -28,7 +34,7 @@ export function useNetwork(): NetworkStore {
 export function createNetwork(panel: Panel) {
   const answer = ref<ListAnswer | null>(null);
   const session = ref<SessionAnswer | null>(null);
-  const filters = reactive<Filters>({ search: '', type: '', status: 'all', differences: false });
+  const filters = reactive<Filters>({ search: '', type: '', status: 'all', differences: false, endpoint: '' });
   const selected = ref<string | null>(null);
   const tab = ref<Tab>('requests');
   const confirming = ref(false);
@@ -46,9 +52,17 @@ export function createNetwork(panel: Panel) {
     selected.value = null;
     if (opened) tab.value = 'requests';
   });
+  // The jump from an endpoint to its requests: the live list, filtered by the endpoint.
+  const endpoints = createEndpoints(panel, (key) => {
+    session.value = null;
+    selected.value = null;
+    filters.endpoint = key;
+    tab.value = 'requests';
+  });
 
-  function say(tone: StatusLine['tone'], text: string): void {
-    outcome.value = { tone, text, polls: OUTCOME_POLLS };
+  /** Says an outcome; `setting` is the link of a text that names a settings path (RB-094-21). */
+  function say(tone: StatusLine['tone'], text: string, setting?: StatusLine['setting']): void {
+    outcome.value = { tone, text, ...(setting ? { setting } : {}), polls: OUTCOME_POLLS };
   }
 
   /** The status line: an outcome or failure, else the open session. */
@@ -93,6 +107,29 @@ export function createNetwork(panel: Panel) {
 
   const selectedRow = computed<ListRow | undefined>(() => (shown.value?.rows ?? []).find((row) => keyOf(row) === selected.value));
 
+  // Into the API client (RB-096-08): the live list's requests only - a saved session's are in no
+  // view any more.
+  const handoff = createApiHandoff(panel, say);
+  const liveSelected = () => (answer.value?.rows ?? []).find((row) => keyOf(row) === selected.value);
+  const api = {
+    open: (): Promise<void> => {
+      const row = liveSelected();
+      return handoff.open(row ? newestOf(row) : null);
+    },
+    openRequest: (one: { view: number; id: string }): Promise<void> => handoff.open(one),
+    save: (): Promise<void> => {
+      const one = liveSelected();
+      const ref = one ? newestOf(one) : null;
+      if (!ref) return handoff.open(null);
+      return handoff.save([ref]);
+    },
+    saveShown: (): Promise<void> => {
+      const rows = answer.value?.rows ?? [];
+      const { requests, cut } = toSave(rows);
+      return handoff.save(requests, { cutAt: cut ? MAX_SAVED : 0, partial: (answer.value?.total ?? 0) > rows.length });
+    },
+  };
+
   /** The newest instance of the selected row in its first view, for a repeat. */
   function selectedSeen(): { view: number; id: string } | null {
     const row = (answer.value?.rows ?? []).find((candidate) => keyOf(candidate) === selected.value);
@@ -132,6 +169,8 @@ export function createNetwork(panel: Panel) {
     debug,
     mocks,
     sessions,
+    endpoints,
+    api,
     say,
     refresh,
     poll,

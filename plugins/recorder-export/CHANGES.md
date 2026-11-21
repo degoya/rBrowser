@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Fixed (RB-094-10): the config's `baseURL` from the start URL carries no user info
+  (`user:password@`), and the scheme counts in any case (`rb_util::url::origin_of`).
+- The recording editor's steps (RB-092-01): a step switched off (`disabled`) is left out of every
+  format, a pause set in the editor (`pauseMs`) takes the measured one's place (capped at 10 s
+  like it), and the fixed wait `wait { ms }` is a `page.waitForTimeout` at every pace, at most
+  10 s.
+- The pointer's way of a step (RB-090-87): a step the recorder kept with its way (`path`, CSS px
+  of the recorded view's viewport with the time of each point) moves the pointer along it with
+  `page.mouse.move` before its action - at the `recorded` pace with the recorded times, at
+  `fast` through the points without waits -, only in a view of the recording's size
+  (`view.width`/`view.height` in the flow, `page.viewportSize()` in the spec). The way's time is
+  taken from the step's pause, so a run takes no longer and the `pauses` stay the one rule. A
+  recording without ways exports as before.
 - A hover rests before the step after it at the `recorded` pace (RB-090-84): the recorder
   reports a menu's hover at the pointer-down of the click into its submenu, so the two carried
   one time and played back to back. A hover followed sooner than 500 ms now waits that long

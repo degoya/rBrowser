@@ -20,3 +20,13 @@ useDefault = true
 [[allowlists]]
 description = "RB-080-23: public keys of the CRX3 test fixtures"
 paths = ['''tests/fixtures/extensions/crx/fixtures\.json''']
+
+# The API client's curl import fixtures (RB-096-02): made-up credentials in pasted curl commands
+# (`-u user:pass`, an Authorization header) that the tests show become `{{$secret ...}}`
+# placeholders. Test material: the two files are allowed.
+[[allowlists]]
+description = "RB-096-02: made-up credentials in the curl import fixtures"
+paths = [
+  '''crates/rb-api-import/fixtures/curl/powershell\.txt''',
+  '''crates/rb-api-import/fixtures/curl/chrome-bash\.txt''',
+]

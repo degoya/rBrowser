@@ -13,7 +13,8 @@
 //! its HTTP status and where it ended come from the page's navigation timing. Waiting follows
 //! [`WaitSpec`]: network idle (at most [`NETWORK_IDLE_MAX`], a page that never goes quiet is
 //! still captured), a selector, scrolling to the end and back for lazy content, a further delay.
-//! The screenshot is `crate::capture::cdp::capture` on the view's session, on a page prepared
+//! The screenshot is `crate::capture::cdp::capture_on` on the view's session (a full page grows
+//! the windowless view to the page's height, `super::render_surface`), on a page prepared
 //! by `crate::capture::clean` as the run's [`CleanPlan`] says (RB-080-12: banners hidden,
 //! animations frozen, undone right after), within its own deadline ([`SHOT_TIMEOUT`], the
 //! setting `sitemap.shotTimeoutSec`) instead of the router's 30 s.
@@ -31,11 +32,12 @@ use serde_json::{Value, json};
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::broadcast::error::RecvError;
 
+use super::render_surface::RenderSurface;
 use super::render_views::{
     FIND_DEADLINE, RenderView, RenderViews, find_target, forget_when_closed, next_marker,
 };
 use super::scripts;
-use crate::capture::cdp::{CaptureTarget, Shot, capture};
+use crate::capture::cdp::{CaptureTarget, Shot, capture_on};
 use crate::capture::clean;
 use crate::cdp::{CdpEvent, CdpRouter, lock};
 use crate::emulation::cdp::{emulation_calls, media_params, metrics_params};
@@ -58,7 +60,7 @@ pub type SessionTarget = Box<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
 /// Where a page's load stands, kept from `navigate` for `wait`.
 struct Navigation {
-    events: Receiver<CdpEvent>,
+    events: Receiver<Arc<CdpEvent>>,
     frame: String,
     loader: String,
     network_idle: bool,
@@ -73,6 +75,8 @@ struct View {
     metrics: Value,
     /// The emulated media of the breakpoint, put back after a capture's preparation.
     media: Value,
+    /// The breakpoint's viewport, the windowless browser's own size.
+    width: u32,
     height: u32,
     dpr: f64,
     navigation: Option<Navigation>,
@@ -105,11 +109,7 @@ pub fn render_metrics(emulation: &Emulation) -> Value {
     let metrics = DeviceMetrics {
         width: emulation.width.max(1),
         height: emulation.height.max(1),
-        dpr: if emulation.dpr > 0.0 {
-            emulation.dpr
-        } else {
-            0.0
-        },
+        dpr: emulation.dpr.max(0.0),
         mobile: emulation.mobile,
         scale: 1.0,
     };
@@ -189,6 +189,7 @@ impl CdpRenderBackend {
             &spec.session,
             spec.emulation.width,
             spec.emulation.height,
+            spec.emulation.dpr,
         );
         self.window.open(
             view,
@@ -352,6 +353,7 @@ impl RenderBackend for CdpRenderBackend {
             session,
             metrics: render_metrics(&spec.emulation),
             media: media_params(&spec.emulation),
+            width: spec.emulation.width.max(1),
             height: spec.emulation.height,
             dpr: spec.emulation.dpr,
             navigation: None,
@@ -449,12 +451,20 @@ impl RenderBackend for CdpRenderBackend {
         let metrics = view.metrics.clone();
         let restore = move || Some(metrics.clone());
         let deadline = self.shot_timeout;
+        let surface = RenderSurface {
+            window: &self.window,
+            marker: &view.marker,
+            width: view.width,
+            height: view.height.max(1),
+            dpr: view.dpr,
+        };
         let shot = async {
-            let captured = capture(&self.cdp, &target, &shot, 1.0, &restore);
+            let captured = capture_on(&self.cdp, &target, &shot, 1.0, &restore, &surface);
             match tokio::time::timeout(deadline, captured).await {
                 Ok(result) => result,
                 Err(_) => {
                     // Dropped mid-way, the capture did not put the breakpoint's size back.
+                    surface.shrink();
                     let back = Some(view.session.as_str());
                     let metrics = view.metrics.clone();
                     if let Err(error) = self

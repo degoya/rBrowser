@@ -1,8 +1,8 @@
 //! Index fixtures for the tests of the index, the merge and the repositories: a repository key,
 //! a fixed clock and entries that pass every rule, to be changed one field at a time.
 
-use chrono::{DateTime, Duration, Utc};
 use ed25519_dalek::SigningKey;
+use time::{OffsetDateTime, SignedDuration};
 
 use super::{
     IndexEntry, IndexSigners, PLUGIN_INDEX_DOMAIN, PLUGIN_INDEX_SCHEMA_VERSION, PluginIndex,
@@ -17,8 +17,8 @@ pub(crate) const SHA256: &str = "0123456789abcdef0123456789abcdef0123456789abcde
 const FINGERPRINT: &str = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
 
 /// The instant every fixture is verified at.
-pub(crate) fn now() -> DateTime<Utc> {
-    DateTime::from_timestamp(1_790_000_000, 0).expect("timestamp")
+pub(crate) fn now() -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(1_790_000_000).expect("timestamp")
 }
 
 /// The repository's signing key.
@@ -72,8 +72,8 @@ pub(crate) fn index_of(sequence: u64, plugins: Vec<IndexEntry>) -> PluginIndex {
     PluginIndex {
         schema_version: PLUGIN_INDEX_SCHEMA_VERSION,
         sequence,
-        issued_at: now() - Duration::hours(1),
-        expires_at: now() + Duration::days(30),
+        issued_at: now() - SignedDuration::hours(1),
+        expires_at: now() + SignedDuration::days(30),
         plugins,
     }
 }

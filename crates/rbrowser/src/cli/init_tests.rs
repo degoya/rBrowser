@@ -1,7 +1,11 @@
 use super::*;
 
-fn no_analyser(_: &Path, _: Option<&str>) -> Result<Option<ProjectConfig>, String> {
-    Ok(None)
+fn no_analyser(_: &Path, _: Option<&str>) -> Analysis {
+    Err(NoProposal::new(Reason::NoPage, "no page"))
+}
+
+fn analysed(config: rb_config::ProjectConfig) -> Analysis {
+    Ok(Analysed { config, sheets: 2 })
 }
 
 #[test]
@@ -72,7 +76,7 @@ fn the_analysers_proposal_is_written_when_it_has_one() {
     let proposal = |_: &Path, url: Option<&str>| {
         let mut config = crate::host::state::default_config();
         config.start_url = url.map(str::to_owned);
-        Ok(Some(config))
+        analysed(config)
     };
     init(
         dir.path(),
@@ -88,7 +92,8 @@ fn the_analysers_proposal_is_written_when_it_has_one() {
 #[test]
 fn a_failing_analyser_falls_back_to_the_minimal_config() {
     let dir = tempfile::tempdir().expect("temp dir");
-    let failing = |_: &Path, _: Option<&str>| Err("no browser".to_owned());
+    let failing =
+        |_: &Path, _: Option<&str>| Err(NoProposal::new(Reason::Unreachable, "no browser"));
     init(dir.path(), None, failing, |_, _| true).expect("writes");
     let loaded = rb_config::load_project(dir.path()).expect("loads");
     assert_eq!(loaded.config.breakpoints.len(), 2);
@@ -128,22 +133,38 @@ fn a_file_url_is_no_start_url() {
 #[test]
 fn the_proposal_says_where_it_comes_from() {
     let dir = tempfile::tempdir().expect("temp dir");
-    let proposal = |_: &Path, _: Option<&str>| Ok(Some(crate::host::state::default_config()));
+    let proposal = |_: &Path, _: Option<&str>| analysed(crate::host::state::default_config());
     let mut seen = None;
-    init(dir.path(), None, proposal, |_, source| {
-        seen = Some(source);
+    init(dir.path(), None, proposal, |_, proposed| {
+        seen = Some(proposed.clone());
         false
     })
     .expect_err("not confirmed");
-    assert_eq!(seen, Some(Source::Analyser));
+    assert_eq!(
+        seen,
+        Some(Proposed {
+            source: Source::Analyser,
+            sheets: 2,
+            fallback: None
+        })
+    );
 
-    let failing = |_: &Path, _: Option<&str>| Err("no stylesheet".to_owned());
-    init(dir.path(), None, failing, |_, source| {
-        seen = Some(source);
+    // RB-091-08: the fallback names why the analyser had none.
+    let why = NoProposal::new(Reason::NoCss, "no stylesheet");
+    let failing = |_: &Path, _: Option<&str>| Err(why.clone());
+    init(dir.path(), None, failing, |_, proposed| {
+        seen = Some(proposed.clone());
         false
     })
     .expect_err("not confirmed");
-    assert_eq!(seen, Some(Source::Default));
+    assert_eq!(
+        seen,
+        Some(Proposed {
+            source: Source::Default,
+            sheets: 0,
+            fallback: Some(why.clone())
+        })
+    );
 }
 
 /// What `ask` prints for `config` and the answer `typed`, and whether it agreed.

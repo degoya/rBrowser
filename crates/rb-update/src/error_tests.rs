@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 
 use super::*;
 
-fn at(seconds: i64) -> DateTime<Utc> {
-    DateTime::from_timestamp(seconds, 0).expect("time")
+fn at(seconds: i64) -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(seconds).expect("time")
 }
 
 /// RB-090-14: an expired manifest is nothing to offer, never a refusal worth a notice; a replay

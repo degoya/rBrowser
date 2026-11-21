@@ -68,11 +68,17 @@ pub fn open(url: &str) {
     );
     if view.is_none() {
         tracing::error!("the settings window's view could not be created");
+        // RB-091-08: no wizard to answer the plugin choice - nothing waits for it.
+        crate::first_run::pages_window_closed();
         return;
     }
     PAGES.with(|pages| pages.borrow_mut().view = view);
     let mut window = PagesWindow::new(rb_i18n::t("settings.window.title"));
     let window = window_create_top_level(Some(&mut window));
+    if window.is_none() {
+        tracing::error!("the settings window could not be created");
+        crate::first_run::pages_window_closed();
+    }
     PAGES.with(|pages| pages.borrow_mut().window = window);
 }
 
@@ -137,6 +143,11 @@ wrap_window_delegate! {
         fn on_window_destroyed(&self, _window: Option<&mut Window>) {
             PAGES_BROWSER.store(0, Ordering::Release);
             PAGES.with(|pages| *pages.borrow_mut() = Pages::default());
+            // RB-091-08: the wizard's window closed with the plugin choice open no longer holds
+            // the plugins' load.
+            crate::first_run::pages_window_closed();
+            // RB-093-04: a bug report waiting in the preview is cancelled with its window.
+            crate::bug_report::preview::pages_window_closed();
         }
 
         fn can_close(&self, _window: Option<&mut Window>) -> i32 {
@@ -153,6 +164,13 @@ wrap_window_delegate! {
         }
 
         fn can_minimize(&self, _window: Option<&mut Window>) -> i32 {
+            1
+        }
+
+        // macOS draws the close, minimise and zoom buttons only on this answer; CEF's default
+        // is "not frameless", the cef crate's 0 - a window without them cannot be closed there
+        // (RB-090-98). Ignored on Windows.
+        fn with_standard_window_buttons(&self, _window: Option<&mut Window>) -> i32 {
             1
         }
 

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "rbrowser": {
+      "type": "stdio",
+      "command": "C:\\Tools\\rBrowser\\rbrowser.exe",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

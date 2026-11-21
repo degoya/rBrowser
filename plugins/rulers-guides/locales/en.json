@@ -77,7 +77,8 @@
         "error_timed_out": "The rulers took too long and were stopped. Try again; the rBrowser log has the details.",
         "error_no_answer": "The rulers did not answer in time. Try again in a moment.",
         "error_suspended": "The rulers failed repeatedly and are paused. Resume them in Settings > Plugins.",
-        "error_other": "The rulers could not apply the change. The rBrowser log has the details."
+        "error_other": "The rulers could not apply the change. The rBrowser log has the details.",
+        "setting_link": "Open the setting"
       },
       "settings": {
         "visible": {
@@ -88,7 +89,7 @@
         "unit": {
           "label": "Unit of a new vertical guide",
           "description": "How a vertical guide dragged out of the ruler counts: px from the left, px from the right, or per cent of the page's width for fluid layouts. Horizontal guides count px from the top.",
-          "help": "How a vertical guide dragged out of the ruler counts: px from the left, px from the right (px-right) for right-aligned layouts, or percent of the page's width for fluid layouts."
+          "help": "How a vertical guide dragged out of the ruler counts: px from the left, px from the right for right-aligned layouts, or % of the width of the page for fluid layouts."
         },
         "snapPx": {
           "label": "Snap step (px)",

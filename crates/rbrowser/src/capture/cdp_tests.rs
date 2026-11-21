@@ -176,6 +176,11 @@ fn full_page_height_is_capped_in_device_pixels() {
     assert_eq!(full_page_height(100.0, 852.0, 3.0, 1.0), 852.0);
     assert_eq!(full_page_height(100_000.0, 852.0, 2.0, 1.0), 8192.0);
     assert_eq!(full_page_height(100_000.0, 852.0, 0.0, 1.0), 16_384.0);
+    // A pixel ratio below 1 never raises the cap in CSS px (security review, wave 090-w23: a
+    // checked-in `dpr: 0.001` made it 16.4 million).
+    assert_eq!(full_page_height(3e7, 852.0, 0.001, 1.0), 16_384.0);
+    assert_eq!(full_page_height(3e7, 852.0, 0.5, 1.0), 16_384.0);
+    assert_eq!(full_page_height(3e7, 852.0, f64::NAN, 1.0), 16_384.0);
 }
 
 #[tokio::test]
@@ -200,4 +205,159 @@ async fn a_failed_viewport_override_is_still_restored() {
     let overrides = script.params("Emulation.setDeviceMetricsOverride");
     assert_eq!(overrides.len(), 2, "the override, then the restore");
     assert_eq!(overrides[1], target(852).metrics);
+}
+
+/// A windowless view's surface that records each call with the number of CDP messages sent by
+/// then, so a test sees where it came among them (RB-090-88).
+struct Recording {
+    script: Arc<Scripted>,
+    calls: std::sync::Mutex<Vec<(String, usize)>>,
+    fail_fit: bool,
+}
+
+impl Recording {
+    fn new(script: &Arc<Scripted>) -> Self {
+        Self {
+            script: script.clone(),
+            calls: std::sync::Mutex::new(Vec::new()),
+            fail_fit: false,
+        }
+    }
+
+    fn calls(&self) -> Vec<(String, usize)> {
+        crate::cdp::lock(&self.calls).clone()
+    }
+}
+
+#[async_trait::async_trait]
+impl Surface for Recording {
+    async fn fit(&self, height: f64) -> Result<(), EngineError> {
+        let at = self.script.methods().len();
+        crate::cdp::lock(&self.calls).push((format!("fit {height}"), at));
+        if self.fail_fit {
+            return Err(EngineError::Invalid("the view is gone".to_owned()));
+        }
+        Ok(())
+    }
+
+    async fn restore(&self) {
+        let at = self.script.methods().len();
+        crate::cdp::lock(&self.calls).push(("restore".to_owned(), at));
+    }
+}
+
+#[tokio::test]
+async fn full_page_grows_the_views_surface_before_the_shot_and_shrinks_it_after() {
+    // A windowless render view paints only its own rectangle: the page height in the emulation
+    // alone gave the top viewport repeated down the image (RB-090-88).
+    let (script, router) = browser();
+    let surface = Recording::new(&script);
+    capture_on(
+        &router,
+        &target(852),
+        &Shot::FullPage,
+        1.0,
+        &host_metrics,
+        &surface,
+    )
+    .await
+    .expect("captured");
+    let methods = script.methods();
+    let grown = methods
+        .iter()
+        .enumerate()
+        .filter(|(_, method)| *method == "Emulation.setDeviceMetricsOverride")
+        .nth(1)
+        .map(|(at, _)| at + 1)
+        .expect("the full-page override");
+    let shot = methods
+        .iter()
+        .position(|method| method == "Page.captureScreenshot")
+        .expect("a shot");
+    let restored = methods
+        .iter()
+        .rposition(|method| method == "Emulation.setDeviceMetricsOverride")
+        .expect("the restore");
+    let calls = surface.calls();
+    assert_eq!(calls.len(), 2, "{calls:?}");
+    // Grown to the page's height after its override and before the shot...
+    assert_eq!(calls[0].0, "fit 4001");
+    assert_eq!(calls[0].1, grown, "{methods:?}");
+    assert!(calls[0].1 <= shot);
+    // ...and back to its own size once the metrics are the host's again.
+    assert_eq!(calls[1], ("restore".to_owned(), restored + 1));
+}
+
+#[tokio::test]
+async fn a_viewport_or_element_shot_leaves_the_surface_alone() {
+    let (script, router) = browser();
+    script.answer("DOM.getDocument", json!({ "root": { "nodeId": 1 } }));
+    script.answer("DOM.querySelector", json!({ "nodeId": 7 }));
+    script.answer(
+        "DOM.getBoxModel",
+        json!({ "model": { "border": [0.0, 0.0, 10.0, 0.0, 10.0, 10.0, 0.0, 10.0] } }),
+    );
+    let surface = Recording::new(&script);
+    let element = Shot::Element {
+        selector: "#a".to_owned(),
+        padding: 0,
+    };
+    for shot in [Shot::Viewport, element] {
+        capture_on(&router, &target(852), &shot, 1.0, &host_metrics, &surface)
+            .await
+            .expect("captured");
+    }
+    assert!(surface.calls().is_empty());
+}
+
+#[tokio::test]
+async fn a_failed_full_page_shot_still_shrinks_the_surface() {
+    let (script, router) = browser();
+    script.fail("Page.captureScreenshot", "boom");
+    let surface = Recording::new(&script);
+    let result = capture_on(
+        &router,
+        &target(852),
+        &Shot::FullPage,
+        1.0,
+        &host_metrics,
+        &surface,
+    )
+    .await;
+    assert!(result.is_err());
+    let calls = surface.calls();
+    assert_eq!(calls.last().map(|call| call.0.as_str()), Some("restore"));
+    let overrides = script.params("Emulation.setDeviceMetricsOverride");
+    assert_eq!(overrides.last(), Some(&target(852).metrics));
+}
+
+#[tokio::test]
+async fn a_surface_that_cannot_grow_fails_the_shot_and_is_put_back() {
+    let (script, router) = browser();
+    let mut surface = Recording::new(&script);
+    surface.fail_fit = true;
+    let error = capture_on(
+        &router,
+        &target(852),
+        &Shot::FullPage,
+        1.0,
+        &host_metrics,
+        &surface,
+    )
+    .await
+    .expect_err("no surface");
+    assert!(error.to_string().contains("the view is gone"), "{error}");
+    assert!(script.params("Page.captureScreenshot").is_empty());
+    let calls: Vec<String> = surface.calls().into_iter().map(|call| call.0).collect();
+    assert_eq!(calls, ["fit 4001", "restore"]);
+    let overrides = script.params("Emulation.setDeviceMetricsOverride");
+    assert_eq!(overrides.last(), Some(&target(852).metrics));
+}
+
+#[tokio::test]
+async fn a_grid_views_capture_has_a_fixed_surface() {
+    // A grid view is a window: it paints the whole emulated page, nothing is resized.
+    let surface = FixedSurface;
+    surface.fit(4001.0).await.expect("nothing to do");
+    surface.restore().await;
 }

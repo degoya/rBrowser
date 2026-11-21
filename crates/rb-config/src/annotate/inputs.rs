@@ -68,6 +68,8 @@ const fn file_found(path: &'static str) -> InputDef {
 /// The paths of the project config.
 pub const PROJECT_INPUTS: &[InputDef] = &[
     folder("capture.dir"),
+    // Where the findings export writes (RB-092-05).
+    folder("checks.export.dir"),
     folder("automation.recorder.dir"),
     folder("automation.recorderExport.dir"),
     // A recommended extension's unpacked folder (RB-080-06).
@@ -85,7 +87,12 @@ pub const USER_INPUTS: &[InputDef] = &[
     folder("engines.chromium.extensions.unpacked[].path"),
     file("wsl.helperPath"),
     file("tools.ffmpegPath"),
+    file("engines.android.adbPath"),
+    // The presentation's tunnel program (RB-096-05).
+    file("tools.cloudflaredPath"),
     file("engines.lighthouseBrowserPath"),
+    // Where a bug report is written (RB-093-04).
+    folder("report.folder"),
 ];
 
 /// Writes `x-input` (and `x-options: "dynamic"` where the core offers the choices) at every path

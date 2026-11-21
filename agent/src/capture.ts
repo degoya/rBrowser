@@ -5,13 +5,17 @@
 // (RB-090-33), scroll per animation frame with an anchor (`scroll/capture.ts`, RB-020-04). Whether anything is captured at all (active view, replay
 // marker, `sync.*` switches) is the host's decision, asked per event. A mouse press inside a
 // hover-only submenu reports the hover on its menu entry first (`menu-trigger.ts`, RB-090-76).
+// While a recording runs, a rest on a menu's entry is a hover step and the pointer's way goes with
+// the step it led to (`record-hover.ts`, RB-090-87). A click on the label of a checkbox or radio
+// names the control (`control`); the engine's own click on the control is not sent (RB-090-93).
 
-import type { AgentConfig, MouseButton, SyncEvent } from './protocol';
+import type { AgentConfig, MouseButton, PathPoint, RecordConfig, SyncEvent } from './protocol';
 import { DEFAULT_SCROLL_DEBOUNCE_MS, MOD_ALT, MOD_CTRL, MOD_META, MOD_SHIFT } from './protocol';
 import { frameOf, ScrollCapture } from './scroll/capture';
-import { actionable, centreTarget, makeTarget } from './selector';
+import { actionable, centreTarget, cssPath, makeTarget } from './selector';
 import { changeState, editableTracker, isSensitive, opensPicker } from './forms/capture';
 import { menuTrigger } from './menu-trigger';
+import { HoverRecording } from './record-hover';
 
 /** A switch of `AgentConfig.capture`. */
 export type CaptureGroup = keyof AgentConfig['capture'];
@@ -28,7 +32,10 @@ export interface CaptureHost {
   /** Whether the wheel is captured (`sync.scrollMode: wheel`, RB-090-33); absent: always. Read
    *  at the start and on every `refresh`. */
   wheel?(): boolean;
-  emit(event: SyncEvent): void;
+  /** A running recording's wishes for this view (RB-090-87); absent or null: none runs. */
+  record?(): RecordConfig | null;
+  /** `path`: the pointer's way to the event, while a recording keeps it (RB-090-87). */
+  emit(event: SyncEvent, path?: PathPoint[]): void;
 }
 
 /** Wheel events are coalesced for this long (about a frame). */
@@ -80,6 +87,15 @@ function isField(element: Element): element is HTMLInputElement | HTMLTextAreaEl
   return element.localName === 'input' || element.localName === 'textarea';
 }
 
+/** The checkbox or radio a click on `subject` - a label - goes on to; null for anything else. */
+function toggleOfLabel(subject: Element): HTMLInputElement | null {
+  if (subject.localName !== 'label') return null;
+  const control = (subject as HTMLLabelElement).control;
+  if (control?.localName !== 'input') return null;
+  const type = (control as HTMLInputElement).type;
+  return type === 'checkbox' || type === 'radio' ? (control as HTMLInputElement) : null;
+}
+
 interface PendingWheel {
   element: Element;
   x: number;
@@ -111,6 +127,12 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
   };
 
   const editable = editableTracker();
+  const recording = new HoverRecording({
+    record: () => host.record?.() ?? null,
+    hovering: () => host.enabled('hover'),
+    emit: (event, path) => host.emit(event, path),
+    now: () => Date.now(),
+  });
   /** The raw element of the last pointermove: the same one again walks no ancestors. */
   let lastRaw: Element | null = null;
   let lastHover: Element | null = null;
@@ -125,6 +147,9 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
     hoverAt = Date.now();
     host.emit({ type: 'hover', target: makeTarget(pending.element, pending.x, pending.y) });
   };
+
+  /** The control of the label just clicked: the engine clicks it next, in the same task. */
+  let labelControl: Element | null = null;
 
   let wheel: PendingWheel | null = null;
   const flushWheel = () => {
@@ -178,12 +203,14 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
     pointermove: (event) => {
       const move = event as PointerEvent;
       if (move.pointerType === 'touch' || !host.enabled('hover')) return;
+      recording.moved(move.clientX, move.clientY);
       const element = deepTarget(move);
       if (!element || element === lastRaw) return;
       lastRaw = element;
       const subject = actionable(element);
       if (subject === lastHover) return;
       lastHover = subject;
+      recording.entered(subject);
       hoverPending = { element: subject, x: move.clientX, y: move.clientY };
       const wait = hoverAt + host.hoverThrottleMs() - Date.now();
       if (wait <= 0) flushHover();
@@ -192,6 +219,16 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
         later(wait, flushHover);
       }
     },
+    // The pointer leaves the document, the window loses the focus or the tab is hidden: a rest
+    // still waiting is none, and the next entry starts anew (RB-090-87).
+    pointerout: (event) => {
+      if ((event as PointerEvent).relatedTarget === null) leave();
+    },
+    // The window's own blur: an element's blur targets a node.
+    blur: (event) => {
+      if (typeof (event.target as { nodeType?: unknown } | null)?.nodeType !== 'number') leave();
+    },
+    visibilitychange: () => leave(),
     scroll: (event) => {
       const target = event.target;
       scrolls.onScroll(target instanceof Element ? target : doc);
@@ -249,12 +286,24 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
 
   // A mouse press inside a hover-only submenu reports the hover on its menu entry first, so a
   // recording (and a follower) opens the submenu before the click (RB-090-76, `menu-trigger.ts`).
+  function leave(): void {
+    recording.left();
+    lastRaw = null;
+    lastHover = null;
+  }
+
+  // While a recording runs, the press ends a rest still waiting and takes the click's way; the
+  // trigger's hover is not reported again when the last rest was on its menu (RB-090-87).
   function menuHover(event: PointerEvent): void {
-    if ((event.pointerType || 'mouse') !== 'mouse' || event.button !== 0) return;
-    if (!host.enabled('hover') || !host.enabled('click')) return;
+    if ((event.pointerType || 'mouse') !== 'mouse') return;
     const element = deepTarget(event);
-    const trigger = element ? menuTrigger(element) : null;
-    if (trigger) host.emit({ type: 'hover', target: centreTarget(trigger), menu: true });
+    if (!element || event.button !== 0 || !host.enabled('hover') || !host.enabled('click')) {
+      recording.pressed(element ?? doc.documentElement, null, event.clientX, event.clientY);
+      return;
+    }
+    const trigger = menuTrigger(element);
+    const report = recording.pressed(element, trigger, event.clientX, event.clientY);
+    if (trigger && report) host.emit({ type: 'hover', target: centreTarget(trigger), menu: true });
   }
 
   function pointer(event: PointerEvent, phase: 'down' | 'up'): void {
@@ -273,16 +322,33 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
 
   function mouse(event: MouseEvent, type: 'click' | 'dblclick' | 'contextmenu'): void {
     const element = deepTarget(event);
+    if (type === 'click') {
+      // The engine's click on a label's checkbox or radio (RB-090-93): the label's click does it
+      // again in every view, and the control's `change` belongs to that click.
+      const engines = labelControl !== null && labelControl === element;
+      labelControl = null;
+      if (engines) return;
+    }
     if (!element || !host.enabled('click')) return;
     // A native picker would open in every view; the control's value follows with `change`.
     if (type !== 'contextmenu' && opensPicker(element)) return;
-    host.emit({
+    const captured: Extract<SyncEvent, { type: 'click' | 'dblclick' | 'contextmenu' }> = {
       type,
       button: buttonOf(event.button),
       detail: event.detail,
       modifiers: modifiers(event),
       target: makeTarget(element, event.clientX, event.clientY),
-    });
+    };
+    const control = type === 'click' ? toggleOfLabel(actionable(element)) : null;
+    if (control) {
+      captured.control = cssPath(control);
+      labelControl = control;
+      // Its click comes in this task or not at all (a page that cancels the label's click).
+      later(0, () => {
+        if (labelControl === control) labelControl = null;
+      });
+    }
+    host.emit(captured, type === 'click' ? recording.clickPath() : undefined);
   }
 
   function key(event: KeyboardEvent, type: 'keydown' | 'keyup'): void {
@@ -340,6 +406,7 @@ export function installCapture(win: Window, host: CaptureHost): Capture {
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
       scrolls.dispose();
+      recording.stop();
     },
   };
 }

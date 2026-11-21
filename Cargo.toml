@@ -6,7 +6,7 @@ members = ["crates/*"]
 exclude = ["spikes", "sdk"]
 
 [workspace.package]
-version = "0.9.0-beta.2"
+version = "0.9.6"
 authors = ["Alexander Herling / DEGOYA.digital"]
 edition = "2024"
 rust-version = "1.99"
@@ -98,8 +98,10 @@ ring = "0.17.14"
 # PNG decode and encode for the screenshots and their overview image (rb-visual, RB-050-03);
 # pure Rust, no `image` umbrella.
 png = "0.18.1"
-# Dates of the update manifest and the update journal, written as RFC 3339 (RB-090-02).
-chrono = { version = "0.4.45", default-features = false, features = ["now", "serde", "std"] }
+# Dates of the update manifest, the update journal and the plugin index, written as RFC 3339
+# (RB-090-02); the version cookie and tracing-appender bring, in place of the unmaintained chrono
+# (RB-090-77).
+time = { version = "0.3.55", default-features = false, features = ["std", "formatting", "parsing", "macros"] }
 # The https-only check of an update artifact's address (RB-090-02); the version ureq brings.
 url = "2.5.8"
 

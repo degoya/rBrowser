@@ -18,6 +18,7 @@ fn message(seq: u64, event: SyncEvent) -> EventMessage {
         frame: None,
         seq,
         time: 0,
+        path: Vec::new(),
         event,
     }
 }
@@ -26,6 +27,7 @@ fn click(seq: u64, path: &str) -> EventMessage {
     message(
         seq,
         SyncEvent::Click(MouseData {
+            control: None,
             button: MouseButton::Left,
             detail: 1,
             modifiers: 0,
@@ -444,6 +446,7 @@ fn queued(event: &EventMessage, epoch: u64) -> Queued {
             block_submit: false,
         },
         epoch,
+        routed: Instant::now(),
     }
 }
 
@@ -465,4 +468,26 @@ fn only_a_scroll_of_the_same_scroller_and_document_supersedes_a_scroll() {
         &queued(&click(1, "a"), 0),
         &queued(&click(2, "a"), 0)
     ));
+}
+
+/// RB-090-32: an event's way through the hub is counted - the wait in the view's queue
+/// (`sync.wait`) and the time to the replay's answer under the replay's counter.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_replayed_event_is_counted_from_its_routing_to_its_answer() {
+    use rb_util::perf::{global, names};
+    let count = |name: &str| {
+        global()
+            .snapshot()
+            .iter()
+            .find(|series| series.name == name)
+            .map_or(0, |series| series.count)
+    };
+    let (waits, replays) = (count(names::SYNC_WAIT), count(names::SYNC_REPLAY));
+    let setup = setup(DEFAULT_TIMEOUT);
+    setup.hub.on_event(A, &click(1, "main > a"));
+    within(Duration::from_secs(5), || {
+        count(names::SYNC_REPLAY) >= replays + 2
+    })
+    .await;
+    assert!(count(names::SYNC_WAIT) >= waits + 2, "B and C waited");
 }

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Load test plugin settings",
+  "type": "object",
+  "properties": {
+    "maxUsers": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 50,
+      "x-category": "network",
+      "x-section": "load-test",
+      "x-order": 1,
+      "x-scope": ["user", "local"],
+      "x-protected": true
+    },
+    "maxRps": {
+      "type": "number",
+      "minimum": 1,
+      "default": 200,
+      "x-category": "network",
+      "x-section": "load-test",
+      "x-order": 2,
+      "x-scope": ["user", "local"],
+      "x-protected": true
+    },
+    "maxDurationS": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 300,
+      "x-category": "network",
+      "x-section": "load-test",
+      "x-order": 3,
+      "x-scope": ["user", "local"],
+      "x-protected": true
+    },
+    "allowedHosts": {
+      "type": "array",
+      "maxItems": 500,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9_.-]+)$" },
+      "default": [],
+      "x-category": "network",
+      "x-section": "load-test",
+      "x-order": 4,
+      "x-scope": ["local"],
+      "x-local-only": true,
+      "x-protected": true
+    }
+  }
+}

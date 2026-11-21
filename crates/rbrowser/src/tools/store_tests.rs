@@ -278,3 +278,54 @@ fn the_digest_is_lowercase_hex() {
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }
+
+/// RB-096-05: a bare program (cloudflared's release asset) is checked like an archive and
+/// becomes the executable of its version folder.
+#[test]
+fn a_bare_program_is_installed_as_its_executable() {
+    let (_dir, store, fetcher) = setup();
+    let bytes = b"MZ cloudflared".to_vec();
+    let url = "https://example.test/cloudflared-windows-amd64.exe";
+    fetcher.serve(url, bytes.clone());
+    let entry = ToolEntry {
+        name: "cloudflared".to_owned(),
+        url: url.to_owned(),
+        archive: Archive::Exe,
+        executable: "cloudflared.exe".to_owned(),
+        members: vec!["cloudflared.exe".to_owned()],
+        license: "Apache-2.0".to_owned(),
+        ..entry_for("2026.11.1", &bytes)
+    };
+    let installed = store.install(&fetcher, &entry).expect("installed");
+    let version_dir = store.root().join("cloudflared").join("2026.11.1");
+    assert_eq!(installed.executable, version_dir.join("cloudflared.exe"));
+    assert_eq!(
+        std::fs::read(&installed.executable).expect("program"),
+        bytes
+    );
+    assert_eq!(store.installed(&entry), Some(installed));
+    assert!(staging_is_empty(&store));
+}
+
+/// A bare program with another hash activates nothing, as an archive does.
+#[test]
+fn a_bare_program_with_another_hash_is_refused() {
+    let (_dir, store, fetcher) = setup();
+    let url = "https://example.test/cloudflared-windows-amd64.exe";
+    fetcher.serve(url, b"MZ tampered!!".to_vec());
+    let entry = ToolEntry {
+        name: "cloudflared".to_owned(),
+        url: url.to_owned(),
+        archive: Archive::Exe,
+        executable: "cloudflared.exe".to_owned(),
+        members: vec!["cloudflared.exe".to_owned()],
+        license: "Apache-2.0".to_owned(),
+        ..entry_for("2026.11.1", b"MZ cloudflare")
+    };
+    assert!(matches!(
+        store.install(&fetcher, &entry),
+        Err(ToolError::HashMismatch { .. })
+    ));
+    assert_eq!(store.installed(&entry), None);
+    assert!(staging_is_empty(&store));
+}

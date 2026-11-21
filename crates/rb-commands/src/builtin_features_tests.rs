@@ -170,6 +170,12 @@ fn the_check_step_and_the_recorder_panel_are_the_persons() {
             "Ctrl+Shift+Space F V",
             RECORDER_PANEL_OMITTED,
         ),
+        // RB-090-91: an agent never deletes a recording.
+        (
+            "recorder.delete",
+            "Ctrl+Shift+Space F M",
+            RECORDER_DELETE_OMITTED,
+        ),
     ] {
         let def = find(&defs, id);
         assert_eq!(def.default_bindings[0].to_string(), chord, "{id}");
@@ -222,4 +228,48 @@ fn zoom_to_fit_says_where_mcp_reaches_it() {
     assert_eq!(def.default_bindings[0].to_string(), "Ctrl+Shift+Space L Z");
     assert_eq!(def.mcp, McpCoverage::Omitted(ZOOM_TO_FIT_OMITTED.into()));
     assert!(ZOOM_TO_FIT_OMITTED.contains("canvas_zoom"));
+}
+
+#[test]
+fn the_recording_editor_has_its_chords_and_tools() {
+    // RB-092-01: the chords of the Flows group that were free.
+    let defs = definitions();
+    for (id, chord, mcp) in [
+        (
+            "recorder.step_add",
+            "Ctrl+Shift+Space F N",
+            McpCoverage::Covered("recorder_step_add".into()),
+        ),
+        (
+            "recorder.step_try",
+            "Ctrl+Shift+Space F J",
+            McpCoverage::Covered("recorder_step_try".into()),
+        ),
+        (
+            "recorder.play_from",
+            "Ctrl+Shift+Space F H",
+            McpCoverage::Covered("recorder_play".into()),
+        ),
+        (
+            "recorder.continue_from",
+            "Ctrl+Shift+Space F U",
+            McpCoverage::Covered("recorder_start".into()),
+        ),
+        (
+            "recorder.step_toggle",
+            "Ctrl+Shift+Space F B",
+            McpCoverage::Covered("recorder_step_toggle".into()),
+        ),
+        (
+            "recorder.pick_element",
+            "Ctrl+Shift+Space F I",
+            McpCoverage::Omitted(RECORDER_PICK_OMITTED.into()),
+        ),
+    ] {
+        let def = find(&defs, id);
+        assert_eq!(def.default_bindings[0].to_string(), chord, "{id}");
+        assert_eq!(def.group, Group::Flows, "{id}");
+        assert_eq!(def.mcp, mcp, "{id}");
+        assert_eq!(def.title_key, format!("commands.{id}"));
+    }
 }

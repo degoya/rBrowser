@@ -16,6 +16,8 @@ export interface TabItem {
   rect: Rect;
   /** `positive-tabindex`, `invisible-<size|opacity|offscreen|clipped>`, `reverse-jump`, `visual-order`. */
   warnings: string[];
+  /** Fixed or sticky on the screen, itself or an ancestor: no place in the reading order (./reading.ts). */
+  fixed?: boolean;
 }
 
 /** What a measurement answers per stop, in document px of the top document. */
@@ -53,11 +55,12 @@ export function viewportRect(stop: TabStop): Rect {
   return { ...own, x: own.x + offset.x, y: own.y + offset.y };
 }
 
-/** Why the element of `stop` cannot be seen, if it cannot (in its own document's terms). */
-function hidden(stop: TabStop): string | undefined {
+/** Why the element of `stop` cannot be seen, if it cannot (in its own document's terms), and
+ *  whether it is fixed or sticky on the screen. */
+function inspect(stop: TabStop): { reason?: string; fixed: boolean } {
   const element = stop.element;
   const win = element.ownerDocument.defaultView;
-  if (!win) return undefined;
+  if (!win) return { fixed: false };
   const ancestors = composedAncestors(element);
   const styles = [element, ...ancestors].map((node) => win.getComputedStyle(node));
   const clippers: Clipper[] = [];
@@ -67,7 +70,9 @@ function hidden(stop: TabStop): string | undefined {
     const overflow = `${style.getPropertyValue('overflow-x')} ${style.getPropertyValue('overflow-y')}`;
     if (/hidden|clip/.test(overflow)) clippers.push({ rect: toRect(ancestor.getBoundingClientRect()), style });
   });
-  return hiddenReason(toRect(element.getBoundingClientRect()), styles, win, clippers);
+  const reason = hiddenReason(toRect(element.getBoundingClientRect()), styles, win, clippers);
+  const fixed = styles.some((style) => /^(fixed|sticky)$/.test(style.getPropertyValue('position')));
+  return { ...(reason ? { reason } : {}), fixed };
 }
 
 /** The tab order of `doc` measured, at most `limit` stops. */
@@ -77,8 +82,9 @@ export function tabList(doc: Document, win: Window, options: OrderOptions, limit
   const items: TabItem[] = stops.map((stop, place) => ({ stop, index: place + 1, rect: viewportRect(stop), warnings: [] }));
   for (const item of items) {
     if (item.stop.tabindex > 0) item.warnings.push('positive-tabindex');
-    const reason = item.stop.iframe ? undefined : hidden(item.stop);
-    if (reason) item.warnings.push(`invisible-${reason}`);
+    const seen = item.stop.iframe ? { fixed: false } : inspect(item.stop);
+    if (seen.reason) item.warnings.push(`invisible-${seen.reason}`);
+    if (seen.fixed) item.fixed = true;
   }
   const seen = items.filter((item) => !item.warnings.some((warning) => warning.startsWith('invisible-')));
   seen.forEach((item, place) => {

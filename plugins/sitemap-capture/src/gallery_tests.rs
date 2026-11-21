@@ -69,7 +69,11 @@ fn filters_and_the_large_view_need_no_script() {
     assert!(!html.to_ascii_lowercase().contains("<script"));
     assert!(html.contains("default-src 'none'"));
     assert!(html.contains("id=\"bp-0\"") && html.contains("id=\"bp-1\""));
-    assert!(html.contains("#bp-1:checked~.sheet .cell:not(.bp-1){display:none}"));
+    assert!(html.contains("main:has(#bp-1:checked) .sheet .cell:not(.bp-1){display:none}"));
+    assert!(
+        !html.contains("~.sheet"),
+        "the radios are no siblings of the sheet"
+    );
     assert!(html.contains("id=\"st-problem\""));
     assert!(html.contains("<tr class=\"problem\">"));
     assert!(html.contains("<a href=\"#v-0-0\">"));
@@ -134,4 +138,112 @@ fn the_defaults_are_the_english_catalogue() {
         let found = &catalogue["plugin"]["sitemap-capture"]["gallery"][name];
         assert_eq!(found, text, "gallery.{name}");
     }
+}
+
+/// The open elements around the first tag whose text contains `marker`, outermost first: a tag
+/// stack over the gallery's `<body>` (its own markup: no comments, no raw text, every `<` a tag).
+fn ancestors(html: &str, marker: &str) -> Vec<String> {
+    const VOID: [&str; 5] = ["meta", "input", "img", "br", "hr"];
+    let body = html
+        .split("<body>")
+        .nth(1)
+        .and_then(|body| body.split("</body>").next())
+        .expect("a body");
+    let mut stack: Vec<String> = Vec::new();
+    let mut rest = body;
+    while let Some(start) = rest.find('<') {
+        let end = rest[start..].find('>').expect("a closed tag") + start;
+        let tag = &rest[start + 1..end];
+        rest = &rest[end + 1..];
+        if let Some(name) = tag.strip_prefix('/') {
+            let open = stack.pop().expect("an open element");
+            assert_eq!(open, name, "nesting");
+            continue;
+        }
+        let name: String = tag
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        if tag.contains(marker) {
+            return stack;
+        }
+        if !VOID.contains(&name.as_str()) {
+            stack.push(name);
+        }
+    }
+    panic!("no element with {marker}");
+}
+
+#[test]
+fn every_filter_rule_reaches_the_sheet_from_an_ancestor_of_its_radio() {
+    let html = render(&sample(), &BTreeMap::new());
+    let sheet = ancestors(&html, "class=\"sheet\"");
+    for radio in ["bp-0", "bp-1", "st-ok", "st-problem"] {
+        let around = ancestors(&html, &format!("id=\"{radio}\""));
+        assert!(
+            around.contains(&"main".to_owned()) && sheet.contains(&"main".to_owned()),
+            "{radio} and the sheet both sit in <main>: {around:?} / {sheet:?}"
+        );
+        assert!(
+            html.contains(&format!("main:has(#{radio}:checked) .sheet ")),
+            "the rule of {radio} starts at <main>"
+        );
+    }
+    assert!(
+        html.contains("main:has(#st-ok:checked) .sheet tr.problem,main:has(#st-problem:checked) .sheet tr.fine{display:none}")
+    );
+}
+
+#[test]
+fn the_thumbnails_take_the_width_asked_for_and_open_the_large_view() {
+    let html = render_sized(&sample(), &BTreeMap::new(), 480);
+    assert!(html.contains(".sheet img{width:480px}"));
+    assert!(html.contains("<a href=\"#v-0-0\"><img src=\"index/mobile.png\""));
+    let default = render(&sample(), &BTreeMap::new());
+    assert!(default.contains(&format!(
+        ".sheet img{{width:{}px}}",
+        default_thumbnail_width()
+    )));
+}
+
+#[test]
+fn a_thumbnail_width_is_one_of_the_schemas_choices_else_its_default() {
+    let schema: serde_json::Value = serde_json::from_str(SCHEMA).expect("the schema");
+    let key = &schema["properties"]["thumbnailWidth"];
+    let default = key["default"].as_u64().expect("a default");
+    assert_eq!(u64::from(default_thumbnail_width()), default);
+    for choice in key["enum"].as_array().expect("choices") {
+        let choice = choice.as_u64().expect("a number");
+        assert_eq!(
+            u64::from(thumbnail_width(Some(&choice.to_string()))),
+            choice
+        );
+    }
+    for odd in [
+        None,
+        Some("0"),
+        Some("333"),
+        Some("\"wide\""),
+        Some("100000"),
+        Some(""),
+    ] {
+        assert_eq!(u64::from(thumbnail_width(odd)), default, "{odd:?}");
+    }
+}
+
+#[test]
+fn the_export_takes_the_apps_colours_in_light_and_dark() {
+    let html = render(&sample(), &BTreeMap::new());
+    let style = html
+        .split("<style>")
+        .nth(1)
+        .and_then(|rest| rest.split("</style>").next())
+        .expect("a style");
+    assert!(
+        style.contains("--primary:#115e59"),
+        "teal, the app's primary"
+    );
+    assert!(style.contains("@media (prefers-color-scheme:dark){:root{"));
+    assert!(style.contains("--primary:#2dd4bf"));
+    assert!(!style.contains("url("), "no font or image from anywhere");
 }

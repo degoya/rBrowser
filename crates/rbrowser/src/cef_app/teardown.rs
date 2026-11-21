@@ -26,6 +26,7 @@ pub fn release() {
     super::engine_badge::clear();
     super::page_zoom::release();
     super::cell_info::release();
+    super::address_field::clear();
     super::canvas_board::clear();
     super::status_bar::release();
     super::frame::release();

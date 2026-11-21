@@ -1,7 +1,7 @@
 use super::*;
 
-fn at(minutes: i64) -> DateTime<Utc> {
-    DateTime::from_timestamp(1_760_000_000 + minutes * 60, 0).expect("timestamp")
+fn at(minutes: i64) -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(1_760_000_000 + minutes * 60).expect("timestamp")
 }
 
 fn fresh(sequence: u64) -> Freshness {
@@ -54,4 +54,19 @@ fn clock_skew_within_the_allowance_is_tolerated_and_next_week_is_not() {
         check(future, None, at(0)),
         Err(StaleError::FromTheFuture { .. })
     ));
+}
+
+/// RB-090-77: an error names the time as chrono's `DateTime<Utc>` showed it.
+#[test]
+fn a_stale_document_names_its_time_in_utc() {
+    let expired = StaleError::Expired { expired_at: at(0) };
+    assert_eq!(
+        expired.to_string(),
+        "document expired at 2025-10-09 08:53:20 UTC"
+    );
+    let future = StaleError::FromTheFuture { issued_at: at(60) };
+    assert_eq!(
+        future.to_string(),
+        "document is issued 2025-10-09 09:53:20 UTC, further ahead than clock skew explains"
+    );
 }

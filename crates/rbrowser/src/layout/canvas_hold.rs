@@ -6,9 +6,10 @@
 //! says it painted that canvas (`canvasPainted`): the newest canvas painted, never an older one
 //! after it. A board that does not answer keeps nothing for longer than [`HOLD_MS`].
 //!
-//! Beside the holds lies the camera a gesture is trying out: every state the core sends while
-//! the gesture lasts draws the board's frames for it (`super::canvas_board::board_state`), so a
-//! state does not take the frames back to the camera kept before the gesture.
+//! Beside the holds lies the camera a gesture is trying out, or the place a label dragged tries
+//! out for its view (RB-094-18): every state the core sends while the gesture lasts draws the
+//! board's frames for it (`super::canvas_board::board_state`), so a state does not take the
+//! frames back to the camera or the place kept before the gesture.
 
 use std::collections::VecDeque;
 
@@ -33,11 +34,24 @@ pub struct Held {
     pub placed: Vec<PlacedView>,
 }
 
+/// The canvas place a label dragged tries out for its view (RB-094-18).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Moved {
+    /// The view's place in the canvas's order.
+    pub index: usize,
+    /// Its left edge in canvas DIP.
+    pub x: i32,
+    /// Its top edge in canvas DIP.
+    pub y: i32,
+}
+
 /// The canvas on trial and the places waiting for the board; part of the host's state.
 #[derive(Clone, Debug, Default)]
 pub struct CanvasHold {
     /// The camera a gesture is trying out; `None` outside a gesture.
     live: Option<Camera>,
+    /// The place a label dragged tries out; `None` outside a drag.
+    moved: Option<Moved>,
     /// The number given last.
     next: u32,
     /// The places waiting for the board, oldest first.
@@ -53,6 +67,16 @@ impl CanvasHold {
     /// A gesture tries `camera` out.
     pub fn try_out(&mut self, camera: Camera) {
         self.live = Some(camera);
+    }
+
+    /// The place a label dragged tries out.
+    pub fn moved(&self) -> Option<Moved> {
+        self.moved
+    }
+
+    /// A label dragged tries `moved` out.
+    pub fn try_moved(&mut self, moved: Moved) {
+        self.moved = Some(moved);
     }
 
     /// The number of the next canvas the board is sent.
@@ -80,6 +104,7 @@ impl CanvasHold {
     /// every hold end.
     pub fn settle(&mut self) {
         self.live = None;
+        self.moved = None;
         self.held.clear();
     }
 }

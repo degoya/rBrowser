@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser pseudo-localisation fixture</title>
+<style>
+  /* RB-092-02: dir and lang per view and the pseudo-localisation of the page. Ten text nodes the
+     pseudo-localisation makes longer; an input value, this style, the script, code, pre and the
+     editable text it leaves alone. window.__fixture says what the page sees: its loads (a reload
+     counts up), the clicks on Save (the click log), dir and lang of <html>. */
+  html { font: 100% system-ui, sans-serif; }
+  body { margin: 0; padding: 12px; max-width: 40rem; }
+  nav a { margin-inline-end: 1rem; }
+  button { inline-size: 6rem; overflow: hidden; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header><h1>Pseudo-localisation fixture</h1></header>
+<nav><a href="#home">Home</a> <a href="#products">Products</a></nav>
+<main>
+<p>A paragraph of ordinary page text.</p>
+<p>Second paragraph with <strong>bold words</strong> inside.</p>
+<p><label for="name">Your name</label> <input id="name" value="Ada"></p>
+<p><button id="save" type="button">Save</button></p>
+<p><code>npm test</code></p>
+<div contenteditable="true">Editable text</div>
+<pre id="log"></pre>
+</main>
+<footer><p>Footer note</p></footer>
+<script>
+  const loads = Number(sessionStorage.getItem("rb-pseudo-loads") || "0") + 1;
+  sessionStorage.setItem("rb-pseudo-loads", String(loads));
+  const state = { loads, clicks: 0 };
+  window.__fixture = {
+    get loads() { return state.loads; },
+    get clicks() { return state.clicks; },
+    get dir() { return document.documentElement.dir; },
+    get lang() { return document.documentElement.lang; },
+  };
+  const render = () => {
+    document.getElementById("log").textContent =
+      `loads=${state.loads} clicks=${state.clicks} dir=${document.documentElement.dir} lang=${document.documentElement.lang}`;
+  };
+  document.getElementById("save").addEventListener("click", () => {
+    state.clicks += 1;
+    render();
+  });
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["dir", "lang"] });
+  render();
+</script>
+</body>
+</html>

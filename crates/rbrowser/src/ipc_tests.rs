@@ -236,3 +236,32 @@ async fn file_reads_are_answered_off_the_calling_thread() {
     });
     assert_eq!(rx.try_recv().ok(), Some(caller));
 }
+
+/// RB-090-32: every query is counted from its arrival to its answer (`ipc.query`), also one
+/// answered off the calling thread.
+#[tokio::test]
+async fn a_query_is_counted_until_its_answer() {
+    use rb_util::perf::{global, names};
+    let count = || {
+        global()
+            .snapshot()
+            .iter()
+            .find(|series| series.name == names::IPC_QUERY)
+            .map_or(0, |series| series.count)
+    };
+    let (_ui, core) = host();
+    let before = count();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let reply = move |answer: Result<String, Failure>| {
+        let _ = tx.send(answer);
+    };
+    dispatch_to(&core, r#"{"type":"getState"}"#, reply.clone());
+    rx.recv_timeout(Duration::from_secs(5))
+        .expect("answered")
+        .expect("state");
+    dispatch_to(&core, r#"{"type":"getSettings"}"#, reply);
+    rx.recv_timeout(Duration::from_secs(5))
+        .expect("answered")
+        .expect("settings");
+    assert!(count() >= before + 2, "both queries counted");
+}

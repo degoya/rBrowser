@@ -1,0 +1,90 @@
+# Responsive images (RB-093-02, docs/plugins.md): in every view, which file the browser took from
+# srcset or <picture>, and whether it is too large or too small for the size it is drawn at times
+# the view's pixel density; a srcset with widths and no sizes; an LCP image that loads lazily or
+# without fetchpriority="high". Live, per view and its density, without a Lighthouse run. A check
+# for `checks_run` and the findings panel, a feature for the MCP tools, the panel and its
+# commands. Hovering an image in the panel marks it in every view.
+manifest_version = 1
+id = "responsive-images"
+name = "Responsive images"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "images"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Checks each view's images against its pixel density: the file srcset or picture chose, too large or too small for its rendered size, sizes and the LCP image."
+# Checks > Responsive images in the page's context menu: the check, as its shortcut runs it.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: labels, sizes and each view's density; evaluate: the collector src/collect.js in the
+# plugin's isolated world, which reads the page and decodes the images the view already shows once
+# more for their own pixels; cdp: the mark of an image (DOM.querySelector,
+# DOM.scrollIntoViewIfNeeded, Overlay.highlightNode; the document found through
+# Accessibility.getFullAXTree, as the outline does), the selector always a parameter; findings:
+# the command `check`. No network of its own.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Accessibility", "DOM", "Overlay"] }
+findings = true
+
+# Up to eight views of up to 300 images each, every image decoded once more (2 s at most each).
+[limits]
+memory_bytes = 134217728
+fuel = 20000000000
+timeout_milliseconds = 60000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `images_check`: the images of the views `target` names (the host adds `target`; every view
+# without one), each measured at its view's density, with their issues; nothing is reported to the findings panel.
+# `budget` holds the answer to that many bytes of JSON (the panel asks for its message limit).
+[[tools]]
+name = "check"
+description = "plugin.responsive-images.tools.check"
+input = { type = "object", properties = { budget = { type = "integer", minimum = 4096, maximum = 4194304 } } }
+
+# MCP `images_mark`: an image marked and scrolled into view in the views named, or every mark
+# cleared (the panel's hover).
+[[tools]]
+name = "mark"
+description = "plugin.responsive-images.tools.mark"
+input = { type = "object", properties = { targets = { type = "array", minItems = 1, maxItems = 64, items = { type = "object", required = ["view", "selector"], properties = { view = { type = "integer", minimum = 0 }, selector = { type = "string", minLength = 1, maxLength = 1024 } } } }, clear = { type = "boolean" } } }
+
+# `plugin.responsive-images.check`, Ctrl+Shift+Space K N (K I is the coverage's): the views
+# `target` names (the context menu's clicked view; every view without one) measured, the findings
+# into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.responsive-images.commands.check"
+shortcut = "Ctrl+Shift+Space K N"
+group = "checks"
+tool = "check"
+
+# `plugin.responsive-images.panel`, Ctrl+Shift+Space P V: shows the responsive images panel.
+[[commands]]
+id = "panel"
+title = "plugin.responsive-images.commands.panel"
+shortcut = "Ctrl+Shift+Space P V"
+group = "panels"
+mcp_omitted = "ui-only: opens the responsive images panel"
+
+# The responsive images panel, on Nuxt UI: panel/dist built from web/src.
+[[panels]]
+id = "responsive-images"
+title = "plugin.responsive-images.panels.responsive-images"
+entry = "panel/index.html"
+icon = "image"
+placement = "sidebar"

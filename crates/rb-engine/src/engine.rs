@@ -7,6 +7,9 @@
 //! | Chromium | [`crate::chromium::ChromiumEngine`] over the CEF app's [`crate::ViewHost`] | the grid |
 //! | Firefox | RB-040-02 (`rb-bidi`, WebDriver BiDi) | an external window, shown in its cell (RB-080-39) |
 //! | WebKit | RB-040-04 (Playwright through the Node sidecar) | an external window, shown in its cell (RB-080-39) |
+//! | Android | RB-095-02 (Chrome on a USB device over ADB and CDP) | the device, its screencast in the cell |
+//! | Safari | RB-095-03 (`rb-safari`, `safaridriver`, macOS only) | an external window of its own |
+//! | iOS | RB-095-04 (`rb-safari::ios`, `safaridriver`, macOS only) | the Simulator's window or the device |
 //! | none yet | [`crate::unsupported::UnsupportedEngine`]: "not available yet" | - |
 //!
 //! Input is replayed in CSS px ([`InputEvent`]); the engine scales. Where the sync agent resolves
@@ -25,12 +28,15 @@ use crate::emulation_report::EmulationReport;
 use crate::external::{CellScale, NativeWindow, WindowRect};
 use crate::{Emulation, EngineError, ViewEvent, ViewId};
 
-/// The engine's name for people: `Chromium`, `Firefox`, `WebKit`.
+/// The engine's name for people: `Chromium`, `Firefox`, `WebKit`, `Safari`, `iOS`.
 pub fn engine_name(kind: EngineKind) -> &'static str {
     match kind {
         EngineKind::Chromium => "Chromium",
         EngineKind::Firefox => "Firefox",
         EngineKind::Webkit => "WebKit",
+        EngineKind::Android => "Android",
+        EngineKind::Safari => "Safari",
+        EngineKind::Ios => "iOS",
     }
 }
 

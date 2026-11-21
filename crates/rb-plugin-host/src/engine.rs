@@ -4,7 +4,8 @@
 //! RD-130-06), unchanged in substance: the engine configuration never differs between plugins -
 //! the limits belong to a store, not to an engine - so one engine serves them all, one ticker
 //! drives every epoch deadline, and a component is compiled once per exact byte content and
-//! handed out again from memory. What survives a restart is [`crate::compile_cache`]'s business.
+//! handed out again from memory. The ticker advances the epoch only while a call's store lives
+//! ([`SharedEngine::ticking`]); idle, its thread is parked and does not wake (RB-090-38). What survives a restart is [`crate::compile_cache`]'s business.
 //!
 //! Handing a compiled component out again bypasses nothing: it is looked up by the SHA-256 of the
 //! very bytes the caller passes, which the caller has verified before asking.
@@ -14,7 +15,7 @@ use std::{
     path::Path,
     sync::{
         Arc, Mutex, OnceLock,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
     thread::JoinHandle,
 };
@@ -68,8 +69,29 @@ pub(crate) struct SharedEngine {
     disk: Option<CompileCache>,
     /// Compiles that did not come from memory, for the tests that say "once".
     compilations: AtomicUsize,
-    stop_ticker: Arc<AtomicBool>,
+    ticker_state: Arc<TickerState>,
     ticker: Option<JoinHandle<()>>,
+}
+
+/// What the epoch ticker and the running calls share.
+#[derive(Default)]
+struct TickerState {
+    /// The calls running now ([`Ticking`]); the ticker parks at zero.
+    active: AtomicUsize,
+    stop: AtomicBool,
+    /// Epochs advanced, for the tests that say "idle".
+    ticks: AtomicU64,
+}
+
+/// Keeps the epoch moving while held: one per call's store ([`SharedEngine::ticking`]).
+pub(crate) struct Ticking {
+    state: Arc<TickerState>,
+}
+
+impl Drop for Ticking {
+    fn drop(&mut self) {
+        self.state.active.fetch_sub(1, Ordering::AcqRel);
+    }
 }
 
 impl SharedEngine {
@@ -96,16 +118,32 @@ impl SharedEngine {
         }
         let engine = Engine::new(&config)
             .map_err(|error| anyhow::anyhow!("create the Wasmtime plugin engine: {error}"))?;
-        let stop_ticker = Arc::new(AtomicBool::new(false));
-        let ticker = spawn_epoch_ticker(engine.clone(), Arc::clone(&stop_ticker));
+        let ticker_state = Arc::new(TickerState::default());
+        let ticker = spawn_epoch_ticker(engine.clone(), Arc::clone(&ticker_state));
         Ok(Self {
             engine,
             compiled: Mutex::new(HashMap::new()),
             disk,
             compilations: AtomicUsize::new(0),
-            stop_ticker,
+            ticker_state,
             ticker: Some(ticker),
         })
+    }
+
+    /// The epoch moves while the answer is held; the first holder wakes the ticker.
+    pub(crate) fn ticking(&self) -> Ticking {
+        if self.ticker_state.active.fetch_add(1, Ordering::AcqRel) == 0 {
+            self.wake_ticker();
+        }
+        Ticking {
+            state: Arc::clone(&self.ticker_state),
+        }
+    }
+
+    fn wake_ticker(&self) {
+        if let Some(ticker) = &self.ticker {
+            ticker.thread().unpark();
+        }
     }
 
     pub(crate) fn engine(&self) -> &Engine {
@@ -146,6 +184,11 @@ impl SharedEngine {
     }
 
     #[cfg(test)]
+    pub(crate) fn ticks(&self) -> u64 {
+        self.ticker_state.ticks.load(Ordering::Acquire)
+    }
+
+    #[cfg(test)]
     pub(crate) fn disk(&self) -> Option<&CompileCache> {
         self.disk.as_ref()
     }
@@ -153,18 +196,26 @@ impl SharedEngine {
 
 impl Drop for SharedEngine {
     fn drop(&mut self) {
-        self.stop_ticker.store(true, Ordering::Release);
+        self.ticker_state.stop.store(true, Ordering::Release);
+        self.wake_ticker();
         if let Some(ticker) = self.ticker.take() {
             let _ = ticker.join().log_panic("plugin_host.epoch_ticker");
         }
     }
 }
 
-fn spawn_epoch_ticker(engine: Engine, stop: Arc<AtomicBool>) -> JoinHandle<()> {
+/// Advances the epoch every tick while a call runs, parked otherwise. A wake between the look at
+/// `active` and the park is not lost: `park` returns at once after an earlier `unpark`.
+fn spawn_epoch_ticker(engine: Engine, state: Arc<TickerState>) -> JoinHandle<()> {
     std::thread::spawn(move || {
-        while !stop.load(Ordering::Acquire) {
+        while !state.stop.load(Ordering::Acquire) {
+            if state.active.load(Ordering::Acquire) == 0 {
+                std::thread::park();
+                continue;
+            }
             std::thread::sleep(crate::runtime::EPOCH_TICK);
             engine.increment_epoch();
+            state.ticks.fetch_add(1, Ordering::AcqRel);
         }
     })
 }

@@ -2,7 +2,9 @@
 //! view's status (`{ viewId, status }`) or one of its steps (`{ viewId, step: { name, id?, state,
 //! message? } }`, `sidecar/src/modules/flows/steps.ts`). A step becomes the pushed
 //! `flowStep`, which the Recorder panel follows; a status stays the run's state
-//! ([`super::app`]). A failed step's message is masked once more and cut.
+//! ([`super::app`]). A failed step's message is masked once more and cut. The run's own
+//! `{ totalSteps }` (`super::run`) and every step go to [`super::run_steps`], which numbers each
+//! view's steps for the activity bar (RB-090-68).
 
 use std::sync::Arc;
 
@@ -18,6 +20,8 @@ use crate::control::Core;
 pub const MAX_MESSAGE: usize = 300;
 /// The most characters of a step's name the shell gets.
 pub const MAX_NAME: usize = 500;
+/// The progress that names the steps of the flow's text (`super::run`, RB-090-68).
+pub const TOTAL_STEPS: &str = "totalSteps";
 
 /// Follows the progress of the run `request` until the task is stopped: a step goes to the
 /// shell, any other progress (a view's status) to `status`.
@@ -32,10 +36,19 @@ pub fn follow(
         request.run_id.clone(),
         request.name.clone(),
     );
+    super::run_steps::begin(&run_id);
     tokio::spawn(async move {
         while let Some(value) = progress.recv().await {
+            if let Some(total) = value.get(TOTAL_STEPS) {
+                let total = total.as_u64().and_then(|total| u32::try_from(total).ok());
+                super::run_steps::set_total(&run_id, total);
+                continue;
+            }
             match event(&run_id, &flow, &value) {
-                Some(step) => shell.send(&CoreToShell::FlowStep(step)),
+                Some(mut step) => {
+                    super::run_steps::note(&run_id, &mut step);
+                    shell.send(&CoreToShell::FlowStep(step));
+                }
                 None => status(&value),
             }
         }
@@ -66,6 +79,8 @@ pub fn event(run_id: &str, flow: &str, progress: &Value) -> Option<FlowStep> {
             .get("message")
             .and_then(Value::as_str)
             .map(|message| rb_diag::redact(message).chars().take(MAX_MESSAGE).collect()),
+        number: None,
+        total: None,
     })
 }
 

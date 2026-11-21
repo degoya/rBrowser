@@ -116,7 +116,7 @@ pub fn bookmark_of(
         (None, Some(url)) if args.follow == Some(true) => as_path(url),
         (None, Some(url)) => BookmarkTarget::Url(url),
         (None, None) => match page {
-            Some(page) if rb_config::bookmarks::is_web_url(&page.url) => {
+            Some(page) if rb_util::url::is_web_url(&page.url) => {
                 if args.follow.unwrap_or(follow.default) {
                     as_path(page.url.clone())
                 } else {

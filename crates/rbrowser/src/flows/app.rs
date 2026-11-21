@@ -21,8 +21,8 @@ use super::result::{RESULT_FILE, RunResult, run_dir, run_id, valid_run_id};
 use super::run::{Endpoint, FlowDeps, InlineFlow, RunRequest, Setup, execute_recorded};
 use super::sync_pause::SyncPause;
 use super::{
-    CANCEL, FlowError, OPEN_RESULTS, PANEL, RERUN_LAST, RUN, RUN_ALL, catalog, endpoints, gate,
-    queue,
+    CANCEL, DELETE, FlowError, OPEN_RESULTS, PANEL, RERUN_LAST, RUN, RUN_ALL, catalog, endpoints,
+    gate, queue,
 };
 use crate::cdp::lock;
 use crate::control::Core;
@@ -246,7 +246,8 @@ fn begin(
         let follow = super::step_progress::follow(&core, &request, statuses, record_status);
         // `automation.flows.hiddenViews: layout` shows the run's layout first (RB-090-84).
         let shown = super::run_layout::show(&core).await;
-        let setup = if shown.switched() {
+        let revealed = super::reveal::show(&core, &request).await;
+        let setup = if shown.switched() || revealed {
             self::setup(&core).unwrap_or(setup)
         } else {
             setup
@@ -377,6 +378,7 @@ pub fn handler(id: &str, core: Weak<Core>) -> Handler {
                 Ok(json!({ "runId": started.run_id }))
             }
             CANCEL => Ok(json!({ "cancelled": cancel() })),
+            DELETE => super::delete::command(&core, &args),
             PANEL => {
                 // A person's (RB-090-71): a folded dock opens.
                 let flows = crate::panel_dock::core_panels::FLOWS;
@@ -453,6 +455,12 @@ impl FlowDeps for AppDeps {
             Some(sync) => Box::new(SyncPause::new(sync, views)),
             None => Box::new(()),
         }
+    }
+
+    async fn load_state(&self, name: &str, views: &[ViewId]) -> Result<(), FlowError> {
+        crate::session_state::load_for_flow(self.core.host(), name, views)
+            .await
+            .map_err(FlowError::Io)
     }
 
     async fn run_flow(

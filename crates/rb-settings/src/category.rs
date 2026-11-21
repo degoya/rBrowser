@@ -31,9 +31,12 @@ pub enum Category {
     Emulation,
     /// 7 - Chromium/CEF, Firefox, WebKit/Playwright, Node runtime.
     Engines,
+    /// 8 - DevTools mode, console, overlays, container queries, simulators, peek, rulers, Web
+    /// Vitals & resources, outline, snippets, JSON/XML viewer, storage, image overlay,
+    /// colour picker, form autofill.
     /// 8 - DevTools mode, console, overlays, simulators, peek, rulers, Web Vitals & resources,
     /// outline, snippets, JSON/XML viewer, storage, image overlay,
-    /// colour picker, form autofill.
+    /// colour picker, form autofill, Live CSS.
     Devtools,
     /// 9 - watch paths, ignore, polling fallback, WSL watcher, interval reload.
     Reload,
@@ -41,7 +44,7 @@ pub enum Category {
     Network,
     /// 11 - screenshots, video, visual regression, cookie-banner hiding, sitemap.
     Capture,
-    /// 12 - SEO, accessibility, Lighthouse, coverage, PWA, error report, fonts.
+    /// 12 - SEO, accessibility, Lighthouse, coverage, PWA, error report, fonts, HTML validation.
     Checks,
     /// 13 - MCP, CDP proxy, Playwright and flows, recorder.
     Automation,
@@ -181,15 +184,21 @@ pub const SECTIONS: &[Section] = &[
     s(Category::Emulation, "media-features"),
     s(Category::Emulation, "throttling"),
     s(Category::Emulation, "geo-time-cpu"),
+    s(Category::Emulation, "text-direction"),
+    s(Category::Emulation, "clock-animations"),
     s(Category::Engines, "chromium"),
     s(Category::Engines, "firefox"),
     s(Category::Engines, "webkit"),
+    s(Category::Engines, "android"),
+    s(Category::Engines, "safari"),
+    s(Category::Engines, "ios"),
     s(Category::Engines, "node"),
     s(Category::Engines, "external"),
     s(Category::Devtools, "devtools"),
     s(Category::Devtools, "framework-devtools"),
     s(Category::Devtools, "console"),
     s(Category::Devtools, "overlays"),
+    s(Category::Devtools, "container-queries"),
     s(Category::Devtools, "simulators"),
     s(Category::Devtools, "peek"),
     s(Category::Devtools, "rulers"),
@@ -201,6 +210,7 @@ pub const SECTIONS: &[Section] = &[
     s(Category::Devtools, "image-overlay"),
     s(Category::Devtools, "color-picker"),
     s(Category::Devtools, "form-autofill"),
+    s(Category::Devtools, "live-css"),
     s(Category::Reload, "watch"),
     s(Category::Reload, "ignore"),
     s(Category::Reload, "polling"),
@@ -213,6 +223,9 @@ pub const SECTIONS: &[Section] = &[
     s(Category::Network, "proxy"),
     s(Category::Network, "certificates"),
     s(Category::Network, "cache"),
+    s(Category::Network, "api-client"),
+    s(Category::Network, "endpoints"),
+    s(Category::Network, "load-test"),
     s(Category::Capture, "screenshots"),
     s(Category::Capture, "video"),
     s(Category::Capture, "visual-regression"),
@@ -220,6 +233,8 @@ pub const SECTIONS: &[Section] = &[
     s(Category::Capture, "sitemap"),
     s(Category::Capture, "screenshot-editor"),
     s(Category::Capture, "env-compare"),
+    s(Category::Capture, "report"),
+    s(Category::Capture, "engine-compare"),
     s(Category::Checks, "findings"),
     s(Category::Checks, "seo"),
     s(Category::Checks, "accessibility"),
@@ -228,6 +243,12 @@ pub const SECTIONS: &[Section] = &[
     s(Category::Checks, "pwa"),
     s(Category::Checks, "error-report"),
     s(Category::Checks, "fonts"),
+    s(Category::Checks, "html-validation"),
+    s(Category::Checks, "structured-data"),
+    s(Category::Checks, "responsive-images"),
+    s(Category::Checks, "security-headers"),
+    s(Category::Checks, "consent-check"),
+    s(Category::Checks, "width-sweep"),
     s(Category::Automation, "mcp"),
     s(Category::Automation, "cdp-proxy"),
     s(Category::Automation, "playwright"),

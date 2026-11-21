@@ -3,6 +3,7 @@
 // emitted to the panel) and in `assets/measure.js` (`__rbOverlaysMeasure.scan`, the component's
 // scan for `overlay_set` and the findings).
 
+import { elementPath } from '../../../../web-common/src/element-path';
 import { cut, fitting } from '../answer';
 import { cssPath } from '../selector';
 import type { PageSettings, Rect } from '../types';
@@ -45,24 +46,18 @@ export function intOption(options: Record<string, unknown>, name: string, min: n
   return typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= min && candidate <= max ? candidate : fallback;
 }
 
-/** The element's full path from the root, one `tag:nth-of-type(n)` per level: the same element
- *  gets the same path in every view, so it is one finding. */
+/** The most characters of a path kept: its end, which tells the elements apart. */
+export const MAX_PATH_CHARS = 300;
+
+/** `path` within {@link MAX_PATH_CHARS} characters, its end kept. */
+export function pathTail(path: string): string {
+  return path.length > MAX_PATH_CHARS ? path.slice(path.length - MAX_PATH_CHARS) : path;
+}
+
+/** The element's path from the root, the findings' shared form (web-common/src/element-path.ts):
+ *  the same element gets the same path in every view and every plugin, so it is one finding. */
 export function fullPath(element: Element): string {
-  const parts: string[] = [];
-  let node: Element | null = element;
-  while (node) {
-    const parent: Element | null = node.parentElement;
-    const tag = node.localName;
-    if (parent) {
-      const same = Array.from(parent.children).filter((child) => child.localName === tag);
-      parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(node) + 1})` : tag);
-    } else {
-      parts.unshift(tag);
-    }
-    node = parent;
-  }
-  const path = parts.join(' > ');
-  return path.length > 300 ? path.slice(path.length - 300) : path;
+  return pathTail(elementPath(element));
 }
 
 function shows(win: Window, rect: Rect): boolean {

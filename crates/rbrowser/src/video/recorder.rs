@@ -23,6 +23,9 @@
 //! encoder cuts it out (`super::encoder::EncodeSpec::page_share`), and [`capture_size`] asks for
 //! a frame large enough that the cut keeps every pixel the view paints. The views on screen are
 //! left as they are.
+//!
+//! A pause ([`Recording::pauser`], RB-090-68) is left out of every file: each writer's pacer
+//! skips the paused time, and the maximum duration counts recorded time only.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -36,7 +39,8 @@ use serde_json::{Value, json};
 use tokio::sync::{mpsc, watch};
 
 use super::encoder::{FrameSink, MIN_PAGE_SHARE};
-use super::pacing::Pacer;
+use super::pacing::{Pacer, Pauses};
+use super::pause::Pauser;
 use crate::cdp::CdpRouter;
 
 /// The screencast's frame event.
@@ -155,6 +159,7 @@ struct Route {
 pub struct Recording {
     stop: watch::Sender<bool>,
     done: watch::Receiver<Option<Arc<Vec<RecordedFile>>>>,
+    pauser: Pauser,
 }
 
 impl Recording {
@@ -169,6 +174,7 @@ impl Recording {
         let mut tap = cdp.tap(FRAME_EVENT, TAP_CAPACITY);
         let (stop, mut stopped) = watch::channel(false);
         let (finished, done) = watch::channel(None);
+        let pauser = Pauser::new(Arc::clone(&options.clock));
         let max_secs = options.max_duration.as_secs_f64();
         let mut routes: Vec<Route> = Vec::new();
         let mut writers = Vec::new();
@@ -205,18 +211,34 @@ impl Recording {
             let clock = Arc::clone(&options.clock);
             let place = (plan.view, plan.file.display().to_string());
             let counted = Arc::clone(&dropped);
-            let writer = tokio::spawn(write_view(plan, inbox, sink, pacer, clock, failure));
+            let pauses = pauser.subscribe();
+            let writer = tokio::spawn(write_view(plan, inbox, sink, pacer, clock, pauses, failure));
             writers.push((place, counted, writer));
         }
         let max_duration = options.max_duration;
         let stop_timeout = options.stop_timeout;
+        let mut pause_log = pauser.subscribe();
         tokio::spawn(async move {
+            let begun = tokio::time::Instant::now();
             let deadline = tokio::time::sleep(max_duration);
             tokio::pin!(deadline);
+            // While paused the maximum waits; after a resume it is that much later.
+            let (mut paused, mut following) = (false, true);
             loop {
                 tokio::select! {
                     _ = stopped.changed() => break,
-                    () = &mut deadline => break,
+                    () = &mut deadline, if !paused => break,
+                    changed = pause_log.changed(), if following => match changed {
+                        Ok(()) => {
+                            let pauses = pause_log.borrow_and_update().clone();
+                            paused = pauses.is_paused();
+                            let held = Duration::try_from_secs_f64(pauses.ended_secs()).unwrap_or_default();
+                            if let Some(at) = begun.checked_add(max_duration.saturating_add(held)) {
+                                deadline.as_mut().reset(at);
+                            }
+                        }
+                        Err(_) => following = false,
+                    },
                     event = tap.recv() => match event {
                         Some(event) => route(&cdp, &routes, event.session_id.as_deref(), &event.params),
                         None => break,
@@ -267,7 +289,7 @@ impl Recording {
             }
             let _ = finished.send(Some(Arc::new(files)));
         });
-        Self { stop, done }
+        Self { stop, done, pauser }
     }
 
     /// Waits until the recording ends by itself (the maximum duration) or by a stop.
@@ -287,6 +309,11 @@ impl Recording {
     /// A handle that stops the recording from elsewhere.
     pub fn stopper(&self) -> watch::Sender<bool> {
         self.stop.clone()
+    }
+
+    /// A handle that pauses and resumes the recording (RB-090-68).
+    pub fn pauser(&self) -> Pauser {
+        self.pauser.clone()
     }
 }
 
@@ -338,11 +365,15 @@ async fn write_view(
     mut sink: Box<dyn FrameSink>,
     mut pacer: Pacer,
     clock: Arc<dyn Fn() -> f64 + Send + Sync>,
+    mut pauses: watch::Receiver<Pauses>,
     failure: Option<String>,
 ) -> RecordedFile {
     let mut error = failure;
     let mut held: Option<Vec<u8>> = None;
     while let Some(frame) = inbox.recv().await {
+        if pauses.has_changed().unwrap_or(false) {
+            pacer.set_pauses(pauses.borrow_and_update().clone());
+        }
         let repeat = pacer.advance(frame.timestamp);
         if error.is_none()
             && let Some(jpeg) = &held
@@ -352,6 +383,7 @@ async fn write_view(
         }
         held = Some(frame.jpeg);
     }
+    pacer.set_pauses(pauses.borrow().clone());
     let repeat = pacer.finish(clock());
     if error.is_none() {
         match &held {

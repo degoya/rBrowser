@@ -31,6 +31,7 @@ fn input(root: &Path, config: Option<Value>) -> BundleInput {
         },
         config_effective: config,
         plugins: json!([{ "id": "seo", "version": "1.0.0" }]),
+        perf: json!({ "enabled": true, "counters": [{ "name": "ipc.query", "p95Ms": 1.5 }] }),
         max_crash_dumps: 2,
     }
 }
@@ -58,6 +59,7 @@ fn the_zip_holds_logs_versions_config_and_plugins() {
             "logs/",
             "logs/cef.log",
             "logs/rbrowser.log",
+            "perf.json",
             "plugins.json",
             "versions.json"
         ]
@@ -69,6 +71,9 @@ fn the_zip_holds_logs_versions_config_and_plugins() {
     assert_eq!(versions["os"]["family"], json!(std::env::consts::OS));
     let plugins: Value = serde_json::from_slice(&zip["plugins.json"]).expect("json");
     assert_eq!(plugins[0]["id"], json!("seo"));
+    // The timing counters (RB-090-32).
+    let perf: Value = serde_json::from_slice(&zip["perf.json"]).expect("json");
+    assert_eq!(perf["counters"][0]["name"], json!("ipc.query"));
 }
 
 #[test]

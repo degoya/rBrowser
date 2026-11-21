@@ -57,7 +57,7 @@ await step('Step 11: hover', async () => {
 });
 // Step 12: assert visible
 await step('Step 12: assert visible', async () => {
-  await expect(page.getByText('We never share your email.', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('span').filter({ hasText: /^\s*We\s+never\s+share\s+your\s+email\.\s*$/ }).filter({ visible: true }).first()).toBeVisible();
 });
 // Step 13: dblclick
 await step('Step 13: dblclick', async () => {

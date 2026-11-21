@@ -38,3 +38,13 @@ fn the_first_time_and_then_only_hidden_panels_or_trust_are_news() {
     let _ = take(&mut last, Inputs::of(&hiding(&["a", "b"]), true));
     assert!(!take(&mut last, Inputs::of(&hiding(&["b", "a"]), true)));
 }
+
+/// RB-092-06: plugins loaded again are news for the panels, the same set again is not.
+#[test]
+fn a_live_change_of_the_plugins_is_news() {
+    let user = UserSettings::default();
+    let mut last = None;
+    assert!(take(&mut last, Inputs::of(&user, false).at(1)));
+    assert!(!take(&mut last, Inputs::of(&user, false).at(1)));
+    assert!(take(&mut last, Inputs::of(&user, false).at(2)));
+}

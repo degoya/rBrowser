@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Settings of the outline (RB-070-03): Settings > DevTools & Debugging > Outline",
+  "title": "Settings of the outline (RB-070-03, RB-094-02): Settings > DevTools & Debugging > Outline",
   "type": "object",
   "properties": {
     "customSelectors": {
@@ -65,6 +65,39 @@
           "x-category": "devtools",
           "x-section": "outline",
           "x-order": 4,
+          "x-scope": ["project", "local", "user"]
+        }
+      }
+    },
+    "diff": {
+      "type": "object",
+      "properties": {
+        "elements": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 3,
+          "items": { "type": "string", "enum": ["interactive", "headings", "landmarks"] },
+          "default": ["interactive", "headings", "landmarks"],
+          "description": "The elements compared across the breakpoints: shown in one view but missing or hidden in another.",
+          "x-category": "devtools",
+          "x-section": "outline",
+          "x-order": 6,
+          "x-scope": ["project", "local", "user"]
+        }
+      }
+    },
+    "readingOrder": {
+      "type": "object",
+      "properties": {
+        "tolerancePx": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "default": 4,
+          "description": "Boxes overlapping by up to this many CSS px still count as one before the other in the reading order (0 to 50).",
+          "x-category": "devtools",
+          "x-section": "outline",
+          "x-order": 7,
           "x-scope": ["project", "local", "user"]
         }
       }

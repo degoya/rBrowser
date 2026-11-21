@@ -1,0 +1,128 @@
+{
+  "plugin": {
+    "security-headers": {
+      "commands": {
+        "check": "Check the security headers of the active view",
+        "compare_environments": "Compare the security headers across the environments"
+      },
+      "errors": {
+        "environments": "The comparison needs at least two environments (Settings > Project > Environments).",
+        "headers_unavailable": "The answer carries none of the headers this check reads, not even Date: they could not be read.",
+        "no_page": "No view shows a web page: open one or give a URL.",
+        "redirect": "The page redirects too often or to an address that is no web page.",
+        "unknown_environment": "The project has no environment {environment}."
+      },
+      "findings": {
+        "cookie": {
+          "flags": "The cookie {cookie} lacks {missing}.",
+          "prefix": "The cookie {cookie} does not keep the rules of its {prefix} prefix: Secure, and for __Host- also Path=/ and no Domain."
+        },
+        "cors": {
+          "credentials": "Access-Control-Allow-Origin * is sent together with Access-Control-Allow-Credentials: true."
+        },
+        "csp": {
+          "base_uri": "The Content-Security-Policy sets no base-uri: add base-uri 'self' or 'none'.",
+          "missing": "The page sends no Content-Security-Policy: nothing limits where its scripts come from.",
+          "missing_script_src": "The Content-Security-Policy has no script-src or default-src: scripts are not restricted.",
+          "object_src": "The Content-Security-Policy sets no object-src (nor default-src): add object-src 'none'.",
+          "unsafe": "The Content-Security-Policy lets {keywords} work for scripts.",
+          "wildcard": "The Content-Security-Policy allows scripts from any source: {sources}."
+        },
+        "frame": {
+          "missing": "Neither X-Frame-Options (DENY or SAMEORIGIN) nor CSP frame-ancestors keeps the page out of foreign frames."
+        },
+        "hsts": {
+          "missing": "The HTTPS page sends no valid Strict-Transport-Security.",
+          "short": "Strict-Transport-Security max-age is {maxAge, plural, one {# second} other {# seconds}}, under the minimum of {minAge}."
+        },
+        "nosniff": {
+          "missing": "The page sends no X-Content-Type-Options: nosniff."
+        },
+        "permissions": {
+          "missing": "The page sends no Permissions-Policy."
+        },
+        "redirect": {
+          "downgrade": "The HTTPS page redirects to {url} over plain HTTP on the way: the connection can be read and changed there."
+        },
+        "referrer": {
+          "missing": "The page sends no Referrer-Policy a browser knows.",
+          "unsafe": "Referrer-Policy unsafe-url sends the full address of the page to every site, over HTTP too."
+        }
+      },
+      "name": "Security headers",
+      "panel": {
+        "absent": "Not sent",
+        "cookie": "Cookie {name}",
+        "differs": "Differs",
+        "empty": "The project has fewer than two environments to compare.",
+        "environment": "Environment",
+        "failed": "Not read",
+        "findings": "{count, plural, =0 {No findings} one {# finding} other {# findings}}",
+        "header": "Header",
+        "loading": "Reading the page in each environment...",
+        "noAttributes": "No attributes",
+        "onlyDifferences": "Only differences",
+        "path": "Page {path}",
+        "refresh": "Compare again",
+        "same": "The environments send the same security headers.",
+        "severity": {
+          "error": "Error",
+          "info": "Note",
+          "warning": "Warning"
+        },
+        "summary": "{count, plural, one {# difference} other {# differences}}",
+        "setting_link": "Open the setting"
+      },
+      "panels": {
+        "security-headers": "Security headers"
+      },
+      "rules": {
+        "cookie": {
+          "flags": "A cookie without Secure, HttpOnly or SameSite",
+          "prefix": "A cookie breaking the rules of its __Host- or __Secure- prefix"
+        },
+        "cors": {
+          "credentials": "Any origin allowed together with credentials"
+        },
+        "csp": {
+          "base_uri": "The Content-Security-Policy has no base-uri",
+          "missing": "No Content-Security-Policy restricts scripts",
+          "object_src": "The Content-Security-Policy has no object-src",
+          "unsafe": "The Content-Security-Policy allows unsafe-inline or unsafe-eval",
+          "wildcard": "The Content-Security-Policy allows scripts from any source"
+        },
+        "frame": {
+          "missing": "No protection against foreign frames"
+        },
+        "hsts": {
+          "missing": "An HTTPS page without Strict-Transport-Security",
+          "short": "A Strict-Transport-Security max-age under the minimum"
+        },
+        "nosniff": {
+          "missing": "No X-Content-Type-Options: nosniff"
+        },
+        "permissions": {
+          "missing": "No Permissions-Policy"
+        },
+        "redirect": {
+          "downgrade": "An HTTPS page that redirects to HTTP on the way"
+        },
+        "referrer": {
+          "missing": "No Referrer-Policy",
+          "unsafe": "Referrer-Policy unsafe-url"
+        }
+      },
+      "settings": {
+        "hstsMinAge": {
+          "description": "The smallest Strict-Transport-Security max-age, in seconds, that is not reported as too short.",
+          "help": "An HTTPS page whose Strict-Transport-Security max-age is below this many seconds is reported. Example: 31536000, one year, which the HSTS preload list asks for.",
+          "label": "Shortest HSTS max-age"
+        }
+      },
+      "tools": {
+        "check": "The security headers and cookies of a page's document (url, the active view's page without one): the values of the compared headers, each cookie's attributes (never its value), the page's project environment and the findings - CSP, HSTS, frame protection, nosniff, Referrer-Policy, Permissions-Policy, CORS with credentials, cookie flags and prefixes - with a count per severity.",
+        "compare": "The active view's page in each of the project's environments (environments names them, all without it): a table of header x environment, the rows that differ marked, each environment's findings, or why its page could not be read."
+      }
+    }
+  }
+}

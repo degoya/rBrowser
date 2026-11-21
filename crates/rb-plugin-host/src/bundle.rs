@@ -10,6 +10,8 @@
 //! start loaded the whole bundle - keeps all of it. Every later start leaves the choice as it is:
 //! a plugin new in the bundle of a later release is offered, never installed unasked, and one the
 //! person removed does not come back. `--install-all-bundled-plugins` chooses the whole bundle.
+//! What a person was offered is kept as well ([`BundleState::offered`]): the app names a plugin
+//! new in the bundle once, after the update that brought it (RB-094-13).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -38,6 +40,11 @@ pub struct BundleState {
     /// The first-run wizard has not answered yet: nothing optional is chosen until it does.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub pending: bool,
+    /// The bundled plugins a person was offered and did not choose: the first choice's bundle,
+    /// or the ones a later start named as new (RB-094-13). A choice written before it was kept
+    /// has none, so its first start names every bundled plugin not chosen once.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub offered: BTreeSet<String>,
 }
 
 /// What a start did with the choice.
@@ -67,6 +74,7 @@ impl BundleState {
             version: BUNDLE_FILE_VERSION,
             chosen,
             pending: false,
+            offered: BTreeSet::new(),
         }
     }
 
@@ -134,7 +142,22 @@ impl BundleState {
     /// Takes plugin `id` out: it is no longer loaded and no later start brings it back.
     pub fn unchoose(&mut self, id: &str) {
         self.chosen.remove(id);
+        self.offered.insert(id.to_owned());
         self.pending = false;
+    }
+
+    /// The plugins of `bundled` neither chosen nor offered yet: new in this bundle. None while
+    /// the first choice is pending - the first-run wizard offers them all.
+    #[must_use]
+    pub fn new_in(&self, bundled: &BTreeSet<String>) -> BTreeSet<String> {
+        if self.pending {
+            return BTreeSet::new();
+        }
+        bundled
+            .iter()
+            .filter(|id| !self.chosen.contains(*id) && !self.offered.contains(*id))
+            .cloned()
+            .collect()
     }
 }
 
@@ -195,6 +218,10 @@ pub fn start(
         state.chosen.extend(bundled.iter().cloned());
         state.pending = false;
         how = BundleStart::All;
+    }
+    // A choice made at this start saw the whole bundle: nothing in it is new any more.
+    if how != BundleStart::InstalledOnly {
+        state.offered.extend(bundled.iter().cloned());
     }
     (state, how)
 }

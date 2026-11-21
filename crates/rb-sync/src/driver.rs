@@ -28,11 +28,13 @@ pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(750);
 /// Called after the status changed off the caller's path (a view got desynced).
 pub type OnChange = Arc<dyn Fn() + Send + Sync>;
 
-/// A replay in a view's queue, with the view's document at the routing ([`Hub::epoch`]). The
-/// request shares its event with the route's (`Arc`): queueing copies no payload.
+/// A replay in a view's queue, with the view's document at the routing ([`Hub::epoch`]) and
+/// the time of the routing (the timing counters, RB-090-32). The request shares its event with
+/// the route's (`Arc`): queueing copies no payload.
 struct Queued {
     request: ReplayRequest,
     epoch: u64,
+    routed: Instant,
 }
 
 /// Hears what the hub does - the recorder (RB-050-01). Called outside the hub's lock; never
@@ -110,13 +112,15 @@ impl SyncHub {
         let (route, skip_changed, queued, leader) = self.with(|hub| {
             let armed = hub.skip_next_armed();
             let leader = hub.active() == Some(source);
-            let route = hub.route(source, message, Instant::now());
+            let routed = Instant::now();
+            let route = hub.route(source, message, routed);
             let queued: Vec<Queued> = match &route {
                 Route::Replay(requests) => requests
                     .iter()
                     .map(|request| Queued {
                         request: request.clone(),
                         epoch: hub.epoch(request.target),
+                        routed,
                     })
                     .collect(),
                 _ => Vec::new(),
@@ -181,16 +185,25 @@ impl SyncHub {
     }
 
     async fn replay_one(&self, queued: Queued) {
-        let Queued { request, epoch } = queued;
+        let Queued {
+            request,
+            epoch,
+            routed,
+        } = queued;
         let (view, event) = (request.target, request.event.clone());
         if self.with(|hub| hub.active() == Some(view)) {
             // The view leads now: its own input is the original.
             return;
         }
         let (replay, timeout) = (lock(&self.replay).clone(), *lock(&self.timeout));
+        rb_util::perf::record(rb_util::perf::names::SYNC_WAIT, routed.elapsed());
         let outcome = tokio::time::timeout(timeout, replay.dispatch(request))
             .await
             .unwrap_or(ReplayOutcome::Timeout);
+        // Only a replay that happened: a timeout is the desync timeout, a miss no replay.
+        if outcome == ReplayOutcome::Done {
+            rb_util::perf::record(replay.counter(view), routed.elapsed());
+        }
         if let ReplayOutcome::Failed(error) = &outcome {
             tracing::debug!(%view, %error, "replay failed");
         }

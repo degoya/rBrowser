@@ -16,7 +16,8 @@ pub fn flow(request: &ExportRequest) -> Result<String, StepError> {
     let recording = &request.recording;
     let mut context = Context::new(Guard::Breakpoint, request.options.locator_preference, None)
         .paced(request.options.pace)
-        .least_pause(request.options.min_pause_ms);
+        .least_pause(request.options.min_pause_ms)
+        .sized(&recording.breakpoints);
     let body = render(&recording.steps, &mut context, 0)?;
     let mut out = format!(
         "// @description Exported by rBrowser (recorder-export) from the recording \"{}\".\n",

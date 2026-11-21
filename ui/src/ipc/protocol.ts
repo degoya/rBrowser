@@ -45,10 +45,17 @@ export type * from './notifications';
 export type * from './portal';
 export type * from './videos';
 import type { VideoEvent, VideoRequest } from './videos';
+export type * from './sitemapGallery';
+import type { SitemapGalleryEvent, SitemapGalleryRequest } from './sitemapGallery';
+// RB-093-04.
+export type * from './bugReport';
+import type { BugReportCoreMessage, BugReportShellMessage } from './bugReport';
+export type * from './mcpSetup';
+import type { McpSetupCoreMessage, McpSetupShellMessage } from './mcpSetup';
 import type { ExtensionEvent, ExtensionRequest } from './extensions';
 import type { SettingsEvent, SettingsRequest } from './settingsMessages';
 import type { NativeMenuEvent, NativeMenuRequest } from './nativeMenu';
-import type { ActivityRequest, ActivitySnapshot } from './activity';
+import type { ActivityRequest, ActivitySnapshot, PluginProgress } from './activity';
 // RB-090-60.
 export type * from './recordings';
 import type { RecordingEvent, RecordingRequest } from './recordings';
@@ -59,6 +66,9 @@ export type { SettingIssue, SettingsEvent, SettingsRequest, SettingValue } from 
 export type { ExtensionPrompt, ExtensionPromptKind, WebStoreExtension } from './extensions';
 
 export type * from './emulation';
+// RB-094-20.
+export type * from './devices';
+import type { DevicesMenu } from './devices';
 // The commands' and the workspace trust's payloads (rb-ipc `payloads.rs`).
 import type { BindingCheck, CommandInfo, TrustInfo, TrustPrompt, WhichKey } from './payloads';
 export type * from './payloads';
@@ -81,7 +91,7 @@ export type IpcErrorCode = (typeof IpcErrorCode)[keyof typeof IpcErrorCode];
 /** rb-engine `ViewId`. */
 export type ViewId = number;
 /** rb-config `EngineKind`. */
-export type EngineKind = 'chromium' | 'firefox' | 'webkit';
+export type EngineKind = 'chromium' | 'firefox' | 'webkit' | 'android' | 'safari' | 'ios';
 /** rb-settings `Scope`. */
 export type Scope = 'user' | 'project' | 'local';
 /** rb-settings `Origin`: the badge of a field. */
@@ -277,7 +287,10 @@ export type ShellToCore =
   /** The Videos panel's requests (`./videos.ts`, RB-110-12). */
   | VideoRequest
   | NativeMenuRequest | RecordingRequest | ActivityRequest // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60), `./activity.ts` (RB-090-67)
-  | SetupShellMessage; // `./setup.ts` (RB-091-05)
+  | SitemapGalleryRequest // `./sitemapGallery.ts` (RB-090-86)
+  | SetupShellMessage // `./setup.ts` (RB-091-05)
+  | BugReportShellMessage // `./bugReport.ts` (RB-093-04)
+  | McpSetupShellMessage; // `./mcpSetup.ts` (RB-091-09)
 
 // ---- core -> shell ------------------------------------------------------------------------
 
@@ -385,6 +398,9 @@ export interface StateSnapshot extends ActivitySnapshot {
   /** The frameworks each view's page runs, for the DevTools offer; absent while none is found
    *  or both are off (RB-080-24). */
   frameworks?: ViewFrameworks[];
+  /** The devices the main menu and the toolbar's "+" offer; absent until the engines started
+   *  (RB-094-20). */
+  devices?: DevicesMenu;
 }
 
 export interface BreakpointProposal {
@@ -402,6 +418,8 @@ export type CoreToShell =
   | ({ type: 'state' } & StateSnapshot)
   /** The cell labels' metrics alone, when nothing else in the state changed (RB-090-36). */
   | { type: 'metrics'; metrics: ViewMetrics[] }
+  /** The plugin calls' progress alone, when nothing else in the state changed (RB-094-10). */
+  | { type: 'pluginProgress'; progress: PluginProgress[] }
   | {
       type: 'commands';
       leader: string;
@@ -454,4 +472,7 @@ export type CoreToShell =
   /** The Videos panel's list and its change (`./videos.ts`, RB-110-12). */
   | VideoEvent
   | NativeMenuEvent | RecordingEvent // `./nativeMenu.ts` (RB-090-41), `./recordings.ts` (RB-090-60)
-  | SetupCoreMessage; // `./setup.ts` (RB-091-05)
+  | SitemapGalleryEvent // `./sitemapGallery.ts` (RB-090-86)
+  | SetupCoreMessage // `./setup.ts` (RB-091-05)
+  | BugReportCoreMessage // `./bugReport.ts` (RB-093-04)
+  | McpSetupCoreMessage; // `./mcpSetup.ts` (RB-091-09)

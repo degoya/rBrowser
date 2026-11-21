@@ -160,6 +160,9 @@ fn a_step_serialises_in_the_documented_shape() {
         view: "mobile".into(),
         at_ms: 1200,
         only_in: vec!["mobile".into()],
+        path: Vec::new(),
+        disabled: false,
+        pause_ms: None,
     };
     assert_eq!(
         serde_json::to_value(&step).expect("serialise"),
@@ -225,4 +228,111 @@ fn a_wait_for_element_step_reads_and_writes_as_wait_for() {
         }
     );
     assert_eq!(serde_json::to_value(&action).expect("serialises"), text);
+}
+
+#[test]
+fn a_step_keeps_its_pointer_path_and_one_without_still_loads() {
+    // A recording made before RB-090-87: no `path`.
+    let older: Step = serde_json::from_value(json!({
+        "id": 1,
+        "action": { "type": "hover", "target": { "selectors": [{ "kind": "css", "path": "nav > a" }] } },
+        "view": "desktop",
+        "atMs": 10
+    }))
+    .expect("loads");
+    assert!(older.path.is_empty());
+    assert!(
+        serde_json::to_value(&older)
+            .expect("writes")
+            .get("path")
+            .is_none()
+    );
+    let way = json!([{ "x": 12, "y": 40, "t": 0 }, { "x": 96, "y": 12, "t": 120 }]);
+    let step: Step = serde_json::from_value(json!({
+        "id": 2,
+        "action": { "type": "hover", "target": { "selectors": [{ "kind": "css", "path": "nav > a" }] } },
+        "view": "desktop",
+        "atMs": 10,
+        "path": way
+    }))
+    .expect("loads");
+    assert_eq!(
+        step.path[1],
+        PathPoint {
+            x: 96,
+            y: 12,
+            t: 120
+        }
+    );
+    assert_eq!(serde_json::to_value(&step).expect("writes")["path"], way);
+    // A point with a stray field is refused, as every part of the model.
+    assert!(
+        serde_json::from_value::<PathPoint>(json!({ "x": 1, "y": 2, "t": 0, "z": 3 })).is_err()
+    );
+}
+
+#[test]
+fn a_loaded_way_keeps_at_most_its_last_points_and_the_schema_says_so() {
+    // A recording file is input: a way of any length loads as its last `MAX_PATH_POINTS` points.
+    let points: Vec<serde_json::Value> = (0..10_000)
+        .map(|index| json!({ "x": index, "y": 0, "t": index }))
+        .collect();
+    let step: Step = serde_json::from_value(json!({
+        "id": 1,
+        "action": { "type": "hover", "target": { "selectors": [{ "kind": "css", "path": "a" }] } },
+        "view": "desktop",
+        "atMs": 0,
+        "path": points
+    }))
+    .expect("loads");
+    assert_eq!(step.path.len(), MAX_PATH_POINTS);
+    assert_eq!(
+        step.path[0],
+        PathPoint {
+            x: 9_936,
+            y: 0,
+            t: 9_936
+        }
+    );
+    assert_eq!(step.path[MAX_PATH_POINTS - 1].x, 9_999);
+    let schema = serde_json::to_value(schemars::schema_for!(Recording)).expect("schema");
+    let text = schema.to_string();
+    assert!(text.contains("\"maxItems\":64"), "{text}");
+}
+
+/// RB-092-01: a step switched off and a pause set in the editor are written only when set, a
+/// recording made before reads with neither, and the fixed wait is a kind of its own.
+#[test]
+fn the_editor_fields_are_written_only_when_set_and_older_steps_read_without_them() {
+    let older: Step = serde_json::from_value(json!({
+        "id": 1, "action": { "type": "navigate", "url": "https://example.test/" },
+        "view": "mobile", "atMs": 0
+    }))
+    .expect("a step made before");
+    assert!(!older.disabled);
+    assert_eq!(older.pause_ms, None);
+    let written = serde_json::to_value(&older).expect("writes");
+    assert!(written.get("disabled").is_none() && written.get("pauseMs").is_none());
+
+    let edited: Step = serde_json::from_value(json!({
+        "id": 2, "action": { "type": "wait", "ms": 1500 },
+        "view": "mobile", "atMs": 10, "disabled": true, "pauseMs": 800
+    }))
+    .expect("an edited step");
+    assert!(edited.disabled);
+    assert_eq!(edited.pause_ms, Some(800));
+    assert_eq!(edited.action, Action::Wait { ms: 1500 });
+    let written = serde_json::to_value(&edited).expect("writes");
+    assert_eq!(written["disabled"], true);
+    assert_eq!(written["pauseMs"], 800);
+    assert_eq!(written["action"], json!({ "type": "wait", "ms": 1500 }));
+}
+
+#[test]
+fn the_schema_caps_the_pause_and_the_wait() {
+    let schema = super::super::recording_schema();
+    let value: serde_json::Value = serde_json::from_str(&schema).expect("the schema is JSON");
+    let text = value.to_string();
+    assert!(text.contains("\"pauseMs\""), "{text}");
+    assert!(text.contains("\"maximum\""), "{text}");
 }

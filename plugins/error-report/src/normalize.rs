@@ -227,16 +227,9 @@ pub fn id_of(key: &str) -> String {
     format!("{:016x}", fnv1a(key))
 }
 
-/// `text` cut to `max` characters, an ellipsis (`...`) marking the cut.
-#[must_use]
-pub fn cut(text: &str, max: usize) -> String {
-    if text.chars().count() <= max {
-        return text.to_owned();
-    }
-    let mut out: String = text.chars().take(max.saturating_sub(3)).collect();
-    out.push_str("...");
-    out
-}
+/// `text` cut to `max` characters, an ellipsis (`...`) marking the cut: the app's own
+/// (RB-094-10).
+pub use rb_util::text::cut_ellipsis as cut;
 
 #[cfg(test)]
 #[path = "normalize_tests.rs"]

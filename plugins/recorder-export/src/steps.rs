@@ -10,6 +10,12 @@
 //! waiting; a hover keeps a short dwell before the step after it ([`crate::pace::pauses`],
 //! RB-090-84).
 //!
+//! RB-092-01: a pause set in the editor (`pauseMs`) replaces the measured one; the editor's
+//! fixed `wait` is a `page.waitForTimeout` at every pace.
+//!
+//! RB-090-87: a step with the pointer's way moves the pointer along it before its action, in a
+//! view of the recording's size ([`crate::path`]); the way's time is part of the step's pause.
+//!
 //! RB-090-76: in the flow each step runs inside the runner's `step('Step <id>: <kind>', ...)`,
 //! so a run's result names the step that failed or ran out of time. A navigation that follows
 //! clicks (or keys) of only some breakpoints takes the others there with `page.goto` before its
@@ -21,8 +27,10 @@
 
 use crate::js::{Secrets, comment, number, relative_url, secret as secret_value, string};
 use crate::locator::locator;
-use crate::model::{Action, Assertion, Locator, LocatorPreference, Selector, Step};
-use crate::pace::{Pace, pauses};
+use crate::model::{
+    Action, Assertion, Locator, LocatorPreference, RecordedBreakpoint, Selector, Step,
+};
+use crate::pace::{MAX_PAUSE_MS, Pace, pauses};
 
 /// Where the steps go.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,6 +50,8 @@ pub struct Context {
     pace: Pace,
     /// The least pause before a step at the `recorded` pace (`automation.recorder.minPauseMs`).
     min_pause_ms: u64,
+    /// The recording's breakpoints: a step's way moves only in a view of its size (RB-090-87).
+    sizes: Vec<RecordedBreakpoint>,
     /// The environment variables of the secrets used so far.
     pub secrets: Secrets,
 }
@@ -55,6 +65,7 @@ impl Context {
             base_url,
             pace: Pace::Fast,
             min_pause_ms: 0,
+            sizes: Vec::new(),
             secrets: Secrets::default(),
         }
     }
@@ -63,6 +74,13 @@ impl Context {
     #[must_use]
     pub fn paced(mut self, pace: Pace) -> Self {
         self.pace = pace;
+        self
+    }
+
+    /// The same context with the recording's breakpoints, whose sizes a step's way needs.
+    #[must_use]
+    pub fn sized(mut self, breakpoints: &[RecordedBreakpoint]) -> Self {
+        self.sizes = breakpoints.to_vec();
         self
     }
 
@@ -99,10 +117,14 @@ pub fn step_pauses(steps: &[Step], min_ms: u64) -> Vec<(u32, u64)> {
         .iter()
         .map(|step| (step.at_ms, matches!(step.action, Action::Hover { .. })))
         .collect();
+    // A pause set in the editor takes the measured one's place, capped alike (RB-092-01).
     written
         .iter()
-        .map(|step| step.id)
         .zip(pauses(&timing, min_ms))
+        .map(|(step, measured)| {
+            let pause = step.pause_ms.map_or(measured, |ms| ms.min(MAX_PAUSE_MS));
+            (step.id, pause)
+        })
         .collect()
 }
 
@@ -153,8 +175,10 @@ pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<Str
         }
         line(&mut out, depth, &format!("// {title}"));
         let pause = waits.next().unwrap_or(0);
-        let wait = (context.pace == Pace::Recorded && pause > 0)
-            .then(|| format!("await page.waitForTimeout({pause});"));
+        let way = crate::path::way(step, &context.sizes, context.guard, context.pace, pause);
+        let before = way.as_ref().map_or(pause, |way| way.before_ms);
+        let wait = (context.pace == Pace::Recorded && before > 0)
+            .then(|| format!("await page.waitForTimeout({before});"));
         // The body as (depth below the step, text). In the flow the pause waits inside the step,
         // so the step a run reports is the one waiting (RB-090-84).
         let mut body = Vec::new();
@@ -199,6 +223,13 @@ pub fn render(steps: &[Step], context: &mut Context, depth: usize) -> Result<Str
                 }
             }
             _ => {}
+        }
+        if let Some(way) = way {
+            body.extend(
+                way.lines
+                    .into_iter()
+                    .map(|(below, text)| (inner + below, text)),
+            );
         }
         body.push((inner, statement));
         if inner == 1 {
@@ -295,6 +326,7 @@ fn kind(action: &Action) -> &'static str {
         Action::Scroll { .. } => "scroll",
         Action::WaitForUrl { .. } => "waitForUrl",
         Action::WaitFor { .. } => "waitFor",
+        Action::Wait { .. } => "wait",
         Action::Assert { assertion } => match assertion {
             Assertion::Visible { .. } => "assert visible",
             Assertion::Text { .. } => "assert text",
@@ -399,6 +431,7 @@ fn statement(action: &Action, context: &mut Context) -> Result<String, String> {
             format!("await expect(page).toHaveURL({});", url_expr(url, context))
         }
         Action::WaitFor { target } => format!("await {}.waitFor();", at(target)?),
+        Action::Wait { ms } => format!("await page.waitForTimeout({});", ms.min(&MAX_PAUSE_MS)),
         Action::Assert { assertion } => match assertion {
             Assertion::Visible { target } => {
                 format!("await expect({}).toBeVisible();", at(target)?)

@@ -1,0 +1,86 @@
+# Load test (RB-096-07, docs/plugins.md): your own server put under load on purpose - many
+# virtual users sending the API client's saved requests (.rbrowser/api/) by a scenario of
+# .rbrowser/api/load/*.json (order or weights, think times, values per user, a profile of users,
+# ramp and rate, abort rules) - to find its limits. The plugin forwards; the core does the work
+# (capability `load-test`, crates/rbrowser/src/load_test): it runs the users on its own runtime
+# and connection pool, apart from the views, pushes the live numbers to the panel, keeps a report
+# (.rbrowser/out/load-test/, JSON and HTML) and ends every connection at once on Stop or when
+# rBrowser closes. Only the trusted project's own origins and this machine are targets without
+# asking; any other host only after the person confirms it is theirs or theirs to test. Every
+# run starts by the person's click on its summary; MCP only reads the reports. Every request
+# names itself (User-Agent "rBrowser load test") and goes out without a proxy.
+manifest_version = 1
+id = "load-test"
+name = "Load test"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "load"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Your own server put under load on purpose: many virtual users from the API client's saved requests, live numbers, a report - only against systems you own or may test."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# load-test: the core's work, no import (RB-096-07). The panel's calls may do everything - a run
+# only from the summary the person confirmed; a command only stops the run; a tool call from MCP
+# only reads the reports - never a start, a change, a stop or a host confirmed.
+[capabilities]
+load-test = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `load_reports`: the runs' reports, newest first.
+[[tools]]
+name = "reports"
+description = "plugin.load-test.tools.reports"
+input = { type = "object", properties = {} }
+
+# MCP `load_report`: one report, the newest without id.
+[[tools]]
+name = "report"
+description = "plugin.load-test.tools.report"
+input = { type = "object", properties = { id = { type = "string", minLength = 1, maxLength = 120 } } }
+
+# MCP `load_compare`: two reports side by side.
+[[tools]]
+name = "compare"
+description = "plugin.load-test.tools.compare"
+input = { type = "object", required = ["a", "b"], properties = { a = { type = "string", minLength = 1, maxLength = 120 }, b = { type = "string", minLength = 1, maxLength = 120 } } }
+
+# The panel's own calls: every op, a run's start included. Never listed nor run over MCP
+# (crates/rbrowser/src/plugins/mcp.rs, PANEL_ONLY); outside the panel the core refuses its ops.
+[[tools]]
+name = "panel"
+description = "plugin.load-test.tools.panel"
+input = { type = "object", required = ["op"], properties = { op = { type = "object" } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.load-test.commands.panel"
+shortcut = "Ctrl+Shift+Space P 5"
+group = "panels"
+mcp_omitted = "ui-only: opens the load test panel"
+
+# The activity bar's Stop of a running load test (RB-093-01: a plugin's `cancel` command).
+[[commands]]
+id = "cancel"
+title = "plugin.load-test.commands.cancel"
+shortcut = "Ctrl+Shift+Space K 2"
+group = "checks"
+mcp_omitted = "ui-only: a load test is started and stopped by a person only; MCP reads its reports with load_reports, load_report and load_compare"
+
+[[panels]]
+id = "load-test"
+title = "plugin.load-test.panels.load-test"
+entry = "panel/index.html"
+icon = "activity"
+placement = "sidebar"

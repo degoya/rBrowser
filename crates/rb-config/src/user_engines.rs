@@ -1,7 +1,7 @@
 //! `engines.external`: the external windows of Firefox and WebKit (RB-040-01);
 //! `engines.firefox`: the installed Firefox over WebDriver BiDi (RB-040-02); `engines.webkit`:
 //! WebKit through Playwright (RB-040-04); `engines.cookies`: copying Chromium's cookies into
-//! them (RB-040-05).
+//! them (RB-040-05); `engines.chromium`, the engine of the grid (RB-010-04).
 
 use std::collections::BTreeMap;
 
@@ -158,6 +158,28 @@ impl EngineSettings {
                     .map(str::trim)
                     .filter(|path| !path.is_empty())
             })
+    }
+}
+
+/// `engines.chromium`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ChromiumSettings {
+    /// Run the Chromium processes in the sandbox (ADR 0001, Decision 6). Off only where the
+    /// sandbox fails on a machine; read at start-up, and while it is off the log says so at
+    /// every start. `--no-sandbox` on the command line switches it off for one start.
+    pub sandbox: bool,
+    /// Chrome extensions from unpacked folders (RB-080-06).
+    #[serde(skip_serializing_if = "crate::shared_settings::is_default")]
+    pub extensions: crate::ChromiumExtensionSettings,
+}
+
+impl Default for ChromiumSettings {
+    fn default() -> Self {
+        Self {
+            sandbox: true,
+            extensions: crate::ChromiumExtensionSettings::default(),
+        }
     }
 }
 

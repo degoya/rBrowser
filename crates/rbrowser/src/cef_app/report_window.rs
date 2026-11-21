@@ -265,6 +265,13 @@ wrap_window_delegate! {
             1
         }
 
+        // macOS draws the close, minimise and zoom buttons only on this answer; CEF's default
+        // is "not frameless", the cef crate's 0 - a window without them cannot be closed there
+        // (RB-090-98). Ignored on Windows.
+        fn with_standard_window_buttons(&self, _window: Option<&mut Window>) -> c_int {
+            1
+        }
+
         fn can_close(&self, _window: Option<&mut Window>) -> c_int {
             1
         }

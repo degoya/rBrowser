@@ -9,12 +9,14 @@
 //! The app's services are `rbrowser`'s `plugins::services::AppServices` (Charge 6).
 
 use std::path::PathBuf;
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use rb_plugin_types::{
     Failure, FailureKind, Finding, HttpRequest, HttpResponse, ViewId, ViewInfo, codes,
 };
+use rb_util::perf;
 
 /// `plugins.error.not_available`, naming the service.
 #[must_use]
@@ -119,6 +121,20 @@ pub trait HostServices: Send + Sync {
         Err(not_available("sidecar"))
     }
 
+    /// A call of plugin `plugin_id` starts (any export, after it got its concurrency slot);
+    /// nothing by default. Each is matched by one [`HostServices::call_ended`].
+    fn call_started(&self, plugin_id: &str) {
+        let _ = plugin_id;
+    }
+
+    /// A call of plugin `plugin_id` ended: answered, failed, trapped, timed out, or dropped by a
+    /// caller that stopped waiting (a cancelled check run). The app ends what a plugin may hold
+    /// only for the length of its calls - a view's width lease (RB-093-01) - once the plugin's
+    /// last running call ended. Nothing by default.
+    fn call_ended(&self, plugin_id: &str) {
+        let _ = plugin_id;
+    }
+
     /// How far plugin `plugin_id`'s current call is (`host.report-progress`); nothing by default.
     fn report_progress(&self, plugin_id: &str, done: u32, total: u32) {
         let _ = (plugin_id, done, total);
@@ -131,8 +147,51 @@ pub trait HostServices: Send + Sync {
     }
 }
 
+/// One call of a plugin as its services hear of it ([`HostServices::call_started`] when made,
+/// [`HostServices::call_ended`] when dropped), so the end is heard whatever ends the call -
+/// also a future dropped mid-await. Its run is the timing counter `plugin.call` (RB-090-32).
+pub(crate) struct CallSpan {
+    services: Arc<dyn HostServices>,
+    plugin_id: String,
+    started: Instant,
+}
+
+impl CallSpan {
+    /// Tells `services` that a call of `plugin_id` starts.
+    pub(crate) fn start(services: &Arc<dyn HostServices>, plugin_id: &str) -> Self {
+        services.call_started(plugin_id);
+        Self {
+            services: Arc::clone(services),
+            plugin_id: plugin_id.to_owned(),
+            started: Instant::now(),
+        }
+    }
+
+    /// [`CallSpan::start`] for a call that waited for its slot since `waiting`: the wait is the
+    /// counter `plugin.wait`.
+    pub(crate) fn after_wait(
+        services: &Arc<dyn HostServices>,
+        plugin_id: &str,
+        waiting: Instant,
+    ) -> Self {
+        perf::record(perf::names::PLUGIN_WAIT, waiting.elapsed());
+        Self::start(services, plugin_id)
+    }
+}
+
+impl Drop for CallSpan {
+    fn drop(&mut self) {
+        perf::record(perf::names::PLUGIN_CALL, self.started.elapsed());
+        self.services.call_ended(&self.plugin_id);
+    }
+}
+
 /// No service wired: every call answers `plugins.error.not_available`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NoServices;
 
 impl HostServices for NoServices {}
+
+#[cfg(test)]
+#[path = "services_tests.rs"]
+mod tests;

@@ -54,6 +54,7 @@ fn the_project_wins_per_key_and_rules_merge() {
             rule: Some("c.*".to_owned()),
             ..IgnoreEntry::default()
         }],
+        ..FindingsSettings::default()
     };
     let merged = project.over(&user);
     assert_eq!(merged.parallel, Some(8));

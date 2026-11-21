@@ -113,6 +113,7 @@ describe('the main menu', () => {
     const submenus = top.flatMap((row) => (row.kind === 'submenu' ? [row.label] : []));
     expect(submenus).toEqual([
       'shell.menu.view',
+      'shell.menu.devices',
       'shell.menu.layout',
       'shell.menu.sync',
       'shell.menu.emulation',

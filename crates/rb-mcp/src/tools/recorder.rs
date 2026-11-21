@@ -33,6 +33,21 @@ pub struct RecorderStartParams {
     /// absent.
     #[serde(default)]
     pub name: Option<String>,
+    /// Continue a stored recording from one of its steps (RB-092-01) instead of starting a new
+    /// one: its steps up to there play first, at the pace `fast`, then the new steps land after
+    /// it. `target` and `name` do not apply.
+    #[serde(default)]
+    pub continue_from: Option<ContinueFrom>,
+}
+
+/// Where a recording continues (RB-092-01).
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ContinueFrom {
+    /// The stored recording.
+    pub recording_id: String,
+    /// The step after which the new steps land.
+    pub step_id: u32,
 }
 
 /// `recorder_stop`.
@@ -99,18 +114,25 @@ pub struct RecorderPlayParams {
     /// lands in `.rbrowser/out/flows/<runId>/result.json` (`flow_list` shows the run going on).
     #[serde(default)]
     pub wait: Option<bool>,
+    /// Play from this step on (RB-092-01, "Play from here").
+    #[serde(default)]
+    pub from_step: Option<u32>,
 }
 
 #[tool_router(router = recorder_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Start recording one view's interactions (clicks, typing, keys, form changes, navigations) as a cleaned flow, or resume a paused recording. `target`: one view (a view id or a breakpoint id shown once) that becomes the active view first; the active view when absent. `name` ([A-Za-z0-9_-], at most 64 characters) names the file; a timestamped name when absent. Password fields and the configured secret fields are recorded as {{secret:<name>}}, never in clear. Refused while a flow runs (recorder.flow_running): its navigations would become steps. Answers the recorder's state, the name and the step count."
+        description = "Start recording one view's interactions (clicks, typing, keys, form changes, navigations) as a cleaned flow, or resume a paused recording. `target`: one view (a view id or a breakpoint id shown once) that becomes the active view first; the active view when absent. `name` ([A-Za-z0-9_-], at most 64 characters) names the file; a timestamped name when absent. Password fields and the configured secret fields are recorded as {{secret:<name>}}, never in clear. Refused while a flow runs (recorder.flow_running): its navigations would become steps. continueFrom { recordingId, stepId } continues a stored recording from that step instead: its steps up to there play first at the pace fast (a failure there starts no recording and the notice says why), then the new steps land after it and the stop writes them into that recording. Answers the recorder's state, the name and the step count."
     )]
     pub(crate) async fn recorder_start(
         &self,
         Parameters(params): Parameters<RecorderStartParams>,
     ) -> ToolResult {
         let result = async {
+            if let Some(from) = params.continue_from {
+                let args = json!({ "recordingId": from.recording_id, "stepId": from.step_id });
+                return self.command("recorder.continue_from", args).await;
+            }
             let views = self.read(|backend| backend.views()).await?;
             let view = resolve_one(params.target.as_ref(), &views)?;
             let args = object([
@@ -178,6 +200,7 @@ impl RbMcpServer {
                 ("views", views.map(|ids| json!(ids))),
                 ("pace", params.pace.map(|pace| json!(pace))),
                 ("wait", params.wait.map(Value::Bool)),
+                ("fromStep", params.from_step.map(|step| json!(step))),
             ]);
             let answer = self.backend.host_tool(PLAY_TOOL, args).await?;
             Ok(self.backend.mask(&answer))

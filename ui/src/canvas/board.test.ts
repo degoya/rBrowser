@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest';
 import type { CanvasRequest } from '../ipc/layout';
 import { sampleState } from '../ipc/mockState';
 import type { StateSnapshot } from '../ipc/protocol';
-import { badgeState, badgeTitle, boardItems, createBoardDrag, engineReasonOf, labelPieces, offsetOf, stepFor } from './board';
+import { badgeState, badgeTitle, boardItems, createBoardDrag, engineReasonOf, labelPieces, stepFor } from './board';
 
+/** A board drag whose sends the core answers when the test says so, and its frames. */
 function harness() {
   const sent: CanvasRequest[] = [];
+  const answers: ((ok: boolean) => void)[] = [];
   const frames: (() => void)[] = [];
   const drag = createBoardDrag({
-    send: (request) => sent.push(request),
+    send: (request) => {
+      sent.push(request);
+      return new Promise<boolean>((resolve) => answers.push(resolve));
+    },
     frame: (callback) => frames.push(callback),
     cancelFrame: (handle) => {
       frames[handle - 1] = () => undefined;
@@ -17,23 +22,74 @@ function harness() {
   const flush = (): void => {
     frames.splice(0).forEach((callback) => callback());
   };
-  return { sent, drag, flush };
+  /** The core answers every request sent so far. */
+  const answer = async (): Promise<void> => {
+    answers.splice(0).forEach((resolve) => resolve(true));
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+  return { sent, drag, flush, answer };
 }
 
 describe('a drag on the canvas board', () => {
-  it('sends one move per frame with the latest delta, then the end', () => {
-    const { sent, drag, flush } = harness();
+  // RB-094-18: the board sent a move every frame, one frame late, with nothing in step with the
+  // core - the core's frames and the window's moves queued up. The board now sends the newest
+  // delta with the next frame, never a second one before the core answered the first.
+  it('sends the newest delta with the next frame, one move at a time, then the end', async () => {
+    const { sent, drag, flush, answer } = harness();
     drag.start({ kind: 'view', view: 2 }, 100, 100);
     drag.move(104, 101);
     drag.move(110, 95.4);
-    expect(sent).toEqual([]);
     flush();
     expect(sent).toEqual([{ type: 'canvasDrag', view: 2, dx: 10, dy: -5, phase: 'move' }]);
+    drag.move(120, 92);
+    drag.move(125, 90);
+    flush();
+    expect(sent, 'nothing while the core has not answered').toHaveLength(1);
+    await answer();
+    flush();
+    // The newest delta; the one in between is never sent.
+    expect(sent.slice(1)).toEqual([{ type: 'canvasDrag', view: 2, dx: 25, dy: -10, phase: 'move' }]);
+    await answer();
+    flush();
+    expect(sent, 'nothing new, nothing sent').toHaveLength(2);
     drag.move(130, 90);
     expect(drag.end(140, 80)).toBe('dragged');
     flush();
-    expect(sent.slice(1)).toEqual([{ type: 'canvasDrag', view: 2, dx: 40, dy: -20, phase: 'end' }]);
+    // The end goes at once, and no move after it.
+    expect(sent.slice(2)).toEqual([{ type: 'canvasDrag', view: 2, dx: 40, dy: -20, phase: 'end' }]);
+    await answer();
+    flush();
+    expect(sent).toHaveLength(3);
     expect(drag.current()).toBeNull();
+  });
+
+  it('sends the end at once while a move is still unanswered, and nothing after it', async () => {
+    const { sent, drag, flush, answer } = harness();
+    drag.start({ kind: 'view', view: 2 }, 0, 0);
+    drag.move(10, 0);
+    flush();
+    drag.move(20, 0);
+    expect(drag.end(30, 0)).toBe('dragged');
+    await answer();
+    flush();
+    expect(sent.map((request) => request.type === 'canvasDrag' && request.phase)).toEqual(['move', 'end']);
+  });
+
+  it('starts the next drag without waiting for an answer of the last one', async () => {
+    const { sent, drag, flush, answer } = harness();
+    drag.start({ kind: 'pan' }, 0, 0);
+    drag.move(10, 0);
+    flush();
+    drag.end(10, 0);
+    drag.start({ kind: 'pan' }, 0, 0);
+    drag.move(0, 10);
+    flush();
+    expect(sent.at(-1)).toEqual({ type: 'canvasPan', dx: 0, dy: 10, phase: 'move' });
+    // The first drag's answer arrives late: it sends nothing of its own.
+    await answer();
+    flush();
+    expect(sent).toHaveLength(3);
   });
 
   it('is a click below the slop and sends nothing', () => {
@@ -73,15 +129,6 @@ describe('the board', () => {
     expect(stepFor('ArrowLeft')).toEqual({ dx: -1, dy: 0 });
     expect(stepFor('ArrowDown')).toEqual({ dx: 0, dy: 1 });
     expect(stepFor('a')).toBeNull();
-  });
-
-  it('shifts the dragged view or, panning, every view', () => {
-    const view = { target: { kind: 'view', view: 2 }, dx: 5, dy: 6, moved: true } as const;
-    expect(offsetOf(2, view)).toEqual({ x: 5, y: 6 });
-    expect(offsetOf(3, view)).toEqual({ x: 0, y: 0 });
-    expect(offsetOf(3, { target: { kind: 'pan' }, dx: -1, dy: 2, moved: true })).toEqual({ x: -1, y: 2 });
-    expect(offsetOf(3, { target: { kind: 'pan' }, dx: -1, dy: 2, moved: false })).toEqual({ x: 0, y: 0 });
-    expect(offsetOf(3, null)).toEqual({ x: 0, y: 0 });
   });
 
   it('lists each view with its strip text, session colour and whether it is active', () => {
@@ -224,5 +271,8 @@ describe('the engine badge of a board label', () => {
     expect(item).toMatchObject({ engine: 'firefox', engineLabel: 'Firefox', engineReason: 'Firefox was not found' });
     expect(engineReasonOf(first.id, undefined)).toBeNull();
     expect(engineReasonOf(first.id, [{ ...state.externals[0]!, status: 'running' }])).toBeNull();
+    // An iOS view's badge says iOS (RB-095-04).
+    first.engine = 'ios';
+    expect(boardItems(state)[0]).toMatchObject({ engine: 'ios', engineLabel: 'iOS' });
   });
 });

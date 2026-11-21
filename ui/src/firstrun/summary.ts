@@ -1,7 +1,7 @@
 // The setup wizard's last step (RB-091-05): what was done, as sentences, and where each thing
 // lives in the settings afterwards.
 
-import type { SetupAnswer, SetupLayout } from '../ipc/protocol';
+import type { McpClient, SetupAnswer, SetupLayout } from '../ipc/protocol';
 import type { ThemeSetting } from '../theme/theme';
 import type { PluginsDone } from './plugins';
 
@@ -12,10 +12,17 @@ export interface BasicsChoice {
   sync: boolean | null;
 }
 
+/** The AI agent step switched MCP on for `client` and wrote `files` files (RB-091-09). */
+export interface AgentDone {
+  client: McpClient;
+  files: number;
+}
+
 export interface SetupSummary {
   plugins: PluginsDone | null;
   project: Extract<SetupAnswer, { op: 'written' }> | null;
   basics: BasicsChoice | null;
+  agent?: AgentDone | null;
 }
 
 export interface Line {
@@ -34,7 +41,7 @@ const LAYOUT_LINES: Record<SetupLayout, string> = {
   canvas: 'firstrun.done.layout.canvas',
 };
 
-export const EMPTY_SUMMARY: SetupSummary = { plugins: null, project: null, basics: null };
+export const EMPTY_SUMMARY: SetupSummary = { plugins: null, project: null, basics: null, agent: null };
 
 /** One sentence per step that did something; one that says nothing was changed otherwise. */
 export function summaryLines(summary: SetupSummary): Line[] {
@@ -42,7 +49,11 @@ export function summaryLines(summary: SetupSummary): Line[] {
   if (summary.plugins !== null) {
     const installed = summary.plugins.results.filter((result) => result.ok).length;
     const failed = summary.plugins.results.length - installed;
-    lines.push({ key: 'firstrun.done.plugins', args: { count: installed } });
+    // Loaded live at the very first start (RB-091-08), else at the next start; "Continue without
+    // plugins" installed none and says nothing of it.
+    if (installed > 0) {
+      lines.push({ key: summary.plugins.restart ? 'firstrun.done.plugins' : 'firstrun.done.plugins_live', args: { count: installed } });
+    }
     if (failed > 0) lines.push({ key: 'firstrun.done.plugins_failed', args: { count: failed } });
     if (summary.plugins.removed.length > 0) {
       lines.push({ key: 'firstrun.done.plugins_removed', args: { count: summary.plugins.removed.length } });
@@ -56,6 +67,10 @@ export function summaryLines(summary: SetupSummary): Line[] {
     if (summary.basics.layout !== null) lines.push({ key: LAYOUT_LINES[summary.basics.layout] });
     if (summary.basics.sync !== null) lines.push({ key: summary.basics.sync ? 'firstrun.done.sync_on' : 'firstrun.done.sync_off' });
   }
+  if (summary.agent !== null && summary.agent !== undefined) {
+    lines.push({ key: 'firstrun.done.mcp' });
+    if (summary.agent.files > 0) lines.push({ key: 'firstrun.done.mcp_files', args: { count: summary.agent.files } });
+  }
   return lines.length > 0 ? lines : [{ key: 'firstrun.done.nothing' }];
 }
 
@@ -64,5 +79,6 @@ export const SETTINGS_PLACES: readonly { labelKey: string; key: string; tab: str
   { labelKey: 'firstrun.done.where.plugins', key: 'plugins', tab: 'catalog' },
   { labelKey: 'firstrun.done.where.project', key: 'startUrl', tab: null },
   { labelKey: 'firstrun.done.where.theme', key: 'ui.theme', tab: null },
+  { labelKey: 'firstrun.done.where.mcp', key: 'mcp.client', tab: null },
   { labelKey: 'firstrun.done.where.wizard', key: 'ui.firstRunWizard', tab: null },
 ];

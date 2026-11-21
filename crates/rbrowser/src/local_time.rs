@@ -37,13 +37,13 @@ pub fn on_user_settings_changed(core: &Core) {
 /// zone's at that instant (so daylight saving time counts; 0 when the system names no zone), 0
 /// for UTC.
 pub fn offset_in(zone: FileNameTime, secs: u64) -> i32 {
-    use chrono::TimeZone as _;
     match zone {
         FileNameTime::Utc => 0,
         FileNameTime::Local => i64::try_from(secs)
             .ok()
-            .and_then(|secs| chrono::Local.timestamp_opt(secs, 0).single())
-            .map_or(0, |time| time.offset().local_minus_utc()),
+            .and_then(|secs| time::OffsetDateTime::from_unix_timestamp(secs).ok())
+            .and_then(|instant| time::UtcOffset::local_offset_at(instant).ok())
+            .map_or(0, time::UtcOffset::whole_seconds),
     }
 }
 

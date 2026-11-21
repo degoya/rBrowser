@@ -92,6 +92,7 @@ fn the_config_is_camel_case() {
         hover_throttle_ms: 100,
         scroll_debounce_ms: 150,
         scroll_mode: AgentScrollMode::Wheel,
+        record: None,
     };
     let json = serde_json::to_value(config).expect("serializes");
     assert_eq!(json["hoverThrottleMs"], 100);
@@ -207,4 +208,62 @@ fn the_point_command_is_tagged_point() {
     let json = serde_json::to_value(&command).expect("serializes");
     assert_eq!(json["cmd"], "point");
     assert_eq!(json["target"]["element"]["path"], "main");
+}
+
+#[test]
+fn a_recording_view_gets_its_record_wishes_and_others_none() {
+    let record = AgentRecord {
+        menu_hovers: true,
+        hover_dwell_ms: 250,
+        record_pointer: AgentRecordPointer::Menu,
+    };
+    let json = serde_json::to_value(record).expect("serializes");
+    assert_eq!(
+        json,
+        json!({ "menuHovers": true, "hoverDwellMs": 250, "recordPointer": "menu" })
+    );
+    // A configuration without a recording carries no `record` (RB-090-87).
+    let plain: AgentConfig = serde_json::from_value(json!({
+        "active": true,
+        "capture": { "click": true, "hover": true, "scroll": true, "keyboard": true,
+                     "input": true, "forms": true, "focus": false },
+        "hoverThrottleMs": 100
+    }))
+    .expect("parses");
+    assert_eq!(plain.record, None);
+    assert!(
+        serde_json::to_value(plain)
+            .expect("writes")
+            .get("record")
+            .is_none()
+    );
+}
+
+#[test]
+fn an_event_carries_its_pointer_path_and_older_agents_none() {
+    let text = r#"{"kind":"event","v":1,"top":true,"seq":1,"time":0,
+        "event":{"type":"hover","target":{"element":{"kind":"css","path":"nav > a"},
+        "offset":{"x":0.5,"y":0.5}},"menu":true},
+        "path":[{"x":10,"y":20,"t":0},{"x":40,"y":22,"t":32}]}"#;
+    let AgentMessage::Event(event) = parse_message(text).expect("a valid message") else {
+        panic!("an event");
+    };
+    assert_eq!(
+        event.path,
+        [
+            PathPoint { x: 10, y: 20, t: 0 },
+            PathPoint {
+                x: 40,
+                y: 22,
+                t: 32
+            }
+        ]
+    );
+    let older = r#"{"kind":"event","v":1,"top":true,"seq":1,"time":0,
+        "event":{"type":"hover","target":{"element":{"kind":"css","path":"a"},
+        "offset":{"x":0.5,"y":0.5}}}}"#;
+    let AgentMessage::Event(event) = parse_message(older).expect("a valid message") else {
+        panic!("an event");
+    };
+    assert!(event.path.is_empty());
 }

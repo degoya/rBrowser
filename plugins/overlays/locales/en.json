@@ -185,6 +185,25 @@
             "label": "Tab order includes iframes",
             "description": "Walks into same-origin iframes; off, every iframe is one stop (a cross-origin iframe always is).",
             "help": "Walks into same-origin iframes and numbers their stops; off, every iframe is one stop, as a cross-origin iframe always is."
+          },
+          "readingOrder": {
+            "label": "Tab order reading arrows",
+            "description": "Draws the reading order (the source order) as dashed arrows beside or instead of the tab order lines, and frames each element shown out of its place.",
+            "help": "Draws the reading order - the order of the source, which screen readers follow - as dashed violet arrows between the tab stops, beside the tab order lines or instead of them. An element that shows before the one before it in the source (CSS order, grid placement, a reversed flex direction, absolute positioning) is framed in pink, the arrow to it too (WCAG 1.3.2). Right-to-left content reads from the right. Stops nobody sees and fixed or sticky ones are left out."
+          },
+          "readingTolerancePx": {
+            "label": "Reading order tolerance (px)",
+            "description": "Neighbouring elements overlapping by up to this many CSS px still count as one before the other (0 to 50).",
+            "help": "Neighbouring elements overlapping by up to this many CSS px still count as one before the other in the reading order (0 to 50); the outline plugin's reading order check uses the same rule."
+          }
+        },
+        "option": {
+          "tabOrder": {
+            "readingOrder": {
+              "off": "Off",
+              "beside": "Beside the tab order",
+              "instead": "Instead of the tab order lines"
+            }
           }
         }
       },

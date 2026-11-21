@@ -115,6 +115,15 @@ describe('the Recorder panel (RB-090-60)', () => {
     expect(wrapper.find('[data-testid="recorder-start"]').exists()).toBe(false);
   });
 
+  it('stops the running recording where it was started (RB-090-94)', async () => {
+    const { wrapper, asked } = await mounted({ ...LIST, recordingNow: 'checkout' });
+    const stop = wrapper.get('[data-testid="recorder-stop"]');
+    expect(stop.text()).toBe('Stop recording');
+    await stop.trigger('click');
+    await settle();
+    expect(asked).toContainEqual({ type: 'runCommand', id: 'recorder.stop' });
+  });
+
   it('shows a recording\'s steps with kind, element, value and onlyIn', async () => {
     const { wrapper } = await mounted();
     await pick(wrapper, 'login');

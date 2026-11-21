@@ -233,7 +233,26 @@
         "hide_other": "Hide the other variant",
         "other": "Not shown: {layout}",
         "open_source": "Open the rule's source",
-        "count": "{count, plural, one {# platform} other {# platforms}}"
+        "count": "{count, plural, one {# platform} other {# platforms}}",
+        "serp": {
+          "title": "Search result",
+          "checked": "Pixel limits as checked on {date}; the search changes them without notice.",
+          "open_source": "Open where the search says it cuts by width",
+          "noindex": "The page says noindex: it does not show in the search like this.",
+          "device": {
+            "desktop": "Desktop ({width} px)",
+            "mobile": "Mobile ({width} px on a 360 px phone)"
+          },
+          "no_title": "No title: the search makes one from the page.",
+          "no_description": "No meta description: the search shows a passage of the page instead.",
+          "title_measure": "Title: {chars, plural, one {# character} other {# characters}}, {width} px of {limit} px.",
+          "description_measure": "Description: {chars, plural, one {# character} other {# characters}}, {width} px of {limit} px.",
+          "cut": "Cut: {shown} of {count, plural, one {# character} other {# characters}} show; the whole text is in the tooltip.",
+          "favicon_none": "No favicon: the search shows a neutral globe.",
+          "favicon_failed": "The favicon could not be loaded ({reason}); the search shows a neutral globe.",
+          "favicon_large": "The favicon is too large to show here ({bytes, plural, one {# byte} other {# bytes}}).",
+          "favicon_format": "The favicon is no PNG, JPEG, GIF, WebP or ICO image the panel can show."
+        }
       },
       "panels": {
         "seo": "SEO"
@@ -575,12 +594,23 @@
               "threads": "Threads",
               "signal": "Signal"
             }
+          },
+          "serpPreview": {
+            "both": "Desktop and mobile",
+            "desktop": "Desktop",
+            "mobile": "Mobile",
+            "off": "Off"
           }
+        },
+        "serpPreview": {
+          "description": "The search result previews the SEO panel shows: Desktop and mobile, Desktop, Mobile or Off.",
+          "help": "The SEO panel shows the page as a Google search result on a desktop and on a phone, title and description cut at the search's pixel widths. Off hides them; the tool seo_social_preview answers the result either way.",
+          "label": "Search result preview"
         }
       },
       "tools": {
         "check": "Checks a page, a small crawl of its site, or its hreflang set for SEO: status, redirects, indexability, canonical, title, description, headings, lang, viewport, charset, Open Graph, JSON-LD, the sitemap and alt texts; compares the raw HTML with the rendered page and writes a report to .rbrowser/out/seo/. scope hreflang checks the language set from the head, the Link header and the sitemap (codes, x-default, self reference, return links as a matrix, targets, languages); parity true compares title, h1, canonical, hreflang, structured data and main text across the views. It also checks the share image and Twitter card, the site's llms.txt and security.txt, Microdata and RDFa, and the order of the raw head. Arguments: url (default: the view's page), scope page, crawl or hreflang, maxPages, parity, groups (rule groups to run, such as wellknown, social, microdata, head).",
-        "social_preview": "Shows how Facebook, X, LinkedIn, Slack, WhatsApp, Discord, iMessage and the other chosen platforms (Telegram, Microsoft Teams, Mastodon, Bluesky, Threads, Signal) preview a shared link to a page: per platform the title and description as it cuts them (with the full text and the tag each came from), the card it shows (large, small or text only) by its published rule with the reason (layout, alternate, unsure when no rule is published or the image size is unknown, reason code and params, confidence and source), and the share image's real format and size, as a data: URI while the answer stays within budget. Built from the raw HTML, as the platforms' scrapers see it. Arguments: url (default: the target view's page), budget (the most bytes of the answer with its images, 4096 to 4194304; default 60000)."
+        "social_preview": "Shows how Facebook, X, LinkedIn, Slack, WhatsApp, Discord, iMessage and the other chosen platforms (Telegram, Microsoft Teams, Mastodon, Bluesky, Threads, Signal) preview a shared link to a page: per platform the title and description as it cuts them (with the full text and the tag each came from), the card it shows (large, small or text only) by its published rule with the reason (layout, alternate, unsure when no rule is published or the image size is unknown, reason code and params, confidence and source), and the share image's real format and size, as a data: URI while the answer stays within budget. Built from the raw HTML, as the platforms' scrapers see it. Arguments: url (default: the target view's page), budget (the most bytes of the answer with its images, 4096 to 4194304; default 60000). It also answers serp, the page's Google search result: title (<title>, else og:title) and description (meta description, else og:description; none: the search shows a passage of the page), site name (og:site_name, else the domain), the URL as a breadcrumb, noindex, the favicon (a data: URI within budget) and per device (desktop, mobile) the pixel width, font sizes and lines the search cuts the texts at (unverified)."
       }
     }
   }

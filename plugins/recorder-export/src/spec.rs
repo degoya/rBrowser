@@ -20,7 +20,8 @@ pub fn spec(request: &ExportRequest) -> Result<String, StepError> {
         base_url(request),
     )
     .paced(request.options.pace)
-    .least_pause(request.options.min_pause_ms);
+    .least_pause(request.options.min_pause_ms)
+    .sized(&recording.breakpoints);
     let body = render(&recording.steps, &mut context, 1)?;
     let mut out = format!(
         "// Exported by rBrowser (recorder-export) from the recording \"{}\".\n\
@@ -79,24 +80,21 @@ pub fn config(request: &ExportRequest) -> String {
     out
 }
 
-/// The base URL: the host's (the environment's origin), else the start URL's origin.
+/// The base URL: the host's (the environment's origin), else the start URL's origin - lower
+/// case, without user info and default port (`rb_util::url::origin_of`, RB-094-10).
 pub fn base_url(request: &ExportRequest) -> Option<String> {
     request
         .options
         .base_url
         .clone()
         .filter(|base| !base.is_empty())
-        .or_else(|| request.recording.start_url.as_deref().and_then(origin))
-}
-
-/// `scheme://authority` of an http(s) URL.
-fn origin(url: &str) -> Option<String> {
-    let (scheme, rest) = url.split_once("://")?;
-    if scheme != "http" && scheme != "https" {
-        return None;
-    }
-    let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
-    (!authority.is_empty()).then(|| format!("{scheme}://{authority}"))
+        .or_else(|| {
+            request
+                .recording
+                .start_url
+                .as_deref()
+                .and_then(rb_util::url::origin_of)
+        })
 }
 
 /// The projects: the host's, else the recording's breakpoints; unnamed and repeated names

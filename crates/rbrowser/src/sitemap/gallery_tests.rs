@@ -1,90 +1,88 @@
 use super::*;
 
-fn open() -> GalleryOpen {
-    let file = Path::new("C:\\work\\my shop\\.rbrowser\\out\\sitemap-capture\\r1\\index.html");
-    GalleryOpen::new("r1", file, "Gallery r1".to_owned())
+#[test]
+fn the_window_shows_the_gallery_page_of_the_shells_pages() {
+    let open = GalleryOpen::new("2026-11-11_10-00-00", "Gallery".to_owned()).expect("a plain id");
+    assert_eq!(open.run_id, "2026-11-11_10-00-00");
+    let page = "rbrowser://ui/settings.html#/sitemap-gallery?run=2026-11-11_10-00-00&open=";
+    assert!(open.url.starts_with(page), "{}", open.url);
+    assert!(crate::shell::is_shell_url(&open.url));
+    assert_eq!(open.title, "Gallery");
+    // The same run opened again gets another address: the page reads it again.
+    let again = GalleryOpen::new("2026-11-11_10-00-00", "Gallery".to_owned()).expect("a plain id");
+    assert_ne!(again.url, open.url);
 }
 
 #[test]
-fn the_window_loads_the_galleries_file_address_and_names_its_folder() {
-    let open = open();
-    assert_eq!(open.run_id, "r1");
-    assert_eq!(
-        open.url,
-        "file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/index.html"
-    );
-    assert_eq!(
-        open.folder,
-        "file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/"
-    );
-    assert_eq!(open.title, "Gallery r1");
+fn a_run_id_that_is_no_plain_name_opens_nothing() {
+    for id in ["../r1", "r1#x", "r1&run=r2", "", "r 1"] {
+        assert_eq!(GalleryOpen::new(id, String::new()), None, "{id}");
+    }
 }
 
 #[test]
-fn the_window_loads_only_what_lies_in_the_runs_folder() {
-    let open = open();
-    assert!(open.may_load(&open.url));
-    assert!(open.may_load(&format!("{}#page-2", open.url)));
-    // Chromium may spell the drive and the escapes its own way.
-    assert!(open.may_load("file:///c:/work/my shop/.rbrowser/out/sitemap-capture/r1/index.html"));
-    assert!(
-        open.may_load("file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/home/mobile.png")
-    );
-    assert!(
-        !open.may_load("file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r2/index.html")
-    );
-    assert!(
-        !open.may_load(
-            "file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/../r2/index.html"
-        )
-    );
-    assert!(!open.may_load(
-        "file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/%2e%2e/r2/index.html"
-    ));
-    assert!(
-        !open.may_load("file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r10/index.html")
-    );
-    assert!(!open.may_load("https://www.example.test/"));
-    assert!(!open.may_load("rbrowser://ui/"));
-}
-
-#[test]
-fn a_gallery_put_in_by_a_repository_reaches_nothing_outside_its_folder() {
-    // Every request of the window passes `may_load`, images included (security review,
-    // wave 090-w21): no SMB share (an NTLM hash), no web beacon, no other file.
-    let open = open();
-    assert!(!open.may_load("file://attacker/share/x.png"));
-    assert!(!open.may_load("file:////attacker/share/x.png"));
-    assert!(!open.may_load("http://beacon.test/x.gif"));
-    assert!(!open.may_load("data:image/png;base64,AAAA"));
-    assert!(!open.may_load("file:///C:/Users/me/.ssh/id_rsa"));
-    assert!(!open.may_load(
-        "file:///C:/work/my%20shop/.rbrowser/out/sitemap-capture/r1/..%5C..%5Csecret.txt"
-    ));
-}
-
-#[test]
-fn a_runs_gallery_is_its_index_file_once_written() {
+fn a_running_run_opens_in_the_window_before_its_index_file_is_written() {
+    // RB-090-88: the window reads `run.json`, a running run's too; only the system browser needs
+    // the `index.html` the plugin writes when the run ends.
     let root = tempfile::tempdir().expect("temp");
     let store = RunStore::open(root.path(), "r1", true)
         .expect("opens")
         .expect("made");
+    assert_eq!(
+        gallery_of(root.path(), "r1", GalleryOpensIn::Window).expect("opens"),
+        None
+    );
     assert!(matches!(
-        gallery_file(root.path(), "r1"),
+        gallery_of(root.path(), "r1", GalleryOpensIn::System),
         Err(RunError::NoGallery(id)) if id == "r1"
     ));
     store
         .write_file(GALLERY_FILE, b"<!doctype html>")
         .expect("written");
+    let file = store.dir().join(GALLERY_FILE);
+    for opened_in in [GalleryOpensIn::Window, GalleryOpensIn::System] {
+        assert_eq!(
+            gallery_of(root.path(), "r1", opened_in).expect("there"),
+            Some(file.clone())
+        );
+        assert!(matches!(
+            gallery_of(root.path(), "r9", opened_in),
+            Err(RunError::NotFound(id)) if id == "r9"
+        ));
+        assert!(gallery_of(root.path(), "../r1", opened_in).is_err());
+    }
+}
+
+#[test]
+fn a_folder_named_like_the_index_file_is_no_gallery() {
+    let root = tempfile::tempdir().expect("temp");
+    let store = RunStore::open(root.path(), "r1", true)
+        .expect("opens")
+        .expect("made");
+    std::fs::create_dir(store.dir().join(GALLERY_FILE)).expect("a folder");
     assert_eq!(
-        gallery_file(root.path(), "r1").expect("there"),
-        store.dir().join(GALLERY_FILE)
+        gallery_of(root.path(), "r1", GalleryOpensIn::Window).expect("opens"),
+        None
     );
     assert!(matches!(
-        gallery_file(root.path(), "r9"),
-        Err(RunError::NotFound(id)) if id == "r9"
+        gallery_of(root.path(), "r1", GalleryOpensIn::System),
+        Err(RunError::NoGallery(_))
     ));
-    assert!(gallery_file(root.path(), "../r1").is_err());
+}
+
+#[test]
+fn the_system_browser_without_an_index_file_tells_the_person_it_comes_at_the_end() {
+    let CoreToShell::Notification(notification) = at_end_notice("r1") else {
+        panic!("a notification");
+    };
+    assert_eq!(notification.level, NotificationLevel::Info);
+    assert_eq!(notification.message_key, "sitemap.notice.galleryAtEnd");
+    assert_eq!(notification.args["runId"], "r1");
+    // The link opens the setting that chooses the window, which shows a running run.
+    assert_eq!(
+        notification.settings_key.as_deref(),
+        Some("sitemap.galleryOpensIn")
+    );
 }
 
 #[test]
@@ -113,11 +111,24 @@ fn an_agent_opens_the_gallery_in_the_apps_window_only() {
 fn the_answer_names_the_run_the_file_and_where_it_opened() {
     let answer = GalleryAnswer {
         run_id: "r1".to_owned(),
-        gallery: "C:\\g\\index.html".to_owned(),
+        gallery: Some("C:\\g\\index.html".to_owned()),
         opened_in: GalleryOpensIn::Window,
     };
     assert_eq!(
         serde_json::to_value(answer).expect("json"),
         serde_json::json!({ "runId": "r1", "gallery": "C:\\g\\index.html", "openedIn": "window" })
+    );
+}
+
+#[test]
+fn a_running_runs_answer_has_no_gallery_file_yet() {
+    let answer = GalleryAnswer {
+        run_id: "r1".to_owned(),
+        gallery: None,
+        opened_in: GalleryOpensIn::Window,
+    };
+    assert_eq!(
+        serde_json::to_value(answer).expect("json"),
+        serde_json::json!({ "runId": "r1", "gallery": null, "openedIn": "window" })
     );
 }

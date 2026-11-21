@@ -22,8 +22,8 @@
 
 use std::path::Path;
 
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use time::OffsetDateTime;
 
 use crate::error::UpdateError;
 use crate::fetch::{BodyTooLarge, Fetcher, Url};
@@ -98,7 +98,7 @@ pub fn check_channel(
     sources: &Sources,
     channel: Channel,
     data: &Path,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<CheckReport, UpdateError> {
     if !gate.is_open() {
         return Err(UpdateError::Disabled);
@@ -117,7 +117,7 @@ pub fn check_channel_with(
     sources: &Sources,
     channel: Channel,
     data: &Path,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> CheckReport {
     let mut floors = Floors::load(data);
     let mut report = CheckReport::default();

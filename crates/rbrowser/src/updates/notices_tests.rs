@@ -1,4 +1,4 @@
-use rb_update::{Artifact, Channel, DateTime, Utc};
+use rb_update::{Artifact, Channel, OffsetDateTime};
 
 use super::*;
 
@@ -6,7 +6,7 @@ fn offered(artifact: bool) -> Offer {
     Offer {
         version: "0.9.0-beta.3".to_owned(),
         channel: Channel::Beta,
-        released_at: DateTime::<Utc>::from_timestamp(1_790_000_000, 0).expect("time"),
+        released_at: OffsetDateTime::from_unix_timestamp(1_790_000_000).expect("time"),
         notes: "- Self-update\n\n- Plugins leave the package\n".to_owned(),
         artifact: artifact.then(|| Artifact {
             platform: "windows".to_owned(),

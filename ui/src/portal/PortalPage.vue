@@ -3,6 +3,9 @@
 // and runs, the pairing QR code with its countdown, the limits of the replay on a device, and
 // the paired devices with "Disconnect". The QR code holds a one-time token; it is drawn from
 // the core's module rows, never from markup. The devices are a Nuxt UI `UTable` (RB-080-88).
+// Below, the presentation over the internet (RB-096-05, `PresentationSection.vue`), shown
+// whether the LAN portal may run or not. Off, the hint opens Settings at `portal.enabled`
+// (RB-094-21).
 import { computed, h, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumn } from '@nuxt/ui';
@@ -10,6 +13,8 @@ import UButton from '@nuxt/ui/components/Button.vue';
 import UTable from '@nuxt/ui/components/Table.vue';
 import type { IpcClient } from '../ipc/client';
 import type { PortalState } from '../ipc/protocol';
+import SettingLink from '../settings/SettingLink.vue';
+import PresentationSection from './PresentationSection.vue';
 import {
   clock,
   disconnectMessage,
@@ -95,9 +100,12 @@ onUnmounted(() => {
     <h1 class="text-lg font-semibold">{{ t('portal.panel.title') }}</h1>
     <p v-if="error" class="text-sm text-error" role="alert">{{ error }}</p>
     <template v-if="state">
-      <p v-if="!state.enabled" class="text-sm" data-testid="portal-disabled">
-        {{ t('portal.panel.disabled') }}
-      </p>
+      <div v-if="!state.enabled" class="flex flex-col items-start gap-1">
+        <p class="text-sm" data-testid="portal-disabled">
+          {{ t('portal.panel.disabled') }}
+        </p>
+        <SettingLink setting-key="portal.enabled" @open="run" />
+      </div>
       <template v-else>
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm" data-testid="portal-status">
@@ -171,6 +179,12 @@ onUnmounted(() => {
           </template>
         </UTable>
       </template>
+      <PresentationSection
+        v-if="state.presentation"
+        :presentation="state.presentation"
+        :now-ms="now"
+        @run="run"
+      />
     </template>
   </section>
 </template>

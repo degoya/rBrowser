@@ -113,3 +113,33 @@ fn a_status_message_may_carry_a_button_that_runs_a_command() {
         json!({ "command": "portal.add_asset_origin", "labelKey": "portal.offer.add" })
     );
 }
+
+/// RB-093-04: a message may carry a copy button beside its command's button; it names the
+/// report whose Markdown the status bar asks for, never the text itself, and without one the
+/// field is not written.
+#[test]
+fn a_status_message_may_carry_a_copy_button_that_names_a_report() {
+    let plain = StatusMessage::new(5, 1_700_000_000_000, notice(NotificationLevel::Success));
+    assert_eq!(plain.copy, None);
+    assert!(
+        serde_json::to_value(&plain)
+            .expect("serializes")
+            .get("copy")
+            .is_none()
+    );
+    let message = plain.with_copy(Some(StatusCopy {
+        label_key: "report.action.copy_markdown".into(),
+        report: "2026-11-20_14-03-07".into(),
+    }));
+    let value =
+        serde_json::to_value(CoreToShell::StatusMessage(message.clone())).expect("serializes");
+    assert_eq!(
+        value["copy"],
+        json!({ "labelKey": "report.action.copy_markdown", "report": "2026-11-20_14-03-07" })
+    );
+    assert_eq!(
+        serde_json::from_value::<StatusMessage>(value).expect("parses"),
+        message
+    );
+    assert_eq!(message.notification(), notice(NotificationLevel::Success));
+}

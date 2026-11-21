@@ -195,3 +195,87 @@ fn an_image_that_does_not_load_leaves_a_size_rule_unsure() {
         (&json!("large"), &json!("small"))
     );
 }
+
+/// RB-090-95: the search result of the page beside the cards - its texts, breadcrumb, `noindex`,
+/// the limits per device and the favicon inline, fetched once.
+#[test]
+fn the_answer_has_the_search_result_with_its_favicon_inline() {
+    let mut host = host(
+        r#"<title>Red shoes</title><meta name="description" content="Light and red.">
+<meta name="robots" content="noindex"><link rel="icon" href="/fav.png">"#,
+    );
+    host.responses.insert(
+        "https://shop.test/fav.png".to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "image/png".to_owned())],
+            body: png(32, 32),
+        },
+    );
+    let answer = answer(&mut host, r#"{"target": 4}"#);
+    let serp = &answer["serp"];
+    assert_eq!(serp["title"]["text"], "Red shoes");
+    assert_eq!(serp["description"]["source"], "description");
+    assert_eq!(serp["siteName"]["text"], "shop.test");
+    assert_eq!(
+        serp["breadcrumb"],
+        json!({ "host": "shop.test", "segments": ["p"] })
+    );
+    assert_eq!(serp["noindex"], true);
+    assert_eq!(serp["limits"]["desktop"]["width"], 600);
+    assert_eq!(serp["favicon"]["source"], "icon");
+    assert!(
+        serp["favicon"]["dataUri"]
+            .as_str()
+            .is_some_and(|uri| uri.starts_with("data:image/png;base64,"))
+    );
+    let favicons = host
+        .fetched
+        .iter()
+        .filter(|request| request.url.contains("fav"))
+        .count();
+    assert_eq!(favicons, 1);
+}
+
+/// The favicon comes before the share images in the budget: small, and shown by both results.
+#[test]
+fn the_favicon_is_inlined_first_and_a_share_image_over_the_rest_is_not() {
+    let mut host = host(r#"<meta property="og:image" content="https://shop.test/big.png">"#);
+    let mut big = png(1200, 630);
+    big.resize(ANSWER_BUDGET / 2, 0);
+    host.responses.insert(
+        "https://shop.test/big.png".to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "image/png".to_owned())],
+            body: big,
+        },
+    );
+    let mut icon = png(48, 48);
+    icon.resize(ANSWER_BUDGET / 4, 0);
+    host.responses.insert(
+        "https://shop.test/favicon.ico".to_owned(),
+        HttpResponse {
+            status: 200,
+            headers: vec![("content-type".to_owned(), "image/png".to_owned())],
+            body: icon,
+        },
+    );
+    let answer = answer(&mut host, "{}");
+    assert_eq!(answer["serp"]["favicon"]["source"], "default");
+    assert!(answer["serp"]["favicon"]["dataUri"].is_string());
+    assert_eq!(answer["images"][0]["tooLarge"], true);
+    assert!(answer.to_string().len() <= ANSWER_BUDGET);
+}
+
+#[test]
+fn a_page_that_does_not_load_still_has_a_search_result_without_texts() {
+    let mut host = host("");
+    host.responses.remove(PAGE);
+    let answer = answer(&mut host, r#"{"target": 4}"#);
+    let serp = &answer["serp"];
+    assert_eq!(serp["title"], Value::Null);
+    assert_eq!(serp["description"], Value::Null);
+    assert_eq!(serp["url"], PAGE);
+    assert_eq!(serp["favicon"]["status"], 404);
+}

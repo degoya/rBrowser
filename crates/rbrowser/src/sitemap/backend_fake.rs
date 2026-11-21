@@ -15,6 +15,9 @@ use crate::sitemap::backend::CdpRenderBackend;
 use crate::sitemap::render_views::{RenderView, RenderViewMade, RenderViews};
 use crate::sitemap::scripts;
 
+/// The window's resize of a render view among the browser's messages.
+pub(super) const RESIZE: &str = "window.resize";
+
 /// A target the fake browser lists.
 pub(super) struct Listed {
     pub(super) id: String,
@@ -174,6 +177,11 @@ pub(super) struct Window {
     pub(super) browser: Mutex<Weak<Scripted>>,
     pub(super) opened: Mutex<Vec<RenderView>>,
     pub(super) closed: Mutex<Vec<String>>,
+    /// Each resize: the marker, the width and the height (RB-090-88).
+    pub(super) resized: Mutex<Vec<(String, u32, u32)>>,
+    /// The browser paints no frame after a resize: its callbacks are kept, never called.
+    pub(super) no_frame: bool,
+    pub(super) unpainted: Mutex<Vec<RenderViewMade>>,
     /// The window cannot make a browser.
     pub(super) refuse: bool,
     /// The browser is made but never lists its marker.
@@ -220,6 +228,22 @@ impl RenderViews for Window {
             });
         }
         made(Ok(()));
+    }
+
+    fn resize(&self, marker: String, width: u32, height: u32, painted: RenderViewMade) {
+        // Among the browser's messages, so a test sees the order of resizes and CDP calls.
+        if let Some(browser) = lock(&self.browser).upgrade() {
+            lock(&browser.sent).push(json!({
+                "method": RESIZE,
+                "params": { "width": width, "height": height }
+            }));
+        }
+        lock(&self.resized).push((marker, width, height));
+        if self.no_frame {
+            lock(&self.unpainted).push(painted);
+        } else {
+            painted(Ok(()));
+        }
     }
 
     fn close(&self, marker: String) {

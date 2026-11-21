@@ -19,6 +19,8 @@ publish = false
 rb-plugin-api = { path = "../../crates/rb-plugin-api" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+# The URL and robots.txt helpers, shared with plugins/seo (RB-094-11).
+plugin-util = { path = "../plugin-util" }
 # A file source (`.xml.gz` handed in by the core) arrives as base64.
 base64 = "0.23.1"
 # gzip sitemaps: raw deflate in pure Rust; the gzip frame is read in src/gzip.rs.

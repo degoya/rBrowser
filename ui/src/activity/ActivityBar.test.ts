@@ -84,7 +84,9 @@ describe('the activity bar', () => {
     await settle();
     expect(mock.sent).toContainEqual({ type: 'runCommand', id: 'recorder.play' });
     expect(mock.sent).toContainEqual({ type: 'collapseActivity', activity: 'recorder', collapsed: true });
-    expect(wrapper.find('[data-testid="activity-bar"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-recorder"]').exists()).toBe(false);
+    // RB-094-13: the bar keeps its room, empty (`ui.activityBar.mode` always).
+    expect(wrapper.find('[data-testid="activity-bar"]').exists()).toBe(true);
   });
 
   it('is drawn only where the core made room, and not at all with indicators only', async () => {
@@ -115,7 +117,7 @@ describe('the room for the bar', () => {
   it('is asked for while something runs and given back after the last activity', async () => {
     const state = sampleState();
     state.video = { views: [1], startedAtMs: Date.now(), maxDurationSec: 600 };
-    const { wrapper, mock } = await mountWithShell(Room, { mock: { state } });
+    const { wrapper, mock } = await mountWithShell(Room, { mock: { state, settings: { 'ui.activityBar.mode': 'bar' } } });
     current = wrapper;
     await settle();
     expect(mock.sent).toContainEqual({ type: 'activityBar', place: 'top' });
@@ -124,6 +126,14 @@ describe('the room for the bar', () => {
     mock.emit({ type: 'state', ...structuredClone(mock.state) });
     await settle();
     expect(mock.sent.at(-1)).toEqual({ type: 'activityBar' });
+  });
+
+  // RB-094-13 (owner): a check showed and hid the bar, and every view jumped up and down.
+  it('is kept with the mode always, while nothing runs too', async () => {
+    const { wrapper, mock } = await mountWithShell(Room, { mock: { state: sampleState() } });
+    current = wrapper;
+    await settle();
+    expect(mock.sent.filter((message) => message.type === 'activityBar')).toEqual([{ type: 'activityBar', place: 'top' }]);
   });
 
   it('is asked for at the bottom when the settings say so, and never with indicators only', async () => {
@@ -149,5 +159,50 @@ describe('the room for the bar', () => {
     current = wrapper;
     await settle();
     expect(mock.sent).toContainEqual({ type: 'collapseActivity', activity: 'video', collapsed: false });
+  });
+
+  // RB-090-08: an activity that starts or ends without the reader acting is said once, by name;
+  // the region is there before its first word and never repeats a ticking state.
+  it('names the activities that start and end in a polite region that is always there', async () => {
+    const state = sampleState();
+    state.activityBar = { place: 'top' };
+    const { wrapper, mock } = await mountBar('top', state);
+    const region = () => wrapper.get('[data-testid="activity-announce"]');
+    expect(region().attributes('role')).toBe('status');
+    expect(region().text()).toBe('');
+    mock.state.sync.desynced = [{ view: 2, reason: 'notFound', selector: 'nav', event: 'click' }];
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('Running: Out of sync');
+    mock.state.recorder = { phase: 'recording', name: 'login', steps: 3 };
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('Running: Recorder, Out of sync');
+    mock.state.recorder = { phase: 'recording', name: 'login', steps: 4 };
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('Running: Recorder, Out of sync');
+    delete mock.state.recorder;
+    mock.state.sync.desynced = [];
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('Nothing running');
+  });
+
+  // Review w30: the page the bar is not granted to stays silent, so it never says idle while the
+  // other page draws a running activity.
+  it('keeps the region of a page without the bar silent', async () => {
+    const state = sampleState();
+    state.activityBar = { place: 'top' };
+    const { wrapper, mock } = await mountBar('bottom', state);
+    const region = () => wrapper.get('[data-testid="activity-announce"]');
+    mock.state.recorder = { phase: 'recording', name: 'login', steps: 3 };
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('');
+    delete mock.state.recorder;
+    mock.emit({ type: 'state', ...structuredClone(mock.state) });
+    await settle();
+    expect(region().text()).toBe('');
   });
 });

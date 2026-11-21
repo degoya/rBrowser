@@ -7,6 +7,7 @@
 //! Every method returns quickly: window work is posted to the CEF UI thread by the backend,
 //! CDP work runs as tasks on the tokio runtime.
 
+mod apply_queue;
 mod attach;
 pub mod focus_cycle;
 mod focused;
@@ -54,8 +55,11 @@ pub struct Host {
     runtime: Handle,
     state: Mutex<HostState>,
     events: broadcast::Sender<ViewEvent>,
-    /// Serialises sending metrics, so a later size never loses against an earlier one.
+    /// Serialises sending metrics, so a later size never loses against an earlier one; the
+    /// views share it for the permission grants of their browser context.
     apply: tokio::sync::Mutex<()>,
+    /// One latest-wins metrics worker per view ([`apply_queue`]).
+    applying: apply_queue::ApplyQueue,
     root: Mutex<Option<PathBuf>>,
     /// What the shell shows beside the views (`shell_state`, contract 0.1-w1b).
     shell: Mutex<shell_state::ShellState>,
@@ -85,6 +89,7 @@ impl Host {
             state: Mutex::new(HostState::default()),
             events,
             apply: tokio::sync::Mutex::new(()),
+            applying: apply_queue::ApplyQueue::default(),
             root: Mutex::new(None),
             shell: Mutex::new(shell_state::ShellState::default()),
             agents,
@@ -222,12 +227,14 @@ impl Host {
         }
     }
 
-    /// A load ended in `view`'s main frame. The marker load attaches the CDP session.
+    /// A load ended in `view`'s main frame. The marker load attaches the CDP session; the
+    /// first other one is the start-up time (RB-090-32).
     pub fn on_load_end(&self, view: ViewId, url: &str) {
         if nav::marker_view(url) == Some(view) {
             attach::spawn_attach(self, view);
             return;
         }
+        crate::perf::counters::first_view_loaded();
         self.update(view, |entry| {
             let ended = set_loading(entry, false);
             ended || url != entry.url
@@ -350,7 +357,7 @@ impl Host {
         let mut state = self.state();
         let mut next = state.clone();
         // A grid leaves a layout mode (RB-080-04).
-        next.mode = None;
+        placed::leave_mode(&mut next);
         let rebuilt = rebuild::rebuild_state(&mut next, layout)?;
         *state = next;
         drop(state);
@@ -409,16 +416,6 @@ impl Host {
             }
         }
         self.spawn_metrics(view, force);
-    }
-
-    fn spawn_metrics(&self, view: ViewId, force: bool) {
-        if let Some(host) = self.me.upgrade() {
-            self.runtime.spawn(async move {
-                if let Err(error) = attach::apply_metrics(&host, view, force).await {
-                    tracing::warn!(%view, %error, "device metrics not applied");
-                }
-            });
-        }
     }
 
     /// The text of the label strip of `view` ([`cell_label`]), which the canvas board draws

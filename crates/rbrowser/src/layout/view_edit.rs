@@ -27,8 +27,10 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
 use super::store;
-pub use super::view_add_size::{ADD_SIZE_CUSTOM, MAX_NAME_CHARS, add_breakpoint, breakpoint_id};
-pub use super::view_selection::{addable, base_grid, selection, take_preset_selection};
+pub use super::view_add_size::{
+    ADD_SIZE_CUSTOM, MAX_NAME_CHARS, add_breakpoint, add_engine_view, breakpoint_id,
+};
+pub use super::view_selection::{addable, addable_in, base_grid, selection, take_preset_selection};
 use crate::control::Core;
 
 /// Open a hidden breakpoint's view again.

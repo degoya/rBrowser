@@ -17,7 +17,7 @@ use rb_plugin_api::{HttpRequest, PluginHost};
 use serde::{Deserialize, Serialize};
 
 use crate::gzip::{GzipError, gunzip, is_gzip};
-use crate::robots::Robots;
+use crate::robots::{Robots, TOKEN};
 use crate::sitemap::{Entry, ParseError, Parsed, parse_any};
 use crate::url::Url;
 
@@ -346,7 +346,7 @@ impl Walk<'_> {
         let limit = MAX_ROBOTS_BYTES.min(self.limits.max_bytes);
         if let Ok((_, bytes)) = fetch(self.host, &url, self.limits.max_redirects, limit) {
             let text = String::from_utf8_lossy(&bytes);
-            self.found.robots = Some(Robots::parse(&text, &url));
+            self.found.robots = Some(Robots::parse(&text, &url, TOKEN));
         }
     }
 }

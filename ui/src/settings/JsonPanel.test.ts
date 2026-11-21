@@ -10,6 +10,7 @@ import { createShellI18n } from '../i18n';
 import type { SettingValue } from '../ipc/protocol';
 import JsonPanel from './JsonPanel.vue';
 import { scopeText } from './jsonView';
+import { unnamedFocusables } from '../test/keyboard';
 
 const values: SettingValue[] = [
   { key: 'sync.scroll', value: false, origin: 'local' },
@@ -94,5 +95,13 @@ describe('the JSON panel', () => {
     });
     await nextTick();
     expect(pre(wrapper).findAll('.json-key').length).toBeGreaterThan(0);
+  });
+
+  // RB-090-08: the scrolling text is a Tab stop, so it is a named region, not a bare <pre>.
+  it('makes its scrolling text a named region', () => {
+    const wrapper = mountPanel(values);
+    expect(pre(wrapper).attributes('role')).toBe('region');
+    expect(pre(wrapper).attributes('aria-label')).toBe('Settings as JSON');
+    expect(unnamedFocusables(wrapper.element)).toEqual([]);
   });
 });

@@ -29,6 +29,11 @@ fn sensitive_query_parameters_are_masked_and_the_rest_of_the_url_stays() {
     );
     assert_eq!(mask_url("https://a.test/p"), "https://a.test/p");
     assert_eq!(mask_url("https://a.test/p?flag"), "https://a.test/p?flag");
+    // RB-094-10: the fragment's tokens and the user info too.
+    assert_eq!(
+        mask_url("https://u:p@a.test/cb#access_token=t&x=1"),
+        "https://***@a.test/cb#access_token=***&x=1"
+    );
 }
 
 #[test]

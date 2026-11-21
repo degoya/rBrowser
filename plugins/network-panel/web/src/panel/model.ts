@@ -54,6 +54,8 @@ export interface Filters {
   type: string;
   status: string;
   differences: boolean;
+  /** An endpoint's key (RB-096-06): only its requests; '' for all. */
+  endpoint: string;
 }
 
 /** The arguments of `list` for the panel's filters. */
@@ -64,6 +66,7 @@ export function listArgs(filters: Filters): Record<string, unknown> {
   if (filters.type) args.types = [filters.type];
   if (filters.status && filters.status !== 'all') args.status = filters.status;
   if (filters.differences) args.differences = true;
+  if (filters.endpoint) args.endpoint = filters.endpoint;
   return args;
 }
 

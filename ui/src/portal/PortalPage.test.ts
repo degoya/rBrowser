@@ -78,6 +78,14 @@ describe('the Portal panel', () => {
     expect(wrapper.find('[data-testid="portal-toggle"]').exists()).toBe(false);
   });
 
+  // RB-094-21: the off hint names Settings > Security & Privacy > Portal and pairing - it opens there.
+  it('opens Settings at portal.enabled from the off hint', async () => {
+    const { wrapper, core } = await mountPortal(() => ({ enabled: false, running: false, devices: [] }));
+    await wrapper.get('[data-testid="setting-link-portal.enabled"]').trigger('click');
+    await settle();
+    expect(core.sent).toContainEqual({ type: 'openSettings', key: 'portal.enabled' });
+  });
+
   it('draws the QR code from its modules and lists the devices', async () => {
     const { wrapper } = await mountPortal(() => RUNNING);
     const path = wrapper.find('[data-testid="portal-qr"] path');
@@ -114,6 +122,19 @@ describe('the Portal panel', () => {
     await settle();
     expect(wrapper.find('[data-testid="portal-qr"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="portal-no-code"]').exists()).toBe(true);
+  });
+
+  it('shows the presentation over the internet beside a portal that is off (RB-096-05)', async () => {
+    const { wrapper, core } = await mountPortal(() => ({
+      enabled: false,
+      running: false,
+      devices: [],
+      presentation: { enabled: true, consented: true, phase: 'off', viewers: 0, maxViewers: 3 },
+    }));
+    expect(wrapper.find('[data-testid="portal-disabled"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="presentation-start"]').trigger('click');
+    await settle();
+    expect(core.sent).toContainEqual({ type: 'runCommand', id: 'portal.present.start', args: {} });
   });
 
   it('stops a running portal', async () => {

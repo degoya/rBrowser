@@ -14,7 +14,12 @@ interface Answer {
 }
 
 interface Clean {
-  prepare(options: { hide: boolean; selectors: string[]; freeze: boolean }): Promise<Answer>;
+  prepare(options: {
+    hide: boolean;
+    selectors: string[];
+    freeze: boolean;
+    mask?: boolean;
+  }): Promise<Answer>;
   undo(token: number): boolean;
 }
 
@@ -114,6 +119,67 @@ describe('capture clean', () => {
     expect(promo && getComputedStyle(promo).display).toBe('none');
     clean().undo(preview.token);
     expect(document.documentElement.outerHTML).toBe(before);
+  });
+
+  // RB-093-04: a bug report's screenshots black out the password fields, then put the page back.
+  it('masks the password fields with one rule and takes it away again', async () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<input id="pw" type="password" value="hunter22"><input id="shown" autocomplete="current-password">',
+    );
+    const page = document.documentElement.outerHTML;
+    const answer = await clean().prepare({ hide: false, selectors: [], freeze: false, mask: true });
+    const style = document.querySelector(`style[data-rbrowser-capture="${answer.token}"]`) as HTMLStyleElement;
+    const rules = Array.from(style.sheet?.cssRules ?? [], (rule) => rule.cssText);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toContain('password');
+    expect(rules[0]).toContain('transparent');
+    clean().undo(answer.token);
+    // The page comes back as it was; the memory of a password field stays (security review w27).
+    expect(document.documentElement.outerHTML).toBe(
+      page.replace('value="hunter22"', 'value="hunter22" data-rbrowser-was-password=""'),
+    );
+  });
+
+  // Security review w27: a show-password toggle turns the field into text without a hint - a
+  // field once seen as a password stays masked for the rest of the document.
+  it('masks a password field the page turned into text after it was seen', async () => {
+    document.body.insertAdjacentHTML('beforeend', '<input id="pw" type="password" value="hunter22">');
+    const first = await clean().prepare({ hide: false, selectors: [], freeze: false, mask: true });
+    clean().undo(first.token);
+    const field = document.getElementById('pw') as HTMLInputElement;
+    field.removeAttribute('data-rbrowser-was-password');
+    field.type = 'text';
+    await new Promise((done) => setTimeout(done, 0));
+    const shot = await clean().prepare({ hide: false, selectors: [], freeze: false, mask: true });
+    expect(field.matches('input[data-rbrowser-was-password]')).toBe(true);
+    const style = document.querySelector(`style[data-rbrowser-capture="${shot.token}"]`) as HTMLStyleElement;
+    expect(style.sheet?.cssRules[0]?.cssText).toContain('data-rbrowser-was-password');
+    clean().undo(shot.token);
+  });
+
+  it('masks the fields that name a secret for the capture alone', async () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<input id="a" name="userPassword"><input id="b" aria-label="Your PIN">' +
+        '<input id="c" placeholder="API token"><input id="d" autocomplete="one-time-code">' +
+        '<input id="e" name="client_secret"><input id="f" name="shipping"><input id="g" name="passport">',
+    );
+    const page = document.documentElement.outerHTML;
+    const answer = await clean().prepare({ hide: false, selectors: [], freeze: false, mask: true });
+    const masked = Array.from(document.querySelectorAll('input[data-rbrowser-mask]'), (input) => input.id);
+    expect(masked).toEqual(['a', 'b', 'c', 'd', 'e']);
+    const style = document.querySelector(`style[data-rbrowser-capture="${answer.token}"]`) as HTMLStyleElement;
+    expect(style.sheet?.cssRules[0]?.cssText).toContain('data-rbrowser-mask');
+    clean().undo(answer.token);
+    expect(document.documentElement.outerHTML).toBe(page);
+  });
+
+  it('adds no mask rule unless asked', async () => {
+    const answer = await clean().prepare({ hide: false, selectors: [], freeze: false });
+    const style = document.querySelector(`style[data-rbrowser-capture="${answer.token}"]`) as HTMLStyleElement;
+    expect(style.sheet?.cssRules).toHaveLength(0);
+    clean().undo(answer.token);
   });
 
   it('removes a lost preparation style by its token', () => {

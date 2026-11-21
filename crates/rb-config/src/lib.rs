@@ -18,20 +18,25 @@ mod activity_bar_settings;
 pub mod allowed;
 mod annotate;
 mod automation;
+mod basic_auth;
 pub mod bookmark_paths;
 pub mod bookmarks;
 mod breakpoint;
 pub mod breakpoint_refs;
+mod bug_report;
 mod cell_label_settings;
+mod clock_settings;
 mod devices;
 mod dirs;
 mod discover;
 mod emulation_extras;
 mod emulation_settings;
+mod engine_compare;
 mod env_compare;
 mod error;
 mod extension_settings;
 mod file_name_time;
+mod findings_export;
 mod framework_devtools;
 mod jsonio;
 mod layout_mode_settings;
@@ -42,8 +47,10 @@ mod merge;
 mod migrate;
 mod model;
 mod new_view_size_settings;
+mod notification_settings;
 mod open_links;
 mod page_api;
+mod page_locale;
 mod page_zoom_settings;
 mod palette;
 mod panel_settings;
@@ -57,15 +64,23 @@ mod shared_settings;
 mod sitemap;
 mod status_bar_settings;
 mod sync_config;
+mod title_bar_settings;
 mod toolbar_settings;
 pub mod trust;
 mod ui_theme;
+mod user_android;
 mod user_automation;
 mod user_cdp;
 mod user_engines;
 mod user_file;
+mod user_ios;
 mod user_logs;
+mod user_mcp;
 mod user_portal;
+mod user_presentation;
+mod user_reload;
+mod user_report;
+mod user_safari;
 mod user_settings;
 mod user_shortcuts;
 mod user_sitemap;
@@ -88,16 +103,21 @@ pub use activity_bar_settings::{
     ActivityBarMode, ActivityBarPosition, ActivityBarSettings, ActivityBarShow,
 };
 pub use automation::{
-    AutomationConfig, LocatorPreference, PlaybackPace, RecordHover, RecorderConfig,
+    AutomationConfig, LocatorPreference, PlaybackPace, RecordHover, RecordPointer, RecorderConfig,
     RecorderExportConfig,
 };
+pub use basic_auth::BasicAuthConfig;
 pub use bookmarks::{Bookmark, BookmarkTarget, ResolvedBookmark};
 pub use breakpoint::{
     Breakpoint, ColorGamut, ColorScheme, Contrast, DeviceKind, DevicePreset, EmulationFields,
     EngineKind, ForcedColors, MediaFeatures, MediaType, NetworkConditions, NetworkPreset,
     NetworkThrottle, Orientation, SafeAreaInsets, TIMEZONES, Viewport,
 };
+pub use bug_report::{BugReportConfig, ReportPart};
 pub use cell_label_settings::{CellAddress, CellLabelSettings};
+pub use clock_settings::{
+    ANIMATION_RATE_CHOICES, ClockUserSettings, DEFAULT_ANIMATION_RATES, DEFAULT_ANIMATION_STEP_MS,
+};
 pub use devices::{BUILTIN_DEVICES_FILE, builtin_devices, effective_devices};
 pub use dirs::{
     LOCAL_APP_DIR, PORTABLE_DATA_DIR, PORTABLE_LOCAL_DIR, PORTABLE_MARKER, local_dir,
@@ -111,10 +131,12 @@ pub use emulation_settings::{
     DEFAULT_CPU_THROTTLING, DEFAULT_GEOLOCATION_PRESET, DEFAULT_TIMEZONE, EmulationUserSettings,
     GeolocationPreset, geolocation_preset, geolocation_presets,
 };
+pub use engine_compare::EngineCompareConfig;
 pub use env_compare::EnvCompareConfig;
 pub use error::{ConfigError, ConfigIssue, MigrationNote};
 pub use extension_settings::{ChromiumExtensionSettings, UnpackedExtension};
 pub use file_name_time::FileNameTime;
+pub use findings_export::{FindingsExportFormat, FindingsExportSettings, FindingsFailOn};
 pub use framework_devtools::{FrameworkDevtoolsMode, FrameworkDevtoolsSettings};
 pub use jsonio::{ConfigFile, GITIGNORE, read_json, to_json_string, write_config_file, write_json};
 pub use layout_mode_settings::{LayoutModeSettings, MinimapPosition, PresetFile, SPLIT_STEP_RANGE};
@@ -132,8 +154,13 @@ pub use model::{
     SeoConfig, SlugStrategy, SyncConfig, VisualConfig, Zoom,
 };
 pub use new_view_size_settings::NewViewSizeSettings;
+pub use notification_settings::NotificationSettings;
 pub use open_links::OpenLinksIn;
 pub use page_api::{BusConfig, PageApiConfig};
+pub use page_locale::{
+    DEFAULT_PSEUDO_FACTOR, PSEUDO_FACTOR_RANGE, PseudoLocaleSettings, TextDirection,
+    clamp_pseudo_factor,
+};
 pub use page_zoom_settings::{PageZoomSettings, ViewsSettings};
 pub use palette::PaletteSettings;
 pub use panel_settings::{
@@ -154,29 +181,40 @@ pub use sitemap::SitemapConfig;
 pub use status_bar_settings::{
     MAX_HISTORY_SIZE, MAX_INFO_TIMEOUT_SEC, MIN_HISTORY_SIZE, StatusBarSettings,
 };
+pub use title_bar_settings::TitleBarSettings;
 pub use toolbar_settings::{ToolbarOverflow, ToolbarSettings};
+pub use user_android::AndroidSettings;
 pub use user_automation::{
     AutomationSettings, DEFAULT_FLOWS_DIR, FlowSettings, HiddenViews, RUN_LAYOUTS,
 };
 pub use user_engines::{CookieSettings, ExternalWindowSettings, FirefoxSettings, WebkitSettings};
+pub use user_ios::IosSettings;
+pub use user_report::UserReportSettings;
+pub use user_safari::SafariSettings;
 pub use user_sitemap::{GalleryOpensIn, UserSitemapSettings};
 // The plugin catalogue's settings (RB-091-01).
 pub use plugin_settings::{CatalogRepository, CatalogSettings};
 pub use user_file::settings_path_for;
 pub use user_portal::{MAX_DEVICES, MAX_PAIRING_TTL_SEC, MIN_PAIRING_TTL_SEC, PortalSettings};
+// The portal over the internet (RB-096-05).
+pub use user_presentation::{
+    MAX_LINK_TTL_SEC, MAX_VIEWERS, MIN_LINK_TTL_SEC, PresentationSettings,
+};
 pub use user_settings::{
     BreakpointShortcutSettings, CdpSettings, ChromiumSettings, DeviceSettings, DevtoolsMode,
-    DevtoolsSettings, EngineSettings, LogSettings, McpSettings, NewViewModifier, PluginId,
-    PluginSettings, ShortcutSettings, Theme, TrustedPluginKey, UiSettings, UpdateAutoInstall,
-    UpdateChannel, UpdateCheck, UpdateSettings, UserReloadSettings, UserSettings,
-    WslNetworkingMode, WslSettings,
+    DevtoolsSettings, EngineSettings, LogSettings, McpClient, McpSettings, NewViewModifier,
+    PluginId, PluginSettings, ShortcutSettings, Theme, TrustedPluginKey, UiSettings,
+    UpdateAutoInstall, UpdateChannel, UpdateCheck, UpdateSettings, UserReloadSettings,
+    UserSettings, WslNetworkingMode, WslSettings,
 };
 pub use user_view::{
-    BookmarkSettings, FocusModeSettings, GridViewSettings, SettingsWindowSettings, StartupSettings,
+    BookmarkSettings, FocusModeSettings, GridViewSettings, SettingsWindowSettings, StartupRestore,
+    StartupSettings,
 };
 pub use user_vitals::{ResourcesSettings, VitalThreshold, VitalThresholds, VitalsSettings};
 pub use validate::{
-    ASSET_ORIGIN_KEY, DEFAULT_SESSION, ENVIRONMENT_URL_KEY, START_URL_KEY, check, is_http_origin,
+    ASSET_ORIGIN_KEY, DEFAULT_SESSION, ENVIRONMENT_URL_KEY, MAX_BREAKPOINT_SIZE, START_URL_KEY,
+    check, is_http_origin,
 };
 pub use video_settings::{ToolsSettings, VideoConfig};
 pub use view_footer_settings::{FooterAlign, FooterField, FooterWrap, ViewFooterSettings};
@@ -277,12 +315,12 @@ pub fn migrate(value: Value) -> Result<(Value, Vec<MigrationNote>), ConfigError>
 /// The JSON schema of the project config, generated from the types and annotated with the
 /// settings structure (the source of `schema/config.v1.json`).
 pub fn project_schema() -> schemars::Schema {
-    schema::schemas().0
+    schema::cached().0.clone()
 }
 
 /// The JSON schema of the user settings (the source of `schema/settings.v1.json`).
 pub fn user_settings_schema() -> schemars::Schema {
-    schema::schemas().1
+    schema::cached().1.clone()
 }
 
 #[cfg(test)]

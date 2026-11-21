@@ -204,3 +204,62 @@ fn a_required_checkbox_is_checked() {
         Fill::Check { checked: true }
     );
 }
+
+#[test]
+fn a_consent_checkbox_is_checked_with_every_seed() {
+    // RB-094-22: a privacy or terms box a page asks for without `required` (it enables the
+    // submit button instead) is checked in a valid fill, never left to chance.
+    for (name, label) in [
+        ("privacy", ""),
+        ("accept_terms", ""),
+        ("", "Datenschutzerklaerung"),
+        ("gdpr", ""),
+        ("", "I consent to being contacted"),
+    ] {
+        let mut field = input("checkbox");
+        field.name = name.to_owned();
+        field.label = label.to_owned();
+        for seed in 0..40 {
+            assert_eq!(
+                valid(&field, Kind::Checkbox, &Ctx::new(seed, Lang::En)),
+                Fill::Check { checked: true },
+                "{name}{label} seed {seed}"
+            );
+        }
+    }
+    // A newsletter or marketing box is no consent the form needs, whatever else it says.
+    for (name, label) in [
+        ("newsletter", ""),
+        ("accept-newsletter", ""),
+        ("marketing_consent", ""),
+        ("", "I accept to receive offers by email"),
+    ] {
+        let mut news = input("checkbox");
+        news.name = name.to_owned();
+        news.label = label.to_owned();
+        assert!(
+            by_chance(&news, true),
+            "{name}{label} stays left to the seed"
+        );
+    }
+}
+
+/// Whether `field` is ticked by some seeds and not by others.
+fn by_chance(field: &Field, tick_consent: bool) -> bool {
+    let checked = (0..40)
+        .filter(|seed| {
+            let mut ctx = Ctx::new(*seed, Lang::En);
+            ctx.tick_consent = tick_consent;
+            valid(field, Kind::Checkbox, &ctx) == Fill::Check { checked: true }
+        })
+        .count();
+    checked > 0 && checked < 40
+}
+
+#[test]
+fn a_consent_checkbox_is_left_to_the_seed_with_the_setting_off() {
+    let mut field = input("checkbox");
+    field.name = "privacy".to_owned();
+    assert!(by_chance(&field, false));
+    assert!(!by_chance(&field, true));
+}

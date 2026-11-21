@@ -13,6 +13,9 @@ use crate::breakpoint_keys::engine_pick::name_key;
 
 /// The engine's name and its window's state in one badge (RB-090-71).
 pub const BADGE_KEY: &str = "engines.external.badge";
+/// The most characters of a failed start's reason the strip shows; the tooltip has it whole
+/// (RB-094-20).
+pub const MAX_REASON: usize = 48;
 
 /// What every view's label strip shows beside its name, in the order of `views`; `in_badge`
 /// (`ui.engineBadge`) puts the engine's state into the engine badge.
@@ -51,16 +54,16 @@ fn status_id(status: ExternalStatus) -> &'static str {
     }
 }
 
-/// What a click on the engine's state does and the words for it: restart a stopped engine, open
-/// a closed window again, bring a window of its own to the front; `None` while there is nothing
+/// What a click on the engine's state does and the words for it: restart a stopped engine, try
+/// a failed start again, open a closed window again, bring a window of its own to the front; `None` while there is nothing
 /// to do (a window in its cell, one starting). The engine badge's menu offers it too.
 pub fn engine_click(external: &ExternalView) -> Option<(PieceAction, &'static str)> {
     let in_cell = external.status == ExternalStatus::Running && external.embedded;
     match external.status {
         ExternalStatus::Closed => Some((PieceAction::Restart, "engines.external.reopen")),
-        ExternalStatus::Exited | ExternalStatus::Failed => {
-            Some((PieceAction::Restart, "engines.external.restart"))
-        }
+        ExternalStatus::Exited => Some((PieceAction::Restart, "engines.external.restart")),
+        // A start that failed is tried again (RB-094-20).
+        ExternalStatus::Failed => Some((PieceAction::Restart, "engines.external.retry")),
         ExternalStatus::Running if !in_cell => Some((PieceAction::Raise, "engines.external.show")),
         _ => None,
     }
@@ -100,8 +103,21 @@ pub fn badge_words(own: (&str, &str), dimmed: bool, state: Option<&Piece>) -> (S
 pub fn engine_piece(external: &ExternalView, in_badge: bool) -> Piece {
     let engine = t(&name_key(external.engine));
     let in_cell = external.status == ExternalStatus::Running && external.embedded;
+    let failed_because = external
+        .reason
+        .as_deref()
+        .filter(|reason| external.status == ExternalStatus::Failed && !reason.trim().is_empty());
     let status = if in_cell {
         t("engines.external.status.embedded")
+    } else if let Some(reason) = failed_because {
+        // RB-094-20: the strip says why, cut; the tooltip has the whole reason.
+        t_with(
+            "engines.external.status.failedBecause",
+            &[(
+                "reason",
+                &rb_util::text::cut_ellipsis(reason.trim(), MAX_REASON),
+            )],
+        )
     } else {
         t(&format!(
             "engines.external.status.{}",

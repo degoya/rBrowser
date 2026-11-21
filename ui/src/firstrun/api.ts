@@ -43,11 +43,13 @@ export interface SetupApi {
   setTheme(theme: ThemeSetting): Promise<void>;
   runCommand(id: string, args?: Record<string, string>): Promise<void>;
   available(): Promise<Available>;
+  /** Installs `ids`; no id answers a pending first choice with nothing (RB-091-08). At the very
+   * first start the answer lets the plugins load live (`restart: false`). */
   installChosen(ids: string[], onProgress: (progress: InstallProgress) => void): Promise<InstallOutcome>;
   /** Takes installed plugins out of the choice (they stay out at later starts). */
   removeChosen(ids: string[]): Promise<InstallOutcome>;
-  /** The wizard's plugin step was skipped while the first choice is pending: the core installs
-   * its recommended set (`{ value: { chosen, restart } }`). */
+  /** The whole setup was skipped while the first choice is pending: the core installs its
+   * recommended set (`{ value: { chosen, restart } }`). Never the plugin step's own button. */
   applyRecommended(): Promise<void>;
 }
 

@@ -37,10 +37,11 @@ use serde_json::{Value, json};
 
 use super::ModeSpec;
 use super::canvas::Camera;
+use super::canvas_hold::Moved;
+use super::canvas_live::PACE;
 use super::canvas_ops::{Placement, canvas_index, canvas_state, mode_and_area, put, set_camera};
 use super::spec::ModeSession;
 use crate::control::Core;
-use crate::host::ui::PlacedView;
 use crate::host::{Host, label_height};
 use crate::ipc::Failure;
 
@@ -50,8 +51,9 @@ pub const BOARD_URL: &str = "rbrowser://ui/canvas-board.html";
 pub const MAX_DRAG: i32 = 200_000;
 
 /// What the board draws: each view's label strip and rect from the area's top-left corner -
-/// through the camera a gesture is trying out while it lasts, so a state sent then does not
-/// take the frames back from the views (RB-090-55).
+/// through the camera a gesture is trying out while it lasts, a dragged view at the place it
+/// tries out, so a state sent then does not take the frames back from the views (RB-090-55,
+/// RB-094-18).
 pub fn board_state(
     host: &Host,
     spec: &ModeSpec,
@@ -74,7 +76,13 @@ pub fn board_state_at(
     camera: Camera,
 ) -> BoardState {
     let sizes = host.mode_sizes();
-    let (items, _) = canvas_state(spec, &sizes, area);
+    let (mut items, _) = canvas_state(spec, &sizes, area);
+    if let Some(moved) = host.live_moved()
+        && let Some(item) = items.get_mut(moved.index)
+    {
+        item.x = moved.x;
+        item.y = moved.y;
+    }
     let slots = spec.canvas_slots(&items, &sizes, area, camera, label_height());
     let level = super::canvas_level::level_at(host, &items, camera).unwrap_or(0.0);
     let infos = host.cell_infos();
@@ -158,8 +166,10 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
     Some(done.map(|()| CoreToShell::Ack).map_err(failure))
 }
 
-/// The label of `view` dragged `dx`/`dy` screen DIP: `move` shows it there, `end` keeps it
-/// (snapped), `cancel` puts it back.
+/// The label of `view` dragged `dx`/`dy` screen DIP: `move` shows it there (its frame on the
+/// board, the view once the board painted it - `super::canvas_live::show_moved`, RB-094-18),
+/// `end` keeps it (snapped), `cancel` puts it back. The end and the cancel send the next state
+/// even when it is the one sent last: it ends the board's trial.
 pub fn drag(
     core: &Core,
     view: ViewId,
@@ -171,7 +181,7 @@ pub fn drag(
     let host = core.host();
     let (spec, area) = mode_and_area(host, LayoutMode::Canvas)?;
     let sizes = host.mode_sizes();
-    let (mut items, camera) = canvas_state(&spec, &sizes, area);
+    let (items, camera) = canvas_state(&spec, &sizes, area);
     let index = canvas_index(
         host,
         &spec,
@@ -181,22 +191,17 @@ pub fn drag(
     let (x, y) = moved((items[index].x, items[index].y), (dx, dy), camera);
     match phase {
         DragPhase::Move => {
-            items[index].x = whole(x);
-            items[index].y = whole(y);
-            let slots = spec.canvas_slots(&items, &sizes, area, camera, label_height());
-            if let Some(slot) = slots.get(index) {
-                host.place_live(
-                    area,
-                    vec![PlacedView {
-                        view,
-                        outer: slot.outer(),
-                        visible: slot.visible,
-                    }],
-                );
-            }
+            tracing::debug!(target: PACE, %view, dx, dy, "a label drag moved");
+            let trial = Moved {
+                index,
+                x: whole(x),
+                y: whole(y),
+            };
+            super::canvas_live::show_moved(core, view, trial)?;
         }
         DragPhase::End => {
             tracing::info!(%view, dx, dy, "a view was dragged on the canvas board");
+            crate::ipc::push::force_next(host);
             let zoom = items[index].zoom;
             put(
                 core,
@@ -209,42 +214,27 @@ pub fn drag(
                 },
             )?;
         }
-        DragPhase::Cancel => {
-            host.update_mode(|_| {});
-        }
+        DragPhase::Cancel => super::canvas_live::back(core),
     }
     Ok(())
 }
 
-/// The empty board dragged `dx`/`dy` screen DIP: the canvas follows the pointer - `move` live,
-/// `end` keeps the camera, `cancel` goes back.
+/// The empty board dragged `dx`/`dy` screen DIP: the canvas follows the pointer - `move` live
+/// (a camera on trial, `super::canvas_live::show`, RB-094-18), `end` keeps the camera, `cancel`
+/// goes back.
 pub fn pan(core: &Core, dx: i32, dy: i32, phase: DragPhase) -> Result<(), CommandError> {
     checked(dx, dy)?;
     let host = core.host();
     let (spec, area) = mode_and_area(host, LayoutMode::Canvas)?;
-    let sizes = host.mode_sizes();
-    let (items, camera) = canvas_state(&spec, &sizes, area);
+    let (_, camera) = canvas_state(&spec, &host.mode_sizes(), area);
     let panned = panned(camera, (dx, dy));
     match phase {
         DragPhase::Move => {
-            let slots = spec.canvas_slots(&items, &sizes, area, panned, label_height());
-            let placed = slots
-                .iter()
-                .zip(view_ids(host, &spec))
-                .filter_map(|(slot, view)| {
-                    Some(PlacedView {
-                        view: view?,
-                        outer: slot.outer(),
-                        visible: slot.visible,
-                    })
-                })
-                .collect();
-            host.place_live(area, placed);
+            tracing::debug!(target: PACE, dx, dy, "a board pan moved");
+            super::canvas_live::show(core, panned)?;
         }
         DragPhase::End => set_camera(core, panned),
-        DragPhase::Cancel => {
-            host.update_mode(|_| {});
-        }
+        DragPhase::Cancel => super::canvas_live::back(core),
     }
     Ok(())
 }

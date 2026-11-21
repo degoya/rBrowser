@@ -15,7 +15,8 @@
 //! | The Browsersync guard | [`BrowsersyncGuard`] |
 //! | Commands (`sync.toggle_view_navigation`; back, forward, navigate, reload) | [`commands`] |
 //! | What `views_list` and `sync_set` need (RB-030-01) | [`mcp`] |
-//! | The address field and the notice in the shell | `ui/src/sync/` |
+//! | A decoupled view's own address field (RB-092-03) | `crate::cell_info::edit`, `cef_app/address_field.rs` |
+//! | The Browsersync notice in the shell | `ui/src/sync/` |
 
 mod browsersync;
 pub mod commands;

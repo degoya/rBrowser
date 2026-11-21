@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rb_plugin_host::{MAX_MESSAGE_BYTES, parse_manifest};
 
 use super::*;
@@ -33,12 +35,12 @@ fn manifest() -> PluginManifest {
     parse_manifest(MANIFEST.as_bytes()).expect("a valid manifest")
 }
 
-fn files() -> BTreeMap<String, Vec<u8>> {
-    BTreeMap::from([
+fn files() -> Arc<BTreeMap<String, Vec<u8>>> {
+    Arc::new(BTreeMap::from([
         ("page/hello.js".to_owned(), b"1;".to_vec()),
         ("panel/index.html".to_owned(), b"<p>hi</p>".to_vec()),
         ("panel/app.js".to_owned(), b"2;".to_vec()),
-    ])
+    ]))
 }
 
 #[test]
@@ -90,12 +92,38 @@ fn only_panel_files_are_served_and_html_gets_the_csp_first() {
     );
     let html = &served["rbrowser://plugin/hello-panel/panel/index.html"];
     assert_eq!(html.mime, "text/html");
-    let text = String::from_utf8(html.bytes.clone()).expect("UTF-8");
+    let text = String::from_utf8(html.bytes().to_vec()).expect("UTF-8");
     assert!(text.starts_with("<meta http-equiv=\"Content-Security-Policy\" content=\""));
     assert!(text.ends_with("<p>hi</p>"));
     let script = &served["rbrowser://plugin/hello-panel/panel/app.js"];
     assert_eq!(script.mime, "text/javascript");
-    assert_eq!(script.bytes, b"2;");
+    assert_eq!(script.bytes(), b"2;");
+}
+
+/// RB-090-38: a panel's script or style is served from the plugin's own files, not from a copy;
+/// only an HTML file, which gets the CSP, has bytes of its own.
+#[test]
+fn panel_files_are_served_from_the_plugin_s_files_without_a_copy() {
+    let manifest = manifest();
+    let files = files();
+    let served = panel_files([(&manifest, &files)]);
+    let script = &served["rbrowser://plugin/hello-panel/panel/app.js"];
+    assert!(
+        std::ptr::eq(script.bytes().as_ptr(), files["panel/app.js"].as_ptr()),
+        "the very bytes"
+    );
+    assert_eq!(
+        Arc::strong_count(&files),
+        2,
+        "one handle for the script, none for the HTML"
+    );
+    let html = &served["rbrowser://plugin/hello-panel/panel/index.html"];
+    assert!(!std::ptr::eq(
+        html.bytes().as_ptr(),
+        files["panel/index.html"].as_ptr()
+    ));
+    drop(served);
+    assert_eq!(Arc::strong_count(&files), 1);
 }
 
 #[test]
@@ -277,4 +305,67 @@ fn the_wizard_requests_parse() {
     let skip: PanelRequest =
         serde_json::from_value(json!({ "op": "applyRecommended" })).expect("applyRecommended");
     assert_eq!(skip, PanelRequest::ApplyRecommended);
+}
+
+fn file(text: &str) -> PanelFile {
+    PanelFile::owned(text.as_bytes().to_vec(), "text/plain")
+}
+
+#[test]
+fn a_live_change_keeps_the_panel_files_it_did_not_change() {
+    // RB-092-06: CEF reads a panel file in place, so a file lives for the process; a new snapshot
+    // of the plugins reuses each file it holds alike and adds only the new or changed ones.
+    let first = kept_or_leaked(
+        BTreeMap::from([
+            ("rbrowser://plugin/a/panel/a.js".to_owned(), file("a")),
+            ("rbrowser://plugin/b/panel/b.js".to_owned(), file("b")),
+        ]),
+        &BTreeMap::new(),
+    );
+    let second = kept_or_leaked(
+        BTreeMap::from([
+            ("rbrowser://plugin/a/panel/a.js".to_owned(), file("a")),
+            (
+                "rbrowser://plugin/b/panel/b.js".to_owned(),
+                file("b, updated"),
+            ),
+            ("rbrowser://plugin/c/panel/c.js".to_owned(), file("c")),
+        ]),
+        &first,
+    );
+    let same = |url: &str| std::ptr::eq(first[url], second[url]);
+    assert!(same("rbrowser://plugin/a/panel/a.js"));
+    assert!(!same("rbrowser://plugin/b/panel/b.js"));
+    assert_eq!(
+        second["rbrowser://plugin/b/panel/b.js"].bytes(),
+        b"b, updated"
+    );
+    assert_eq!(second["rbrowser://plugin/c/panel/c.js"].bytes(), b"c");
+    // A plugin removed takes its files out of what is served.
+    let third = kept_or_leaked(BTreeMap::new(), &second);
+    assert!(third.is_empty());
+}
+
+/// Review w30: a file changed by a live change is leaked as a copy of its own, never with a
+/// handle on its plugin's whole files; the first set shares them.
+#[test]
+fn a_changed_file_after_a_live_change_keeps_no_handle_on_the_plugin_s_files() {
+    let manifest = manifest();
+    let files = files();
+    let first = kept_or_leaked(panel_files([(&manifest, &files)]), &BTreeMap::new());
+    let shared = Arc::strong_count(&files);
+    assert!(shared > 1, "the first set shares the files");
+    let mut changed = (*files).clone();
+    changed.insert("panel/app.js".to_owned(), b"3;".to_vec());
+    let changed = Arc::new(changed);
+    let second = kept_or_leaked(panel_files([(&manifest, &changed)]), &first);
+    assert_eq!(
+        second["rbrowser://plugin/hello-panel/panel/app.js"].bytes(),
+        b"3;"
+    );
+    assert_eq!(
+        Arc::strong_count(&changed),
+        1,
+        "no leaked handle on the new files"
+    );
 }

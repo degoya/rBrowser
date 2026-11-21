@@ -136,6 +136,21 @@ fn gallery_renders_a_run() {
     let html = answer["html"].as_str().expect("html");
     assert!(html.contains("index/mobile.png"));
     assert!(html.contains("HTTP 404"));
+    assert!(
+        html.contains(&format!(
+            ".sheet img{{width:{}px}}",
+            gallery::default_thumbnail_width()
+        )),
+        "no setting: the default width"
+    );
+    host.settings
+        .insert("thumbnailWidth".to_owned(), "640".to_owned());
+    let answer = call(&mut host, GALLERY, &args).expect("renders");
+    let html = answer["html"].as_str().expect("html");
+    assert!(
+        html.contains(".sheet img{width:640px}"),
+        "the setting's width"
+    );
 }
 
 #[test]

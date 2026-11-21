@@ -104,7 +104,7 @@ fn a_cached_index_is_verified_again_at_start_and_an_expired_one_is_dropped() {
     let mut restarted = catalog(&store, vec![official()]);
     restarted.load_cached(at());
     assert!(restarted.is_loaded("official", at()));
-    let much_later = at() + chrono::Duration::days(60);
+    let much_later = at() + time::SignedDuration::days(60);
     let mut later = catalog(&store, vec![official()]);
     later.load_cached(much_later);
     assert!(!later.is_loaded("official", much_later));
@@ -124,7 +124,7 @@ fn a_loaded_index_that_expires_offers_nothing_more() {
     assert_eq!(catalog.entries(at()).len(), 1);
     assert!(
         catalog
-            .entries(at() + chrono::Duration::days(60))
+            .entries(at() + time::SignedDuration::days(60))
             .is_empty()
     );
 }

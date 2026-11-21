@@ -103,6 +103,9 @@ fn a_view_without_a_web_page_is_skipped() {
     assert_eq!(skipped[0].reason, "url");
     assert!(is_web_url("HTTPS://example.com"));
     assert!(!is_web_url("file:///C:/site/index.html"));
+    // RB-094-10: the app's one check - a host, nothing trimmed.
+    assert!(!is_web_url(" https://example.com"));
+    assert!(!is_web_url("https://"));
 }
 
 #[test]

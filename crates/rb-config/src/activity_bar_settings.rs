@@ -1,8 +1,10 @@
 //! `ui.activityBar` of the user settings (RB-090-67): the activity bar, a strip of the shell
-//! that is there only while something runs - a video, a recording, a flow run, a check run, the
-//! portal, views out of sync - with the running activity's controls. Where it stands, whether it
-//! is drawn at all or the toolbar's indicators carry the activities alone, and which activities
-//! have an entry in it. Settings > General > Appearance, beside the toolbar's switches.
+//! that keeps its room (`always`, RB-094-13) or is there only while something runs - a video, a
+//! recording, a flow run, a check run, the portal, views out of sync, a changed clock, a
+//! plugin's long call, forced pseudo-class states (RB-094-16) - with the running activity's
+//! controls. Where it stands, whether it is drawn at all or the toolbar's indicators carry the
+//! activities alone, and which activities have an entry in it. Settings > General >
+//! Appearance, beside the toolbar's switches.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,8 +17,9 @@ pub struct ActivityBarSettings {
     /// the status bar. The views give it its height and take it back when the last activity
     /// ends.
     pub position: ActivityBarPosition,
-    /// `bar` shows the running activities' controls in the bar; `indicator` draws no bar and
-    /// leaves each activity to its compact indicator in the toolbar.
+    /// `always` keeps the bar's room, empty while nothing runs, so the views never move; `bar`
+    /// shows the bar only while something runs; `indicator` draws no bar and leaves each
+    /// activity to its compact indicator in the toolbar.
     pub mode: ActivityBarMode,
     /// Which activities have an entry in the bar; one switched off shows only its compact
     /// indicator in the toolbar.
@@ -38,8 +41,10 @@ pub enum ActivityBarPosition {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ActivityBarMode {
-    /// The bar with the running activities' controls.
+    /// The bar always, empty while nothing runs: the views keep their place (RB-094-13).
     #[default]
+    Always,
+    /// The bar with the running activities' controls, only while something runs.
     Bar,
     /// No bar; the toolbar's compact indicators only.
     Indicator,
@@ -61,6 +66,14 @@ pub struct ActivityBarShow {
     pub portal: bool,
     /// Views out of sync: how many, and Resync.
     pub desync: bool,
+    /// The page clock or the animations changed (RB-094-07): the time and rate, Step, Real
+    /// time and 100 %.
+    pub time: bool,
+    /// A plugin call that reports its progress (RB-093-01): the plugin, how far it is and
+    /// Cancel when the plugin has a cancel command.
+    pub plugins: bool,
+    /// Pseudo-class states forced on an element (RB-094-16): the states, the views and Reset.
+    pub forced_states: bool,
 }
 
 impl Default for ActivityBarShow {
@@ -72,6 +85,9 @@ impl Default for ActivityBarShow {
             checks: true,
             portal: true,
             desync: true,
+            time: true,
+            plugins: true,
+            forced_states: true,
         }
     }
 }

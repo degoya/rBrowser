@@ -79,4 +79,10 @@ describe('a Nuxt UI panel\'s link', () => {
     panel.post({ target: 'host', action: 'open_link', url: 'https://example.test/' });
     expect(posted).toEqual([{ target: 'host', action: 'open_link', url: 'https://example.test/' }]);
   });
+
+  it('asks the host to open the settings at a key', () => {
+    const panel = createPanel({ prefix: 'plugin.demo.', name: 'demo' });
+    panel.openSettings('api-client.benchRepeats');
+    expect(posted).toEqual([{ target: 'host', action: 'open_settings', key: 'api-client.benchRepeats' }]);
+  });
 });

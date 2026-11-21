@@ -1,5 +1,6 @@
-//! The origin, host and authority of a URL, without a URL crate: the views show web pages, so
-//! `http(s)` (and `ws(s)` for a host) is all the app and its plugins compare.
+//! The origin, host and authority of a URL and whether it is a web page, without a URL crate:
+//! the views show web pages, so `http(s)` (and `ws(s)` for a host) is all the app and its plugins
+//! compare.
 
 /// The authority of `url` (`host[:port]`, an IPv6 literal in its brackets) as written, the user
 /// info in front of the last `@` dropped; `None` without `://` or for an empty authority.
@@ -25,6 +26,14 @@ pub fn host_of(url: &str) -> Option<String> {
     (!host.is_empty()).then(|| host.to_ascii_lowercase())
 }
 
+/// Whether `url` is a web page a view or a check may load: `http` or `https` with a host
+/// ([`origin_of`] has one), and no whitespace or control character anywhere (nothing trimmed).
+/// `http://`, `about:blank`, `file:`, `data:` and a bare host are none.
+#[must_use]
+pub fn is_web_url(url: &str) -> bool {
+    origin_of(url).is_some() && !url.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
 /// The origin of an `http(s)` URL as `location.origin` gives it: `scheme://host[:port]` in lower
 /// case, user info dropped, the scheme's default port (80, 443) dropped. `None` for another
 /// scheme (`about:`, `file:`, `data:`, the app's own) or a URL without a host.
@@ -45,6 +54,24 @@ pub fn origin_of(url: &str) -> Option<String> {
         Some(port) if port != default_port => Some(format!("{scheme}://{host}:{port}")),
         _ => Some(format!("{scheme}://{host}")),
     }
+}
+
+/// `url` without the user info of its authority (`https://user:pw@host/` is
+/// `https://host/`); an `@` in the path, the query or the fragment stays.
+#[must_use]
+pub fn without_user_info(url: &str) -> String {
+    match user_info_span(url) {
+        Some((start, end)) => format!("{}{}", &url[..start], &url[end..]),
+        None => url.to_owned(),
+    }
+}
+
+/// The byte range of `url`'s user info with its `@` (`user:pw@`), when it has one.
+pub(crate) fn user_info_span(url: &str) -> Option<(usize, usize)> {
+    let start = url.find("://")? + 3;
+    let rest = &url[start..];
+    let authority = &rest[..rest.find(['/', '?', '#']).unwrap_or(rest.len())];
+    authority.rfind('@').map(|at| (start, start + at + 1))
 }
 
 /// The scheme in front of `://`, lower case.

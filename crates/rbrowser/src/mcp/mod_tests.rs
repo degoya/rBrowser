@@ -7,7 +7,10 @@ use rb_ipc::CoreToShell;
 use serde_json::json;
 use tokio::runtime::Handle;
 
-use super::{COPY_CONFIG, TOGGLE, config_snippet, definitions, wsl_config_snippet, wsl_path};
+use super::{
+    COPY_CONFIG, SETUP, TOGGLE, config_snippet, definitions, setup_route, wsl_config_snippet,
+    wsl_path,
+};
 use crate::cdp::fake::FakeBrowser;
 use crate::control::{Core, CoreSetup};
 use crate::host::Host;
@@ -50,12 +53,19 @@ pub(super) fn core_and_ui() -> (Arc<Core>, Arc<RecordingUi>) {
 fn the_commands_have_their_chords_and_no_tool() {
     let defs = definitions().expect("valid ids");
     let ids: Vec<&str> = defs.iter().map(|def| def.id.as_str()).collect();
-    assert_eq!(ids, vec![TOGGLE, COPY_CONFIG]);
+    assert_eq!(ids, vec![TOGGLE, COPY_CONFIG, SETUP]);
     let chords: Vec<String> = defs
         .iter()
         .flat_map(|def| def.default_bindings.iter().map(ToString::to_string))
         .collect();
-    assert_eq!(chords, vec!["Ctrl+Shift+Space , M", "Ctrl+Shift+Space , C"]);
+    assert_eq!(
+        chords,
+        vec![
+            "Ctrl+Shift+Space , M",
+            "Ctrl+Shift+Space , C",
+            "Ctrl+Shift+Space , N"
+        ]
+    );
     for def in &defs {
         assert!(matches!(&def.mcp, McpCoverage::Omitted(reason) if !reason.is_empty()));
     }
@@ -68,6 +78,18 @@ fn the_commands_pass_the_registry_lint() {
         let handler: rb_commands::Handler = Arc::new(|_| Ok(serde_json::Value::Null));
         registry.register(def, handler).expect("registered");
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_setup_command_opens_the_client_choice_in_the_settings() {
+    // RB-091-09: Settings > Automation > MCP, at `mcp.client`.
+    assert_eq!(setup_route(), "settings/mcp.client");
+    let (core, ui) = core_and_ui();
+    core.run_command(SETUP, json!({})).expect("opens");
+    assert!(ui.calls().iter().any(|call| matches!(
+        call,
+        UiCall::SettingsWindow(url) if url.ends_with("#/settings/mcp.client")
+    )));
 }
 
 #[test]
@@ -129,7 +151,7 @@ async fn every_registered_command_resolves_to_a_registered_or_pending_tool() {
     }
     let ids: Vec<&str> = entries.iter().map(|(id, _)| *id).collect();
     assert!(
-        ids.contains(&TOGGLE) && ids.contains(&COPY_CONFIG),
+        ids.contains(&TOGGLE) && ids.contains(&COPY_CONFIG) && ids.contains(&SETUP),
         "{ids:?}"
     );
 }

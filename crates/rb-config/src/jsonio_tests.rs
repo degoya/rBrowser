@@ -63,7 +63,7 @@ fn the_first_write_creates_the_gitignore_and_keeps_an_existing_one() {
     let leftovers: Vec<_> = fs::read_dir(dir.path().join(".rbrowser"))
         .expect("dir")
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_name().to_string_lossy().contains(".tmp-"))
+        .filter(|entry| entry.file_name().to_string_lossy().ends_with(".tmp"))
         .collect();
     assert!(leftovers.is_empty(), "no temporary file is left behind");
 }

@@ -9,6 +9,7 @@
 //! `DOM`, `CSS` and `Runtime` (the root font size) are used, on this target alone; the grid's
 //! views are not touched.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -68,7 +69,7 @@ async fn create_target(router: &CdpRouter) -> Result<String, String> {
 
 async fn read_page(
     router: &CdpRouter,
-    events: &mut tokio::sync::broadcast::Receiver<CdpEvent>,
+    events: &mut tokio::sync::broadcast::Receiver<Arc<CdpEvent>>,
     target: &str,
     url: &str,
 ) -> Result<Collected, String> {
@@ -153,7 +154,7 @@ async fn read_page(
 /// no sheet came for [`SETTLE`], or [`PAGE_TIMEOUT`] passed. Only this `session`'s load and
 /// sheets move the settle time; the other views' events do not.
 async fn wait_for_sheets(
-    events: &mut tokio::sync::broadcast::Receiver<CdpEvent>,
+    events: &mut tokio::sync::broadcast::Receiver<Arc<CdpEvent>>,
     session: &str,
 ) -> Vec<Value> {
     let deadline = Instant::now() + PAGE_TIMEOUT;

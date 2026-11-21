@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser form autofill fixture: dependent fields</title>
+<style>
+  /* RB-094-22: a contact form that changes while it is filled, as a framework's form does. The
+     topic select renders the company and message fields 30 ms after its `change` (an
+     asynchronous render, replaced on every change); the callback checkbox enables the phone
+     field; the privacy checkbox (not `required`) enables the submit button. A fill must leave
+     every field filled in one run and the submits at 0: every submit lands in window.__submits
+     and #submits, every click on the button in window.__clicks. The plugin's Vitest tests load
+     this page and run its script (web/src/contact.test.ts). */
+  body { margin: 16px; font: 16px system-ui, sans-serif; }
+  fieldset { display: grid; gap: 8px; max-width: 520px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<form id="contact" method="post" action="/forms/submit">
+  <fieldset>
+    <legend>Contact</legend>
+    <label>Name <input id="name" name="name" autocomplete="name" required></label>
+    <label>Topic
+      <select id="topic" name="topic" required>
+        <option value="">Choose a topic</option>
+        <option value="support">Support</option>
+        <option value="sales">Sales</option>
+      </select>
+    </label>
+    <div id="details"></div>
+    <label><input type="checkbox" id="callback" name="callback"> Call me back</label>
+    <label>Phone <input type="tel" id="phone" name="phone" disabled></label>
+    <label><input type="checkbox" id="privacy" name="privacy"> I accept the privacy policy</label>
+    <button id="send" type="submit" disabled>Send</button>
+  </fieldset>
+</form>
+<p>Submits: <output id="submits">0</output></p>
+<script>
+  window.__submits = 0;
+  window.__clicks = 0;
+  const form = document.getElementById('contact');
+  const details = document.getElementById('details');
+  const send = document.getElementById('send');
+  document.getElementById('topic').addEventListener('change', (event) => {
+    const topic = event.target.value;
+    setTimeout(() => {
+      details.innerHTML = topic === ''
+        ? ''
+        : '<label>Company <input id="company" name="company" autocomplete="organization" required></label>'
+          + '<label>Message <textarea id="message" name="message" required></textarea></label>';
+    }, 30);
+  });
+  document.getElementById('callback').addEventListener('change', (event) => {
+    document.getElementById('phone').disabled = !event.target.checked;
+  });
+  document.getElementById('privacy').addEventListener('change', (event) => {
+    send.disabled = !event.target.checked;
+  });
+  send.addEventListener('click', () => { window.__clicks += 1; });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    window.__submits += 1;
+    document.getElementById('submits').textContent = String(window.__submits);
+  });
+</script>
+</body>
+</html>

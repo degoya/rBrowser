@@ -11,7 +11,8 @@
 //!    and the caret, the videos paused on their first frame; it answers a token;
 //! 3. a short settle wait; then the capture;
 //! 4. the undo, in reverse and whatever the capture gave: the script's undo in the same world,
-//!    the view's own media, the timeline's own rate.
+//!    the view's own media, the timeline's own rate (a view the user stopped keeps 0,
+//!    RB-094-07).
 //!
 //! Everything is async on the caller's runtime (never the UI thread). A step that fails is
 //! logged and skipped: a banner left visible must not cost the screenshot. Each step has
@@ -130,15 +131,18 @@ pub async fn prepare(
         return prepared;
     }
     if plan.freeze {
+        // A rate of 0 is a capture's that was never undone - unless the user stopped the view's
+        // animations (RB-094-07): then the held rate goes back, else 1.
+        let held = || crate::time_control::held_rate(session).unwrap_or(1.0);
         let rate = match call(cdp, "Animation.getPlaybackRate", json!({}), session).await {
             Ok(answer) => answer
                 .get("playbackRate")
                 .and_then(Value::as_f64)
                 .filter(|rate| rate.is_finite() && *rate > 0.0)
-                .unwrap_or(1.0),
+                .unwrap_or_else(held),
             Err(error) => {
-                tracing::debug!(%error, "the timeline's rate is unknown; 1 is put back");
-                1.0
+                tracing::debug!(%error, "the timeline's rate is unknown; the held one or 1 is put back");
+                held()
             }
         };
         // Kept before the call: one that failed may still have taken effect.

@@ -47,7 +47,12 @@ pub(crate) fn link(
             Capability::ProjectWrite => link_project_write(linker)?,
             Capability::Findings => link_findings(linker)?,
             Capability::Sidecar => link_sidecar(linker)?,
-            Capability::NetworkRules | Capability::ConsoleLogs | Capability::Status => {}
+            Capability::NetworkRules
+            | Capability::ConsoleLogs
+            | Capability::Status
+            | Capability::ConsentProbe
+            | Capability::ApiClient
+            | Capability::LoadTest => {}
         }
     }
     Ok(())

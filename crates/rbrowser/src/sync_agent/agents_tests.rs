@@ -98,6 +98,36 @@ async fn a_binding_call_becomes_a_report_and_ready_gets_the_config() {
     assert!(expression.contains(r#""cmd":"configure""#), "{expression}");
 }
 
+/// One thread: the agents read nothing while the burst comes in, so a shared buffer would
+/// have dropped the context before the binding call came.
+#[tokio::test(flavor = "current_thread")]
+async fn a_burst_of_screencast_frames_does_not_make_the_agents_miss_their_events() {
+    let (fake, agents) = setup();
+    let mut reports = agents.subscribe();
+    agents
+        .attach(ViewId(4), "T4", "S4", config(false))
+        .await
+        .expect("attaches");
+    fake.emit(context_created("S4", 12, "T4", "rbrowser"));
+    for _ in 0..3000 {
+        fake.emit(json!({
+            "method": "Page.screencastFrame", "sessionId": "S4",
+            "params": { "data": "AAAA", "sessionId": 1 },
+        }));
+    }
+    fake.emit(binding("S4", 12, READY));
+    let report = tokio::time::timeout(Duration::from_secs(1), reports.recv())
+        .await
+        .expect("in time")
+        .expect("a report");
+    assert_eq!(report.view, ViewId(4));
+    assert_eq!(
+        report.frame_id.as_deref(),
+        Some("T4"),
+        "the context was kept"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn foreign_and_invalid_binding_calls_are_dropped() {
     let (fake, agents) = setup();

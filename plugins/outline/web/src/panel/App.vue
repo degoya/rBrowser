@@ -8,13 +8,17 @@
 // marked -, one status line with an icon, an empty section as `UEmpty`. RB-091-03: each tab
 // counts its findings (from one findings-only `get` until the tab is read), coloured by the
 // worst; the findings at no entry (the page's, content outside the landmarks) stand above the
-// tree, a click marks them; "Only problems" keeps the entries with a finding.
-import { computed, reactive, ref } from 'vue';
+// tree, a click marks them; "Only problems" keeps the entries with a finding. RB-094-02: the tabs
+// Breakpoints (`breakpoint_diff`, the elements the views do not all show) and Reading order
+// (`reading_order`); the commands of both post the tab to show.
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
+import { onPanelEvent } from '../../../../web-common/panel-ui/src/events';
 import { answerBudget } from '../../../../web-common/panel-ui/src/limit';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
 import PanelTabs from '../../../../web-common/panel-ui/src/components/PanelTabs.vue';
+import { type DiffAnswer, diffItems, orderItems, showTab } from './breakpoints';
 import OutlineTree from './OutlineTree.vue';
 import {
   type Answer,
@@ -41,6 +45,8 @@ const TAB_ICON: Record<Tab, string> = {
   images: 'i-lucide-image',
   forms: 'i-lucide-text-cursor-input',
   focus: 'i-lucide-focus',
+  breakpoints: 'i-lucide-monitor-smartphone',
+  order: 'i-lucide-list-ordered',
   axtree: 'i-lucide-accessibility',
   custom: 'i-lucide-scan-search',
 };
@@ -65,7 +71,17 @@ let stop = false;
 
 const answer = computed(() => cache.get(tab.value));
 const checked = computed(() => CHECKED.includes(tab.value));
-const all = computed<Item[]>(() => (answer.value ? items(strings.value, tab.value, answer.value, axView.value) : []));
+/** The tool each tab reads; `get` for the sections. */
+const TOOL_OF: Partial<Record<Tab, string>> = { breakpoints: 'breakpoint_diff', order: 'reading_order' };
+const EMPTY_OF: Partial<Record<Tab, string>> = { breakpoints: 'panel.noDifferences', order: 'panel.orderGood' };
+
+function itemsOf(name: Tab, value: Answer): Item[] {
+  if (name === 'breakpoints') return diffItems(strings.value, value as DiffAnswer);
+  if (name === 'order') return orderItems(strings.value, value);
+  return items(strings.value, name, value, axView.value);
+}
+
+const all = computed<Item[]>(() => (answer.value ? itemsOf(tab.value, answer.value) : []));
 const list = computed<Item[]>(() => (onlyProblems.value && checked.value ? problemsOnly(all.value) : all.value));
 const pageNotes = computed(() => (answer.value && checked.value ? loose(strings.value, tab.value, answer.value) : []));
 const axItems = computed(() => (answer.value?.views ?? []).map((view) => ({ label: view.label, value: view.id })));
@@ -94,7 +110,10 @@ const line = computed(() => {
 });
 
 function load(name: Tab): void {
-  panel.call({ tool: 'get' }, { sections: [name], budget: answerBudget(panel.settings.value) }).then(
+  const budget = answerBudget(panel.settings.value);
+  const tool = TOOL_OF[name];
+  const call = tool ? panel.call({ tool }, { budget }) : panel.call({ tool: 'get' }, { sections: [name], budget });
+  call.then(
     (value) => {
       const typed = value as Answer;
       cache.set(name, typed);
@@ -191,6 +210,12 @@ async function checkLinks(): Promise<void> {
   }
 }
 
+const stopEvents = onPanelEvent((message) => {
+  const asked = showTab(message);
+  if (asked) select(asked);
+});
+onBeforeUnmount(() => stopEvents());
+
 panel.onSettings((first) => {
   if (first) {
     load(tab.value);
@@ -274,7 +299,7 @@ panel.onSettings((first) => {
         v-if="answer && list.length === 0"
         id="empty"
         :icon="onlyProblems && checked ? 'i-lucide-circle-check' : TAB_ICON[tab]"
-        :title="onlyProblems && checked && all.length > 0 ? tx('panel.noProblems') : tx('panel.empty')"
+        :title="onlyProblems && checked && all.length > 0 ? tx('panel.noProblems') : tx(EMPTY_OF[tab] ?? 'panel.empty')"
         variant="naked"
       />
       <OutlineTree v-else-if="answer" :items="list" :links="linkStates" @activate="activate" />

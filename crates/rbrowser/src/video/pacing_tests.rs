@@ -81,3 +81,72 @@ fn a_non_finite_timestamp_writes_nothing() {
     pacer.advance(1.0);
     assert_eq!(pacer.advance(f64::INFINITY), 0);
 }
+
+/// RB-090-68: a pause from 101 to 104 is left out - the frame held at the pause is written up
+/// to the pause, the next one from there, and the file is 3 s shorter than the wall clock.
+#[test]
+fn a_pause_is_left_out_of_the_slots() {
+    let mut pacer = pacer(10);
+    let mut pauses = Pauses::default();
+    assert!(pauses.pause(101.0));
+    assert!(pauses.resume(104.0));
+    pacer.set_pauses(pauses);
+    assert_eq!(pacer.advance(100.0), 0);
+    // The frame of 100.0 until the pause at 101.0: 10 slots.
+    assert_eq!(pacer.advance(102.0), 10);
+    // A frame during the pause writes nothing: the pause has no slots.
+    assert_eq!(pacer.advance(103.0), 0);
+    // After the resume the frame held since the pause runs on: 104.5 is 1.5 s recorded.
+    assert_eq!(pacer.advance(104.5), 5);
+    assert_eq!(pacer.finish(105.0), 5);
+    assert_eq!(pacer.written(), 20);
+    assert!((pacer.duration_secs() - 2.0).abs() < 1e-9);
+}
+
+/// A pause that is still open stops the clock at its start: frames and the stop during it add
+/// nothing past the pause.
+#[test]
+fn an_open_pause_stops_the_clock_at_its_start() {
+    let mut pacer = pacer(10);
+    pacer.advance(100.0);
+    let mut pauses = Pauses::default();
+    assert!(pauses.pause(100.5));
+    pacer.set_pauses(pauses);
+    assert_eq!(pacer.advance(130.0), 5);
+    // The frame painted during the pause is the last: written once, as every last frame is.
+    assert_eq!(pacer.finish(160.0), 1);
+    assert_eq!(pacer.written(), 6);
+}
+
+/// The pauses' log refuses what makes no sense: a second pause while paused, a resume without a
+/// pause, a time that is no number; a resume before its pause counts as none.
+#[test]
+fn the_pauses_take_only_sensible_changes() {
+    let mut pauses = Pauses::default();
+    assert!(!pauses.is_paused());
+    assert!(!pauses.resume(1.0));
+    assert!(!pauses.pause(f64::NAN));
+    assert!(pauses.pause(10.0));
+    assert!(!pauses.pause(11.0), "already paused");
+    assert!(pauses.is_paused());
+    assert_eq!(pauses.paused_since(), Some(10.0));
+    assert!(
+        (pauses.before(15.0) - 5.0).abs() < 1e-9,
+        "an open pause runs to the time asked"
+    );
+    assert!(pauses.ended_secs().abs() < 1e-9);
+    assert!(pauses.resume(9.0));
+    assert!(
+        pauses.ended_secs().abs() < 1e-9,
+        "a resume before its pause is a pause of 0 s"
+    );
+    assert!(pauses.pause(20.0));
+    assert!(pauses.resume(22.5));
+    assert!((pauses.ended_secs() - 2.5).abs() < 1e-9);
+    assert!((pauses.before(21.0) - 1.0).abs() < 1e-9);
+    assert!(pauses.before(5.0).abs() < 1e-9);
+    assert_eq!(pauses.paused_since(), None);
+    // A pause never starts before the last one ended: no time counts twice.
+    assert!(pauses.pause(21.0));
+    assert_eq!(pauses.paused_since(), Some(22.5));
+}

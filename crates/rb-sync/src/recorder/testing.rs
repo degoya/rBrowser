@@ -2,7 +2,7 @@
 
 use rb_engine::ViewId;
 
-use super::model::RecordedBreakpoint;
+use super::model::{PathPoint, RecordedBreakpoint};
 use super::record::{Recorder, RecorderOptions, RecordingView, StartInfo};
 use crate::event::{
     ChangeData, ElementSelector, ElementTarget, HoverData, InputData, KeyData, MouseButton,
@@ -53,12 +53,14 @@ pub fn message(event: SyncEvent) -> EventMessage {
         frame: None,
         seq: 1,
         time: 0,
+        path: Vec::new(),
         event,
     }
 }
 
 pub fn click(element: ElementSelector) -> SyncEvent {
     SyncEvent::Click(MouseData {
+        control: None,
         button: MouseButton::Left,
         detail: 1,
         modifiers: 0,
@@ -182,6 +184,32 @@ pub fn started(options: RecorderOptions, url: Option<&str>) -> Recorder {
         })
         .expect("starts");
     recorder
+}
+
+/// A way of `points` points, 10 px and 20 ms apart.
+pub fn way(points: usize) -> Vec<PathPoint> {
+    (0..points)
+        .map(|index| PathPoint {
+            x: i32::try_from(index * 10).unwrap_or(i32::MAX),
+            y: 5,
+            t: u32::try_from(index * 20).unwrap_or(u32::MAX),
+        })
+        .collect()
+}
+
+/// `event` with the pointer's way `path`, from the top frame when `top`, captured in the desktop
+/// view at `ms` and replayed into the mobile one.
+pub fn feed_way(
+    recorder: &mut Recorder,
+    ms: u64,
+    event: SyncEvent,
+    path: Vec<PathPoint>,
+    top: bool,
+) {
+    let mut message = message(event);
+    message.path = path;
+    message.top = top;
+    recorder.on_event(DESKTOP, &message, &[MOBILE], START + ms);
 }
 
 /// `event` captured in `source` at `ms` after the start and replayed into `targets`.

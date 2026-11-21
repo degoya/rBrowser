@@ -1,7 +1,8 @@
 use rb_ipc::PluginGrantDetails;
 
 use super::{
-    INVALID_CODE, grants_within, note_installed, progress_message, valid_ids, with_session,
+    INVALID_CODE, grants_within, live_after, note_installed, progress_message, refuse_mcp,
+    valid_ids, with_session,
 };
 
 fn grants() -> PluginGrantDetails {
@@ -106,4 +107,32 @@ fn a_session_install_raises_the_base_of_the_next_check() {
     assert_eq!(with_session(shipped.clone()).version.to_string(), "1.0.0");
     note_installed("session-raise", "1.1.0");
     assert_eq!(with_session(shipped).version.to_string(), "1.1.0");
+}
+
+#[test]
+fn a_change_loads_live_once_and_never_on_top_of_a_held_load() {
+    // RB-092-06: a load the first choice held starts with the answer; only without it the
+    // plugins load again, and only a load that ran says "live" (no restart notice).
+    let mut reloads = 0;
+    assert!(live_after(true, || {
+        reloads += 1;
+        true
+    }));
+    assert_eq!(reloads, 0, "the held load comes with the answer");
+    assert!(live_after(false, || {
+        reloads += 1;
+        true
+    }));
+    assert!(!live_after(false, || {
+        reloads += 1;
+        false
+    }));
+    assert_eq!(reloads, 2);
+}
+
+/// RB-094-13 review: MCP never installs a plugin, whatever tool would forward the command.
+#[test]
+fn mcp_never_runs_plugins_install() {
+    assert!(refuse_mcp("plugins.install").is_err());
+    assert!(refuse_mcp("plugins.list").is_ok());
 }

@@ -142,11 +142,21 @@ fn the_state_snapshot_shape() {
         frameworks: Vec::new(),
         video: None,
         activity_bar: ActivityBarState::default(),
+        time_control: None,
+        plugin_progress: Vec::new(),
+        forced_states: Vec::new(),
+        devices: None,
     }));
     let json = to_json(&state);
     // RB-090-67: no video, no activity bar - neither key is written.
     assert!(json.get("video").is_none());
     assert!(json.get("activityBar").is_none());
+    // RB-094-07: the real time and every animation at 100 % - no key either.
+    assert!(json.get("timeControl").is_none());
+    // RB-093-01: no plugin progress, no key.
+    assert!(json.get("pluginProgress").is_none());
+    // RB-094-16: no forced state, no key.
+    assert!(json.get("forcedStates").is_none());
     assert_eq!(json["type"], "state");
     assert_eq!(json["activeView"], 1);
     assert_eq!(json["project"]["trusted"], true);

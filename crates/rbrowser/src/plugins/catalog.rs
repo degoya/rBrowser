@@ -15,7 +15,6 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use chrono::Utc;
 use rb_config::UserSettings;
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use rb_plugin_host::{
@@ -23,6 +22,7 @@ use rb_plugin_host::{
     OFFICIAL_INDEX_URL, Repository, RepositoryError,
 };
 use serde_json::{Map, Value, json};
+use time::OffsetDateTime;
 
 use crate::control::Core;
 
@@ -33,6 +33,8 @@ pub const NO_UPDATES_NOTICE_KEY: &str = "plugins.catalog.notice.no_updates";
 /// The status bar's notice of updates installed by themselves (`{count}`,
 /// `plugins.catalog.autoUpdate`, RB-091-04).
 pub const AUTO_UPDATED_NOTICE_KEY: &str = "plugins.catalog.notice.auto_updated";
+/// As [`AUTO_UPDATED_NOTICE_KEY`], the updates loaded live (RB-092-06).
+pub const AUTO_UPDATED_LIVE_NOTICE_KEY: &str = "plugins.catalog.notice.auto_updated_live";
 /// The status bar's notice that a check failed; the catalogue's tab names which repository.
 pub const CHECK_FAILED_NOTICE_KEY: &str = "plugins.catalog.notice.check_failed";
 /// The status message when a person's update check starts (RB-090-85).
@@ -96,7 +98,7 @@ pub fn repositories(user: &UserSettings) -> (Vec<Repository>, Vec<Value>) {
 pub fn open_catalog(user: &UserSettings, dir: PathBuf) -> (Catalog, Vec<Value>) {
     let (repositories, refused) = repositories(user);
     let mut catalog = Catalog::new(CatalogStore::new(dir), repositories);
-    catalog.load_cached(Utc::now());
+    catalog.load_cached(OffsetDateTime::now_utc());
     (catalog, refused)
 }
 
@@ -110,7 +112,7 @@ pub fn answer(
     installed: Value,
 ) -> Value {
     let (mut catalog, refused) = open_catalog(user, dir);
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let outcomes = fetcher
         .map(|fetcher| catalog.refresh(fetcher, now))
         .unwrap_or_default();
@@ -219,9 +221,15 @@ pub fn check_in_background(core: &Core) {
         // bundled plugins' updates.
         let updated = super::bundle_offer::auto_update(&core);
         if updated > 0 {
+            // RB-092-06: the updates load now; the notice says so, or the next start.
+            let key = if super::live::reload(&core) {
+                AUTO_UPDATED_LIVE_NOTICE_KEY
+            } else {
+                AUTO_UPDATED_NOTICE_KEY
+            };
             core.notify(CoreToShell::Notification(Notification {
                 level: NotificationLevel::Info,
-                message_key: AUTO_UPDATED_NOTICE_KEY.to_owned(),
+                message_key: key.to_owned(),
                 args: [("count".to_owned(), updated.to_string())].into(),
                 settings_key: Some(CATALOG_SETTING.to_owned()),
             }));

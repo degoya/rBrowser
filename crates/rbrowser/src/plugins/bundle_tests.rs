@@ -3,9 +3,11 @@ use std::collections::BTreeSet;
 use rb_config::ProjectConfig;
 use serde_json::json;
 
-use rb_plugin_host::BundleStartFlags;
+use rb_plugin_host::{BundleStartFlags, BundleState};
 
-use super::{chosen_at_start, missing, named_plugins, update_choice_in};
+use super::{
+    chosen_at_start, missing, named_plugins, should_hold, take_new_in_bundle, update_choice_in,
+};
 
 fn ids(list: &[&str]) -> BTreeSet<String> {
     list.iter().map(|id| (*id).to_owned()).collect()
@@ -48,6 +50,40 @@ fn the_first_start_chooses_and_a_later_one_keeps_the_choice() {
         flags(true, false, false),
     );
     assert_eq!(all, newer_bundle, "--install-all-bundled-plugins");
+}
+
+/// RB-094-13 (owner): a plugin new in the bundle of an update is named once - the start keeps it
+/// as offered, so the next start names nothing; it is never installed unasked.
+#[test]
+fn a_plugin_new_in_the_bundle_is_named_once_and_not_installed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let bundle = ids(&["axe", "todo"]);
+    chosen_at_start(
+        dir.path(),
+        &bundle,
+        &ids(&["axe"]),
+        flags(false, false, false),
+    );
+    assert!(
+        take_new_in_bundle().is_empty(),
+        "the first choice saw the whole bundle"
+    );
+    let newer_bundle = ids(&["axe", "todo", "fresh"]);
+    let later = chosen_at_start(
+        dir.path(),
+        &newer_bundle,
+        &newer_bundle,
+        flags(false, true, false),
+    );
+    assert_eq!(later, ids(&["axe"]));
+    assert_eq!(take_new_in_bundle(), ids(&["fresh"]));
+    chosen_at_start(
+        dir.path(),
+        &newer_bundle,
+        &newer_bundle,
+        flags(false, true, false),
+    );
+    assert!(take_new_in_bundle().is_empty(), "named once");
 }
 
 /// An installation that ran before RB-091-04 keeps the whole bundle; so does one whose choice
@@ -170,4 +206,49 @@ fn the_wizard_s_first_start_waits_and_a_later_one_recommends() {
         ),
         ids(&["todo"])
     );
+}
+
+/// RB-091-08: only a fresh installation whose wizard asks holds the load, and only before any
+/// choice exists; `--install-all-bundled-plugins` never waits.
+#[test]
+fn only_the_wizards_first_start_holds_the_load() {
+    assert!(should_hold(flags(false, false, true), false));
+    assert!(
+        !should_hold(flags(false, false, true), true),
+        "a choice exists"
+    );
+    assert!(!should_hold(flags(true, false, true), false), "install all");
+    assert!(!should_hold(flags(false, true, false), false), "ran before");
+    assert!(!should_hold(flags(false, false, false), false), "no wizard");
+}
+
+/// RB-091-08: the choice written pending at the hold loads the wizard's answer once it is given -
+/// and the recommended set when the wizard closed without one.
+#[test]
+fn the_held_load_takes_the_wizards_answer() {
+    let bundle = ids(&["axe", "seo", "video"]);
+    let recommended = ids(&["axe", "video"]);
+    let answered = tempfile::tempdir().expect("tempdir");
+    BundleState::pending().save(answered.path()).expect("saved");
+    update_choice_in(answered.path(), &BTreeSet::new(), |state| {
+        state.choose("seo")
+    })
+    .expect("answered");
+    let loaded = chosen_at_start(
+        answered.path(),
+        &bundle,
+        &recommended,
+        flags(false, false, true),
+    );
+    assert_eq!(loaded, ids(&["seo"]), "the ticks, not the recommended set");
+
+    let closed = tempfile::tempdir().expect("tempdir");
+    BundleState::pending().save(closed.path()).expect("saved");
+    let loaded = chosen_at_start(
+        closed.path(),
+        &bundle,
+        &recommended,
+        flags(false, false, true),
+    );
+    assert_eq!(loaded, recommended);
 }

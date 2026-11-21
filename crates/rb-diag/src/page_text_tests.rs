@@ -47,3 +47,20 @@ fn the_logs_rules_hold_too_and_twice_is_once() {
     );
     assert_eq!(redact_page_text(&once), once);
 }
+
+#[test]
+fn every_name_of_the_one_list_is_masked_in_a_url() {
+    // RB-094-10: the page texts' URL parameters are `rb_util::mask`'s list, not one of their own.
+    for name in rb_util::mask::SENSITIVE_PARAMS {
+        for separator in ['?', '&', ';', '#'] {
+            let text = format!("https://a.test/p{separator}{name}=v4lue-9&page=2");
+            let masked = redact_page_text(&text);
+            assert!(!masked.contains("v4lue"), "{text} -> {masked}");
+            assert!(masked.ends_with("&page=2"), "{text} -> {masked}");
+        }
+    }
+    assert_eq!(
+        redact_page_text("https://app.test/cb?code=c0de&state=xyz"),
+        "https://app.test/cb?code=***&state=xyz"
+    );
+}

@@ -30,6 +30,8 @@ const STRINGS: Record<string, string> = {
   'plugin.lighthouse.panel.reasons.engine': 'Lighthouse runs only in Chromium; this breakpoint uses {engine}',
   'plugin.lighthouse.panel.unavailable': 'Lighthouse is not available: {reason}',
   'plugin.lighthouse.errors.no_sidecar': 'The Node sidecar is not available ({reason}).',
+  'plugin.lighthouse.errors.no_browser': 'No browser to run in. Choose one in Settings > Engines > Node runtime > Lighthouse browser.',
+  'plugin.lighthouse.panel.setting_link': 'Open the setting',
   'plugin.lighthouse.panel.report': '{breakpoint}: {path}',
   'plugin.lighthouse.panel.findings': '{count, plural, one {# finding} other {# findings}}',
   'plugin.lighthouse.panel.idle': 'No Lighthouse run yet.',
@@ -231,6 +233,22 @@ describe('the Lighthouse panel', () => {
     expect($('#status')?.dataset.tone).toBe('error');
   });
 
+  // RB-094-21: a failure that names a setting links there from the status line; one that names none does not.
+  it('links a failed run to the setting its text names', async () => {
+    await fromHost({ type: 'settings', strings: STRINGS, settings: {} });
+    await answerStatus(STATUS);
+    ($('#run') as HTMLButtonElement).click();
+    const run = posted.find((m) => m.type === 'call' && m.command === 'run');
+    await fromHost({ type: 'result', id: run?.id, ok: false, error: 'plugin.lighthouse.errors.no_browser' });
+    const link = $('#status [data-testid="setting-link-engines.lighthouseBrowserPath"]') as HTMLElement;
+    link.click();
+    expect(posted).toContainEqual({ target: 'host', action: 'open_settings', key: 'engines.lighthouseBrowserPath' });
+    ($('#run') as HTMLButtonElement).click();
+    const again = posted.filter((m) => m.type === 'call' && m.command === 'run').at(-1);
+    await fromHost({ type: 'result', id: again?.id, ok: false, error: 'plugins.error.busy' });
+    expect($('#status [data-testid^="setting-link-"]')).toBeNull();
+  });
+
   it('opens the measured page through the host, only on a click', async () => {
     await fromHost({ type: 'settings', strings: STRINGS, settings: {} });
     await answerStatus(STATUS);
@@ -245,8 +263,10 @@ describe('the Lighthouse panel', () => {
       sidecar: { available: false, error: 'plugin.lighthouse.errors.no_sidecar', reason: 'not started' },
       latest: null,
     });
-    expect($('#status')?.textContent).toBe('Lighthouse is not available: The Node sidecar is not available (not started).');
+    expect($('#status')?.textContent).toContain('Lighthouse is not available: The Node sidecar is not available (not started).');
     expect($('#status')?.dataset.tone).toBe('error');
+    // RB-094-21: the text names Settings > Engines > Node runtime; the line links there.
+    expect($('#status [data-testid="setting-link-engines.nodePath"]')?.textContent?.trim()).toBe('Open the setting');
     expect(document.querySelectorAll('#rows [data-card]').length).toBe(0);
     expect($('#empty')?.textContent).toBe('No Lighthouse run yet.');
   });

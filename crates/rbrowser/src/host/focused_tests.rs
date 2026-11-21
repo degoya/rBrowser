@@ -148,3 +148,15 @@ fn elsewhere_a_loading_page_takes_the_focus() {
         &off
     ));
 }
+
+/// RB-090-38: the config in effect is read under the lock, the same as its copy.
+#[tokio::test]
+async fn with_config_reads_the_config_in_effect() {
+    let setup = setup(focus_activates());
+    let host = setup.core.host();
+    assert!(host.with_config(|config| config.sync.activate_on_focus));
+    assert_eq!(
+        host.with_config(|config| config.breakpoints.clone()),
+        host.config().breakpoints
+    );
+}

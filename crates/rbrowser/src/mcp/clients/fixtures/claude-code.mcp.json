@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "rbrowser": {
+      "command": "C:\\Tools\\rBrowser\\rbrowser.exe",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

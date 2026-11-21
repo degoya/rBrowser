@@ -9,7 +9,10 @@ pub mod commands_file;
 pub mod diag_save;
 mod handlers;
 mod keys;
+mod notify;
 pub mod settings;
+#[cfg(test)]
+pub(crate) mod test_support;
 mod title;
 
 use std::collections::BTreeMap;
@@ -21,9 +24,7 @@ use std::time::SystemTime;
 use rb_commands::{ChordMachine, CommandError, CommandId, CommandRegistry, LEADER, Notice};
 use rb_config::UserSettings;
 use rb_diag::{CefBuild, DiagPaths};
-use rb_ipc::{
-    CommandInfo, CoreToShell, Notification, NotificationLevel, StatusAction, event_script,
-};
+use rb_ipc::{CommandInfo, CoreToShell, Notification, NotificationLevel, event_script};
 use rb_settings::SettingsRegistry;
 use serde_json::Value;
 pub(crate) use title::command_title;
@@ -74,6 +75,8 @@ pub struct Core {
     shell_ready: AtomicBool,
     /// The status bar's messages (RB-080-15).
     status: crate::status::StatusLog,
+    /// Whether the leader's ticker runs (only while a chord is open, RB-094-10).
+    ticking: AtomicBool,
 }
 
 impl Core {
@@ -108,6 +111,7 @@ impl Core {
             pending: Mutex::new(Vec::new()),
             shell_ready: AtomicBool::new(false),
             status: crate::status::StatusLog::for_settings(&setup.user.ui.status_bar),
+            ticking: AtomicBool::new(false),
         });
         let notices = {
             let mut registry = lock(&core.registry);
@@ -130,7 +134,6 @@ impl Core {
         {
             core.notify(message);
         }
-        core.spawn_ticker();
         // The installed Firefox editions, enumerated once off the UI thread, so the first
         // settings window already lists them (RB-080-32).
         crate::engines::firefox::installed::refresh_in_background(&core);
@@ -157,13 +160,27 @@ impl Core {
         lock(&self.user).clone()
     }
 
+    /// `read` of the user settings in effect, without a copy of them all (a task that reads one
+    /// setting at every event, RB-094-10).
+    pub fn with_user_settings<R>(&self, read: impl FnOnce(&UserSettings) -> R) -> R {
+        read(&lock(&self.user))
+    }
+
     /// Puts `user` in effect (the settings window wrote them, the file changed; RB-010-08); the
-    /// leader's timing, the emulation, hot reload and the sidecar's settings follow at once.
-    /// Writing the file is the caller's.
+    /// leader's timing, the emulation, hot reload, the sidecar's and the engines' settings follow
+    /// at once. Writing the file is the caller's.
     pub fn replace_user_settings(&self, user: UserSettings) {
         lock(&self.chords).set_settings(settings::chord_settings(&user));
         let theme = user.ui.theme;
-        let theme_before = std::mem::replace(&mut *lock(&self.user), user).ui.theme;
+        let engines = user.engines.clone();
+        let before = std::mem::replace(&mut *lock(&self.user), user);
+        let theme_before = before.ui.theme;
+        // The engines take `engines.*` (Android, `engines.external`, Firefox, WebKit, Safari,
+        // iOS; RB-096-09) - only when it changed: Firefox's agents are configured again on each
+        // apply, and Android retries the views that could not start.
+        if engines != before.engines {
+            crate::engines::on_config_changed(self);
+        }
         crate::emulation::on_user_settings_changed(self);
         // Hot reload's polling and the WSL watcher follow the user settings (RB-030-05).
         crate::reload::on_config_changed(self);
@@ -198,6 +215,7 @@ impl Core {
         crate::text_scale::on_user_settings_changed(self);
         // `ui.fileNameTime` (RB-090-69).
         crate::local_time::on_user_settings_changed(self);
+        crate::launch::on_user_settings_changed(self);
     }
 
     /// The status bar's messages (RB-080-15).
@@ -355,38 +373,6 @@ impl Core {
         match event_script(message) {
             Ok(script) => self.ui.send_to_shell(script),
             Err(error) => tracing::warn!(%error, "a message to the shell cannot be encoded"),
-        }
-    }
-
-    /// Shows `message` (a notification) in the shell, or keeps it until the shell is ready. A
-    /// notification goes into the status bar's log and to the bar and its history at once: they
-    /// read the log when they load, so their event never waits (RB-080-15).
-    pub fn notify(&self, message: CoreToShell) {
-        self.notify_with(message, None);
-    }
-
-    /// [`Self::notify`] with a button in the status bar that runs `action`'s command
-    /// (RB-090-71); the shell's own notification carries none.
-    pub fn notify_with_action(&self, notification: Notification, action: StatusAction) {
-        self.notify_with(CoreToShell::Notification(notification), Some(action));
-    }
-
-    fn notify_with(&self, mut message: CoreToShell, action: Option<StatusAction>) {
-        if let CoreToShell::Notification(notification) = &mut message {
-            // A person reads the sentence, not the error code in front of it (RB-090-85).
-            crate::status::strip_codes(notification);
-            let entry =
-                self.status
-                    .push_with(notification.clone(), action, crate::status::now_ms());
-            match event_script(&CoreToShell::StatusMessage(entry)) {
-                Ok(script) => self.ui.send_to_status_bar(script),
-                Err(error) => tracing::warn!(%error, "a status message cannot be encoded"),
-            }
-        }
-        if self.shell_ready.load(Ordering::Acquire) {
-            self.send(&message);
-        } else {
-            lock(&self.pending).push(message);
         }
     }
 

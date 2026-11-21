@@ -11,6 +11,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub use crate::event::PathPoint;
 use crate::event::{ElementSelector, ElementTarget};
 
 /// The format version; raised on every incompatible change.
@@ -96,6 +97,63 @@ pub struct Step {
     /// The breakpoints it ran in, when not all of the recording's; empty means all.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub only_in: Vec<String>,
+    /// The pointer's way to the step (`automation.recorder.recordPointer`, RB-090-87): CSS px of
+    /// the viewport of the view it was recorded in, `t` ms after the way's first point, at most
+    /// [`MAX_PATH_POINTS`]. Play and the export move the pointer along it before the step when
+    /// the view has that size. Absent in a recording made before, and for a step without one.
+    /// A recording loaded from a file keeps only the last [`MAX_PATH_POINTS`] of a longer way,
+    /// read one by one, so a file cannot make it hold more.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "last_points"
+    )]
+    #[schemars(length(max = 64))]
+    pub path: Vec<PathPoint>,
+    /// Switched off in the editor (RB-092-01): kept in the recording, neither played nor
+    /// exported. Written only when set.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub disabled: bool,
+    /// The pause before the step at the pace `recorded`, ms, set in the editor (RB-092-01): in
+    /// place of the one its `atMs` measures, at most [`MAX_PAUSE_MS`]. Absent: the measured one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(max = 10000))]
+    pub pause_ms: Option<u32>,
+}
+
+/// The longest pause before a step and the longest fixed wait, ms (the exporter's cap).
+pub const MAX_PAUSE_MS: u32 = 10_000;
+
+/// The most points of a step's way (the agent's `PATH_MAX_POINTS`; the schema's `maxItems`).
+pub const MAX_PATH_POINTS: usize = 64;
+
+/// A way's last [`MAX_PATH_POINTS`] points; never more held at once.
+fn last_points<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<PathPoint>, D::Error> {
+    struct Last;
+    impl<'de> serde::de::Visitor<'de> for Last {
+        type Value = Vec<PathPoint>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("a list of points")
+        }
+
+        fn visit_seq<A: serde::de::SeqAccess<'de>>(
+            self,
+            mut seq: A,
+        ) -> Result<Self::Value, A::Error> {
+            let mut kept = std::collections::VecDeque::with_capacity(MAX_PATH_POINTS);
+            while let Some(point) = seq.next_element::<PathPoint>()? {
+                if kept.len() == MAX_PATH_POINTS {
+                    kept.pop_front();
+                }
+                kept.push_back(point);
+            }
+            Ok(kept.into())
+        }
+    }
+    deserializer.deserialize_seq(Last)
 }
 
 /// What a step does.
@@ -166,8 +224,8 @@ pub enum Action {
         /// The control.
         target: Locator,
     },
-    /// Move the pointer onto an element (kept only when a click into what it revealed
-    /// follows).
+    /// Move the pointer onto an element: a menu's entry the pointer rested on, or with
+    /// `recordHover: all` one that revealed what the next click hits.
     Hover {
         /// The element.
         target: Locator,
@@ -192,6 +250,13 @@ pub enum Action {
     WaitFor {
         /// The element.
         target: Locator,
+    },
+    /// Wait a fixed time at every pace (RB-092-01, added in the editor), at most
+    /// [`MAX_PAUSE_MS`].
+    Wait {
+        /// How long, ms.
+        #[schemars(range(max = 10000))]
+        ms: u32,
     },
     /// Check something.
     Assert {

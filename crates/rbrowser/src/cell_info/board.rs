@@ -68,8 +68,8 @@ pub fn click(core: &Core, view: ViewId, kind: LabelPiece) -> Result<(), CommandE
 
 /// Runs `action` for `view` - the grid strip's piece (`cef_app/cell_info.rs`), the board's, the
 /// engine badge's menu and the vitals bar (`cef_app/cell_footers.rs`, RB-090-71) alike: make
-/// the view active, restart its engine, raise the external windows or mark the element behind a
-/// vital.
+/// the view active, restart its engine, raise the external windows, mark the element behind a
+/// vital or open the address field of a decoupled view (RB-092-03).
 pub fn run(core: &Core, view: ViewId, action: PieceAction) {
     let (id, args) = match action {
         PieceAction::Activate => {
@@ -80,6 +80,7 @@ pub fn run(core: &Core, view: ViewId, action: PieceAction) {
         }
         PieceAction::Restart => (RESTART, json!({ "view": view.0 })),
         PieceAction::Raise => (RAISE, json!({})),
+        PieceAction::EditAddress => (super::address::EDIT_ADDRESS, json!({ "view": view.0 })),
         PieceAction::Mark(metric) => {
             // The message the shell's vitals badge sent: the core marks the element.
             let message = ShellToCore::HighlightVital { view, metric };

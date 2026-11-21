@@ -6,26 +6,35 @@
 // Each is a button with its details as the tooltip and the accessible name (the native `title`:
 // the board lies behind the views' overlays, so a tooltip it drew could be hidden behind them).
 // A click, Enter or Space names the piece (`pick`); the core does what a click on the strip's
-// piece does. Its press, release and keys never reach the label (no drag, no step).
+// piece does. Its press, release and keys never reach the label (no drag, no step). While the
+// core has the address field of a decoupled view open (`edit`, RB-092-03), the field stands in
+// the address's place (`BoardAddressField.vue`).
+import { computed } from 'vue';
 import UButton from '@nuxt/ui/components/Button.vue';
 import type { LabelPiece } from '../ipc/layout';
 import type { ViewId } from '../ipc/protocol';
+import BoardAddressField from './BoardAddressField.vue';
 import type { BoardEntryPiece } from './board';
 
-defineProps<{
+const props = defineProps<{
   view: ViewId;
   /** The label is the active view's: the pieces take its inverted colours. */
   active: boolean;
   pieces: BoardEntryPiece[];
+  /** The open address field: the address it starts with and the view's label. */
+  edit?: { url: string; label: string } | null;
 }>();
+
+const shown = computed(() => (props.edit ? props.pieces.filter((piece) => piece.kind !== 'address') : props.pieces));
 
 const emit = defineEmits<{ pick: [piece: LabelPiece] }>();
 </script>
 
 <template>
   <div class="contents">
+    <BoardAddressField v-if="edit" :view="view" :url="edit.url" :label="edit.label" />
     <UButton
-      v-for="piece in pieces"
+      v-for="piece in shown"
       :key="piece.kind"
       type="button"
       color="neutral"

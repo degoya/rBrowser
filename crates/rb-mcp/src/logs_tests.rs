@@ -318,3 +318,91 @@ fn a_request_keeps_its_headers_for_a_repeat_off_the_wire() {
             .contains("secret")
     );
 }
+
+#[test]
+fn a_response_keeps_its_waiting_time_caching_and_compression_and_the_decoded_size() {
+    let store = LogStore::default();
+    store.record(
+        VIEW,
+        "Network.requestWillBeSent",
+        &json!({ "requestId": "r1", "request": { "url": "https://a.test/api/users/1", "method": "GET" },
+                 "type": "Fetch", "timestamp": 1.0, "wallTime": 1.0 }),
+    );
+    store.record(
+        VIEW,
+        "Network.responseReceived",
+        &json!({ "requestId": "r1", "type": "Fetch",
+                 "response": { "status": 200, "mimeType": "application/json",
+                               "timing": { "sendEnd": 2.0, "receiveHeadersEnd": 52.0 },
+                               "headers": { "content-encoding": "gzip", "Cache-Control": "no-cache",
+                                            "Set-Cookie": "sid=secret" } } }),
+    );
+    for length in [1000.0, 2000.5] {
+        store.record(
+            VIEW,
+            "Network.dataReceived",
+            &json!({ "requestId": "r1", "dataLength": length, "encodedDataLength": 10.0 }),
+        );
+    }
+    let request = store.request(VIEW, "r1").expect("recorded");
+    let response = request.response.as_ref().expect("the response facts");
+    assert_eq!(response.ttfb_ms, Some(50.0));
+    assert_eq!(response.encoding.as_deref(), Some("gzip"));
+    assert_eq!(response.cache_control.as_deref(), Some("no-cache"));
+    assert_eq!(request.decoded_size, Some(3000.5));
+    let wire = serde_json::to_value(&request).expect("JSON");
+    assert_eq!(wire["response"]["ttfbMs"], json!(50.0));
+    assert_eq!(wire["decodedSize"], json!(3000.5));
+    assert!(!wire.to_string().contains("secret"), "{wire}");
+}
+
+#[test]
+fn a_request_without_a_response_carries_no_response_facts() {
+    let store = LogStore::default();
+    store.record(
+        VIEW,
+        "Network.requestWillBeSent",
+        &json!({ "requestId": "r1", "request": { "url": "https://a.test/", "method": "GET" },
+                 "timestamp": 1.0, "wallTime": 1.0 }),
+    );
+    let wire = serde_json::to_value(store.request(VIEW, "r1").expect("recorded")).expect("JSON");
+    assert!(
+        wire.get("response").is_none() && wire.get("decodedSize").is_none(),
+        "{wire}"
+    );
+}
+
+/// RB-090-34: `Network` is not collected until someone asks for the requests (or
+/// `mcp.collectNetwork` wants it); the first read switches it on, once, for good.
+#[test]
+fn network_collection_starts_with_the_first_read_of_the_requests() {
+    let store = LogStore::default();
+    let mut wanted = store.network_wanted();
+    assert!(!*wanted.borrow_and_update(), "off at the start");
+    assert!(!super::DOMAINS.contains(&super::NETWORK_DOMAIN));
+    assert!(store.console(VIEW, 10).is_empty());
+    assert!(store.errors(VIEW, 10).is_empty());
+    assert!(
+        !wanted.has_changed().expect("open"),
+        "other reads leave it off"
+    );
+    assert!(store.network(VIEW, 10).is_empty(), "nothing collected yet");
+    assert!(
+        wanted.has_changed().expect("open"),
+        "the read switched it on"
+    );
+    assert!(*wanted.borrow_and_update());
+    assert!(store.request(VIEW, "r1").is_none());
+    store.want_network();
+    assert!(
+        !wanted.has_changed().expect("open"),
+        "switched on once, never again"
+    );
+}
+
+#[test]
+fn want_network_switches_collection_on_without_a_read() {
+    let store = LogStore::default();
+    store.want_network();
+    assert!(*store.network_wanted().borrow());
+}

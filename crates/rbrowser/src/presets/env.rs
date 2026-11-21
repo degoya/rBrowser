@@ -50,11 +50,6 @@ pub fn next_environment<'a>(
         .map(|environment| environment.id.as_str())
 }
 
-/// Whether `url` is an http(s) page (not `about:blank`, a data URL or nothing yet).
-pub fn is_web_url(url: &str) -> bool {
-    split_origin(url).is_some()
-}
-
 /// The frame colour `#rrggbb` as an opaque ARGB value; `None` for anything else.
 pub fn frame_argb(color: &str) -> Option<u32> {
     let hex = color.strip_prefix('#')?;

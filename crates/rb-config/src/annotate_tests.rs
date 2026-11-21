@@ -54,6 +54,8 @@ fn trust_relevant_keys_are_protected_from_mcp() {
         "engines.chromium.extensions.allowWebStore",
         // Plugins' Lighthouse runs beyond the views' sites (RB-090-21).
         "plugins.lighthouseAnyUrl",
+        // The consent probe beyond public addresses and the project's own sites (RB-094-09).
+        "plugins.consentProbeAnyUrl",
     ] {
         let def = PROJECT_KEYS
             .iter()
@@ -204,10 +206,11 @@ fn path_keys_and_fields_carry_their_dialog() {
 #[test]
 fn a_missing_input_path_is_reported() {
     let mut schema = json!({ "properties": { "capture": { "properties": { "dir": {} } } } });
-    let missing = annotate_inputs(&mut schema, PROJECT_INPUTS).expect_err("three are missing");
+    let missing = annotate_inputs(&mut schema, PROJECT_INPUTS).expect_err("four are missing");
     assert_eq!(
         missing,
         [
+            "checks.export.dir",
             "automation.recorder.dir",
             "automation.recorderExport.dir",
             "extensions[].path"
@@ -231,7 +234,10 @@ fn every_path_named_key_has_an_input() {
                 .next()
                 .unwrap_or_default()
                 .to_ascii_lowercase();
-            if leaf.ends_with("path") || leaf.ends_with("dir") {
+            // `emulation.dir` is the text direction (`ltr`/`rtl`, RB-092-02), an enum the lint
+            // passes over too (`scripts/lib/settings_schema.py` asks for a plain string).
+            let not_a_path = def.key == "emulation.dir";
+            if (leaf.ends_with("path") || leaf.ends_with("dir")) && !not_a_path {
                 assert!(
                     inputs.iter().any(|input| input.path == def.key),
                     "{}: a path key without an x-input entry",

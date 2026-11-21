@@ -1,33 +1,38 @@
 // The page script of the form autofill (RB-070-11): the component runs it in a view through
-// `evaluate`, in the plugin's isolated world, as `(<this function>)(<request as JSON>)`
-// (src/fill.rs). `collect` reads the fields of the document or of one element (`selector`) with
-// their hints; `apply` sets the planned values (src/plan.rs) field by field. Values go through the
-// prototype's setter, then `input` and `change` bubble, as the sync agent's form apply does
-// (agent/src/forms/apply.ts) - frameworks see them - and checkboxes and radios are clicked. The
-// events are not trusted, so the sync agent relays none of them: every view is filled by its own
-// run. `collect` also names the document's forms - each with a selector that finds it alone -
-// and each field its form, so a person can choose one. Nothing is submitted: a submit while the values are set is cancelled and counted, buttons
-// are never clicked and file inputs never touched. `capture` (RB-090-70) reads the current values
-// of one form - the selector's element, the focused field's form, the only form, else the whole
-// document - for a preset; a password field, a field that names a secret (the rule of
-// src/secret.rs, `secretOf`) and a file input give no value, so it never leaves the page.
-// `type=hidden` inputs are fields only with `hiddenInputs` (the setting captureHiddenInputs).
-// `apply` also names, per field it set, what a running recording takes (`record`, RB-090-78,
-// src/record.rs): the field's target as the sync agent names an element it captures input on
-// (`targetOf`, src/target.js, which src/fill.rs passes in), what was done and the value - a
-// password's never.
+// `evaluate`, in the plugin's isolated world, as `(<this function>)(<request as JSON>, targetOf,
+// settled)` (src/fill.rs). `collect` reads the fields of the document or of one element
+// (`selector`) with their hints; `apply` sets the planned values (src/plan.rs) field by field.
+// Values go through the prototype's setter, then `input` and `change` bubble, as the sync agent's
+// form apply does (agent/src/forms/apply.ts) - frameworks see them - and checkboxes and radios are
+// clicked. The events are not trusted, so the sync agent relays none of them: every view is filled
+// by its own run. `collect` also names the document's forms - each with a selector that finds it
+// alone - and each field its form. Nothing is submitted: a submit while the values are set is
+// cancelled and counted, buttons are never clicked and file inputs never touched. `capture`
+// (RB-090-70) reads the current values of one form - the selector's element, the focused field's
+// form, the only form, else the whole document - for a preset; a password field, a field that
+// names a secret (src/secret.rs, `secretOf`) and a file input give no value. `type=hidden` inputs
+// are fields only with `hiddenInputs` (captureHiddenInputs). `apply` names, per field it changed,
+// what a running recording takes (`record`, RB-090-78, src/record.rs): its target as the sync
+// agent names it (`targetOf`, src/target.js), what was done and the value - a password's never; a
+// field that already held it gives none (RB-090-86). A fill runs for (`fillScope`, RB-090-86) the
+// selector's element, else the page's controls but those of its navigation (a header, nav, menu
+// or search) and, outside a form, the disclosure toggles (aria-controls, aria-expanded,
+// aria-haspopup); the focus narrows nothing. `collect` answers which (`scope`). Passes
+// (RB-094-22): `collect` names whether a field holds a value (`filled`) and skips an
+// `aria-disabled` one; with `settle` `apply` answers a promise and waits after each control field
+// it changed (`settled`, src/settle.js); a field gone meanwhile is `missing`, and each result says
+// whether the run `changed` it. Each field has an identity (`uid`) kept in the isolated world
+// across runs, so a field the page inserts shifts no other's: the passes tell fields apart by it.
+// The world lasts while the document does: Chromium finds it again by name (services/page.rs).
 // @ts-check
 /**
- * @param {{ op: string, selector?: string | null, skipHidden?: boolean, hiddenInputs?: boolean, actions?: any[] }} request
+ * @param {{ op: string, selector?: string | null, skipHidden?: boolean, hiddenInputs?: boolean, actions?: any[], settle?: any }} request
  * @param {(element: Element) => unknown} [targetOf]
+ * @param {(steps: Iterator<unknown>, settle: any) => Promise<void>} [settled]
  */
-(request, targetOf) => {
+(request, targetOf, settled) => {
   'use strict';
-  const MAX_FIELDS = 300;
-  const MAX_OPTIONS = 200;
-  const MAX_TEXT = 200;
-  const MAX_FORMS = 50;
-  const MAX_SELECTOR = 1024;
+  const MAX_FIELDS = 300, MAX_OPTIONS = 200, MAX_TEXT = 200, MAX_FORMS = 50, MAX_SELECTOR = 1024;
   /** Inputs that are no fields: they are not reported at all. */
   const NOT_FIELDS = ['hidden', 'submit', 'button', 'reset', 'image'];
   /** The longest value a preset takes (src/settings.rs MAX_VALUE). */
@@ -137,6 +142,11 @@
     }
   }
 
+  /** The page's navigation: a fill without a selector leaves its controls alone. */
+  const NAVIGATION = 'header, nav, search, [role="navigation"], [role="banner"], [role="menu"], [role="menubar"], [role="search"]';
+  /** A disclosure toggle: outside a form it opens a menu or a section, it holds no data. */
+  const DISCLOSURE = ['aria-controls', 'aria-expanded', 'aria-haspopup'];
+
   /** Every control under `scope`, in document order. @param {ParentNode & Node} scope */
   function controls(scope) {
     const left = request.hiddenInputs === true ? NOT_FIELDS.filter((type) => type !== 'hidden') : NOT_FIELDS;
@@ -147,10 +157,40 @@
     );
   }
 
+  /**
+   * The controls a fill runs for and how they were chosen (RB-090-86): the selector's element,
+   * else the page's but its navigation and, outside a form, its disclosure toggles.
+   * @returns {{ list?: (HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement)[], error?: string, scope: string }}
+   */
+  function fillScope() {
+    if (request.selector) {
+      const found = root();
+      return found.root ? { list: controls(found.root), scope: 'selector' } : { error: found.error, scope: 'selector' };
+    }
+    const list = controls(document).filter((element) => !element.closest(NAVIGATION)
+      && (element.form !== null || !DISCLOSURE.some((name) => element.hasAttribute(name))));
+    return { list, scope: 'page' };
+  }
+
   /** The radios of `radio`'s group. @param {HTMLInputElement} radio @param {Element[]} all */
   const group = (radio, all) =>
     /** @type {HTMLInputElement[]} */ (all.filter((other) => other instanceof HTMLInputElement &&
       other.type === 'radio' && other.name === radio.name && other.form === radio.form));
+
+  /** Whether a field holds a value: a text, a checked box or radio, an option chosen (not the first by default). @param {Element} element @param {HTMLInputElement[] | null} radios */
+  function filledOf(element, radios) {
+    if (radios) return radios.some((radio) => radio.checked);
+    if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) return element.checked;
+    if (element instanceof HTMLSelectElement) {
+      if (element.multiple) return Array.from(element.selectedOptions).some((option) => option.value !== '');
+      return element.value !== '' && (element.selectedIndex > 0 || element.options[0]?.defaultSelected === true);
+    }
+    return String(/** @type {HTMLInputElement} */ (element).value ?? '') !== '';
+  }
+
+  /** The elements' identities, kept in the isolated world while the document lives (RB-094-22). */
+  const ids = (/** @type {any} */ (globalThis).__rbAutofillIds ??= { map: new WeakMap(), next: 1 });
+  const uidOf = (/** @type {Element} */ element) => ids.map.get(element) ?? (ids.map.set(element, ids.next), ids.next++);
 
   /**
    * The fields: one per control, one per radio group (its first radio), with their hints.
@@ -193,10 +233,11 @@
         multiple: element instanceof HTMLSelectElement ? element.multiple : Boolean(input?.multiple),
         options: options.slice(0, MAX_OPTIONS),
         skip: type === 'file' ? 'file'
-          : members.every((member) => member.disabled) ? 'disabled'
+          : members.every((member) => member.disabled || member.getAttribute('aria-disabled') === 'true') ? 'disabled'
           : text && text.readOnly ? 'readonly'
           : request.skipHidden !== false && type !== 'hidden' && !members.some(shown) ? 'hidden' : '',
-        form: formIndex(element),
+        form: formIndex(element), uid: uidOf(element),
+        filled: filledOf(element, radios),
       });
     }
     return { out, truncated: false };
@@ -297,6 +338,17 @@
     fire(select);
   }
 
+  /**
+   * A field's whole state, to tell whether a run changed it.
+   * @param {Element} element @param {HTMLInputElement[] | null} radios
+   */
+  function state(element, radios) {
+    if (radios) return String(radios.findIndex((radio) => radio.checked));
+    if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) return String(element.checked);
+    if (element instanceof HTMLSelectElement) return Array.from(element.selectedOptions, (option) => option.index).join(',');
+    return String(/** @type {HTMLInputElement} */ (element).value ?? '');
+  }
+
   /** What a field holds now. @param {Element} element @param {HTMLInputElement[] | null} radios */
   function holds(element, radios) {
     if (radios) return cut(radios.find((radio) => radio.checked)?.value ?? '');
@@ -320,11 +372,13 @@
     const results = [];
     /** @type {Set<HTMLFormElement>} */
     const forms = new Set();
+    /** @type {(HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement)[]} */
     const touched = [];
-    try {
+    /** The fields one by one; it yields after a control field it changed, for the page to settle. */
+    function* steps() {
       for (const action of request.actions ?? []) {
         const element = all[action.index];
-        if (!element) {
+        if (!element || !element.isConnected) {
           results.push({ index: action.index, status: 'missing' });
           continue;
         }
@@ -333,6 +387,7 @@
           continue;
         }
         const radios = element instanceof HTMLInputElement && element.type === 'radio' ? group(element, all) : null;
+        const before = state(element, radios);
         element.focus({ preventScroll: true });
         if (action.op === 'radio' && radios) {
           const target = radios.find((radio) => radio.value === action.value);
@@ -349,15 +404,26 @@
         if (element.form) forms.add(element.form);
         touched.push(element);
         const errors = FLAGS.filter((flag) => element.validity[/** @type {keyof ValidityState} */ (flag)] === true);
+        // Only what the run changed goes to a recording (RB-090-86).
+        const changed = state(element, radios) !== before;
         results.push({ index: action.index, status: 'done', value: holds(element, radios), valid: element.validity.valid, errors,
-          record: recordOf(element, radios) });
+          changed, record: changed ? recordOf(element, radios) : null });
+        if (changed && action.op !== 'text') yield;
       }
+    }
+    const answer = () => {
       const formValid = forms.size > 0
         ? Array.from(forms).every((form) => form.checkValidity())
         : touched.length > 0 ? touched.every((element) => element.validity.valid) : null;
       return { fields: results, formValid, blockedSubmits: blocked };
+    };
+    const close = () => view.removeEventListener('submit', stop, true);
+    if (request.settle && settled) return settled(steps(), request.settle).then(answer).finally(close);
+    try {
+      for (const run = steps(); !run.next().done;);
+      return answer();
     } finally {
-      view.removeEventListener('submit', stop, true);
+      close();
     }
   }
 
@@ -425,10 +491,10 @@
   }
 
   if (request.op === 'capture') return capture();
-  const found = root();
-  if (!found.root) return { error: found.error, locale: locale(), url: location.href, forms: formsOf(), fields: [] };
-  const all = controls(found.root);
+  const found = fillScope();
+  if (!found.list) return { error: found.error, locale: locale(), url: location.href, forms: formsOf(), fields: [], scope: found.scope };
+  const all = found.list;
   if (request.op === 'apply') return apply(all);
   const { out, truncated } = fields(all);
-  return { locale: locale(), url: location.href, forms: formsOf(), fields: out, truncated };
+  return { locale: locale(), url: location.href, forms: formsOf(), fields: out, truncated, scope: found.scope };
 }

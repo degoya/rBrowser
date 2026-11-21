@@ -123,6 +123,11 @@ fn urls_are_masked_case_blind_and_the_rest_kept() {
         "https://a.test/p?q=1&Token=***#f"
     );
     assert_eq!(mask_url("https://a.test/p"), "https://a.test/p");
+    // RB-094-10: a signed URL's credentials and the fragment's tokens too.
+    assert_eq!(
+        mask_url("https://b.s3.test/k?X-Amz-Signature=ab&x=1#id_token=e.y.j"),
+        "https://b.s3.test/k?X-Amz-Signature=***&x=1#id_token=***"
+    );
 }
 
 #[test]

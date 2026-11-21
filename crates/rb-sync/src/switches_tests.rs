@@ -16,6 +16,7 @@ pub(crate) fn target(path: &str) -> ElementTarget {
 
 fn click() -> SyncEvent {
     SyncEvent::Click(MouseData {
+        control: None,
         button: MouseButton::Left,
         detail: 1,
         modifiers: 0,

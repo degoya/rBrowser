@@ -5,7 +5,8 @@
 // allowed it with `portal.enabled`, a LAN listener being a human's decision) and shows a fresh
 // pairing QR code. On, a click opens the core's native menu below it (RB-090-45, `nativeMenu.ts`)
 // with the QR code, the devices, a device to disconnect and the stop - the portal's existing
-// commands. The state comes from `getPortal`, asked again on every `portalChanged`.
+// commands. The state comes from `getPortal`, asked again on every `portalChanged`. Where a person
+// allowed the presentation over the internet (RB-096-05), the menu starts or ends it too.
 
 import type { InjectionKey } from 'vue';
 import type { IpcClient } from '../ipc/client';
@@ -18,6 +19,7 @@ import {
   showQrMessage,
   toggleMessage,
 } from '../portal/portal';
+import { isPresenting, startMessage as presentMessage, stopMessage as endPresentMessage } from '../portal/presentation';
 import type { Subscribe } from '../whichkey/whichkey';
 
 /** The button's icon: a phone and a tablet. */
@@ -91,12 +93,23 @@ export function portalRows(state: PortalState | null, t: Translate): NativeMenuR
   if (state.devices.length > 1) {
     devices.push({ kind: 'item', id: ALL, label: t('shell.toolbar.portal.menu.disconnect_all') });
   }
+  const presentation = state.presentation;
+  const present: NativeMenuRow[] =
+    presentation?.enabled === true
+      ? [
+          { kind: 'separator' },
+          isPresenting(presentation)
+            ? { kind: 'item', id: 'present_stop', label: t('shell.toolbar.portal.menu.present_stop') }
+            : { kind: 'item', id: 'present', label: t('shell.toolbar.portal.menu.present') },
+        ]
+      : [];
   return [
     { kind: 'item', id: 'show_qr', label: t('shell.toolbar.portal.menu.show_qr') },
     { kind: 'item', id: 'devices', label: t('shell.toolbar.portal.menu.devices') },
     { kind: 'separator' },
     { kind: 'heading', label: t('shell.toolbar.portal.menu.disconnect') },
     ...devices,
+    ...present,
     { kind: 'separator' },
     { kind: 'item', id: 'stop', label: t('portal.panel.stop') },
   ];
@@ -111,6 +124,10 @@ export function portalChoice(id: string): ShellToCore | null {
       return { type: 'runCommand', id: PORTAL_DEVICES_COMMAND };
     case 'stop':
       return toggleMessage(false);
+    case 'present':
+      return presentMessage({ consent: false, download: false });
+    case 'present_stop':
+      return endPresentMessage();
     case ALL:
       return { type: 'runCommand', id: DISCONNECT_COMMAND };
     default: {

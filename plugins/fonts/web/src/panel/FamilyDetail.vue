@@ -5,6 +5,7 @@
 // state per view, the use per view (with what Chromium drew, when a view could tell), and the
 // family's findings, each with its severity as an icon and a word.
 import { computed, ref, watch } from 'vue';
+import SettingLink from '../../../../web-common/panel-ui/src/components/SettingLink.vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { type Answer, type Family, faceStates, findingsFor, message, renderedKnown, viewLabel } from './model';
 import type { FontPreviews } from './preview';
@@ -92,9 +93,12 @@ const faceLabel = (face: { weight: string; style: string }): string => `${face.w
               <p v-if="state?.kind === 'ready'" class="break-words leading-tight" :style="{ fontFamily: state.css, fontSize: `${size}px`, fontWeight: face?.weight, fontStyle: face?.style }">
                 {{ text }}
               </p>
-              <p v-else-if="state?.kind === 'missing'" data-reason class="text-sm text-muted">
-                {{ t('panel.preview.' + state.reason, { kb: state.kb ?? '' }) }}
-              </p>
+              <template v-else-if="state?.kind === 'missing'">
+                <p data-reason class="text-sm text-muted">
+                  {{ t('panel.preview.' + state.reason, { kb: state.kb ?? '' }) }}
+                </p>
+                <SettingLink v-if="state.reason === 'too_large'" setting-key="fonts.previewMaxKb" :label="t('panel.setting_link')" />
+              </template>
               <p v-else class="flex items-center gap-1.5 text-sm text-muted">
                 <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />{{ t('panel.preview.loading') }}
               </p>

@@ -122,7 +122,7 @@ impl State {
             "channel": facts.channel.as_str(),
             "installed": facts.installed,
             "offered": offer.map(|offer| offer.version.clone()),
-            "releasedAt": offer.map(|offer| offer.released_at.to_rfc3339()),
+            "releasedAt": offer.map(|offer| rb_update::utc::rfc3339(offer.released_at)),
             "size": offer.and_then(Offer::size),
             "notes": offer.map(|offer| offer.notes.clone()),
             "installKind": facts.kind.as_str(),

@@ -25,6 +25,9 @@ use crate::control::Core;
 use crate::host::Host;
 use crate::sync_hub;
 
+/// Page navigations kept while the navigation sync is busy.
+const PAGE_TAP_CAPACITY: usize = 1024;
+
 /// Navigation sync of one window.
 pub struct NavSyncHost {
     me: Weak<NavSyncHost>,
@@ -282,7 +285,7 @@ impl NavSyncHost {
         let Some(sync) = sync_hub::for_host(&host) else {
             return;
         };
-        let detect = host.config().sync.detect_browsersync;
+        let detect = host.with_config(|config| config.sync.detect_browsersync);
         let sync_on = sync.hub().with(|hub| hub.switches().enabled);
         let action = lock(&self.guard).detected(&origin, detect, sync_on);
         match action {
@@ -326,15 +329,12 @@ impl NavSyncHost {
     }
 
     fn watch_pages(&self, host: &Host) {
-        let mut events = host.cdp().subscribe();
+        // A tap of their own: no burst of other events pushes a navigation out.
+        let methods = ["Page.navigatedWithinDocument", "Page.frameNavigated"];
+        let mut events = host.cdp().tap_methods(&methods, PAGE_TAP_CAPACITY);
         let weak = self.me.clone();
         self.runtime.spawn(async move {
-            loop {
-                let event = match events.recv().await {
-                    Ok(event) => event,
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => return,
-                };
+            while let Some(event) = events.recv_shared().await {
                 let Some(nav) = weak.upgrade() else {
                     return;
                 };

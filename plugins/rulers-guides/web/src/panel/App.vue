@@ -26,6 +26,8 @@ const breakpoints = ref<string[]>([]);
 /** The templates' values, as the component answers them: the empty fields' placeholders. */
 const templates = ref<Record<string, Template>>({});
 const message = ref<StatusLine | null>(null);
+/** The host's code of a plugin paused after repeated failures. */
+const SUSPENDED = 'plugins.error.suspended';
 
 const say = (text: string, tone: Tone = 'info'): void => {
   message.value = { tone, text };
@@ -33,6 +35,8 @@ const say = (text: string, tone: Tone = 'info'): void => {
 function failed(error: unknown): void {
   const code = error instanceof Error ? error.message : String(error);
   say(t('panel.failed', { error: failure(t, panel.strings.value, code, (error as CallError).params ?? {}) }), 'error');
+  // "Resume them in Settings > Plugins" links there (RB-094-21).
+  if (code === SUSPENDED && message.value) message.value = { ...message.value, setting: { key: 'plugins', label: t('panel.setting_link') } };
 }
 
 /** The status line: the host's waiting, else what the last change said. */

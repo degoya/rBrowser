@@ -5,6 +5,7 @@
 //! for the next run's estimate. Every message also stays for a panel that opens later
 //! (`getChecksProgress`, `getFindings`).
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -18,6 +19,7 @@ use rb_plugin_host::{
 };
 use rb_plugin_types::FindingsFile;
 
+use super::selection::Base;
 use super::{LAST, run};
 use crate::cdp::lock;
 use crate::control::Core;
@@ -115,7 +117,7 @@ fn skip_key(reason: SkipReason) -> &'static str {
 }
 
 /// An engine's name for people (`webkit` -> `WebKit`); a name rBrowser does not know as given.
-fn engine_label(engine: &str) -> String {
+pub(crate) fn engine_label(engine: &str) -> String {
     serde_json::from_value::<rb_config::EngineKind>(serde_json::Value::from(engine)).map_or_else(
         |_| engine.to_owned(),
         |kind| rb_engine::engine_name(kind).to_owned(),
@@ -183,6 +185,8 @@ pub struct PanelSink {
     estimate_ms: Option<u64>,
     breakpoints: BTreeMap<u32, String>,
     project_off: ProjectOff,
+    /// The last run a run of chosen checks merges into (RB-094-17).
+    base: Option<Arc<Base>>,
     state: Mutex<SinkState>,
 }
 
@@ -196,7 +200,8 @@ struct SinkState {
 
 impl PanelSink {
     /// A sink for run `run_id` started at `started`, its views named by `breakpoints`; the
-    /// cancel of the run becomes the one `checks.cancel` reaches.
+    /// cancel of the run becomes the one `checks.cancel` reaches. With a `base` (a run of chosen
+    /// checks, RB-094-17) the findings so far and the rows at the end are merged into it.
     pub fn start(
         core: Arc<Core>,
         run_id: String,
@@ -204,6 +209,7 @@ impl PanelSink {
         estimate_ms: Option<u64>,
         project_off: ProjectOff,
         cancel: Arc<Cancel>,
+        base: Option<Arc<Base>>,
     ) -> Arc<Self> {
         *lock(&CURRENT) = Some(cancel);
         Arc::new(Self {
@@ -213,6 +219,7 @@ impl PanelSink {
             estimate_ms,
             breakpoints,
             project_off,
+            base,
             state: Mutex::new(SinkState::default()),
         })
     }
@@ -267,15 +274,27 @@ impl PanelSink {
     pub fn finish(&self, outcome: &RunOutcome) {
         self.close();
         let jobs = ipc_jobs(&outcome.jobs, &self.breakpoints);
+        let jobs = match &self.base {
+            Some(base) => base.jobs(jobs),
+            None => jobs,
+        };
         self.send(self.progress(jobs, true, outcome.cancelled));
     }
 
     fn partial(&self, file: &FindingsFile) {
-        match serde_json::to_value(file) {
+        let texts = |of: &FindingsFile| run::messages(of, rb_i18n::plugin_texts);
+        let (shown, messages) = match &self.base {
+            Some(base) => {
+                let (merged, messages) = base.run(file, texts);
+                (Cow::Owned(merged), messages)
+            }
+            None => (Cow::Borrowed(file), texts(file)),
+        };
+        match serde_json::to_value(&*shown) {
             Ok(value) => {
                 let message = CoreToShell::Findings {
                     run: value,
-                    messages: run::messages(file, rb_i18n::plugin_texts),
+                    messages,
                     project_off: self.project_off.clone(),
                     partial: true,
                 };
@@ -323,6 +342,20 @@ impl ProgressSink for Shared {
             Offer::Skip => {}
         }
     }
+}
+
+/// The progress details after `plugin`'s own run `file` (RB-094-14), told to the panel like a
+/// run's: merged into the last run, that plugin's rows replaced; replacing it, the rows of `file`
+/// alone. Left as it is while a run goes - its own progress follows.
+pub fn follow_reported(core: &Core, file: &FindingsFile, plugin: &str, merged: bool) {
+    let mut last = lock(&LAST_PROGRESS);
+    if last.as_ref().is_some_and(|progress| !progress.finished) {
+        return;
+    }
+    let previous = last.as_ref().filter(|_| merged);
+    let progress = super::merge::plugin_progress(previous, file, plugin);
+    core.send(&CoreToShell::ChecksProgress(progress.clone()));
+    *last = Some(progress);
 }
 
 /// The status bar's notice of `key` with `args`.

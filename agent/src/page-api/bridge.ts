@@ -17,7 +17,7 @@ export const MAX_RATE_LIMIT = 1000;
 export const MAX_ORIGIN_LENGTH = 2048;
 
 const TYPE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:/-]*$/;
-const ENGINES = ['chromium', 'firefox', 'webkit'];
+const ENGINES = ['chromium', 'firefox', 'webkit', 'safari', 'ios'];
 
 
 function isCount(value: unknown, min: number, max: number): value is number {

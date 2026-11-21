@@ -5,7 +5,7 @@
 //! 0.1-w1b), the rest answer `501` until their jobs plug in (RB-010-16, RB-020-02).
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rb_engine::{Target, ViewHost};
 use rb_ipc::{
@@ -26,11 +26,18 @@ pub type Failure = (IpcErrorCode, String);
 /// and `listFlows` off the calling thread (the CEF UI thread; a command such as
 /// `diagnostics.create` takes a while, a setting is written to a file, the settings and the
 /// flows are read from disk - RB-090-36), the rest at once.
+///
+/// The time from here to the answer is the timing counter `ipc.query` (RB-090-32).
 pub fn dispatch_to(
     core: &Core,
     request: &str,
     reply: impl FnOnce(Result<String, Failure>) + Send + 'static,
 ) {
+    let arrived = Instant::now();
+    let reply = move |answer: Result<String, Failure>| {
+        rb_util::perf::record(rb_util::perf::names::IPC_QUERY, arrived.elapsed());
+        reply(answer);
+    };
     match parse_request(request) {
         Ok(ShellToCore::RunCommand { id, args }) => {
             core.run_command_async(&id, args, move |result| {
@@ -48,6 +55,12 @@ pub fn dispatch_to(
         // The Recorder panel reads and writes the disk and waits for the export plugin (RB-090-60).
         Ok(message) if crate::recorder::panel::is_off_thread(&message) => {
             crate::recorder::panel::dispatch_off_thread(core, message, move |answer| {
+                reply(answer.and_then(|answer| encode(&answer)));
+            });
+        }
+        // The sitemap gallery reads `run.json`, which may be large (RB-090-86).
+        Ok(message) if crate::sitemap::gallery_page::is_gallery_request(&message) => {
+            crate::sitemap::gallery_page::dispatch_off_thread(core, message, move |answer| {
                 reply(answer.and_then(|answer| encode(&answer)));
             });
         }
@@ -163,7 +176,8 @@ fn command_failure(error: rb_commands::CommandError) -> Failure {
     (code, error.to_string())
 }
 
-/// The whole state the toolbar and the cell labels show.
+/// The whole state the toolbar and the cell labels show; the config and the shell state are read
+/// once.
 pub fn snapshot(host: &Host) -> StateSnapshot {
     let config = host.config();
     let views = host.views();
@@ -205,6 +219,9 @@ pub fn snapshot(host: &Host) -> StateSnapshot {
             }
         })
         .collect();
+    // From the config and shell state read above, not read again (RB-094-10).
+    let hidden = crate::layout::view_edit::addable_in(&config, shell.preset.as_deref());
+    let bookmarks = crate::bookmarks::summaries_in(&config, shell.environment.as_deref());
     StateSnapshot {
         project,
         views,
@@ -218,7 +235,7 @@ pub fn snapshot(host: &Host) -> StateSnapshot {
             mode: shell.mode,
             focus: shell.focus,
             modes: crate::layout::ipc::mode_state(host, &shell.modes),
-            hidden: crate::layout::view_edit::addable(host),
+            hidden,
             minimap: shell.modes.minimap,
         },
         // The SyncHub's state (RB-020-02); the project's switches before it runs.
@@ -238,7 +255,7 @@ pub fn snapshot(host: &Host) -> StateSnapshot {
         // The external views (RB-040-01).
         externals: shell.externals,
         recorder: shell.recorder,
-        bookmarks: crate::bookmarks::summaries(host),
+        bookmarks,
         // The last sitemap capture (RB-050-05).
         sitemap: shell.sitemap,
         // The cell labels' Web Vitals and resources (RB-060-10).
@@ -248,6 +265,14 @@ pub fn snapshot(host: &Host) -> StateSnapshot {
         // The running video and the activity bar's place and folded entries (RB-090-67).
         video: shell.video,
         activity_bar: shell.activity_bar,
+        // The views' clock and animation rates while changed (RB-094-07).
+        time_control: shell.time_control,
+        // The plugin calls that report progress (RB-093-01, `crate::plugins::services`).
+        plugin_progress: shell.plugin_progress,
+        // The views with forced pseudo-class states (RB-094-16, `crate::force_state`).
+        forced_states: shell.forced_states,
+        // The devices of the menus (RB-094-20, `crate::engines::android::menu`).
+        devices: shell.devices,
     }
 }
 

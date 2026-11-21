@@ -65,6 +65,19 @@ pub fn request_context(session: &str) -> Option<RequestContext> {
     Some(context)
 }
 
+/// A request context of its own for one consent probe (RB-094-09, `crate::plugins::consent`): in
+/// memory (no cache folder), never kept here, so nothing a probe page sets outlives its browser
+/// and no other browser shares it. `None` when CEF makes none - the caller then makes no
+/// browser, never one in the global context.
+pub fn fresh_request_context() -> Option<RequestContext> {
+    let settings = RequestContextSettings {
+        cache_path: CefString::from(""),
+        persist_session_cookies: 0,
+        ..Default::default()
+    };
+    request_context_create_context(Some(&settings), None)
+}
+
 wrap_delete_cookies_callback! {
     // Hands "deleted" to the waiting `done`, once.
     struct Deleted {

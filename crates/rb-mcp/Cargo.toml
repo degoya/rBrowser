@@ -11,6 +11,8 @@ publish = false
 async-trait.workspace = true
 # The HTTP routes in front of rmcp's Streamable HTTP service: the token guard and `/health`.
 axum.workspace = true
+# A screenshot resource's PNG as a blob (RB-095-01).
+base64.workspace = true
 # The token and the nonce of the probe: the endpoint secrets of `rb_cdp::secret` (RB-080-28).
 rb-cdp = { path = "../rb-cdp" }
 rb-commands = { path = "../rb-commands" }
@@ -19,6 +21,8 @@ rb-config = { path = "../rb-config" }
 # The log buffers mask what pages write (`rb_diag::page_text`), as the log does.
 rb-diag = { path = "../rb-diag" }
 rb-engine = { path = "../rb-engine" }
+# The prompts' texts from the shared catalogue (RB-095-01).
+rb-i18n = { path = "../rb-i18n" }
 # The instance file's folder, the user's alone on Windows too (RB-090-21).
 rb-process = { path = "../rb-process" }
 rb-util = { path = "../rb-util" }

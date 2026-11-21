@@ -2,9 +2,11 @@
 //! `unsupported(reason)`. The view shows the fields that are not `applied` as its "not
 //! emulable" marker; `views_list` lists them as `unsupported`.
 //!
-//! The table per engine follows ADR 0001, Decision 8 (Firefox over BiDi) and Playwright's
-//! options (WebKit). It is the contract RB-040-02 and RB-040-04 check on the real engines; a
-//! field they find works moves to `applied` here, so every place that shows it agrees.
+//! The table per engine follows ADR 0001, Decision 8 (Firefox over BiDi), Playwright's
+//! options (WebKit) and classic WebDriver (Safari, RB-095-03, and iOS, RB-095-04, which also
+//! mark every view as a follower: [`LEADER_FIELD`]). It is the contract RB-040-02, RB-040-04 and RB-095-03 check on
+//! the real engines; a field they find works moves to `applied` here, so every place that shows
+//! it agrees.
 
 use rb_config::{EngineKind, MediaType};
 use serde::{Deserialize, Serialize};
@@ -46,18 +48,43 @@ pub struct EmulationReport {
 const FIREFOX: &str = "no WebDriver BiDi override in Firefox";
 /// Why WebKit cannot: Playwright has no such option for WebKit.
 const WEBKIT: &str = "no Playwright option for WebKit";
+/// Why an Android device cannot: it is real hardware at its own size (RB-095-02).
+const ANDROID: &str = "an Android device is not emulated: it shows its own size and settings";
+/// Why Safari cannot: classic WebDriver sizes the window and nothing else (RB-095-03).
+const SAFARI: &str = "no WebDriver command in Safari";
+/// The marker every Safari view carries: it never leads the sync (RB-095-03).
+pub const LEADER_FIELD: &str = "leader";
+/// Why: Safari locks a person's input in a window under automation.
+const SAFARI_LEADER: &str =
+    "Safari locks input in automated windows: the view follows the active view, never leads";
+/// Why iOS cannot: the device or simulator has its own screen; WebDriver sizes nothing (RB-095-04).
+const IOS: &str = "no WebDriver command on iOS";
+/// Why an iOS view never leads: automation locks the person's input in Mobile Safari too.
+const IOS_LEADER: &str =
+    "iOS locks input in automated Safari: the view follows the active view, never leads";
 
 impl EmulationReport {
     /// The report `engine` gives for `emulation`: the fields it sets, each with the engine's
     /// support. Chromium applies everything (CDP, RB-010-05).
     pub fn for_engine(engine: EngineKind, emulation: &Emulation) -> Self {
-        let fields = requested(emulation)
+        let mut fields: Vec<FieldReport> = requested(emulation)
             .into_iter()
             .map(|field| FieldReport {
                 field: field.to_owned(),
                 support: support(engine, field),
             })
             .collect();
+        let leader = match engine {
+            EngineKind::Safari => Some(SAFARI_LEADER),
+            EngineKind::Ios => Some(IOS_LEADER),
+            _ => None,
+        };
+        if let Some(reason) = leader {
+            fields.push(FieldReport {
+                field: LEADER_FIELD.to_owned(),
+                support: FieldSupport::Unsupported(reason.to_owned()),
+            });
+        }
         Self { fields }
     }
 
@@ -154,6 +181,23 @@ fn support(engine: EngineKind, field: &str) -> FieldSupport {
             | "textScale"
             | "cpuThrottling" => unsupported(WEBKIT),
             _ => FieldSupport::Applied,
+        },
+        EngineKind::Android => match field {
+            "viewport" | "dpr" => FieldSupport::Applied,
+            _ => unsupported(ANDROID),
+        },
+        // The window takes the viewport's size; the display gives the pixel ratio.
+        EngineKind::Safari => match field {
+            "viewport" => FieldSupport::Applied,
+            "dpr" => FieldSupport::Approximated("Safari renders at the display's ratio".to_owned()),
+            _ => unsupported(SAFARI),
+        },
+        // The device's own screen: its size and pixel ratio; a phone is mobile and touch.
+        EngineKind::Ios => match field {
+            "viewport" => unsupported("iOS shows the device's own size"),
+            "dpr" => unsupported("iOS renders at the device's pixel ratio"),
+            "mobile" | "touch" => FieldSupport::Applied,
+            _ => unsupported(IOS),
         },
     }
 }

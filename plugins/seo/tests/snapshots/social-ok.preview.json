@@ -209,5 +209,58 @@
       "dataUri": "data:image/jpeg;base64,/9j/4AAEAAD/wAARCAJ2BLA=",
       "tooLarge": false
     }
-  ]
+  ],
+  "serp": {
+    "title": {
+      "text": "Social fixture: six platforms preview this page",
+      "source": "title"
+    },
+    "description": {
+      "text": "A page of the SEO check fixture site that answers every essential rule but the ones it is made for.",
+      "source": "description"
+    },
+    "siteName": {
+      "text": "fixture.test",
+      "source": "domain"
+    },
+    "url": "https://fixture.test/social-ok/",
+    "breadcrumb": {
+      "host": "fixture.test",
+      "segments": [
+        "social-ok"
+      ]
+    },
+    "noindex": false,
+    "limits": {
+      "confidence": "unverified",
+      "checked": "2026-11-20",
+      "source": "https://developers.google.com/search/docs/appearance/title-link",
+      "desktop": {
+        "width": 600,
+        "titleFontPx": 20,
+        "titleLines": 1,
+        "descriptionFontPx": 14,
+        "descriptionLines": 2
+      },
+      "mobile": {
+        "width": 328,
+        "titleFontPx": 20,
+        "titleLines": 2,
+        "descriptionFontPx": 14,
+        "descriptionLines": 3
+      }
+    },
+    "favicon": {
+      "url": "https://fixture.test/favicon.ico",
+      "source": "default",
+      "status": 404,
+      "error": null,
+      "format": null,
+      "width": null,
+      "height": null,
+      "bytes": 0,
+      "dataUri": null,
+      "tooLarge": false
+    }
+  }
 }

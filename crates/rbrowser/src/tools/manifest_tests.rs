@@ -33,6 +33,57 @@ fn the_embedded_manifest_pins_an_lgpl_ffmpeg_for_windows() {
     assert!(ffmpeg.size > 0 && ffmpeg.size <= MAX_SIZE);
 }
 
+/// RB-095-02: the Android Platform Tools are downloaded from Google after the person's consent,
+/// never shipped; the entry takes `adb.exe` with the two USB libraries and the threads runtime
+/// it loads, and the licence notice.
+#[test]
+fn the_embedded_manifest_pins_googles_platform_tools_for_windows() {
+    let manifest = Manifest::embedded().expect("the embedded manifest is valid");
+    let adb = manifest.entry(ADB, WINDOWS_X64).expect("adb for Windows");
+    assert!(
+        adb.url
+            .starts_with("https://dl.google.com/android/repository/platform-tools_r"),
+        "{}",
+        adb.url
+    );
+    assert!(adb.url.ends_with("-win.zip"), "{}", adb.url);
+    assert_eq!(adb.license, ANDROID_SDK_LICENSE);
+    assert_eq!(adb.executable, "adb.exe");
+    for member in ["AdbWinApi.dll", "AdbWinUsbApi.dll", "NOTICE.txt"] {
+        assert!(adb.members.iter().any(|m| m == member), "{member}");
+    }
+    assert_ne!(adb.sha256, PLACEHOLDER_SHA256, "the pin is set");
+    assert!(adb.size > 0 && adb.size <= MAX_SIZE);
+    assert!(
+        adb.source_url
+            .starts_with("https://android.googlesource.com/")
+    );
+}
+
+/// Besides an LGPL build only the Android SDK licence is taken (RB-095-02), and only for adb:
+/// another tool under it is refused like any other licence.
+#[test]
+fn the_android_sdk_licence_is_taken_for_adb_only() {
+    let adb = ToolEntry {
+        name: ADB.to_owned(),
+        executable: "adb.exe".to_owned(),
+        members: vec!["adb.exe".to_owned()],
+        license: ANDROID_SDK_LICENSE.to_owned(),
+        ..entry()
+    };
+    assert_eq!(adb.validate(), Ok(()));
+    let other = ToolEntry {
+        license: ANDROID_SDK_LICENSE.to_owned(),
+        ..entry()
+    };
+    assert!(other.validate().is_err(), "ffmpeg under the SDK licence");
+    let gpl_adb = ToolEntry {
+        license: "GPL-2.0".to_owned(),
+        ..adb
+    };
+    assert!(gpl_adb.validate().is_err());
+}
+
 #[test]
 fn a_valid_entry_passes() {
     assert_eq!(entry().validate(), Ok(()));
@@ -174,4 +225,64 @@ fn every_btbn_pin_is_a_month_end_release() {
             entry.name, entry.url
         );
     }
+}
+
+/// RB-096-05: cloudflared, the presentation's tunnel, is the release's bare program (no archive)
+/// under Apache-2.0, pinned like ffmpeg.
+#[test]
+fn the_embedded_manifest_pins_cloudflared_for_windows() {
+    let manifest = Manifest::embedded().expect("the embedded manifest is valid");
+    let cloudflared = manifest
+        .entry(CLOUDFLARED, WINDOWS_X64)
+        .expect("cloudflared for Windows");
+    assert!(
+        cloudflared
+            .url
+            .starts_with("https://github.com/cloudflare/cloudflared/releases/download/"),
+        "{}",
+        cloudflared.url
+    );
+    assert_eq!(cloudflared.archive, Archive::Exe);
+    assert_eq!(cloudflared.executable, "cloudflared.exe");
+    assert_eq!(cloudflared.members, ["cloudflared.exe"]);
+    assert_eq!(cloudflared.license, "Apache-2.0");
+    assert_ne!(cloudflared.sha256, PLACEHOLDER_SHA256, "the pin is set");
+    assert!(cloudflared.size > 0 && cloudflared.size <= MAX_SIZE);
+}
+
+/// The licences a managed tool may have: an LGPL (ffmpeg) or Apache-2.0 (cloudflared); a GPL
+/// still never.
+#[test]
+fn apache_2_0_is_taken_beside_the_lgpl() {
+    let apache = ToolEntry {
+        license: "Apache-2.0".to_owned(),
+        ..entry()
+    };
+    assert_eq!(apache.validate(), Ok(()));
+    for refused in ["GPL-3.0-only", "Apache-2.0 WITH x", "apache-2.0"] {
+        let other = ToolEntry {
+            license: refused.to_owned(),
+            ..entry()
+        };
+        assert!(other.validate().is_err(), "{refused:?} was taken");
+    }
+}
+
+/// A bare program is its one member: the executable, nothing beside it.
+#[test]
+fn a_bare_program_names_only_its_executable() {
+    let bare = ToolEntry {
+        archive: Archive::Exe,
+        members: vec!["ffmpeg.exe".to_owned()],
+        ..entry()
+    };
+    assert_eq!(bare.validate(), Ok(()));
+    let more = ToolEntry {
+        archive: Archive::Exe,
+        ..entry()
+    };
+    assert!(
+        more.validate().is_err(),
+        "a bare program has no LICENSE.txt"
+    );
 }

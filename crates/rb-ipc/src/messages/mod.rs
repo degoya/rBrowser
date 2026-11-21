@@ -7,13 +7,16 @@
 //!
 //! One file per direction, so a wave can add variants side by side: the shell's requests
 //! (`shell_to_core.rs`), the core's answers and events (`core_to_shell.rs`) and the state they
-//! carry (`state.rs`); everything is re-exported here, so `crate::messages::*` paths hold.
+//! carry (`state.rs`); everything is re-exported here, so `crate::messages::*` paths hold. The
+//! payloads of the Videos panel's requests are `video_requests.rs` (RB-093-04 made room).
 
 mod core_to_shell;
 mod shell_to_core;
 mod state;
 mod sync_feature;
+mod video_requests;
 
 pub use core_to_shell::CoreToShell;
 pub use shell_to_core::{ShellToCore, SyncFeature};
 pub use state::{LayoutState, ProjectInfo, SettingValue, StateSnapshot, SyncState};
+pub use video_requests::{ConvertVideoRequest, VideoFileRef};

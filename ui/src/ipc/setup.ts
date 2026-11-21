@@ -9,6 +9,21 @@ export type SetupTemplate = 'analyzer' | 'default' | 'devices';
 export type SetupSource = 'analyzer' | 'default' | 'devices';
 export type SetupLayout = 'grid' | 'canvas';
 export type SetupStep = 'preview' | 'write' | 'basics';
+/** Why the analyser had no proposal (RB-091-08); the text is `firstrun.project.reason.<code>`. */
+export type SetupReasonCode =
+  | 'no_page'
+  | 'unreachable'
+  | 'timeout'
+  | 'no_css'
+  | 'plugin_missing'
+  | 'plugin_failed'
+  | 'bad_output'
+  | 'nothing_found'
+  | 'invalid';
+export interface SetupReason {
+  code: SetupReasonCode;
+  params?: Record<string, string>;
+}
 
 export type SetupRequest =
   | { op: 'info' }
@@ -27,7 +42,18 @@ export type SetupJson = string | number | boolean | null | SetupJson[] | { [key:
 
 export type SetupAnswer =
   | { op: 'info'; enabled: boolean; project?: SetupProject; written?: string }
-  | { op: 'proposal'; requestId: number; proposalId: number; root: string; config: { [key: string]: SetupJson }; source: SetupSource }
+  | {
+      op: 'proposal';
+      requestId: number;
+      proposalId: number;
+      root: string;
+      config: { [key: string]: SetupJson };
+      source: SetupSource;
+      /** The stylesheets the analyser read, when its proposal is the source. */
+      sheets?: number;
+      /** Why the analyser had none, when it was asked and the source is `default`. */
+      reason?: SetupReason;
+    }
   | { op: 'written'; requestId: number; root: string; path: string; open: boolean }
   | { op: 'applied'; requestId: number; root: string }
   | { op: 'failed'; requestId: number; step: SetupStep; messageKey: string; args?: Record<string, string> };

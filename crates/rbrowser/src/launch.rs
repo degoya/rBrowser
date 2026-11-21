@@ -1,6 +1,14 @@
 //! What a launch decides before CEF starts: the browser's own switches and the window title.
+//! The main window's title follows `ui.titleBar` (RB-094-19) at once
+//! ([`on_user_settings_changed`]); the other windows keep their own titles.
 
-use rb_config::NetworkConfig;
+use rb_config::{NetworkConfig, TitleBarSettings};
+
+use crate::control::Core;
+
+/// The credit line at the end of the main window's title (RB-094-19): the owner's, fixed text,
+/// never translated.
+pub const CREDIT: &str = "made with Love by Alexander Herling/DEGOYA.digital";
 
 /// The switches the browser process adds to its command line: the CDP pipe (ADR 0001,
 /// Decision 4; no port) and the project's network settings, which apply to this instance only.
@@ -39,8 +47,10 @@ pub fn browser_switches(
     switches
 }
 
-/// The window title: the project's folder name, then the product.
-pub fn window_title(project: Option<&std::path::Path>) -> String {
+/// The main window's title: the project's folder name, then the product, its version
+/// (`ui.titleBar.showVersion`, as About shows it) and the credit line
+/// (`ui.titleBar.showCredit`): `shop - rBrowser 0.9.4 - made with Love by ...`.
+pub fn window_title(project: Option<&std::path::Path>, bar: &TitleBarSettings) -> String {
     let name = project.and_then(|root| {
         let written = root.to_string_lossy().replace('/', "\\");
         written
@@ -50,10 +60,24 @@ pub fn window_title(project: Option<&std::path::Path>) -> String {
             .filter(|name| !name.is_empty())
             .map(str::to_owned)
     });
-    match name {
-        Some(name) => format!("{name} - rBrowser"),
-        None => "rBrowser".to_owned(),
+    let mut title = name.map_or_else(String::new, |name| format!("{name} - "));
+    title.push_str("rBrowser");
+    if bar.show_version {
+        title.push(' ');
+        title.push_str(env!("CARGO_PKG_VERSION"));
     }
+    if bar.show_credit {
+        title.push_str(" - ");
+        title.push_str(CREDIT);
+    }
+    title
+}
+
+/// The user settings changed: the main window takes its title again, `ui.titleBar` may have.
+pub fn on_user_settings_changed(core: &Core) {
+    let project = core.host().project_root();
+    let title = window_title(project.as_deref(), &core.user_settings().ui.title_bar);
+    core.ui().set_window_title(title);
 }
 
 #[cfg(test)]

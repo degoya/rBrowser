@@ -4,7 +4,8 @@
 // running ones on top, each view on demand (`ProgressRows.vue`, RB-080-98). After the run it
 // collapses to one line - the checks, the time, how many failed or were skipped - that opens the
 // rows again. The logic is `progress.ts`; the panel (`FindingsPanel.vue`) feeds it and ticks
-// `elapsedMs`. A screen reader hears the count and the end only (RB-090-22).
+// `elapsedMs`. A screen reader hears the count and the end only (RB-090-22). The details of a
+// finished run offer to run one check or a selection again (`rerun`, RB-094-17).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
@@ -13,16 +14,18 @@ import UCollapsible from '@nuxt/ui/components/Collapsible.vue';
 import UIcon from '@nuxt/ui/components/Icon.vue';
 import UProgress from '@nuxt/ui/components/Progress.vue';
 import ProgressRows from './ProgressRows.vue';
+import RerunChecks from './RerunChecks.vue';
 import { FINDINGS_ICONS } from './icons';
 import { STATE_ICONS, pluginRows, progressCounts, runTally, secondsLeft, wholeSeconds } from './progress';
 import type { ChecksProgress } from './types';
 
-const props = defineProps<{ progress: ChecksProgress; elapsedMs: number }>();
-const emit = defineEmits<{ cancel: [] }>();
+const props = defineProps<{ progress: ChecksProgress; elapsedMs: number; canRerun?: boolean }>();
+const emit = defineEmits<{ cancel: []; rerun: [plugins: string[]] }>();
 const { t } = useI18n();
 
 const counts = computed(() => progressCounts(props.progress));
 const rows = computed(() => pluginRows(props.progress));
+const rowPlugins = computed(() => rows.value.map((row) => row.plugin));
 const left = computed(() => secondsLeft(props.progress.estimateMs, props.elapsedMs));
 const tally = computed(() => runTally(props.progress));
 /** The summary line's icon: cancelled, failed in a view, or through. */
@@ -108,7 +111,8 @@ const details = ref(false);
       <span class="text-muted">{{ t('findings.progress.details') }}</span>
     </UButton>
     <template #content>
-      <ProgressRows :rows="rows" />
+      <RerunChecks v-if="canRerun" :plugins="rowPlugins" @rerun="(plugins) => emit('rerun', plugins)" />
+      <ProgressRows :rows="rows" :can-rerun="canRerun" @rerun="(plugin) => emit('rerun', [plugin])" />
     </template>
   </UCollapsible>
 </template>

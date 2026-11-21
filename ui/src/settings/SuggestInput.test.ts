@@ -32,7 +32,7 @@ async function field(value = '') {
 }
 
 function menu(wrapper: VueWrapper) {
-  return wrapper.findComponent(UInputMenu);
+  return wrapper.findComponent(UInputMenu) as unknown as VueWrapper;
 }
 
 /** Types `text` as the menu reports it: its model follows every keystroke in autocomplete. */

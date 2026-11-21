@@ -125,3 +125,72 @@ fn a_flow_played_as_recorded_carries_the_exporters_pauses() {
     assert_eq!(recorded.pause_ms, 31_000);
     assert_eq!(recorded.source, fast.source);
 }
+
+fn three_steps() -> Recording {
+    let text = json!({
+        "version": 1, "name": "checkout", "startedAtMs": 1, "appVersion": "0.9.2",
+        "steps": [
+            { "id": 1, "action": { "type": "navigate", "url": "http://x.test/" }, "view": "desktop", "atMs": 0 },
+            { "id": 2, "action": { "type": "wait", "ms": 1500 }, "view": "desktop", "atMs": 10, "disabled": true },
+            { "id": 3, "action": { "type": "wait", "ms": 40000 }, "view": "desktop", "atMs": 20 }
+        ]
+    })
+    .to_string();
+    rb_sync::recorder::from_json(&text).expect("a recording")
+}
+
+fn ids(recording: &Recording) -> Vec<u32> {
+    recording.steps.iter().map(|step| step.id).collect()
+}
+
+/// RB-092-01: "Play" leaves out the steps switched off, "Play from here" starts at a step,
+/// "Try" plays one step alone, and the steps before "Continue recording from here" end at it.
+#[test]
+fn a_part_of_the_recording_plays() {
+    let all = three_steps();
+    assert_eq!(ids(&select(&all, &Part::default()).expect("all")), [1, 3]);
+    let from = Part {
+        from_step: Some(2),
+        ..Part::default()
+    };
+    assert_eq!(ids(&select(&all, &from).expect("from 2")), [3]);
+    let only = Part {
+        only_step: Some(2),
+        ..Part::default()
+    };
+    assert_eq!(ids(&select(&all, &only).expect("only 2")), [2]);
+    let up_to = Part {
+        up_to: Some(2),
+        ..Part::default()
+    };
+    assert_eq!(ids(&select(&all, &up_to).expect("up to 2")), [1]);
+    let missing = Part {
+        from_step: Some(9),
+        ..Part::default()
+    };
+    assert!(matches!(
+        select(&all, &missing),
+        Err(CommandError::InvalidArgs(_))
+    ));
+}
+
+#[test]
+fn a_fixed_wait_adds_to_the_runs_budget_capped_like_the_export() {
+    // Step 2 is off and plays not; step 3 waits at most 10 s.
+    assert_eq!(
+        waits_ms(&select(&three_steps(), &Part::default()).expect("all")),
+        10_000
+    );
+}
+
+#[test]
+fn the_arguments_name_a_part_and_a_draft() {
+    let read = args(
+        &json!({ "recordingId": "checkout", "fromStep": 3, "onlyStep": 2,
+                              "draft": { "version": 1 } }),
+    )
+    .expect("a part");
+    assert_eq!(read.from_step, Some(3));
+    assert_eq!(read.only_step, Some(2));
+    assert_eq!(read.draft, Some(json!({ "version": 1 })));
+}

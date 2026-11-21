@@ -110,14 +110,26 @@ wrap_window_delegate! {
             1
         }
 
+        // macOS draws the close, minimise and zoom buttons only on this answer; CEF's default
+        // is "not frameless", the cef crate's 0 - a window without them cannot be closed there
+        // (RB-090-98). Ignored on Windows.
+        fn with_standard_window_buttons(&self, _window: Option<&mut Window>) -> i32 {
+            1
+        }
+
         fn can_close(&self, _window: Option<&mut Window>) -> i32 {
             // Logged, so a diagnostics ZIP shows what closed the window (a close button, or a
             // browser's DoClose falling through to its top-level window).
             tracing::info!("the main window is asked to close");
             // The browsers close now: a session they end is not attached again (RB-080-91).
             if let Some(host) = super::views::host() {
+                // The pages are kept a last time while every view still shows its own
+                // (RB-092-04).
+                crate::restore_last::on_closing(host);
                 host.begin_shutdown();
             }
+            // A running load test ends with the window, every connection at once (RB-096-07).
+            crate::load_test::on_closing();
             // The pages window and the page windows close with the main one (RB-010-08).
             super::settings_window::close();
             super::page_windows::close_all();
@@ -170,6 +182,15 @@ pub fn open(title: &str, background: bool) {
     let mut delegate = MainWindow::new(title.to_owned(), background);
     let window = window_create_top_level(Some(&mut delegate));
     UI.with(|ui| ui.borrow_mut().window = window);
+}
+
+/// The main window's title is `title` now (`ui.titleBar`, RB-094-19); before the window exists
+/// nothing changes - it takes the title [`open`] was given. UI thread.
+pub fn set_title(title: &str) {
+    let window = UI.with(|ui| ui.borrow().window.clone());
+    if let Some(window) = window {
+        window.set_title(Some(&CefString::from(title)));
+    }
 }
 
 /// The shell view's height changed - the toolbar wraps into a second row or is back in one

@@ -25,6 +25,7 @@ use super::limits::Limits;
 pub use super::limits::{MAX_CONNECTIONS, MAX_PER_ADDRESS};
 use super::origins::{host_matches, upstream_for};
 use super::pairing::{session_of, set_cookie};
+use super::present::public::Public;
 use super::state::Shared;
 use crate::cdp::lock;
 
@@ -55,6 +56,8 @@ pub struct PortalServer {
     pub(super) me: Weak<PortalServer>,
     /// One listener per asset origin (RB-090-65).
     pub(super) assets: Mutex<AssetListeners>,
+    /// The presentation's listener behind the tunnel (RB-096-05, [`super::present::serve`]).
+    pub(super) public: Option<Arc<Public>>,
 }
 
 impl std::fmt::Debug for PortalServer {
@@ -89,6 +92,15 @@ impl PortalServer {
     ///
     /// The address is no local one, or the port is taken.
     pub fn start(runtime: &Handle, options: Options) -> std::io::Result<Arc<Self>> {
+        Self::start_with(runtime, options, None)
+    }
+
+    /// [`Self::start`], as the presentation's listener when `public` is given (RB-096-05).
+    pub(super) fn start_with(
+        runtime: &Handle,
+        options: Options,
+        public: Option<Arc<Public>>,
+    ) -> std::io::Result<Arc<Self>> {
         let wanted = SocketAddr::from((options.ip, options.port.unwrap_or(0)));
         let listener = std::net::TcpListener::bind(wanted)?;
         listener.set_nonblocking(true)?;
@@ -104,11 +116,17 @@ impl PortalServer {
             shared: Mutex::new(Shared::new(options.pairing_ttl, options.max_devices)),
             agent: options.agent,
             stopped,
-            connections: Mutex::new(Limits::default()),
+            // Behind the tunnel every connection comes from 127.0.0.1.
+            connections: Mutex::new(if public.is_some() {
+                Limits::shared_address()
+            } else {
+                Limits::default()
+            }),
             on_change: options.on_change,
             runtime: runtime.clone(),
             me: me.clone(),
             assets: Mutex::new(AssetListeners::default()),
+            public,
         });
         runtime.spawn(accept_loop(
             listener,
@@ -220,6 +238,10 @@ async fn serve(mut stream: TcpStream, peer: IpAddr, server: &Arc<PortalServer>, 
         let _ = respond_text(&mut stream, 400, "Bad Request").await;
         return;
     };
+    if let Some(public) = &server.public {
+        super::present::serve::serve(stream, request, rest, peer, server, public).await;
+        return;
+    }
     let authority = match role {
         Role::Main => server.address.to_string(),
         Role::Asset(asset) => asset.authority.clone(),

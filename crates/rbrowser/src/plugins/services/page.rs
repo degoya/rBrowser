@@ -4,7 +4,9 @@
 //!   title).
 //! - `evaluate` runs the plugin's script in the plugin's own isolated world `rbplugin-<id>` of
 //!   the view's main frame (the world its page scripts live in; `Page.createIsolatedWorld` with
-//!   that name, never the page's main world) with `Runtime.evaluate` - by value, a promise
+//!   that name, never the page's main world; Chromium answers the same world of the document
+//!   for the same name in the view's one session, so a script's globals last from call to
+//!   call, as hot reload's world does) with `Runtime.evaluate` - by value, a promise
 //!   awaited, no user gesture - within the plugin's call time. Its answer is the value's JSON
 //!   (`null` for `undefined` or a value JSON cannot hold); a throw is
 //!   `plugins.error.host_failed` with `reason=exception` and the exception's first 200
@@ -93,7 +95,7 @@ fn engine_failed(error: &EngineError) -> Failure {
 }
 
 /// `view` when it is a Chromium view of `views`.
-fn chromium(views: &dyn Views, view: ViewId, service: &str) -> Result<(), Failure> {
+pub(super) fn chromium(views: &dyn Views, view: ViewId, service: &str) -> Result<(), Failure> {
     let info = views
         .views()
         .into_iter()
@@ -210,6 +212,14 @@ pub async fn cdp(
         return Err(Failure::coded(FailureKind::BadData, codes::INVALID));
     }
     within(timeout, async {
+        // Chromium answers a resource's content only to a session with the Page domain on
+        // ("Agent is not enabled"); on is harmless and stays (RB-094-13: html-validate, coverage).
+        if method == RESOURCE_CONTENT {
+            views
+                .cdp(view, "Page.enable", json!({}))
+                .await
+                .map_err(|error| engine_failed(&error))?;
+        }
         views
             .cdp(view, method, params)
             .await
@@ -218,6 +228,9 @@ pub async fn cdp(
     })
     .await
 }
+
+/// The one method a plugin may send that needs the Page domain on in the view's session.
+const RESOURCE_CONTENT: &str = "Page.getResourceContent";
 
 #[cfg(test)]
 #[path = "page_tests.rs"]

@@ -7,10 +7,11 @@
 //! steps after a ` > `), `[data-testid="otp"]`, or the field's accessible name (`One-time code`,
 //! any case). The page is not asked: matching runs on what the event carries.
 //!
-//! A URL's tokens are no steps' business either: the value of a known token parameter
-//! ([`URL_TOKEN_PARAMS`]) or of a parameter a `secretFields` entry names, in the query or the
-//! fragment, is recorded as `********` ([`mask_url`]). Such a value is single-use or bound to a
-//! session, so a replay gains nothing from it.
+//! A URL's tokens are no steps' business either: the value of a known token parameter (the one
+//! list `rb_util::mask`) or of a parameter a `secretFields` entry names, in the query or the
+//! fragment, is recorded as `********`, and the user info (`user:password@`) is dropped
+//! ([`mask_url`]). Such a value is single-use or bound to a session, so a replay gains nothing
+//! from it.
 
 use crate::event::{ElementSelector, ElementTarget};
 
@@ -19,60 +20,16 @@ const MAX_NAME: usize = 32;
 /// The name of a secret whose field has none.
 const FALLBACK_NAME: &str = "secret";
 
-/// The URL parameters whose values are tokens (any case): OAuth's code and tokens, signatures,
-/// keys and passwords.
-pub const URL_TOKEN_PARAMS: &[&str] = &[
-    "access_token",
-    "refresh_token",
-    "id_token",
-    "token",
-    "code",
-    "client_secret",
-    "password",
-    "api_key",
-    "apikey",
-    "sig",
-    "signature",
-    "x-amz-signature",
-    "x-amz-credential",
-    "x-amz-security-token",
-];
-
-/// `url` with the value of every token parameter in its query and fragment as `********`: one
-/// of [`URL_TOKEN_PARAMS`] or named by an entry of `extra` (`secretFields`, any case).
+/// `url` without its user info and with the value of every token parameter in its query and
+/// fragment as `********`: one of `rb_util::mask`'s list (RB-094-10) or named by an entry of
+/// `extra` (`secretFields`, any case). The user info is dropped, not masked: a replay meets the
+/// site's login (Basic auth answers it from the person's store) instead of a wrong name.
 pub fn mask_url(url: &str, extra: &[String]) -> String {
-    let Some(start) = url.find(['?', '#']) else {
-        return url.to_owned();
-    };
-    let (head, tail) = url.split_at(start);
-    let mut out = String::with_capacity(url.len());
-    out.push_str(head);
-    for piece in tail.split_inclusive(['?', '#', '&', ';']) {
-        let (body, separator) = match piece.char_indices().last() {
-            Some((at, '?' | '#' | '&' | ';')) => piece.split_at(at),
-            _ => (piece, ""),
-        };
-        match body.split_once('=') {
-            Some((name, _)) if is_token_param(name, extra) => {
-                out.push_str(name);
-                out.push('=');
-                out.push_str(crate::forms::MASK);
-            }
-            _ => out.push_str(body),
-        }
-        out.push_str(separator);
-    }
-    out
-}
-
-fn is_token_param(name: &str, extra: &[String]) -> bool {
-    !name.is_empty()
-        && (URL_TOKEN_PARAMS
-            .iter()
-            .any(|known| known.eq_ignore_ascii_case(name))
-            || extra
-                .iter()
-                .any(|entry| entry.trim().eq_ignore_ascii_case(name)))
+    rb_util::mask::mask_url_with(
+        &rb_util::url::without_user_info(url),
+        extra,
+        crate::forms::MASK,
+    )
 }
 
 /// Whether the field `target` is secret: a password field (`sensitive`) or one of `extra`.

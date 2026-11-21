@@ -125,6 +125,114 @@
           ]
         }
       }
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "resourceTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Document",
+              "XHR",
+              "Fetch",
+              "EventSource",
+              "WebSocket",
+              "Script",
+              "Stylesheet",
+              "Image",
+              "Font",
+              "Media",
+              "Other"
+            ]
+          },
+          "maxItems": 11,
+          "uniqueItems": true,
+          "default": [
+            "XHR",
+            "Fetch"
+          ],
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 1,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^/.{0,511}$",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": [],
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 2,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        },
+        "slowMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600000,
+          "default": 1000,
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 3,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        },
+        "largeBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 67108864,
+          "default": 10240,
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 4,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        },
+        "nPlusOne": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100,
+          "default": 5,
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 5,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        },
+        "breakpointDifference": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2,
+          "x-category": "network",
+          "x-section": "endpoints",
+          "x-order": 6,
+          "x-scope": [
+            "user",
+            "project"
+          ]
+        }
+      }
     }
   }
 }

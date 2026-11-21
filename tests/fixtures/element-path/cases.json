@@ -1,0 +1,72 @@
+{
+  "description": "The element path a finding's stable id is made of (RB-094-10): the lower-case tag names from `html` down to the element, joined by ' > ', a step numbered ':nth-of-type(n)' (1-based) only when its parent holds more than one child of that tag; no ids, no classes; a shadow root crossed with ' >>> ' after its host's path. The target is the element with `data-target`. Every implementation is held to these cases: plugins/web-common/src/element-path.ts (every TypeScript bundle), plugins/schema-org/src/path.rs (Rust, also plugins/seo through its re-export) and the page copy in plugins/seo/src/collect.js. Cases with `shadow: true` need a live DOM (a declarative shadow root, attached by the TypeScript tests); the Rust parser sees no shadow roots and skips them.",
+  "cases": [
+    {
+      "name": "the root is html",
+      "html": "<html data-target><head></head><body></body></html>",
+      "path": "html"
+    },
+    {
+      "name": "body is one step below html",
+      "html": "<html><head></head><body data-target></body></html>",
+      "path": "html > body"
+    },
+    {
+      "name": "the head's children are numbered too",
+      "html": "<html><head><meta charset=\"utf-8\"><meta name=\"a\" data-target><title>t</title></head><body></body></html>",
+      "path": "html > head > meta:nth-of-type(2)"
+    },
+    {
+      "name": "only children carry no number",
+      "html": "<html><head></head><body><main><p data-target>text</p></main></body></html>",
+      "path": "html > body > main > p"
+    },
+    {
+      "name": "a tag is numbered among its own tag only, 1-based",
+      "html": "<html><head></head><body><main><img src=\"a\"><p></p><img src=\"b\" data-target></main></body></html>",
+      "path": "html > body > main > img:nth-of-type(2)"
+    },
+    {
+      "name": "the first of several is numbered and ids and classes are ignored",
+      "html": "<html><head></head><body><div id=\"x\" class=\"a b\"><span class=\"c\" data-target></span></div><div></div></body></html>",
+      "path": "html > body > div:nth-of-type(1) > span"
+    },
+    {
+      "name": "siblings of other tags do not count",
+      "html": "<html><head></head><body><p></p><div></div><p></p><section data-target></section></body></html>",
+      "path": "html > body > section"
+    },
+    {
+      "name": "text and comments do not count",
+      "html": "<html><head></head><body><ul>\n  <!-- c -->\n  <li>a</li>\n  text\n  <li data-target>b</li>\n</ul></body></html>",
+      "path": "html > body > ul > li:nth-of-type(2)"
+    },
+    {
+      "name": "custom elements are numbered like any tag",
+      "html": "<html><head></head><body><x-card></x-card><x-card><b data-target></b></x-card></body></html>",
+      "path": "html > body > x-card:nth-of-type(2) > b"
+    },
+    {
+      "name": "camel-case SVG tags are written in lower case",
+      "html": "<html><head></head><body><svg><defs><linearGradient id=\"g\"></linearGradient><linearGradient data-target></linearGradient></defs></svg></body></html>",
+      "path": "html > body > svg > defs > lineargradient:nth-of-type(2)"
+    },
+    {
+      "name": "a deep path numbers each level on its own",
+      "html": "<html><head></head><body><main><article><section></section><section><div><a></a><a data-target></a></div></section></article></main><main></main></body></html>",
+      "path": "html > body > main:nth-of-type(1) > article > section:nth-of-type(2) > div > a:nth-of-type(2)"
+    },
+    {
+      "name": "a shadow root is crossed with >>> after its host's path",
+      "shadow": true,
+      "html": "<html><head></head><body><section></section><section><template shadowrootmode=\"open\"><button></button><button data-target></button></template></section></body></html>",
+      "path": "html > body > section:nth-of-type(2) >>> button:nth-of-type(2)"
+    },
+    {
+      "name": "nested shadow roots are crossed one after the other",
+      "shadow": true,
+      "html": "<html><head></head><body><x-a><template shadowrootmode=\"open\"><div><x-b><template shadowrootmode=\"open\"><i></i><i data-target></i></template></x-b></div></template></x-a></body></html>",
+      "path": "html > body > x-a >>> div > x-b >>> i:nth-of-type(2)"
+    }
+  ]
+}

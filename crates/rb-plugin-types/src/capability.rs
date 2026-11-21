@@ -43,6 +43,21 @@ pub enum Capability {
     /// Short notices in the status bar, the plugin's own texts under its name (`status` posts,
     /// RB-080-64; review S1); no import.
     Status,
+    /// Asking the core for a probe: an `http(s)` page loaded in a fresh, empty session of the
+    /// core's, captured before consent and after "Reject all", then discarded; the capture comes
+    /// back as the argument `$consent` (RB-094-09). No import - the host runs it.
+    ConsentProbe,
+    /// Asking the core for the API client's work (RB-096-01): the collections under
+    /// `.rbrowser/api/` read and written, a request sent from the core - no CORS, the host
+    /// granted by a person first, the secrets put in by the core and masked in what comes back.
+    /// The answer comes back as the argument `$apiResult`. No import - the host runs it.
+    ApiClient,
+    /// Asking the core for the load test's work (RB-096-07): scenarios below
+    /// `.rbrowser/api/load/` read and written, a run of many virtual users started by a person in
+    /// the plugin's panel - only against the trusted project's own origins, this machine or a
+    /// host the person confirmed - its live numbers and reports. The answer comes back as the
+    /// argument `$loadResult`. No import - the host runs it.
+    LoadTest,
 }
 
 /// A capability id rBrowser does not know.
@@ -52,7 +67,7 @@ pub struct UnknownCapability(pub String);
 
 impl Capability {
     /// Every capability, in the order of `docs/plugins.md`.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 15] = [
         Self::Views,
         Self::Evaluate,
         Self::Cdp,
@@ -65,6 +80,9 @@ impl Capability {
         Self::NetworkRules,
         Self::ConsoleLogs,
         Self::Status,
+        Self::ConsentProbe,
+        Self::ApiClient,
+        Self::LoadTest,
     ];
 
     /// The id a manifest names it by.
@@ -83,6 +101,9 @@ impl Capability {
             Self::NetworkRules => "network-rules",
             Self::ConsoleLogs => "console-logs",
             Self::Status => "status",
+            Self::ConsentProbe => "consent-probe",
+            Self::ApiClient => "api-client",
+            Self::LoadTest => "load-test",
         }
     }
 
@@ -99,7 +120,12 @@ impl Capability {
             Self::ProjectWrite => Some("project-write"),
             Self::Findings => Some("findings"),
             Self::Sidecar => Some("sidecar"),
-            Self::NetworkRules | Self::ConsoleLogs | Self::Status => None,
+            Self::NetworkRules
+            | Self::ConsoleLogs
+            | Self::Status
+            | Self::ConsentProbe
+            | Self::ApiClient
+            | Self::LoadTest => None,
         }
     }
 

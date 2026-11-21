@@ -14,8 +14,9 @@ use std::sync::Mutex;
 
 use rb_config::{Environment, Layout, LayoutCell, Zoom};
 use rb_engine::{Target, ViewHost as _, ViewId};
+use rb_util::url::is_web_url;
 
-use super::plan::{self, PlanError, is_web_url, url_in, view_path};
+use super::plan::{self, PlanError, url_in, view_path};
 use super::runs::RunError;
 use super::tool::{LiveAnswer, LiveArgs, LiveView};
 use crate::cdp::lock;

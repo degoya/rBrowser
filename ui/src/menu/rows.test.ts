@@ -46,6 +46,12 @@ const ARGS: Readonly<Record<string, (args: Args) => boolean>> = {
   ),
   // app_theme/defs.rs theme_of
   'ui.theme.set': (args) => only(args, ['theme']) && isObject(args) && ['system', 'light', 'dark'].includes(String(args.theme)),
+  // RB-094-20, devicesMenu.ts: settings_window/mod.rs (a key), engines/android/commands.rs
+  // AddArgs, open_link/mod.rs (a web address), engines/set_engine.rs (the engine)
+  'settings.open': (args) => only(args, ['key']) && text(args, 'key'),
+  'view.add_android': (args) => only(args, ['serial']) && text(args, 'serial'),
+  'app.open_link': (args) => only(args, ['url']) && text(args, 'url') && isObject(args) && String(args.url).startsWith('https://'),
+  'view.set_engine': (args) => only(args, ['engine']) && isObject(args) && args.engine === 'safari',
 };
 
 /** A state with something in every list the menus read: presets, environments, bookmarks, sizes. */
@@ -191,8 +197,9 @@ describe('the rows of the menus', () => {
     }
     expect(enabled(idle, 'recorder.start')).toBe(true);
     expect(enabled(idle, 'sitemap.capture')).toBe(true);
-    // The gallery once the last run wrote one (RB-090-83).
-    expect(enabled(busy, 'sitemap.gallery')).toBe(false);
+    // The gallery of any run, also while it runs (RB-090-90); none without a run.
+    expect(enabled(idle, 'sitemap.gallery')).toBe(false);
+    expect(enabled(busy, 'sitemap.gallery')).toBe(true);
     const done = fullState('grid', {
       sitemap: {
         runId: 'r1',

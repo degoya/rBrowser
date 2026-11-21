@@ -125,7 +125,11 @@ pub fn plan(views: &[ViewInfo], args: &CopyArgs) -> Result<Plan, PlanError> {
         match view.engine {
             EngineKind::Firefox => group.firefox.push(view.id),
             EngineKind::Webkit => group.webkit.push(view.id),
-            EngineKind::Chromium => {}
+            // WebDriver sets cookies only for the page Safari shows: not copied (RB-095-03).
+            EngineKind::Safari => {}
+            // The same for Mobile Safari on iOS (RB-095-04).
+            EngineKind::Ios => {}
+            EngineKind::Chromium | EngineKind::Android => {}
         }
     }
     let groups = sessions

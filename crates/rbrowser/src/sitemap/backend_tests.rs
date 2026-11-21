@@ -12,7 +12,7 @@ use crate::sitemap::render_views::RenderView;
 #[path = "backend_fake.rs"]
 mod fake;
 
-use fake::{Fixture, Scripted, Window, browser, browser_with, spec};
+use fake::{Fixture, RESIZE, Scripted, Window, browser, browser_with, spec};
 
 #[tokio::test]
 async fn a_view_is_a_windowless_browser_found_by_its_marker_with_the_breakpoints_metrics() {
@@ -27,7 +27,8 @@ async fn a_view_is_a_windowless_browser_found_by_its_marker_with_the_breakpoints
     assert!(marker.starts_with(MARKER_PREFIX), "{marker}");
     assert_eq!(
         *lock(&window.opened),
-        [RenderView::new(&marker, "default", 375, 667)]
+        // At the breakpoint's pixel ratio, as its emulation asks for (RB-090-90).
+        [RenderView::new(&marker, "default", 375, 667, 2.0)]
     );
     // No hidden target any more: the window made the browser, the backend found it.
     assert!(scripted.sent("Target.createTarget").is_empty());
@@ -261,7 +262,10 @@ async fn a_screenshot_without_a_frame_fails_at_the_shots_own_deadline() {
 #[tokio::test(start_paused = true)]
 async fn a_full_page_shot_given_up_puts_the_breakpoints_size_back() {
     let Fixture {
-        scripted, backend, ..
+        scripted,
+        window,
+        backend,
+        ..
     } = browser_with(
         Scripted {
             stall_shots: true,
@@ -285,6 +289,12 @@ async fn a_full_page_shot_given_up_puts_the_breakpoints_size_back() {
             .any(|call| call["params"]["height"] == 2000.0)
     );
     assert_eq!(metrics.last().expect("restored")["params"]["height"], 667);
+    // The windowless view grew with it and is back at the breakpoint's size too (RB-090-88).
+    let marker = lock(&window.opened)[0].marker.clone();
+    assert_eq!(
+        *lock(&window.resized),
+        [(marker.clone(), 375, 2000), (marker, 375, 667)]
+    );
     // And every page starts at the breakpoint's size, whatever the shot before left.
     backend
         .navigate(view, "http://127.0.0.1:9/next")
@@ -374,4 +384,105 @@ fn render_metrics_are_the_breakpoints_own_size_at_scale_one() {
     assert_eq!(metrics["width"], 1280);
     assert_eq!(metrics["deviceScaleFactor"], 0.0);
     assert_eq!(metrics["scale"], 1.0);
+}
+
+/// The methods sent from the last `Page.getLayoutMetrics` on, the window's resizes among them.
+fn from_the_shot(scripted: &Scripted) -> Vec<(String, Value)> {
+    let sent = lock(&scripted.sent).clone();
+    let start = sent
+        .iter()
+        .rposition(|message| message["method"] == "Page.getLayoutMetrics")
+        .expect("a shot");
+    sent[start..]
+        .iter()
+        .filter(|message| message["method"] != "Runtime.evaluate")
+        .map(|message| {
+            let method = message["method"].as_str().unwrap_or_default().to_owned();
+            let height = message["params"]["height"].clone();
+            (method, height)
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn a_full_page_shot_grows_the_windowless_view_to_the_page_and_back() {
+    // A windowless view paints only its own rectangle: the page's height in the emulation alone
+    // repeated the top viewport down the image (RB-090-88). It grows after the override, the shot
+    // waits for its frame, and it shrinks after the restore.
+    let Fixture {
+        scripted,
+        window,
+        backend,
+        ..
+    } = browser();
+    let view = backend.open(&spec("default")).await.expect("opens");
+    backend
+        .navigate(view, "http://127.0.0.1:9/long")
+        .await
+        .expect("loads");
+    assert_eq!(
+        backend.screenshot(view, true).await.expect("captures"),
+        b"PNG"
+    );
+    let order = from_the_shot(&scripted);
+    let expected: Vec<(String, Value)> = vec![
+        ("Page.getLayoutMetrics".to_owned(), Value::Null),
+        (
+            "Emulation.setDeviceMetricsOverride".to_owned(),
+            json!(2000.0),
+        ),
+        (RESIZE.to_owned(), json!(2000)),
+        ("Page.captureScreenshot".to_owned(), Value::Null),
+        ("Emulation.setDeviceMetricsOverride".to_owned(), json!(667)),
+        (RESIZE.to_owned(), json!(667)),
+    ];
+    assert_eq!(order, expected);
+    // At the breakpoint's width, the view it was made for.
+    let marker = lock(&window.opened)[0].marker.clone();
+    assert_eq!(lock(&window.resized)[0], (marker, 375, 2000));
+}
+
+#[tokio::test]
+async fn a_viewport_shot_keeps_the_windowless_views_size() {
+    let Fixture {
+        window, backend, ..
+    } = browser();
+    let view = backend.open(&spec("default")).await.expect("opens");
+    backend.screenshot(view, false).await.expect("captures");
+    assert!(lock(&window.resized).is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_view_that_paints_no_frame_of_the_page_fails_the_shot() {
+    // Never a frame of the old size saved as a full page (code review, wave 090-w23): the view is
+    // asked once more, then the shot fails with its reason - into run.json like any failed shot -
+    // and the view gets its breakpoint's size back.
+    let Fixture {
+        scripted,
+        window,
+        backend,
+        ..
+    } = browser_with(
+        Scripted::default(),
+        Window {
+            no_frame: true,
+            ..Window::default()
+        },
+    );
+    let view = backend.open(&spec("default")).await.expect("opens");
+    let started = tokio::time::Instant::now();
+    let error = backend.screenshot(view, true).await.expect_err("no frame");
+    assert!(
+        error.to_string().contains("no frame at the page's height"),
+        "{error}"
+    );
+    assert!(started.elapsed() >= crate::sitemap::render_surface::FRAME_WAIT * 2);
+    assert!(scripted.sent("Page.captureScreenshot").is_empty());
+    let heights: Vec<u32> = lock(&window.resized)
+        .iter()
+        .map(|(_, _, height)| *height)
+        .collect();
+    assert_eq!(heights, [2000, 2000, 667]);
+    let metrics = scripted.sent("Emulation.setDeviceMetricsOverride");
+    assert_eq!(metrics.last().expect("restored")["params"]["height"], 667);
 }

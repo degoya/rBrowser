@@ -20,7 +20,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 use url::Url;
 
 use crate::index::{
@@ -101,7 +101,7 @@ impl Catalog {
 
     /// Loads every cached index that still verifies at `now`; one that does not is deleted. The
     /// offline rule: without a refresh, only what still verifies is offered.
-    pub fn load_cached(&mut self, now: DateTime<Utc>) {
+    pub fn load_cached(&mut self, now: OffsetDateTime) {
         let floors = self.store.floors();
         for repository in &self.repositories {
             let Some(bytes) = self.store.cached_index(&repository.id) else {
@@ -148,7 +148,7 @@ impl Catalog {
     pub fn refresh(
         &mut self,
         fetcher: &dyn Fetcher,
-        now: DateTime<Utc>,
+        now: OffsetDateTime,
     ) -> Vec<(String, Result<(), RepositoryError>)> {
         let repositories = self.repositories.clone();
         repositories
@@ -171,7 +171,7 @@ impl Catalog {
         &mut self,
         fetcher: &dyn Fetcher,
         repository: &Repository,
-        now: DateTime<Utc>,
+        now: OffsetDateTime,
     ) -> Result<(), RepositoryError> {
         let limit = u64::try_from(MAX_INDEX_BYTES).unwrap_or(u64::MAX);
         let timeout = Duration::from_secs(INDEX_TIMEOUT_SECONDS);
@@ -204,7 +204,7 @@ impl Catalog {
     }
 
     /// The indexes loaded and not expired at `now`, in the repositories' order.
-    fn current(&self, now: DateTime<Utc>) -> Vec<(&Repository, &LoadedIndex)> {
+    fn current(&self, now: OffsetDateTime) -> Vec<(&Repository, &LoadedIndex)> {
         self.repositories
             .iter()
             .filter_map(|repository| {
@@ -218,7 +218,7 @@ impl Catalog {
 
     /// Whether an index of `repository` is loaded and current at `now`.
     #[must_use]
-    pub fn is_loaded(&self, repository: &str, now: DateTime<Utc>) -> bool {
+    pub fn is_loaded(&self, repository: &str, now: OffsetDateTime) -> bool {
         self.current(now)
             .iter()
             .any(|(loaded, _)| loaded.id == repository)
@@ -226,7 +226,7 @@ impl Catalog {
 
     /// Every plugin offered at `now`, each with every repository's offer.
     #[must_use]
-    pub fn entries(&self, now: DateTime<Utc>) -> Vec<CatalogEntry> {
+    pub fn entries(&self, now: OffsetDateTime) -> Vec<CatalogEntry> {
         let indexes: Vec<(String, &PluginIndex)> = self
             .current(now)
             .into_iter()
@@ -246,7 +246,7 @@ impl Catalog {
         repository: &str,
         id: &str,
         version: &str,
-        now: DateTime<Utc>,
+        now: OffsetDateTime,
     ) -> Result<(Url, IndexEntry), RepositoryError> {
         self.current(now)
             .into_iter()
@@ -267,7 +267,7 @@ impl Catalog {
 
     /// The updates of the plugins the catalogue installed: each from the repository it came from.
     #[must_use]
-    pub fn updates(&self, now: DateTime<Utc>) -> Vec<Offer> {
+    pub fn updates(&self, now: OffsetDateTime) -> Vec<Offer> {
         let entries = self.entries(now);
         self.store
             .installs()

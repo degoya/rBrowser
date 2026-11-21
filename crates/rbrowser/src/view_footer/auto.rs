@@ -304,12 +304,14 @@ async fn read(core: &Arc<Core>, view: ViewId) {
             let config = host.config();
             let root = host.project_root();
             let analysed = tokio::task::spawn_blocking(move || {
-                let plugins = crate::analyzer::plugins::bundled();
+                // As it waits for the load at any start, it waits for the first-run wizard's
+                // plugin choice at the very first (RB-091-08), never reading with no plugin.
+                let plugins = crate::analyzer::plugins::bundled_when_answered();
                 // The project's own names for the boundaries (RB-090-50): without its files only
                 // a framework's default widths get a name - `2xl`, `3xl` and every name of the
                 // project's own at another width stayed without one.
-                let files = crate::analyzer::run::static_files(plugins, &config, root.as_deref());
-                crate::analyzer::run::detect(plugins, &config, &collected, &files, None)
+                let files = crate::analyzer::run::static_files(&plugins, &config, root.as_deref());
+                crate::analyzer::run::detect(&plugins, &config, &collected, &files, None)
             })
             .await;
             match analysed {

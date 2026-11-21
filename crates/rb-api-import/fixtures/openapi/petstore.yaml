@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: Petstore
+  version: 1.0.0
+servers:
+  - url: https://{region}.petstore.example/v1
+    variables:
+      region:
+        default: eu
+  - url: https://staging.petstore.example/v1
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      tags: [pets]
+      summary: List pets
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: session
+          in: cookie
+          schema:
+            type: string
+    post:
+      tags: [pets]
+      summary: Create a pet
+      requestBody:
+        $ref: '#/components/requestBodies/NewPet'
+      callbacks:
+        created:
+          '{$request.body#/callback}':
+            post:
+              responses:
+                '200':
+                  description: ok
+  /pets/{petId}:
+    parameters:
+      - $ref: '#/components/parameters/PetId'
+    get:
+      tags: [pets]
+      operationId: showPet
+      deprecated: true
+      description: One pet by its id.
+      security:
+        - apiKey: []
+    delete:
+      tags: [pets]
+      summary: Delete a pet
+      security: []
+  /pets/{petId}/photo:
+    put:
+      summary: Upload a photo
+      security:
+        - oauth: [pets:write]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                caption:
+                  type: string
+                  example: Rex
+                image:
+                  type: string
+                  format: binary
+  /login:
+    post:
+      summary: Log in
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: string
+                remember:
+                  type: boolean
+components:
+  parameters:
+    PetId:
+      name: petId
+      in: path
+      required: true
+      schema:
+        type: integer
+  requestBodies:
+    NewPet:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Pet'
+  schemas:
+    Pet:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+          example: Rex
+        tag:
+          type: string
+          enum: [dog, cat]
+        born:
+          type: string
+          format: date
+        owner:
+          $ref: '#/components/schemas/Owner'
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pet'
+    Owner:
+      allOf:
+        - type: object
+          properties:
+            email:
+              type: string
+              format: email
+        - type: object
+          properties:
+            verified:
+              type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.petstore.example/token
+          scopes:
+            pets:write: write pets

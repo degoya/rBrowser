@@ -132,3 +132,20 @@ fn the_summary_names_each_pair_with_its_share_in_percent() {
     let json = serde_json::to_value(&summary).expect("json");
     assert_eq!(json["pairs"][3]["status"], "differs");
 }
+
+#[test]
+fn a_differing_pair_names_its_areas_and_the_summary_carries_them() {
+    let shots = vec![Some(striped(40, 0)), Some(striped(40, 4))];
+    let found = diff_group(&shots, &[(0, 1)], &options(), 0.0);
+    assert_eq!(found[0].status, PairStatus::Differs);
+    let area = found[0].regions.first().expect("one area");
+    assert_eq!((area.x, area.y, area.width, area.height), (0, 0, 4, 10));
+    assert_eq!(area.pixels, 40);
+    let same = diff_group(
+        &[Some(striped(40, 0)), Some(striped(40, 0))],
+        &[(0, 1)],
+        &options(),
+        0.0,
+    );
+    assert!(same[0].regions.is_empty(), "no area without a difference");
+}

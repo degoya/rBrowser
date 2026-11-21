@@ -5,7 +5,7 @@
 //! starts its own instance, which writes the file again.
 
 use std::fmt;
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Read as _};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -98,18 +98,7 @@ pub fn write(path: &Path, file: &InstanceFile) -> io::Result<()> {
         .ok_or_else(|| io::Error::other("the instance file has no folder"))?;
     create_private_dir(dir)?;
     let bytes = serde_json::to_vec_pretty(file).map_err(io::Error::other)?;
-    let temp = path.with_extension(format!("json.tmp-{}", std::process::id()));
-    let written = private_file(&temp).and_then(|mut out| {
-        out.write_all(&bytes)?;
-        out.sync_all()
-    });
-    if let Err(error) = written {
-        let _ = std::fs::remove_file(&temp);
-        return Err(error);
-    }
-    std::fs::rename(&temp, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&temp);
-    })
+    rb_util::fs::write_atomic_private(path, &bytes)
 }
 
 /// Creates `dir` (mode 0700 on Unix; on Windows the local folder's ACL is the user's).
@@ -121,17 +110,6 @@ pub fn create_private_dir(dir: &Path) -> io::Result<()> {
         std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
     }
     Ok(())
-}
-
-fn private_file(path: &Path) -> io::Result<std::fs::File> {
-    let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        options.mode(0o600);
-    }
-    options.open(path)
 }
 
 #[cfg(test)]

@@ -1,4 +1,18 @@
+use std::cell::Cell;
+
 use super::*;
+
+thread_local! {
+    /// How often this test's thread decoded a screenshot's base64 ([`png_bytes`], RB-090-29).
+    pub(crate) static BASE64_DECODES: Cell<usize> = const { Cell::new(0) };
+}
+
+/// The base64 decodes `run` makes on this thread.
+pub(crate) fn base64_decodes(run: impl FnOnce()) -> usize {
+    BASE64_DECODES.with(|count| count.set(0));
+    run();
+    BASE64_DECODES.with(Cell::get)
+}
 
 /// A PNG of `width` x `height` RGB pixels, `paint(x, y)` each, as CDP answers it (base64).
 pub(crate) fn png_base64(width: u32, height: u32, paint: impl Fn(u32, u32) -> [u8; 3]) -> String {
@@ -181,7 +195,7 @@ fn a_scan_sees_every_row_besides_the_region() {
     let mut rows = Vec::new();
     let mut visit = |y: u32, row: &[Rgb]| rows.push((y, row.len(), row[39]));
     let image = decode_scan(
-        &shot,
+        &png_bytes(&shot).expect("base64"),
         |width, height| Region::around(5, 5, 1, width, height),
         Some(&mut visit),
     )
@@ -286,4 +300,22 @@ fn the_tile_stays_under_a_page_message() {
     assert!(MAX_TILE_BYTES.div_ceil(3) * 4 + 256 <= 64 * 1024);
     // Wide enough for the largest loupe with room to move.
     assert!(side >= 2 * 31);
+}
+
+/// RB-090-29: the size and the pixels are read from bytes decoded once.
+#[test]
+fn the_size_and_the_scan_read_the_same_bytes() {
+    let shot = png_base64(12, 8, |_, _| [1, 2, 3]);
+    let decodes = base64_decodes(|| {
+        let png = png_bytes(&shot).expect("base64");
+        assert_eq!(image_size(&png).expect("a PNG"), (12, 8));
+        let image = decode_scan(&png, |w, h| Region::around(1, 1, 0, w, h), None).expect("decodes");
+        assert_eq!(image.rgb().len(), 3);
+    });
+    assert_eq!(decodes, 1);
+}
+
+#[test]
+fn no_base64_is_bad_data() {
+    assert!(png_bytes("not base64 !").is_err());
 }

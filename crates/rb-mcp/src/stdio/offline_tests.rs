@@ -18,6 +18,10 @@ fn initialize_succeeds_with_the_client_s_version_and_says_why_in_the_instruction
     assert_eq!(answer["result"]["protocolVersion"], "2025-03-26");
     assert_eq!(answer["result"]["serverInfo"]["name"], "rbrowser");
     assert!(answer["result"]["capabilities"]["tools"].is_object());
+    // A client that connects before rBrowser runs still learns of the prompts and resources
+    // (RB-095-01).
+    assert!(answer["result"]["capabilities"]["prompts"].is_object());
+    assert!(answer["result"]["capabilities"]["resources"].is_object());
     let instructions = answer["result"]["instructions"].as_str().expect("text");
     assert!(instructions.contains(WHY), "{instructions}");
     let bare = super::answer(r#"{"jsonrpc":"2.0","id":"a","method":"initialize"}"#, WHY)

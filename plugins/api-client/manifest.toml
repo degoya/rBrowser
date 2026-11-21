@@ -1,0 +1,117 @@
+# API client (RB-096-01, docs/plugins.md): HTTP APIs tested in a panel - a request built (method,
+# URL with its query, headers, body, auth, timeout, redirects, TLS check), sent from the core,
+# its answer read (status, phases, size, headers, cookies, the body as a tree, source, preview or
+# image) - and kept as one `.http` file per request below `.rbrowser/api/`, which VS Code REST
+# Client and the JetBrains HTTP Client run as they are. The plugin forwards; the core does the
+# work (capability `api-client`, crates/rbrowser/src/api_client): it reads and writes the
+# collections, puts the variables in (`.rbrowser/api/http-client.env.json`, the private values
+# of `api-client.secrets` in config.local.json, `RB_SECRET_*`), sends only to the hosts a person
+# allowed, follows a redirect only to such a host, and masks every secret in what comes back.
+manifest_version = 1
+id = "api-client"
+name = "API client"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "api"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "HTTP APIs tested in a panel: requests built and sent from the core, answers read as a tree, the collections kept in the project as .http files."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# api-client: the core's work, no import (RB-096-01). The panel's calls may do everything; a
+# tool call from MCP and a command only list and read the collections, run a saved request, read
+# the history and write a saved request as code - never a free request, a save, a delete, an
+# export or a host grant.
+[capabilities]
+api-client = true
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "collections"
+description = "plugin.api-client.tools.collections"
+input = { type = "object", properties = { id = { type = "string", minLength = 6, maxLength = 200 } } }
+
+[[tools]]
+name = "run"
+description = "plugin.api-client.tools.run"
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 6, maxLength = 200 }, environment = { type = "string", minLength = 1, maxLength = 64 } } }
+
+[[tools]]
+name = "history"
+description = "plugin.api-client.tools.history"
+input = { type = "object", properties = {} }
+
+# RB-096-04. MCP `api_run_collection`: every saved request of `folder` (all without one) sent
+# in `environment` (the views' without one) and judged by its checks; the report, its failures
+# as findings in the findings panel. Only saved requests, only granted hosts.
+[[tools]]
+name = "run_collection"
+description = "plugin.api-client.tools.run_collection"
+input = { type = "object", properties = { folder = { type = "string", minLength = 1, maxLength = 200 }, environment = { type = "string", minLength = 1, maxLength = 64 } } }
+
+# MCP `api_report`: the last collection run's report.
+[[tools]]
+name = "report"
+description = "plugin.api-client.tools.report"
+input = { type = "object", properties = {} }
+
+# MCP `api_bench`: the saved request `id` sent api-client.benchRepeats times in each of up to two
+# environments, at most api-client.benchConcurrency at once; its phases as min, median, p95, max.
+[[tools]]
+name = "bench"
+description = "plugin.api-client.tools.bench"
+input = { type = "object", required = ["id"], properties = { id = { type = "string", minLength = 6, maxLength = 200 }, environments = { type = "array", maxItems = 2, uniqueItems = true, items = { type = "string", minLength = 1, maxLength = 64 } } } }
+
+# RB-096-03: a saved request as code - read-only, the environment's plain values in, every
+# secret a variable the snippet names (never its value); exports write a file and stay the panel's.
+[[tools]]
+name = "code"
+description = "plugin.api-client.tools.code"
+input = { type = "object", required = ["id", "language"], properties = { id = { type = "string", minLength = 6, maxLength = 200 }, language = { type = "string", enum = ["curl", "httpie", "fetch", "playwright"] }, environment = { type = "string", minLength = 1, maxLength = 64 } } }
+
+# The panel's own calls: every op, a free request included. Never listed nor run over MCP
+# (crates/rbrowser/src/plugins/mcp.rs, PANEL_ONLY); outside the panel the core refuses its ops.
+[[tools]]
+name = "panel"
+description = "plugin.api-client.tools.panel"
+input = { type = "object", required = ["op"], properties = { op = { type = "object" } } }
+
+[[commands]]
+id = "panel"
+title = "plugin.api-client.commands.panel"
+shortcut = "Ctrl+Shift+Space P 4"
+group = "panels"
+mcp_omitted = "ui-only: opens the API client panel"
+
+[[commands]]
+id = "send"
+title = "plugin.api-client.commands.send"
+shortcut = "Ctrl+Shift+Space D Y"
+group = "devtools"
+mcp_omitted = "ui-only: sends the request open in the API client panel; MCP runs saved requests with api_run"
+
+# RB-096-04: the panel runs every saved request and shows the report.
+[[commands]]
+id = "run_collection"
+title = "plugin.api-client.commands.run_collection"
+shortcut = "Ctrl+Shift+Space K 1"
+group = "checks"
+mcp_omitted = "ui-only: runs the collections in the API client panel; MCP runs them with api_run_collection"
+
+[[panels]]
+id = "api-client"
+title = "plugin.api-client.panels.api-client"
+entry = "panel/index.html"
+icon = "send"
+placement = "sidebar"

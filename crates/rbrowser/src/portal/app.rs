@@ -130,18 +130,7 @@ pub fn start(core: &Arc<Core>) -> Result<Started, StartError> {
         .flatten()
         .collect()
     })));
-    refresh_page(core.host(), &server);
-    // Subscribed here, not in the task: a config change right after the start must reach it.
-    let feeds = Feeds {
-        views: core.host().subscribe(),
-        reports: core.host().sync_agents().subscribe(),
-        stopped: server.stopped.subscribe(),
-    };
-    core.runtime().spawn(follow(
-        Arc::downgrade(core.host()),
-        Arc::downgrade(&server),
-        feeds,
-    ));
+    follow_grid(core, &server);
     state.server = Some(server.clone());
     state.started_with = Some(settings.clone());
     drop(state);
@@ -158,8 +147,27 @@ pub fn start(core: &Arc<Core>) -> Result<Started, StartError> {
     })
 }
 
-/// Stops the portal; `false` when it was not running.
+/// Has `server` follow the grid: the active view's page now and on every change, the leader's
+/// events; the presentation's listener too (RB-096-05).
+pub(super) fn follow_grid(core: &Core, server: &Arc<PortalServer>) {
+    refresh_page(core.host(), server);
+    // Subscribed here, not in the task: a config change right after the start must reach it.
+    let feeds = Feeds {
+        views: core.host().subscribe(),
+        reports: core.host().sync_agents().subscribe(),
+        stopped: server.stopped.subscribe(),
+    };
+    core.runtime().spawn(follow(
+        Arc::downgrade(core.host()),
+        Arc::downgrade(server),
+        feeds,
+    ));
+}
+
+/// Stops the portal - and a presentation over the internet with it (RB-096-05); `false` when
+/// the portal was not running.
 pub fn stop(core: &Core) -> bool {
+    super::present::app::stop(core);
     let stopped = stop_quietly();
     if stopped {
         core.notify(notification(
@@ -189,6 +197,7 @@ fn stop_quietly() -> bool {
 
 /// The app quits.
 pub fn shutdown() {
+    super::present::app::shutdown();
     stop_quietly();
 }
 
@@ -196,6 +205,7 @@ pub fn shutdown() {
 /// (switched off, moved, a lower limit), the portal stops (a person starts it again);
 /// `portal.offerAssetOrigins` is read where it is used and stops nothing.
 pub fn on_user_settings_changed(core: &Core) {
+    super::present::app::on_user_settings_changed(core);
     let settings = core.user_settings().portal;
     let changed = {
         let state = lock(&STATE);
@@ -239,6 +249,7 @@ pub fn panel_state(core: &Core, with_pairing: bool) -> PortalState {
     let Some(server) = server else {
         return PortalState {
             enabled,
+            presentation: Some(super::present::panel::panel(core, with_pairing)),
             ..PortalState::default()
         };
     };
@@ -259,6 +270,7 @@ pub fn panel_state(core: &Core, with_pairing: bool) -> PortalState {
         address: Some(server.origin().to_owned()),
         devices: server.devices().into_iter().map(device).collect(),
         pairing,
+        presentation: Some(super::present::panel::panel(core, with_pairing)),
     }
 }
 
@@ -350,12 +362,15 @@ async fn follow(host: Weak<Host>, server: Weak<PortalServer>, feeds: Feeds) {
 /// listeners first, so the page's rewrite knows them), for the devices.
 pub(super) fn refresh_page(host: &Host, server: &PortalServer) {
     let config = host.config();
-    server.set_assets(asset_origins(
-        config
-            .environments
-            .iter()
-            .map(|env| (env.url.as_str(), env.asset_origins.as_slice())),
-    ));
+    // The presentation's tunnel reaches its own listener only (RB-096-05).
+    if !server.is_public() {
+        server.set_assets(asset_origins(
+            config
+                .environments
+                .iter()
+                .map(|env| (env.url.as_str(), env.asset_origins.as_slice())),
+        ));
+    }
     let origins = allowlist(
         config.start_url.as_deref(),
         config.environments.iter().map(|env| env.url.as_str()),

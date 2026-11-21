@@ -139,6 +139,8 @@ fn a_proposal_carries_the_config_as_it_will_be_written() {
             root: "C:\\site".to_owned(),
             config: json!({ "version": 1, "breakpoints": [] }),
             source: SetupSource::Default,
+            sheets: None,
+            reason: None,
         },
     };
     let value = serde_json::to_value(&proposal).expect("serializes");
@@ -146,6 +148,58 @@ fn a_proposal_carries_the_config_as_it_will_be_written() {
     assert_eq!(value["answer"]["requestId"], 7);
     assert_eq!(value["answer"]["source"], "default");
     assert_eq!(value["answer"]["config"]["version"], 1);
+    // Neither field without the analyser.
+    assert!(value["answer"].get("sheets").is_none());
+    assert!(value["answer"].get("reason").is_none());
+}
+
+/// RB-091-08: the analyser's success names the stylesheets, its fallback the reason - a code the
+/// page turns into `firstrun.project.reason.<code>`, with its values.
+#[test]
+fn a_proposal_says_what_the_analyser_did() {
+    let found = SetupAnswer::Proposal {
+        request_id: 3,
+        proposal_id: 1,
+        root: "C:\\site".to_owned(),
+        config: json!({ "version": 1 }),
+        source: SetupSource::Analyzer,
+        sheets: Some(4),
+        reason: None,
+    };
+    let value = serde_json::to_value(&found).expect("serializes");
+    assert_eq!(value["sheets"], 4);
+    let fell_back = SetupAnswer::Proposal {
+        request_id: 4,
+        proposal_id: 2,
+        root: "C:\\site".to_owned(),
+        config: json!({ "version": 1 }),
+        source: SetupSource::Default,
+        sheets: None,
+        reason: Some(SetupReason {
+            code: SetupReasonCode::PluginMissing,
+            params: [("code".to_owned(), "plugins.error.not_available".to_owned())].into(),
+        }),
+    };
+    let value = serde_json::to_value(&fell_back).expect("serializes");
+    assert_eq!(
+        value["reason"],
+        json!({ "code": "plugin_missing", "params": { "code": "plugins.error.not_available" } })
+    );
+    let back: SetupAnswer = serde_json::from_value(value).expect("reads back");
+    assert_eq!(back, fell_back);
+    for (code, text) in [
+        (SetupReasonCode::NoPage, "no_page"),
+        (SetupReasonCode::Unreachable, "unreachable"),
+        (SetupReasonCode::Timeout, "timeout"),
+        (SetupReasonCode::NoCss, "no_css"),
+        (SetupReasonCode::PluginMissing, "plugin_missing"),
+        (SetupReasonCode::PluginFailed, "plugin_failed"),
+        (SetupReasonCode::BadOutput, "bad_output"),
+        (SetupReasonCode::NothingFound, "nothing_found"),
+        (SetupReasonCode::Invalid, "invalid"),
+    ] {
+        assert_eq!(serde_json::to_value(code).expect("serializes"), text);
+    }
 }
 
 #[test]

@@ -275,6 +275,9 @@ fn the_run_time_is_the_local_time() {
     assert_eq!(run_time(0, 0), "1970-01-01 00:00");
     assert_eq!(run_time(0, -3600), "1969-12-31 23:00");
     assert_eq!(run_time(1_794_925_920, 3600), "2026-11-17 15:32");
+    // A zone a quarter of an hour off, and an offset no zone has: UTC then (RB-090-77).
+    assert_eq!(run_time(1_794_925_920, 20_700), "2026-11-17 20:17");
+    assert_eq!(run_time(1_794_925_920, 100_000), "2026-11-17 14:32");
 }
 
 #[test]

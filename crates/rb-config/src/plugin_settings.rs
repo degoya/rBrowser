@@ -35,6 +35,10 @@ pub struct PluginSettings {
     /// the views show, so it cannot read local or LAN pages through Lighthouse's report
     /// (RB-090-21).
     pub lighthouse_any_url: bool,
+    /// Let the consent probe of a plugin granted `consent-probe` load any address. Off holds it
+    /// to public addresses and the trusted project's own sites, so a plugin cannot run its
+    /// script in a local or LAN page (RB-094-09).
+    pub consent_probe_any_url: bool,
     /// The largest message between a plugin panel and rBrowser, as JSON text in bytes, in
     /// either direction (RB-090-44): a call's arguments, its answer, an event. A page script's
     /// messages keep their own 64 KiB.
@@ -67,6 +71,9 @@ pub struct CatalogSettings {
     /// Say in the status bar when the project's config names a plugin that is not installed
     /// (RB-091-04).
     pub missing_notice: bool,
+    /// Name the plugins new in rBrowser's bundle once after the update that brought them, with
+    /// a button that installs them (RB-094-13).
+    pub new_notice: bool,
 }
 
 impl Default for CatalogSettings {
@@ -77,6 +84,7 @@ impl Default for CatalogSettings {
             auto_update: false,
             prefer_repository: true,
             missing_notice: true,
+            new_notice: true,
         }
     }
 }
@@ -128,6 +136,7 @@ impl Default for PluginSettings {
             panels_hidden: Vec::new(),
             show_bundled: true,
             lighthouse_any_url: false,
+            consent_probe_any_url: false,
             panel_message_max_bytes: Self::PANEL_MESSAGE_DEFAULT_BYTES,
             catalog: CatalogSettings::default(),
         }

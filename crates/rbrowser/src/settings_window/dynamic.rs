@@ -57,7 +57,7 @@ pub struct PluginFacts {
 pub fn sources(core: &Core) -> serde_json::Map<String, Value> {
     let mut sources = serde_json::Map::new();
     if let Some(loaded) = crate::analyzer::plugins::loaded() {
-        let facts = plugin_facts(loaded);
+        let facts = plugin_facts(&loaded);
         for source in SOURCES {
             if let Some(data) = plugin_options(&facts, source) {
                 sources.insert(source.to_owned(), data);

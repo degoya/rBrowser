@@ -104,7 +104,8 @@
           "no_file": "No preview: this face names no font file.",
           "not_loaded": "No preview: no Chromium view loaded this face.",
           "failed": "No preview: the browser could not read the font file."
-        }
+        },
+        "setting_link": "Open the setting"
       },
       "panels": {
         "fonts": "Fonts"

@@ -1,5 +1,8 @@
 //! The window side of the host ([`UiBackend`]): every call is posted to the CEF UI thread.
 
+use std::sync::Mutex;
+use std::time::Instant;
+
 use cef::*;
 use rb_engine::{CellRect, ViewHost as _, ViewId};
 
@@ -11,6 +14,7 @@ use super::{
     activate, canvas_board, cell_labels, devtools, dialogs, embed, engine_badge, frame, grid,
     page_windows, placed, pop_out, settings_window,
 };
+use crate::host::ui::place_tickets::PlaceTickets;
 use crate::host::ui::{
     CellOverlay, CookiesCleared, DevtoolsDock, EmbedRequest, PageWindow, PathPick, PathPicked,
     PlacedView, PopOutWindow, UiBackend, UiGrid,
@@ -19,6 +23,10 @@ use crate::shell::SHELL_URL;
 
 /// The CEF window behind the host.
 pub struct CefUi;
+
+/// The placements posted to the UI thread and not run yet: only the newest of a view moves it
+/// (RB-094-18).
+static PLACE_TICKETS: Mutex<PlaceTickets> = Mutex::new(PlaceTickets::new());
 
 /// Runs `action` with `view`'s browser on the UI thread.
 fn with_browser(view: ViewId, action: impl FnOnce(&Browser) + Send + 'static) {
@@ -36,8 +44,25 @@ impl UiBackend for CefUi {
         on_ui(move || grid::apply(&grid));
     }
 
+    // Latest wins: a placement overtaken by a newer one of its views before the UI thread ran
+    // it moves those views no more (RB-094-18); the wait is logged for the pace of a gesture.
     fn place_views(&self, area: CellRect, placed: Vec<PlacedView>) {
-        on_ui(move || placed::place(area, &placed));
+        let ticket = rb_util::lock(&PLACE_TICKETS).post(&placed);
+        let posted = Instant::now();
+        on_ui(move || {
+            let (fresh, skipped) = rb_util::lock(&PLACE_TICKETS).take(ticket, placed);
+            tracing::debug!(
+                target: crate::layout::canvas_live::PACE,
+                ticket,
+                waited_us = u64::try_from(posted.elapsed().as_micros()).unwrap_or(u64::MAX),
+                placed = fresh.len(),
+                skipped,
+                "the window placed views"
+            );
+            if !fresh.is_empty() {
+                placed::place(area, &fresh);
+            }
+        });
     }
 
     // The board's page answers each canvas it painted once it exists (RB-090-55).
@@ -211,6 +236,16 @@ impl UiBackend for CefUi {
         on_ui(move || super::render_views::open(view, made));
     }
 
+    fn resize_render_view(
+        &self,
+        marker: String,
+        width: u32,
+        height: u32,
+        painted: crate::sitemap::render_views::RenderViewMade,
+    ) {
+        on_ui(move || super::render_views::resize(&marker, width, height, painted));
+    }
+
     fn close_render_view(&self, marker: String) {
         on_ui(move || super::render_views::close(&marker));
     }
@@ -237,6 +272,10 @@ impl UiBackend for CefUi {
 
     fn set_app_theme(&self, theme: rb_config::Theme) {
         on_ui(move || super::theme::set(theme));
+    }
+
+    fn set_window_title(&self, title: String) {
+        on_ui(move || super::window::set_title(&title));
     }
 
     fn set_status_bar_visible(&self, visible: bool) {
@@ -298,6 +337,10 @@ impl UiBackend for CefUi {
 
     fn set_cell_info(&self, infos: Vec<crate::cell_info::CellInfo>) {
         on_ui(move || super::cell_info::set(infos));
+    }
+
+    fn edit_address(&self, view: ViewId, url: String, name: String) {
+        on_ui(move || super::address_field::open(view, &url, &name));
     }
 
     fn clear_session_cookies(&self, session: String, done: CookiesCleared) {

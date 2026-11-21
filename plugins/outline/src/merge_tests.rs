@@ -91,3 +91,15 @@ fn a_truncated_list_is_named_and_an_unknown_section_is_null() {
         serde_json::Value::Null
     );
 }
+
+#[test]
+fn the_place_in_the_document_is_a_per_view_field_no_item_carries() {
+    let one = PageOutline::parse(
+        &json!({ "headings": [{ "level": 1, "text": "Title", "order": 3, "visible": true }] })
+            .to_string(),
+    )
+    .expect("outline");
+    let value = section("headings", &[(1, &one)]);
+    assert!(value["rows"][0]["item"].get("order").is_none());
+    assert_eq!(value["rows"][0]["item"]["text"], "Title");
+}

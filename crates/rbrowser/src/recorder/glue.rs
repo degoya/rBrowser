@@ -11,13 +11,14 @@ use rb_config::RecordHover;
 use rb_engine::{ViewEvent, ViewHost, ViewId};
 use rb_ipc::{RecorderPhase, RecorderStatus};
 use rb_sync::recorder::{
-    HoverCapture, RecordedBreakpoint, Recorder, RecorderOptions, RecorderState, RecordingStore,
-    RecordingView, StartInfo, StoreError, check_name,
+    RecordedBreakpoint, Recorder, RecorderOptions, RecorderState, RecordingStore, RecordingView,
+    StartInfo, StoreError, check_name,
 };
-use rb_sync::{EventMessage, Observer, ReplayOutcome, Route, SyncEvent, SyncSwitches};
+use rb_sync::{EventMessage, Observer, ReplayOutcome, Route, SyncEvent};
 use tokio::runtime::Handle;
 use tokio::sync::broadcast::error::RecvError;
 
+pub use super::capture::{hover_capture, missing_kinds, uncaptured};
 use crate::cdp::lock;
 use crate::flows::exclusive::{exclusively, running_flow};
 use crate::host::Host;
@@ -68,6 +69,9 @@ pub enum RecorderFailure {
         "the flow {0:?} is running: stop it (flows.cancel) or wait for its end before a recording takes steps (recorder.flow_running)"
     )]
     FlowRunning(String),
+    /// The recording continued from a step cannot take the new steps (RB-092-01).
+    #[error(transparent)]
+    Edit(#[from] rb_sync::recorder::EditError),
 }
 
 /// Refuses a recording's start or resume while the flow `flow` runs (RB-090-71).
@@ -85,7 +89,14 @@ pub fn not_while_flow(flow: Option<&str>) -> Result<(), RecorderFailure> {
 /// The recorder of one window.
 pub struct HostRecorder {
     host: Weak<Host>,
-    recorder: Mutex<Recorder>,
+    pub(super) recorder: Mutex<Recorder>,
+    /// The recorded view's agent's wishes while the recording takes steps (RB-090-87).
+    pub(super) wishes: Mutex<Option<rb_sync::AgentRecord>>,
+    /// What the shell lists of the recording that runs (RB-090-89).
+    pub(super) live: Mutex<super::live::Live>,
+    /// The stored recording the one that runs continues, and the step after which the new
+    /// steps land (RB-092-01).
+    pub(super) continuing: Mutex<Option<super::continue_from::Continuing>>,
 }
 
 impl HostRecorder {
@@ -94,6 +105,9 @@ impl HostRecorder {
         let recorder = Arc::new(Self {
             host: Arc::downgrade(host),
             recorder: Mutex::new(Recorder::new(RecorderOptions::default())),
+            wishes: Mutex::new(None),
+            live: Mutex::default(),
+            continuing: Mutex::new(None),
         });
         recorder.watch_views(host, runtime);
         recorder
@@ -170,13 +184,18 @@ impl HostRecorder {
         let leader = host.active_view();
         let info = StartInfo {
             name,
-            start_url: leader.and_then(|view| host.view(view)).map(|info| info.url),
+            // A continued recording goes on where its steps left the page (RB-092-01).
+            start_url: leader
+                .and_then(|view| host.view(view))
+                .map(|info| info.url)
+                .filter(|_| lock(&self.continuing).is_none()),
             environment: host.shell_state().environment,
             app_version: env!("CARGO_PKG_VERSION").to_owned(),
             views: recording_views(&host),
             leader,
             now_ms: now_ms(),
         };
+        let wishes = super::agent_record::wishes(&config);
         {
             let mut recorder = lock(&self.recorder);
             recorder.set_options(RecorderOptions {
@@ -189,6 +208,7 @@ impl HostRecorder {
         }
         let observer: Arc<dyn Observer> = self.clone();
         sync.hub().set_observer(Some(observer));
+        self.follow(&host, Some(wishes));
         tracing::info!("recording started");
         Ok(Outcome {
             not_captured,
@@ -209,6 +229,7 @@ impl HostRecorder {
             return resumed;
         }
         lock(&self.recorder).pause()?;
+        self.follow(&host, None);
         tracing::info!("recording paused");
         Ok(self.publish())
     }
@@ -222,13 +243,25 @@ impl HostRecorder {
             // Held through the save, so no step comes in between the save and the end.
             let mut recorder = lock(&self.recorder);
             let mut recording = recorder.snapshot()?;
-            let path = store_of(&host)?.save_new(&mut recording)?;
+            let store = store_of(&host)?;
+            let continued = lock(&self.continuing).clone();
+            let path = match &continued {
+                // Into the recording it continues (RB-092-01).
+                Some(continuing) => {
+                    let (whole, path) = continuing.save(&store, &recording)?;
+                    recording = whole;
+                    path
+                }
+                None => store.save_new(&mut recording)?,
+            };
             recorder.stop()?;
+            *lock(&self.continuing) = None;
             (recording, path)
         };
         if let Some(sync) = crate::sync_hub::for_host(&host) {
             sync.hub().set_observer(None);
         }
+        self.follow(&host, None);
         self.publish();
         tracing::info!(steps = recording.steps.len(), "recording saved");
         Ok(Outcome {
@@ -278,6 +311,12 @@ impl HostRecorder {
             .and_then(|view| host.view(view))
             .map(|info| info.url);
         lock(&self.recorder).resume(url.as_deref(), now_ms())?;
+        self.follow(
+            host,
+            Some(super::agent_record::wishes(
+                &host.config().automation.recorder,
+            )),
+        );
         tracing::info!("recording resumed");
         Ok(self.publish())
     }
@@ -292,6 +331,7 @@ impl HostRecorder {
                 crate::activity_bar::on_recorder(shell, status.as_ref());
                 shell.recorder = status;
             });
+            super::live::publish(self, &host, false);
         }
         outcome
     }
@@ -335,10 +375,10 @@ impl Observer for HostRecorder {
             _ => Vec::new(),
         };
         let changed = {
+            // A step changed in place (a fill that grew) counts as well (RB-090-89).
             let mut recorder = lock(&self.recorder);
-            let before = recorder.step_count();
             recorder.on_event(source, message, &targets, now_ms());
-            recorder.step_count() != before
+            recorder.changed()
         };
         if changed {
             self.publish();
@@ -362,60 +402,6 @@ pub fn status_of(outcome: &Outcome) -> Option<RecorderStatus> {
         name: outcome.name.clone().unwrap_or_default(),
         steps: u32::try_from(outcome.steps).unwrap_or(u32::MAX),
     })
-}
-
-/// Why the active view's agent captures nothing - so a recording would stay empty: no active
-/// view, sync off, or the active view excluded. The recorder hears only what that agent
-/// captures, and the agent captures only while sync routes its events.
-pub fn uncaptured(
-    switches: SyncSwitches,
-    excluded: bool,
-    has_leader: bool,
-) -> Option<&'static str> {
-    if !has_leader {
-        Some("no view is active to record from")
-    } else if !switches.enabled {
-        Some(
-            "sync is off: the recorder records what the active view's sync agent captures - turn sync on first",
-        )
-    } else if excluded {
-        Some(
-            "the active view is excluded from sync: the recorder records what its sync agent captures - include it first",
-        )
-    } else {
-        None
-    }
-}
-
-/// The recorder's hover capture for `automation.recorder.recordHover` (RB-090-81). A function,
-/// not a `From`: neither type is this crate's, and neither crate depends on the other.
-pub fn hover_capture(choice: RecordHover) -> HoverCapture {
-    match choice {
-        RecordHover::Menu => HoverCapture::Menu,
-        RecordHover::All => HoverCapture::All,
-        RecordHover::Off => HoverCapture::Off,
-    }
-}
-
-/// The kinds of steps whose capture is off by their sync switch: clicks, input, keys and form
-/// controls always, hover and scroll when the recorder records them.
-pub fn missing_kinds(
-    switches: SyncSwitches,
-    record_hover: bool,
-    record_scroll: bool,
-) -> Vec<&'static str> {
-    [
-        ("click", switches.click),
-        ("input", switches.input),
-        ("keyboard", switches.keyboard),
-        ("forms", switches.forms),
-        ("hover", switches.hover || !record_hover),
-        ("scroll", switches.scroll || !record_scroll),
-    ]
-    .into_iter()
-    .filter(|(_, on)| !on)
-    .map(|(kind, _)| kind)
-    .collect()
 }
 
 /// The project's recordings folder (`automation.recorder.dir`).

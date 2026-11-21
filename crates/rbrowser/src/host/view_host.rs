@@ -234,6 +234,24 @@ impl Host {
         self.re_emulate(view, |overrides| overrides.color_scheme = None)
     }
 
+    /// Drops `view`'s live text direction (`dir`) and/or language (`lang`): back to its
+    /// breakpoint's, else the page's own (RB-092-02).
+    pub fn clear_text_direction(
+        &self,
+        view: ViewId,
+        dir: bool,
+        lang: bool,
+    ) -> Result<bool, EngineError> {
+        self.re_emulate(view, |overrides| {
+            if dir {
+                overrides.dir = None;
+            }
+            if lang {
+                overrides.lang = None;
+            }
+        })
+    }
+
     /// Drops `view`'s live overrides: back to its breakpoint.
     pub fn reset_emulation(&self, view: ViewId) -> Result<bool, EngineError> {
         self.re_emulate(view, |overrides| *overrides = EmulationFields::default())

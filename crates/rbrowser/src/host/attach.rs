@@ -193,6 +193,8 @@ async fn attach(host: &Arc<Host>, view: ViewId) -> Result<(), EngineError> {
     }
     // The Framework DevTools probe and hooks (RB-080-24), before the first document too.
     host.frameworks.attach(view, &session).await;
+    // The page clock and the animation rate (RB-094-07), before the first document too.
+    crate::time_control::attach(&host.cdp, view, &session).await;
     if let Some(url) = pending {
         host.ui.navigate(view, &url);
     }
@@ -301,6 +303,8 @@ pub(super) async fn apply_metrics(
         calls: permission_calls,
         granted,
     } = permission;
+    // `dir` and `lang` ride on the sync agent, not on a CDP call (RB-092-02).
+    host.agents.follow_emulation(view, &pending.next).await;
     let Pending {
         session, metrics, ..
     } = &pending;

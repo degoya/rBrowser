@@ -4,14 +4,12 @@ use ed25519_dalek::SigningKey;
 use super::*;
 use crate::sign::{VerifyError, sign_document};
 
-fn now() -> DateTime<Utc> {
-    DateTime::from_timestamp(1_760_000_000, 0).expect("timestamp")
+fn now() -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(1_760_000_000).expect("timestamp")
 }
 
-fn instant(text: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(text)
-        .expect("date")
-        .with_timezone(&Utc)
+fn instant(text: &str) -> OffsetDateTime {
+    crate::utc::parse(text).expect("date")
 }
 
 fn public(seed: u8) -> &'static str {

@@ -70,6 +70,22 @@ pub struct StateSnapshot {
     /// nothing (RB-090-67).
     #[serde(default, skip_serializing_if = "crate::ActivityBarState::is_empty")]
     pub activity_bar: crate::ActivityBarState,
+    /// The views' clock and animation rates while either is changed: the activity bar's entry
+    /// (RB-094-07); absent while the time is real and every animation runs at 100 %.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_control: Option<crate::TimeControlActivity>,
+    /// The plugin calls running that reported progress, by plugin id: the activity bar's
+    /// plugins entry (RB-093-01); absent while none does.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub plugin_progress: Vec<crate::PluginProgress>,
+    /// The views with forced pseudo-class states and the states: the activity bar's entry
+    /// with Reset (RB-094-16); absent while no view has one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub forced_states: Vec<crate::ViewForcedStates>,
+    /// The devices the main menu and the toolbar's "+" offer (RB-094-20); absent until the
+    /// window's engines started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub devices: Option<crate::DevicesMenu>,
 }
 
 /// The open project.

@@ -1,0 +1,13 @@
+# My Codex settings.
+model = "gpt-5-codex"
+
+[mcp_servers.docs]
+command = "docs-mcp"
+args = ["--stdio"]
+
+[mcp_servers.docs.env]
+DOCS_TOKEN = "kept-as-it-is"
+
+[mcp_servers.rbrowser]
+command = "C:\\Tools\\rBrowser\\rbrowser.exe"
+args = ["mcp"]

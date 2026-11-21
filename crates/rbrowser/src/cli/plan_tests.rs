@@ -239,6 +239,7 @@ fn the_environment_takes_the_settings_it_is_given() {
         startup: rb_config::StartupSettings {
             open_last_project: true,
             focus_on_open: false,
+            ..rb_config::StartupSettings::default()
         },
         ..rb_config::UserSettings::default()
     };

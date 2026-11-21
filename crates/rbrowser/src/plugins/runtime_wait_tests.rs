@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use rb_plugin_host::{NO_ANSWER, PAGE_TIMEOUT_MILLISECONDS};
+use rb_plugin_host::{MAX_PENDING, NO_ANSWER, PAGE_TIMEOUT_MILLISECONDS};
 use serde_json::json;
 
 use super::*;

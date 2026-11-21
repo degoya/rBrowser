@@ -282,6 +282,7 @@ pub fn print_breakpoint(paper: Paper, session: Option<&str>) -> Breakpoint {
         height: None,
         device: None,
         engine: EngineKind::Chromium,
+        ios_device: None,
         session: session.map(str::to_owned),
         sync_navigation: true,
         shortcut: None,

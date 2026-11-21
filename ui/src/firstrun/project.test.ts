@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEV_SERVER_ADDRESSES, proposedViews } from './project';
+import { DEV_SERVER_ADDRESSES, proposedViews, reasonKey } from './project';
 
 describe('the project step', () => {
   it('proposes the usual dev server addresses, Vite first', () => {
@@ -23,5 +23,12 @@ describe('the project step', () => {
       { id: 'odd', label: 'odd', size: null },
     ]);
     expect(proposedViews({ version: 1 })).toEqual([]);
+  });
+
+  it('names each reason of the analyser, and an unknown one as nothing found', () => {
+    expect(reasonKey('unreachable')).toBe('firstrun.project.reason.unreachable');
+    expect(reasonKey('plugin_missing')).toBe('firstrun.project.reason.plugin_missing');
+    expect(reasonKey('constructor')).toBe('firstrun.project.reason.nothing_found');
+    expect(reasonKey(undefined)).toBe('firstrun.project.reason.nothing_found');
   });
 });

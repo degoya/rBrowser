@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use rb_plugin_host::{PageScriptSource, world_name};
+use rb_plugin_host::{MAX_PENDING, PageScriptSource, world_name};
 use serde_json::json;
 
 use super::*;

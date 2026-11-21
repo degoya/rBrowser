@@ -1,0 +1,77 @@
+# Consent check (RB-094-05, docs/plugins.md): which requests to other sites, cookies and
+# localStorage keys a page has before any consent, and after "Reject all" of its cookie banner -
+# a technical pre-check for the GDPR and the TDDDG, no legal advice. A check for `checks_run` and
+# the findings panel, a feature for the MCP tool `consent_check`, the command and the panel.
+manifest_version = 1
+id = "consent-check"
+name = "Consent check"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "consent"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Which third-party requests, cookies and storage keys a page has before any consent and after \"Reject all\": a technical pre-check, no legal advice."
+# Checks > Consent check in the page's context menu: the check, as its shortcut runs it.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the view a call reads; evaluate: the collector src/collect.js in the plugin's isolated
+# world, in mode `read` only on a view (the page's URL, its localStorage keys, the banner shown;
+# "Reject all" is clicked only in the core's probe session, never in a view); cdp: the cookies
+# sent to the view's own URL (`Network.getCookies` with that URL); console-logs: the host's
+# capture of the view's requests (`$console`); out-write: the export
+# `.rbrowser/out/consent-check/consent-check.json`; findings: the command `check`;
+# consent-probe: the core's probe (RB-094-09) - the tool and the command answer the host's offer
+# `$consentProbe` with the page and the collectors (modes `read` and `reject`), the core loads it
+# in a fresh session of its own, clicks "Reject all", discards the session and calls again with
+# the capture `$consent`. `checks_run` gets no offer and reads the view.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Network"] }
+console-logs = true
+out-write = true
+findings = true
+consent-probe = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `consent_check`: `url` or the page of the target view (the active one without one), loaded
+# in the core's fresh probe session, judged: requests to other sites by
+# host and kind, cookies (name, domain, lifetime; never a value), localStorage keys, before
+# consent and after "Reject all", the differences, the findings, the notice and the caveats of
+# the capture; `export` also writes the answer to the out folder.
+[[tools]]
+name = "check"
+description = "plugin.consent-check.tools.check"
+input = { type = "object", properties = { url = { type = "string", maxLength = 2048 }, export = { type = "boolean" } } }
+
+# `plugin.consent-check.check`, Ctrl+Shift+Space K Y (Y for yes or no, the consent): the check of
+# the view `target` names (the context menu's clicked view; the active view without one), the
+# findings into the findings panel and the answer into the consent panel.
+[[commands]]
+id = "check"
+title = "plugin.consent-check.commands.check"
+shortcut = "Ctrl+Shift+Space K Y"
+group = "checks"
+tool = "check"
+
+# The consent panel, on Nuxt UI: panel/dist built from web/src. Its icon is one the shell
+# bundles (ui/src/panels/icons.ts).
+[[panels]]
+id = "consent-check"
+title = "plugin.consent-check.panels.consent-check"
+entry = "panel/index.html"
+icon = "search-check"
+placement = "sidebar"

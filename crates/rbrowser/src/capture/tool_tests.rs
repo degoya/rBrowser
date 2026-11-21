@@ -176,3 +176,14 @@ fn hide_banners_and_freeze_animations_reach_the_request() {
         .expect("valid");
     assert_eq!(unset.clean, rb_visual::CleanOverrides::default());
 }
+
+/// RB-093-04: only the bug report masks the password fields; no argument of the tool or the
+/// commands reaches the flag.
+#[test]
+fn no_argument_asks_for_the_password_mask() {
+    assert!(serde_json::from_value::<ScreenshotArgs>(json!({ "maskPasswords": true })).is_err());
+    let request = ScreenshotArgs::default()
+        .request(16, Duration::ZERO, false)
+        .expect("valid");
+    assert!(!request.mask_passwords);
+}

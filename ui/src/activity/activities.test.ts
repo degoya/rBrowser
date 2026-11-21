@@ -47,14 +47,16 @@ function everything(): ActivityInputs {
   state.video = { views: [1], startedAtMs: 1000, maxDurationSec: 600 };
   state.recorder = { phase: 'recording', name: 'login', steps: 2 };
   state.sync.desynced = [{ view: 2, reason: 'notFound', selector: 'nav', event: 'click' }];
+  state.timeControl = { animations: [{ view: 1, rate: 0 }] };
   return { state, flowRun: FLOW_RUN, checks: CHECKS, portal: PORTAL };
 }
 
 describe('the activity bar settings', () => {
-  it('default to the bar below the toolbar with every activity', () => {
+  it('default to the bar below the toolbar, always there, with every activity', () => {
     const settings = barSettings({});
     expect(settings.position).toBe('top');
-    expect(settings.mode).toBe('bar');
+    expect(settings.mode).toBe('always');
+    expect(barSettings({ 'ui.activityBar.mode': 'bar' }).mode).toBe('bar');
     expect(ACTIVITIES.every((activity) => settings.show[activity])).toBe(true);
   });
 
@@ -77,13 +79,20 @@ describe('the running activities', () => {
   });
 
   it('come from the snapshot, the flow run, the checks and the portal, in the bar order', () => {
-    expect(running(everything())).toEqual(['video', 'recorder', 'flows', 'checks', 'portal', 'desync']);
+    expect(running(everything())).toEqual(['video', 'recorder', 'flows', 'checks', 'portal', 'desync', 'time']);
   });
 
   it('end with a finished check run and a stopped portal', () => {
     const inputs = { ...everything(), checks: { ...CHECKS, finished: true }, portal: { ...PORTAL, running: false } };
     expect(running(inputs)).not.toContain('checks');
     expect(running(inputs)).not.toContain('portal');
+  });
+
+  it('hold the clock and the animations while either is changed (RB-094-07)', () => {
+    const state = sampleState();
+    expect(running({ state, flowRun: null, checks: null, portal: null })).toEqual([]);
+    state.timeControl = { clock: { start: '2026-12-24T10:00:00', local: true, speed: 0 } };
+    expect(running({ state, flowRun: null, checks: null, portal: null })).toEqual(['time']);
   });
 
   it('keep the recorder while it offers the recording just stopped', () => {
@@ -103,13 +112,23 @@ describe('the bar entries and the room', () => {
 
   it('leave out an activity switched off or folded', () => {
     const settings = barSettings({ 'ui.activityBar.show.desync': false });
-    expect(barEntries(run, settings, ['video'])).toEqual(['recorder', 'flows', 'checks', 'portal']);
+    expect(barEntries(run, settings, ['video'])).toEqual(['recorder', 'flows', 'checks', 'portal', 'time']);
+    const noTime = barSettings({ 'ui.activityBar.show.time': false });
+    expect(barEntries(run, noTime, [])).not.toContain('time');
   });
 
   it('ask for the settings position while there are entries, nothing otherwise', () => {
-    expect(wantedPlace(['video'], barSettings({}))).toBe('top');
-    expect(wantedPlace(['video'], barSettings({ 'ui.activityBar.position': 'bottom' }))).toBe('bottom');
-    expect(wantedPlace([], barSettings({}))).toBeNull();
+    const bar = { 'ui.activityBar.mode': 'bar' };
+    expect(wantedPlace(['video'], barSettings(bar))).toBe('top');
+    expect(wantedPlace(['video'], barSettings({ ...bar, 'ui.activityBar.position': 'bottom' }))).toBe('bottom');
+    expect(wantedPlace([], barSettings(bar))).toBeNull();
+  });
+
+  // RB-094-13 (owner): the bar shown and hidden around a check moved every view up and down.
+  it('keep the room with the mode always, entries or not, and never with indicator', () => {
+    expect(wantedPlace([], barSettings({}))).toBe('top');
+    expect(wantedPlace([], barSettings({ 'ui.activityBar.position': 'bottom' }))).toBe('bottom');
+    expect(wantedPlace(['video'], barSettings({ 'ui.activityBar.mode': 'indicator' }))).toBeNull();
   });
 
   it('are drawn only by the page where the core made room', () => {
@@ -135,5 +154,19 @@ describe('the counters', () => {
     expect(flowCounts({ project: true })).toBeNull();
     expect(checkCounts(CHECKS)).toEqual({ done: 1, total: 3 });
     expect(checkCounts(null)).toBeNull();
+  });
+});
+
+describe('the presentation over the internet (RB-096-05)', () => {
+  it('runs the portal activity while it starts or is live, the LAN portal off', () => {
+    const portal: PortalState = {
+      enabled: false,
+      running: false,
+      devices: [],
+      presentation: { enabled: true, consented: true, phase: 'starting', viewers: 0, maxViewers: 3 },
+    };
+    expect(running({ state: null, flowRun: null, checks: null, portal })).toEqual(['portal']);
+    const off = { ...portal, presentation: { ...portal.presentation!, phase: 'off' as const } };
+    expect(running({ state: null, flowRun: null, checks: null, portal: off })).toEqual([]);
   });
 });

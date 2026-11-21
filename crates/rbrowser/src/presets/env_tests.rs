@@ -125,12 +125,3 @@ fn environments_cycle_in_config_order() {
     assert_eq!(next_environment(&envs, Some("gone")), Some("local"));
     assert_eq!(next_environment(&[], None), None);
 }
-
-#[test]
-fn only_http_pages_are_web_pages() {
-    assert!(is_web_url("https://example.com"));
-    assert!(is_web_url("http://localhost:3000/x"));
-    assert!(!is_web_url("about:blank"));
-    assert!(!is_web_url(""));
-    assert!(!is_web_url("file:///C:/x.html"));
-}

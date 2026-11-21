@@ -10,9 +10,9 @@ use serde_json::json;
 
 use super::model::{Action, Builder, Item, Label, Mark};
 
-/// The Recorder submenu's title.
-pub const KEY_MENU: &str = "contextmenu.recorder.menu";
-/// The Run flow submenu's title.
+/// The Recorder submenu's title: the main menu's Flows > Recorder (RB-090-92).
+pub const KEY_MENU: &str = super::model::KEY_RECORDER;
+/// The Run flow submenu's title, beside the Recorder under Flows.
 pub const KEY_FLOWS: &str = "contextmenu.flows.menu";
 
 /// What the recorder and the flows show when the menu opens.

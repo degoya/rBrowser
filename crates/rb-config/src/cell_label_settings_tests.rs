@@ -9,8 +9,22 @@ fn engine_status_shows_and_the_address_only_when_it_differs_by_default() {
         CellLabelSettings {
             engine_status: true,
             address: CellAddress::Differs,
+            address_editable: true,
         }
     );
+}
+
+// RB-092-03: the address field of a decoupled view's label strip is on unless switched off.
+#[test]
+fn the_address_field_is_on_by_default_and_switched_off_on_its_own() {
+    let settings: UserSettings = serde_json::from_str(
+        r#"{ "version": 1, "ui": { "cellLabel": { "addressEditable": false } } }"#,
+    )
+    .expect("parses");
+    assert!(!settings.ui.cell_label.address_editable);
+    assert_eq!(settings.ui.cell_label.address, CellAddress::Differs);
+    let written = serde_json::to_value(&settings.ui.cell_label).expect("writes");
+    assert_eq!(written["addressEditable"], serde_json::json!(false));
 }
 
 #[test]

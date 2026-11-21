@@ -5,6 +5,7 @@
 // meanwhile", after which it reads the files again instead of writing.
 
 import { searchItems, searching, type Search } from './search';
+import { isObject } from '../../../../web-common/src/is-object';
 
 export type State = 'open' | 'done' | 'cancelled';
 
@@ -61,7 +62,6 @@ const OWN_TAGS = new Set(['done', 'cancelled', 'project', 'lasted', 'wasted']);
 /** The codes of a change refused because the file changed since it was shown. */
 export const CONFLICTS: readonly string[] = ['plugin.todo.errors.changed', 'plugins.error.write_conflict'];
 
-const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 const count = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 

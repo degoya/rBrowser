@@ -335,3 +335,49 @@ async fn a_step_is_acked_and_its_answer_follows_as_an_event() {
     .expect("the answer arrives");
     assert!(event.contains("\"op\":\"failed\""), "{event}");
 }
+
+/// RB-091-08: a step that panics answers with a failure and its request's number - the page's
+/// spinner never waits for an answer that does not come.
+#[test]
+fn a_step_that_panics_answers_with_a_failure() {
+    let write = SetupRequest::Write {
+        request_id: 7,
+        proposal_id: 1,
+    };
+    let answer = guarded(&write, || panic!("a step broke"));
+    assert_eq!(
+        answer,
+        SetupAnswer::Failed {
+            request_id: 7,
+            step: SetupStep::Write,
+            message_key: STEP_FAILED_KEY.to_owned(),
+            args: BTreeMap::new(),
+        }
+    );
+    let preview = SetupRequest::Preview {
+        request_id: 8,
+        root: "C:\\site".to_owned(),
+        url: None,
+        template: SetupTemplate::Default,
+        devices: Vec::new(),
+    };
+    assert!(matches!(
+        guarded(&preview, || panic!("again")),
+        SetupAnswer::Failed {
+            request_id: 8,
+            step: SetupStep::Preview,
+            ..
+        }
+    ));
+    // A step that does not panic answers as it does.
+    let applied = SetupAnswer::Applied {
+        request_id: 9,
+        root: "C:\\site".to_owned(),
+    };
+    let basics = SetupRequest::Basics {
+        request_id: 9,
+        layout: None,
+        sync: None,
+    };
+    assert_eq!(guarded(&basics, || applied.clone()), applied);
+}

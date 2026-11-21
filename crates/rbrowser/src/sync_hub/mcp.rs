@@ -125,7 +125,7 @@ pub fn current_state(core: &Core) -> Result<SyncState, CommandError> {
     let host = core.host();
     let sync =
         for_host(host).ok_or_else(|| CommandError::Failed("sync is not started".to_owned()))?;
-    let mut state = sync.state(&host.config().sync);
+    let mut state = sync.state(&host.with_config(|config| config.sync.clone()));
     state.features.scroll_mode = crate::scroll_sync::mode(host);
     Ok(state)
 }
@@ -133,7 +133,7 @@ pub fn current_state(core: &Core) -> Result<SyncState, CommandError> {
 /// `view`'s desync for `views_list`; `None` while it is in sync.
 pub fn view_desync(host: &Host, view: ViewId) -> Option<ViewDesync> {
     let sync = for_host(host)?;
-    sync.state(&host.config().sync)
+    sync.state(&host.with_config(|config| config.sync.clone()))
         .desynced
         .into_iter()
         .find(|desync| desync.view == view)

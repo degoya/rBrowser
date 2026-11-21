@@ -81,6 +81,7 @@ fn a_select_change_takes_the_click_that_opened_it() {
 fn two_clicks_and_a_dblclick_are_one_dblclick() {
     let cell = css("#cell");
     let dblclick = SyncEvent::Dblclick(MouseData {
+        control: None,
         button: MouseButton::Left,
         detail: 2,
         modifiers: 0,

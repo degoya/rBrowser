@@ -9,7 +9,9 @@
 //! it after the base again gives the same page, so no bookmark changes where it leads.
 
 use crate::ProjectConfig;
-use crate::bookmarks::{base_url, is_bookmark_path, is_web_url};
+use rb_util::url::is_web_url;
+
+use crate::bookmarks::{base_url, is_bookmark_path};
 
 /// The origin (`scheme://host[:port]`, lower case, no default port, no user info) and the rest
 /// of an `http`/`https` URL; `None` for anything else.

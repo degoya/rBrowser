@@ -5,11 +5,13 @@ import WhichKeyBar from './whichkey/WhichKeyBar.vue';
 import SizeInputBar from './breakpoint_keys/SizeInputBar.vue';
 import NewSizeBar from './toolbar/NewSizeBar.vue';
 import SessionBar from './sessions/SessionBar.vue';
+import EnvironmentAuthBar from './basic-auth/EnvironmentAuthBar.vue';
 import BookmarkBar from './bookmarks/BookmarkBar.vue';
 import SitemapBar from './sitemap/SitemapBar.vue';
 import SavePresetBar from './layout/SavePresetBar.vue';
 import ExtensionPromptBar from './extensions/ExtensionPromptBar.vue';
 import ActivityBar from './activity/ActivityBar.vue';
+import ErrorToast from './notify/ErrorToast.vue';
 import { useActivities } from './activity/store';
 // The command palette and the findings panel live in windows of their own (the pages,
 // `palette`, `findings`): the shell strip keeps its 44 px. The activity bar below the toolbar
@@ -26,9 +28,12 @@ useActivities().manageRoom();
     <SizeInputBar />
     <NewSizeBar />
     <SessionBar />
+    <EnvironmentAuthBar />
     <BookmarkBar />
     <SitemapBar />
     <SavePresetBar />
     <ExtensionPromptBar />
+    <!-- An action's error at the top as well, in the toolbar's strip (RB-094-20). -->
+    <ErrorToast />
   </UApp>
 </template>

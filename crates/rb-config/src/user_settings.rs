@@ -1,6 +1,5 @@
-//! The serde model of the user settings, `%APPDATA%\rBrowser\settings.json`: app values that
-//! belong to the person, not the project. RB-010-01 loads and writes it; RB-010-02 annotates
-//! the keys; the jobs named per field read them.
+//! The serde model of the user settings, `%APPDATA%\rBrowser\settings.json`: the person's app
+//! values, not the project's. RB-010-01 loads and writes it, RB-010-02 annotates the keys.
 
 use std::collections::BTreeMap;
 
@@ -10,12 +9,17 @@ use serde_json::Value;
 
 pub use crate::plugin_settings::{PluginId, PluginSettings, TrustedPluginKey};
 pub use crate::ui_theme::Theme;
+use crate::user_android::AndroidSettings;
 use crate::user_automation::AutomationSettings;
 pub use crate::user_cdp::CdpSettings;
+pub use crate::user_engines::ChromiumSettings;
 use crate::user_engines::{
     CookieSettings, ExternalWindowSettings, FirefoxSettings, WebkitSettings,
 };
 pub use crate::user_logs::LogSettings;
+pub use crate::user_mcp::{McpClient, McpSettings};
+// Split from this file (500-line rule, RB-095-04); the old path holds.
+pub use crate::user_reload::UserReloadSettings;
 pub use crate::user_shortcuts::{BreakpointShortcutSettings, NewViewModifier, ShortcutSettings};
 pub use crate::user_updates::{UpdateAutoInstall, UpdateChannel, UpdateCheck, UpdateSettings};
 use crate::user_view::{
@@ -149,6 +153,9 @@ pub struct UserSettings {
     /// Capture > Sitemap: where a capture's gallery opens (RB-090-83).
     #[serde(default)]
     pub sitemap: crate::UserSitemapSettings,
+    /// Capture > Bug report: the report's folder and the preview (RB-093-04).
+    #[serde(default)]
+    pub report: crate::UserReportSettings,
     /// Plugin sections and anything unknown, kept verbatim.
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
@@ -189,8 +196,7 @@ pub struct UiSettings {
     pub view_footer: crate::ViewFooterSettings,
     /// The page's context menu offers the toolbar's emulation switches for the clicked view -
     /// colour scheme, reduced motion, offline, location, time zone, reset - in an Emulation
-    /// submenu, and "Analyze breakpoints" beside it (RB-080-49). Off, the submenu is gone and
-    /// "Analyze breakpoints" stays under Checks. Needs `ui.pageContextMenu`.
+    /// submenu (RB-080-49). Off, the submenu is gone. Needs `ui.pageContextMenu`.
     pub page_context_menu_emulation: bool,
     /// Layout > what the "New size..." picker lists (RB-080-46).
     pub new_view_size: crate::NewViewSizeSettings,
@@ -220,6 +226,11 @@ pub struct UiSettings {
     /// folder without a config says "Set up project" once in the status bar. Off: neither, and
     /// the command that opens the wizard refuses - for a team that rolls out its own setup.
     pub first_run_wizard: bool,
+    /// What the main window's title shows after the project and the product: the version and
+    /// the credit line (RB-094-19).
+    pub title_bar: crate::TitleBarSettings,
+    /// Layout > Status bar: an action's error at the top as well (RB-094-20).
+    pub notifications: crate::NotificationSettings,
 }
 
 impl Default for UiSettings {
@@ -243,58 +254,8 @@ impl Default for UiSettings {
             cell_label: crate::CellLabelSettings::default(),
             file_name_time: crate::FileNameTime::Local,
             first_run_wizard: true,
-        }
-    }
-}
-
-/// `mcp`. Protected from MCP itself.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
-pub struct McpSettings {
-    /// The MCP server runs.
-    pub enabled: bool,
-    /// The `evaluate` tool may run page JavaScript.
-    pub allow_evaluate: bool,
-    /// A fixed port on 127.0.0.1; a free one at every start when absent (RB-030-01).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub port: Option<u16>,
-    /// How long MCP waits for each view, in milliseconds: the final URL of `navigate`,
-    /// `reload`, `back` and `forward`, the input of `click`, `type`, `hover` and `press_key`,
-    /// and `sync_set`'s work (RB-030-01).
-    #[schemars(range(min = 1000, max = 600_000))]
-    pub navigation_timeout_ms: u32,
-    /// Console messages kept per view for `console_logs` (RB-030-01).
-    #[schemars(range(min = 10, max = 10_000))]
-    pub console_log_limit: u32,
-    /// Network requests kept per view for `network_requests` (RB-030-01).
-    #[schemars(range(min = 10, max = 10_000))]
-    pub network_request_limit: u32,
-    /// Uncaught exceptions kept per view for `errors` (RB-030-01).
-    #[schemars(range(min = 10, max = 10_000))]
-    pub error_limit: u32,
-    /// The most bytes `evaluate` and `snapshot` answer; more is cut (RB-030-01).
-    #[schemars(range(min = 4096, max = 16_777_216))]
-    pub max_answer_bytes: u32,
-    /// `rbrowser mcp` starts the project's rBrowser in the background when none runs
-    /// (RB-030-02).
-    pub stdio_auto_start: bool,
-    /// A setting changed over MCP is shown in the shell (RB-030-03).
-    pub notify_on_setting_change: bool,
-}
-
-impl Default for McpSettings {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            allow_evaluate: false,
-            port: None,
-            navigation_timeout_ms: 15_000,
-            console_log_limit: 500,
-            network_request_limit: 500,
-            error_limit: 200,
-            max_answer_bytes: 262_144,
-            stdio_auto_start: false,
-            notify_on_setting_change: true,
+            title_bar: crate::TitleBarSettings::default(),
+            notifications: crate::NotificationSettings::default(),
         }
     }
 }
@@ -320,9 +281,7 @@ pub struct EngineSettings {
     /// (RB-080-58).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lighthouse_browser_path: Option<String>,
-    /// The Firefox executable before RB-040-02 (`engines.firefoxPath`): still read, never
-    /// written, outside the schema; `engines.firefox.path` wins
-    /// ([`EngineSettings::firefox_executable`]).
+    /// `engines.firefoxPath` before RB-040-02: read, never written; `firefox.path` wins.
     #[serde(skip_serializing)]
     #[schemars(skip)]
     pub firefox_path: Option<String>,
@@ -332,8 +291,14 @@ pub struct EngineSettings {
     pub firefox: FirefoxSettings,
     /// WebKit through Playwright (RB-040-04).
     pub webkit: WebkitSettings,
+    /// Safari over `safaridriver`, macOS only (RB-095-03).
+    pub safari: crate::SafariSettings,
+    /// iOS over `safaridriver`: the Simulator or a connected device, macOS only (RB-095-04).
+    pub ios: crate::IosSettings,
     /// Copying Chromium's cookies into the Firefox and WebKit views (RB-040-05).
     pub cookies: CookieSettings,
+    /// Chrome on an Android device over ADB (RB-095-02).
+    pub android: AndroidSettings,
 }
 
 impl Default for EngineSettings {
@@ -348,29 +313,10 @@ impl Default for EngineSettings {
             external: ExternalWindowSettings::default(),
             firefox: FirefoxSettings::default(),
             webkit: WebkitSettings::default(),
+            safari: crate::SafariSettings::default(),
+            ios: crate::IosSettings::default(),
             cookies: CookieSettings::default(),
-        }
-    }
-}
-
-/// `engines.chromium`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ChromiumSettings {
-    /// Run the Chromium processes in the sandbox (ADR 0001, Decision 6). Off only where the
-    /// sandbox fails on a machine; read at start-up, and while it is off the log says so at
-    /// every start. `--no-sandbox` on the command line switches it off for one start.
-    pub sandbox: bool,
-    /// Chrome extensions from unpacked folders (RB-080-06).
-    #[serde(skip_serializing_if = "crate::shared_settings::is_default")]
-    pub extensions: crate::ChromiumExtensionSettings,
-}
-
-impl Default for ChromiumSettings {
-    fn default() -> Self {
-        Self {
-            sandbox: true,
-            extensions: crate::ChromiumExtensionSettings::default(),
+            android: AndroidSettings::default(),
         }
     }
 }
@@ -426,29 +372,6 @@ pub enum DevtoolsMode {
     DockedRight,
     /// A window of its own (`show_dev_tools`, the native frontend).
     Window,
-}
-
-/// `reload` of the user settings.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
-pub struct UserReloadSettings {
-    /// Poll instead of relying on file events.
-    pub polling_fallback: bool,
-    /// How often polling looks for changes, in milliseconds (RB-030-05).
-    #[schemars(range(min = 250))]
-    pub poll_interval_ms: u64,
-    /// How long input in a view pauses the interval reload, in seconds (RB-030-05).
-    pub interval_pause_sec: u64,
-}
-
-impl Default for UserReloadSettings {
-    fn default() -> Self {
-        Self {
-            polling_fallback: false,
-            poll_interval_ms: 1000,
-            interval_pause_sec: 10,
-        }
-    }
 }
 
 /// `wsl` (RB-030-04).

@@ -314,6 +314,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "plugin-util"
+version = "0.1.0"
+dependencies = [
+ "rb-plugin-api",
+ "serde_json",
+]
+
+[[package]]
 name = "precomputed-hash"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -349,7 +357,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -357,7 +365,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -395,6 +403,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
+]
+
+[[package]]
+name = "schema-org"
+version = "0.1.0"
+dependencies = [
+ "scraper",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -444,8 +461,10 @@ name = "seo-plugin"
 version = "0.1.0"
 dependencies = [
  "ego-tree",
+ "plugin-util",
  "rb-plugin-api",
  "roxmltree",
+ "schema-org",
  "scraper",
  "serde",
  "serde_json",

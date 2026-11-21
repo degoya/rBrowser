@@ -12,6 +12,7 @@ import { createPanelBridge, type PanelBridge } from './panel-bridge';
 import type { FrameworkReport } from './protocol';
 import { nameOf, statusOf } from './status';
 import { openViewChannel, watchProbe, type ViewChannel } from './view-channel';
+import { isObject } from '../../../web-common/src/is-object';
 
 const PREFIX = 'plugin.framework-devtools.';
 /** How often the panel asks which view is active, in ms. */
@@ -29,10 +30,6 @@ const $ = (id: string): HTMLElement => {
   if (!element) throw new Error(`no element #${id}`);
   return element;
 };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function theme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

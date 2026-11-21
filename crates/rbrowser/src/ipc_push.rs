@@ -1,7 +1,8 @@
 //! What the state forwarder pushes to the shell's pages (RB-090-36): every page parses and
 //! renders each push, so a state like the one sent last goes out no more, and a change of the
 //! cell labels' metrics alone - the resources every 2 s, the Web Vitals while a page loads -
-//! goes out as `metrics`, not as the whole state.
+//! goes out as `metrics`, a change of the plugins' progress alone (up to 4 Hz) as
+//! `pluginProgress` (RB-094-10), not as the whole state.
 
 use std::sync::{Arc, Mutex, Weak};
 
@@ -18,26 +19,38 @@ pub struct StatePush {
 
 impl StatePush {
     /// The message for `now`: `None` when it is the state sent last, `metrics` when only they
-    /// changed, else the whole state.
+    /// changed, `pluginProgress` when only it changed, else the whole state.
     pub fn next(&mut self, mut now: StateSnapshot) -> Option<CoreToShell> {
         let Some(last) = self.last.as_mut() else {
             return Some(self.whole(now));
         };
         let metrics = std::mem::take(&mut now.metrics);
+        let progress = std::mem::take(&mut now.plugin_progress);
         let last_metrics = std::mem::take(&mut last.metrics);
+        let last_progress = std::mem::take(&mut last.plugin_progress);
         let rest_same = *last == now;
         now.metrics = metrics;
+        now.plugin_progress = progress;
         last.metrics = last_metrics;
-        if !rest_same {
-            return Some(self.whole(now));
+        last.plugin_progress = last_progress;
+        let metrics_same = last.metrics == now.metrics;
+        let progress_same = last.plugin_progress == now.plugin_progress;
+        match (rest_same, metrics_same, progress_same) {
+            (true, true, true) => None,
+            (true, false, true) => {
+                last.metrics.clone_from(&now.metrics);
+                Some(CoreToShell::Metrics {
+                    metrics: now.metrics,
+                })
+            }
+            (true, true, false) => {
+                last.plugin_progress.clone_from(&now.plugin_progress);
+                Some(CoreToShell::PluginProgress {
+                    progress: now.plugin_progress,
+                })
+            }
+            _ => Some(self.whole(now)),
         }
-        if last.metrics == now.metrics {
-            return None;
-        }
-        last.metrics.clone_from(&now.metrics);
-        Some(CoreToShell::Metrics {
-            metrics: now.metrics,
-        })
     }
 
     /// The next state goes out whole, the one sent last or not.

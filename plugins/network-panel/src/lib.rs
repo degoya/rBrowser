@@ -12,6 +12,14 @@
 //!   response for editing, continue and abort (for one view or all), compose and repeat from a
 //!   view's context; the rule kinds `mapLocal` and `mapRemote` and the extended rewrite
 //!   ([`kinds`]); sessions saved as HAR and opened for display ([`sessions`]).
+//! - **The endpoint analysis** (RB-096-06, [`endpoint_tool`]): the page's requests grouped by
+//!   method and path with ids as placeholders ([`template`], [`endpoints`]), per endpoint calls,
+//!   median and p95 of duration and waiting time, sizes, statuses, caching and compression, per
+//!   view ([`endpoint_summary`], [`stats`]); its check rules ([`endpoint_rules`]) make this a
+//!   `check-plugin` too. Nothing is sent: the host's capture is all it reads.
+//! - **Into the API client** (RB-096-08, [`api_handoff`]): a request opened in the API client or
+//!   saved as one, the filtered ones saved at once; the core reads the headers and turns the
+//!   secrets into variables (capability `api-client`).
 //!
 //! The logic is plain JSON on the native traits and tested natively; `guest.rs` translates it
 //! into the contract's vocabulary and exists on `wasm32` alone.
@@ -19,24 +27,35 @@
 #[cfg(target_arch = "wasm32")]
 mod guest;
 
+pub mod api_handoff;
+pub mod calls;
 pub mod context;
 pub mod debug;
 pub mod edit;
+pub mod endpoint_rules;
+pub mod endpoint_settings;
+pub mod endpoint_summary;
+pub mod endpoint_tool;
+pub mod endpoints;
 pub mod har;
 pub mod har_import;
 pub mod kinds;
+pub mod levels;
 pub mod mocks;
 pub mod requests;
 pub mod rules;
 pub mod sessions;
+pub mod stats;
 pub mod store;
+pub mod template;
 pub mod tools;
 
 #[cfg(test)]
 mod fake_host;
 
+use rb_plugin_api::check::Check;
 use rb_plugin_api::feature::Feature;
-use rb_plugin_api::{Failure, FailureKind, PluginHost, codes};
+use rb_plugin_api::{CheckContext, Failure, FailureKind, Finding, PluginHost, RuleInfo, codes};
 use serde_json::{Value, json};
 
 /// The plugin's id: the prefix of its keys.
@@ -90,6 +109,23 @@ fn answer(value: Result<Value, Failure>) -> Result<String, Failure> {
     value.map(|value| value.to_string())
 }
 
+/// The check run (`checks_run`, the findings panel): the endpoint rules over the current page of
+/// the capture the host hands in the context's arguments.
+impl Check for NetworkPanel {
+    fn describe(&self) -> Vec<RuleInfo> {
+        endpoint_rules::describe()
+    }
+
+    fn run(
+        &mut self,
+        host: &mut dyn PluginHost,
+        ctx: &CheckContext,
+    ) -> Result<Vec<Finding>, Failure> {
+        let args = parse(&ctx.args)?;
+        Ok(endpoint_tool::check(host, &args, &ctx.rules, ctx.view))
+    }
+}
+
 impl Feature for NetworkPanel {
     fn run_command(
         &mut self,
@@ -105,7 +141,10 @@ impl Feature for NetworkPanel {
             "har_export" => answer(tools::har_export(host, &args)),
             "site_data_clear" => answer(tools::site_data_clear(host, &args)),
             "breakpoints_toggle" => answer(debug::breakpoints_toggle(host, &args)),
-            other => Err(unknown(other)),
+            "endpoints" => answer(Ok(endpoint_tool::open())),
+            "endpoints_check" => answer(endpoint_tool::endpoints_check(host, &args)),
+            other => api_handoff::command(other)
+                .map_or_else(|| Err(unknown(other)), |value| answer(Ok(value))),
         }
     }
 
@@ -140,6 +179,10 @@ impl Feature for NetworkPanel {
             "session_save" => answer(sessions::save(host, &args)),
             "session_open" => answer(sessions::open(host, &args)),
             "sessions_list" => answer(Ok(sessions::list(host))),
+            "endpoints" => answer(endpoint_tool::endpoints(host, &args)),
+            "endpoints_check" => answer(endpoint_tool::endpoints_check(host, &args)),
+            "api_open" => answer(api_handoff::api_open(&args)),
+            "api_save" => answer(api_handoff::api_save(&args)),
             other => Err(unknown(other)),
         }
     }

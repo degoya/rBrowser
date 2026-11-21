@@ -13,12 +13,17 @@ use crate::refusal::refuse;
 /// folders under `.rbrowser/out/`, which a plugin's `out-write` (`.rbrowser/out/<plugin-id>/`)
 /// would otherwise write into without trust: `checks` (the check runner, RB-060-01),
 /// `env-compare` (RB-080-03), `exports` (the recorder's export, `automation.recorderExport.dir`,
+/// RB-050-02), `flows` (RB-040-07), `recordings` (the recorder, RB-050-01), `reports` (the bug
+/// report bundle, RB-093-04), `screenshots` (RB-050-03) and `video` (RB-080-02, the Videos panel
+/// RB-110-12). Not
+/// `engine-compare` (RB-094-03), `env-compare` (RB-080-03), `exports` (the recorder's export, `automation.recorderExport.dir`,
 /// RB-050-02), `flows` (RB-040-07), `recordings` (the recorder, RB-050-01),
 /// `screenshots` (RB-050-03) and `video` (RB-080-02, the Videos panel RB-110-12). Not
 /// `sitemap-capture` (RB-050-05): that is the bundled first-party plugin's own id.
 pub const RESERVED_IDS: &[&str] = &[
     "checks",
     "core",
+    "engine-compare",
     "env-compare",
     "exports",
     "flows",
@@ -26,6 +31,7 @@ pub const RESERVED_IDS: &[&str] = &[
     "plugins",
     "rbrowser",
     "recordings",
+    "reports",
     "screenshots",
     "settings",
     "system",
@@ -40,6 +46,7 @@ pub const RESERVED_MCP_PREFIXES: &[&str] = &[
     "cdp",
     "checks",
     "commands",
+    "compare",
     "config",
     "devtools",
     "emulation",

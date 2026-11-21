@@ -33,6 +33,7 @@ pub mod relative;
 mod store;
 
 use rb_commands::{Binding, CommandError, Platform, Shortcut, builtin_reserved};
+use rb_config::ProjectConfig;
 use rb_engine::{Target, ViewHost, ViewId};
 use rb_ipc::{BookmarkSummary, CoreToShell, Notification, NotificationLevel};
 use serde::Deserialize;
@@ -128,9 +129,13 @@ pub fn open_target(host: &Host) -> Target {
 
 /// The bookmarks as the shell lists them, with their URLs in the current environment.
 pub fn summaries(host: &Host) -> Vec<BookmarkSummary> {
-    let config = host.config();
-    let environment = host.shell_state().environment;
-    let base = rb_config::bookmarks::base_url(&config, environment.as_deref());
+    summaries_in(&host.config(), host.shell_state().environment.as_deref())
+}
+
+/// [`summaries`] of `config` in `environment`, for a caller that read both already (the state
+/// push, RB-094-10).
+pub fn summaries_in(config: &ProjectConfig, environment: Option<&str>) -> Vec<BookmarkSummary> {
+    let base = rb_config::bookmarks::base_url(config, environment);
     config
         .bookmarks
         .iter()

@@ -133,6 +133,12 @@ pub enum Request {
         /// As the MCP tool `sitemap_capture` takes them.
         args: crate::sitemap::tool::CaptureArgs,
     },
+    /// `rbrowser check` (RB-092-05): run the checks over every view, export the run and answer
+    /// the `CheckAnswer`; the CLI decides its exit code from it.
+    Check {
+        /// The plugins, the format, the output file and the threshold.
+        args: crate::checks::export::check::CheckRequest,
+    },
 }
 
 /// Why a request was refused; the only detail a client learns.
@@ -298,6 +304,10 @@ pub fn check(line: &[u8], nonce: &str) -> Result<Request, Refusal> {
         }
         Request::SitemapCapture { args } => match args.check() {
             Ok(()) => Ok(Request::SitemapCapture { args }),
+            Err(_) => Err(Refusal::BadRequest),
+        },
+        Request::Check { args } => match args.check() {
+            Ok(()) => Ok(Request::Check { args }),
             Err(_) => Err(Refusal::BadRequest),
         },
     }

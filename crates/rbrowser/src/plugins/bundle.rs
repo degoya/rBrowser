@@ -11,7 +11,9 @@
 //! - `--install-all-bundled-plugins` ([`record_start`]) chooses the whole bundle.
 //!
 //! The first-run wizard and Settings > Plugins > Catalog change the choice
-//! ([`super::bundle_install`]). A project config that names a plugin that is not installed gets a
+//! ([`super::bundle_install`]). RB-091-08: when the very first start opens the wizard, the
+//! choice is written pending at once and the one load of the plugins waits for the wizard's
+//! answer ([`hold_for_wizard`]), so the plugins chosen there load live, without a restart. A project config that names a plugin that is not installed gets a
 //! notice with an Install button ([`notice_missing`], `plugins.catalog.missingNotice`), and MCP's
 //! `plugins_list` names it ([`missing_now`]); MCP never installs.
 
@@ -29,12 +31,19 @@ use crate::control::Core;
 pub const MISSING_NOTICE_KEY: &str = "plugins.notice.missing";
 /// Its button, which opens Settings > Plugins > Catalog.
 pub const MISSING_ACTION_KEY: &str = "plugins.notice.missing_install";
+/// The status bar's notice of the bundled plugins new in this version (`{count}`, `{plugins}`,
+/// RB-094-13), named once after the update that brought them.
+pub const NEW_NOTICE_KEY: &str = "plugins.notice.new_in_bundle";
+/// Its button, which installs them (`plugins.install` with `bundled`).
+pub const NEW_ACTION_KEY: &str = "plugins.notice.new_install";
 
 /// How this process was started.
 static START: OnceLock<BundleStartFlags> = OnceLock::new();
 /// The bundled plugins this start chose, the base of a change when the choice file cannot be
 /// read (review 4).
 static CHOSEN_AT_START: OnceLock<BTreeSet<String>> = OnceLock::new();
+/// The bundled plugins new in this version, until their notice takes them (RB-094-13).
+static NEW_IN_BUNDLE: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 
 /// Records how the app was started, before anything loads a plugin: `install_all` for
 /// `--install-all-bundled-plugins`, `ran_before` when the user settings were there already,
@@ -58,13 +67,7 @@ fn writing() -> MutexGuard<'static, ()> {
 /// review 8); `None` - every one - without a folder for the choice.
 pub fn chosen_for_load(bundled: &BTreeMap<PathBuf, PluginManifest>) -> Option<BTreeSet<String>> {
     let dir = super::catalog::store_dir()?;
-    // Not recorded (a process that is not the app): an installation that ran before, so nothing
-    // a person relies on goes missing.
-    let flags = START.get().copied().unwrap_or(BundleStartFlags {
-        ran_before: true,
-        install_all: false,
-        wizard: false,
-    });
+    let flags = start_flags();
     let ids: BTreeSet<String> = bundled
         .values()
         .map(|manifest| manifest.id.clone())
@@ -87,8 +90,11 @@ pub fn chosen_at_start(
         ran_before: flags.ran_before || BundleState::exists(dir),
         ..flags
     };
-    let (state, how) = bundle_start(BundleState::load(dir), bundled, recommended, flags);
-    if how != BundleStart::InstalledOnly {
+    let (mut state, how) = bundle_start(BundleState::load(dir), bundled, recommended, flags);
+    // RB-094-13: a plugin new in this bundle is named once - kept as offered from now on.
+    let new = state.new_in(bundled);
+    state.offered.extend(new.iter().cloned());
+    if how != BundleStart::InstalledOnly || !new.is_empty() {
         if let Err(error) = state.save(dir) {
             tracing::warn!(
                 code = error.code(),
@@ -102,7 +108,16 @@ pub fn chosen_at_start(
             "plugins: the bundled plugins chosen at this start"
         );
     }
+    if !new.is_empty() {
+        tracing::info!(new = ?new, "plugins: bundled plugins new in this version, named once");
+        rb_util::lock(&NEW_IN_BUNDLE).extend(new);
+    }
     state.chosen
+}
+
+/// Takes the bundled plugins new in this version that were not named yet.
+pub fn take_new_in_bundle() -> BTreeSet<String> {
+    std::mem::take(&mut *rb_util::lock(&NEW_IN_BUNDLE))
 }
 
 /// Changes the choice in `dir` with `change` and saves it. A choice file that cannot be read is
@@ -139,6 +154,49 @@ pub fn update_choice(change: impl FnOnce(&mut BundleState)) -> Result<BundleStat
     update_choice_in(&dir, &loaded, change)
 }
 
+/// How this process was started; an unrecorded one (not the app) as an installation that ran
+/// before, so nothing a person relies on goes missing.
+fn start_flags() -> BundleStartFlags {
+    START.get().copied().unwrap_or(BundleStartFlags {
+        ran_before: true,
+        install_all: false,
+        wizard: false,
+    })
+}
+
+/// Whether the first choice waits for the first-run wizard (RB-091-08): a fresh installation
+/// whose wizard asks (`flags.wizard`), without `--install-all-bundled-plugins`, and no choice
+/// yet. Anything else loads as before.
+#[must_use]
+pub fn should_hold(flags: BundleStartFlags, choice_exists: bool) -> bool {
+    flags.wizard && !flags.install_all && !choice_exists
+}
+
+/// The very first start opens the first-run wizard: when the choice is to wait for it
+/// ([`should_hold`]), the one load of the plugins is held until the plugin step answers it or the
+/// wizard closes, and the choice is written pending - what the load would write. A load that began
+/// already (an early caller) refuses the hold, so the answer says "next start", never "live"; a
+/// choice that cannot be written lets go of the hold, and the load chooses as before.
+pub fn hold_for_wizard() {
+    let Some(dir) = super::catalog::store_dir() else {
+        return;
+    };
+    let _guard = writing();
+    if !should_hold(start_flags(), BundleState::exists(&dir)) || !crate::analyzer::plugins::hold() {
+        return;
+    }
+    // The wizard offers the whole bundle: none of it is new after the answer (RB-094-13).
+    let mut pending = BundleState::pending();
+    pending.offered = super::bundle_offer::bundled_plugins().into_keys().collect();
+    if let Err(error) = pending.save(&dir) {
+        tracing::warn!(
+            code = error.code(),
+            "the pending plugin choice was not saved; the plugins load now"
+        );
+        crate::analyzer::plugins::release();
+    }
+}
+
 /// Whether the choice waits for the first-run wizard's answer (review 7).
 pub fn choice_pending() -> bool {
     super::catalog::store_dir()
@@ -165,7 +223,8 @@ pub fn missing(named: &BTreeSet<String>, installed: &BTreeSet<String>) -> Vec<St
 
 /// The ids the load gave - loaded or switched off - once it is done; `None` while it runs.
 pub fn installed_ids() -> Option<BTreeSet<String>> {
-    let report = &crate::analyzer::plugins::loaded()?.report;
+    let loaded = crate::analyzer::plugins::loaded()?;
+    let report = &loaded.report;
     Some(
         report
             .loaded
@@ -215,6 +274,34 @@ pub fn notice_missing(core: &Core) {
         label_key: MISSING_ACTION_KEY.to_owned(),
         label_args: Default::default(),
         args: serde_json::Value::Null,
+    };
+    core.notify_with_action(notice, action);
+}
+
+/// Names the bundled plugins new in this version once in the status bar, with a button that
+/// installs them and the catalogue as the notice's setting (RB-094-13,
+/// `plugins.catalog.newNotice`). Never waits for the load.
+pub fn notice_new(core: &Core) {
+    let new = take_new_in_bundle();
+    if new.is_empty() || !core.user_settings().plugins.catalog.new_notice {
+        return;
+    }
+    let ids: Vec<String> = new.into_iter().collect();
+    let notice = Notification {
+        level: NotificationLevel::Info,
+        message_key: NEW_NOTICE_KEY.to_owned(),
+        args: [
+            ("count".to_owned(), ids.len().to_string()),
+            ("plugins".to_owned(), ids.join(", ")),
+        ]
+        .into(),
+        settings_key: Some(super::catalog::CATALOG_SETTING.to_owned()),
+    };
+    let action = StatusAction {
+        command: "plugins.install".to_owned(),
+        label_key: NEW_ACTION_KEY.to_owned(),
+        label_args: Default::default(),
+        args: serde_json::json!({ "bundled": ids }),
     };
     core.notify_with_action(notice, action);
 }

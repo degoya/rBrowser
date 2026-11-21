@@ -13,7 +13,8 @@ use super::state::HostState;
 use super::ui::PlacedView;
 use super::{Host, label_height, rebuild};
 use crate::layout::canvas::Camera;
-use crate::layout::canvas_hold::{HOLD_MS, Held};
+use crate::layout::canvas_hold::{HOLD_MS, Held, Moved};
+use crate::layout::canvas_live::PACE;
 use crate::layout::{Item, ModeSpec, Slot};
 
 impl Host {
@@ -116,6 +117,17 @@ impl Host {
         self.state().canvas.try_out(camera);
     }
 
+    /// The place a label dragged on the canvas board tries out; `None` outside a drag.
+    pub fn live_moved(&self) -> Option<Moved> {
+        self.state().canvas.moved()
+    }
+
+    /// A label dragged tries `moved` out: every state draws its view's frame there until the
+    /// views are placed for good (RB-094-18).
+    pub fn try_moved(&self, moved: Moved) {
+        self.state().canvas.try_moved(moved);
+    }
+
     /// Holds `placed` as the canvas `number` until the board painted it ([`Self::painted`]) or
     /// [`HOLD_MS`] passed: a board that does not answer never keeps the views from their places.
     pub fn hold(&self, number: u32, area: CellRect, placed: Vec<PlacedView>) {
@@ -127,7 +139,13 @@ impl Host {
         if let Some(host) = self.me.upgrade() {
             self.runtime.spawn(async move {
                 tokio::time::sleep(Duration::from_millis(HOLD_MS)).await;
-                host.painted(number);
+                if host.place_held(number) {
+                    tracing::debug!(
+                        target: PACE,
+                        seq = number,
+                        "unanswered: placed after the hold"
+                    );
+                }
             });
         }
     }
@@ -136,10 +154,19 @@ impl Host {
     /// their frames. A canvas placed already, older than one placed, or held no more after the
     /// views were placed for good moves nothing.
     pub fn painted(&self, number: u32) {
+        let placed = self.place_held(number);
+        tracing::debug!(target: PACE, seq = number, placed, "the board painted a canvas");
+    }
+
+    /// Places the views held as the canvas `number`; `false` when none were (placed already,
+    /// older than one placed, or after the views were placed for good).
+    fn place_held(&self, number: u32) -> bool {
         let held = self.state().canvas.painted(number);
-        if let Some(held) = held {
-            self.place_live(held.area, held.placed);
-        }
+        let Some(held) = held else {
+            return false;
+        };
+        self.place_live(held.area, held.placed);
+        true
     }
 
     /// The grid area as the window laid it out; `None` before it did.
@@ -202,6 +229,16 @@ impl Host {
     /// off-screen marks.
     pub(super) fn placed_views(&self) -> Option<(CellRect, Vec<PlacedView>)> {
         place(&mut self.state()).map(|placement| (placement.area, placement.placed))
+    }
+}
+
+/// A grid leaves the layout mode of `state` (RB-080-04): no view is placed off screen any more.
+/// Focus mode's one view and the grid's views are shown; a kept view's mark from the mode stayed,
+/// and a played recording skipped the view the person had just recorded in (RB-090-89).
+pub(super) fn leave_mode(state: &mut HostState) {
+    state.mode = None;
+    for entry in state.views.values_mut() {
+        entry.off_screen = false;
     }
 }
 

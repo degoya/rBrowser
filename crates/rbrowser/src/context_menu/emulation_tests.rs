@@ -104,9 +104,14 @@ pub(super) fn action(entry: &Entry) -> (String, serde_json::Value) {
 #[test]
 fn the_block_shows_the_toolbars_switches_and_analyze_breakpoints() {
     let items = build(&state(Some(emulation())));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     let mut shown = Vec::new();
     lines(block, 0, &mut shown);
+    // The animation rates' names are the catalogue's (RB-094-07).
+    let rate = |chosen: &str, percent: &str| {
+        let name = rb_i18n::t_with("contextmenu.time.rate", &[("percent", percent)]);
+        format!("  {chosen} '{name}'")
+    };
     assert_eq!(
         shown,
         [
@@ -139,6 +144,24 @@ fn the_block_shows_the_toolbars_switches_and_analyze_breakpoints() {
             "  ( ) '4x slower'",
             "  ( ) '6x slower'",
             "  ( ) '20x slower'",
+            "contextmenu.time.clock>",
+            "  (o) contextmenu.time.real_time",
+            "  ( ) contextmenu.time.freeze_now",
+            "contextmenu.time.animations>",
+            "  ( ) contextmenu.time.stopped",
+            rate("( )", "10").as_str(),
+            rate("( )", "25").as_str(),
+            rate("(o)", "100").as_str(),
+            "  -",
+            "  contextmenu.time.step",
+            "  contextmenu.time.all_normal",
+            "-",
+            "contextmenu.emulation.dir>",
+            "  (o) contextmenu.emulation.dir_none",
+            "  ( ) contextmenu.emulation.dir_ltr",
+            "  ( ) contextmenu.emulation.dir_rtl",
+            "  ( ) contextmenu.emulation.dir_auto",
+            "[ ] contextmenu.emulation.pseudo",
             "-",
             "emulation.toolbar.reset",
             "contextmenu.emulation.all_views>",
@@ -147,13 +170,15 @@ fn the_block_shows_the_toolbars_switches_and_analyze_breakpoints() {
             "  ( ) contextmenu.emulation.scheme_none",
             "  -",
             "  [ ] emulation.toolbar.reducedMotion",
+            "  [ ] contextmenu.emulation.rtl",
+            "  [ ] contextmenu.emulation.pseudo",
             "  -",
             "  emulation.toolbar.reset",
         ],
         "no view at all: nothing in common, nothing marked under All views"
     );
-    // The submenu follows Panels; the analyzer opens the view's group after it (owner's
-    // grouping, 2026-11-17) and is not under Checks then.
+    // The submenu stands where the main menu has Emulation (RB-090-92): after Layout, which
+    // holds the analyzer, and before Capture; the analyzer is not under Checks.
     let mut top = Vec::new();
     lines(&items, 0, &mut top);
     let top: Vec<&str> = top
@@ -161,28 +186,28 @@ fn the_block_shows_the_toolbars_switches_and_analyze_breakpoints() {
         .map(String::as_str)
         .filter(|line| !line.starts_with(' '))
         .collect();
-    let panels = top
+    let emulation_at = top
         .iter()
-        .position(|line| *line == "contextmenu.panels.menu>")
-        .expect("panels");
+        .position(|line| *line == "shell.menu.emulation>")
+        .expect("emulation");
     assert_eq!(
-        top[panels..panels + 4],
+        top[emulation_at - 1..emulation_at + 2],
         [
-            "contextmenu.panels.menu>",
-            "contextmenu.emulation.menu>",
-            "-",
-            "contextmenu.checks.analyze",
+            "shell.menu.layout>",
+            "shell.menu.emulation>",
+            "shell.menu.capture>",
         ]
     );
-    let checks = submenu(&items, "contextmenu.checks.menu");
+    let checks = submenu(&items, "shell.menu.checks");
     assert!(
         !checks
             .iter()
             .any(|item| matches!(item, Item::Entry(entry) if text(&entry.label) == "contextmenu.checks.analyze")),
         "once in the menu"
     );
+    let layout = submenu(&items, "shell.menu.layout");
     assert_eq!(
-        action(entry(&items, "contextmenu.checks.analyze")),
+        action(entry(layout, "contextmenu.checks.analyze")),
         ("breakpoints.analyze".to_owned(), serde_json::Value::Null),
         "the toolbar's command, the window for Null"
     );
@@ -192,7 +217,7 @@ fn the_block_shows_the_toolbars_switches_and_analyze_breakpoints() {
 #[test]
 fn every_switch_runs_the_toolbars_command_for_the_clicked_view() {
     let items = build(&state(Some(emulation())));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     let set = |fields: serde_json::Value| {
         (
             "emulation.set".to_owned(),
@@ -321,7 +346,7 @@ fn the_presets_are_named_by_label_catalogue_or_id() {
     });
     let state_of = EmulationState::of(Some(&emulation), &[], &settings);
     let items = build(&state(Some(state_of)));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     let location = submenu(block, "emulation.extras.geolocation");
     let office = entry(location, "'R&D office'");
     assert_eq!(office.mark, Mark::Radio(true));
@@ -352,23 +377,21 @@ fn the_presets_are_named_by_label_catalogue_or_id() {
     }
 }
 
-/// `ui.pageContextMenuEmulation` off: no submenu, and the analyzer is under Checks as before.
+/// `ui.pageContextMenuEmulation` off: no submenu; the analyzer stays under Layout (RB-090-92).
 #[test]
 fn the_setting_off_leaves_the_block_out() {
     let items = build(&state(None));
-    assert!(
-        !items
-            .iter()
-            .any(|item| matches!(item, Item::Menu { label, .. } if text(label) == "contextmenu.emulation.menu"))
-    );
+    assert!(!items.iter().any(
+        |item| matches!(item, Item::Menu { label, .. } if text(label) == "shell.menu.emulation")
+    ));
     assert!(
         !items
             .iter()
             .any(|item| matches!(item, Item::Entry(entry) if text(&entry.label) == "contextmenu.checks.analyze")),
         "not an entry of the menu itself"
     );
-    let checks = submenu(&items, "contextmenu.checks.menu");
-    entry(checks, "contextmenu.checks.analyze");
+    let layout = submenu(&items, "shell.menu.layout");
+    entry(layout, "contextmenu.checks.analyze");
 }
 
 /// The fullest block fits: every submenu has an id of its own inside the submenus' range,
@@ -390,7 +413,11 @@ fn the_fullest_block_fits_the_ids() {
     let items = build(&state(Some(emulation())));
     let (mut menus, mut entries) = (Vec::new(), Vec::new());
     walk(&items, &mut menus, &mut entries);
-    assert_eq!(menus.len(), 9, "four of the block, five of the emulation");
+    assert_eq!(
+        menus.len(),
+        14,
+        "Layout, Capture > Screenshot, Video, Checks, Panels; eight of the emulation"
+    );
     let unique: BTreeSet<i32> = menus.iter().copied().collect();
     assert_eq!(unique.len(), menus.len(), "{menus:?}");
     assert!(

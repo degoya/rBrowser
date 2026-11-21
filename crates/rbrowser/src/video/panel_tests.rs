@@ -162,10 +162,10 @@ async fn the_panel_lists_and_deletes_through_the_ipc() {
     let delete = |recording: &str, file: Option<&str>| {
         ipc_in(
             &core,
-            &ShellToCore::DeleteVideo {
+            &ShellToCore::DeleteVideo(rb_ipc::VideoFileRef {
                 recording: recording.to_owned(),
                 file: file.map(str::to_owned),
-            },
+            }),
             dir,
         )
         .expect("deleteVideo is this module's")
@@ -212,10 +212,10 @@ async fn reveal_refuses_what_is_no_recording_and_needs_a_project() {
     let reveal = |core: &Arc<Core>, recording: &str, file: Option<&str>| {
         ipc_in(
             core,
-            &ShellToCore::RevealVideo {
+            &ShellToCore::RevealVideo(rb_ipc::VideoFileRef {
                 recording: recording.to_owned(),
                 file: file.map(str::to_owned),
-            },
+            }),
             dir,
         )
         .expect("revealVideo is this module's")
@@ -267,11 +267,11 @@ async fn convert_refuses_what_it_may_not_make() {
     let convert = |file: &str, to: rb_ipc::VideoTarget| {
         ipc_in(
             &core,
-            &ShellToCore::ConvertVideo {
+            &ShellToCore::ConvertVideo(rb_ipc::ConvertVideoRequest {
                 recording: NEW.to_owned(),
                 file: file.to_owned(),
                 to,
-            },
+            }),
             dir,
         )
         .expect("convertVideo is this module's")

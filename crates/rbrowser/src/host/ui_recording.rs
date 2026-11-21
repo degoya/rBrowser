@@ -33,6 +33,7 @@ pub(crate) enum UiCall {
     NativeMenu(crate::layout::native_menu::NativeMenu),
     EngineBadges(bool),
     CellInfo(Vec<crate::cell_info::CellInfo>),
+    EditAddress(ViewId, String, String),
     ClearCookies(String),
     FocusShell,
     PageWindow(PageWindow, String),
@@ -49,6 +50,7 @@ pub(crate) enum UiCall {
     Release(ViewId, Option<WindowRect>),
     PanelDock(Option<crate::panel_dock::DockedPanels>),
     AppTheme(rb_config::Theme),
+    WindowTitle(String),
     PageZoom(ViewId, f64),
 }
 
@@ -163,6 +165,9 @@ impl UiBackend for RecordingUi {
     fn set_cell_info(&self, infos: Vec<crate::cell_info::CellInfo>) {
         self.push(UiCall::CellInfo(infos));
     }
+    fn edit_address(&self, view: ViewId, url: String, name: String) {
+        self.push(UiCall::EditAddress(view, url, name));
+    }
     fn set_page_zoom(&self, view: ViewId, level: f64) {
         self.push(UiCall::PageZoom(view, level));
     }
@@ -218,6 +223,10 @@ impl UiBackend for RecordingUi {
 
     fn set_app_theme(&self, theme: rb_config::Theme) {
         self.push(UiCall::AppTheme(theme));
+    }
+
+    fn set_window_title(&self, title: String) {
+        self.push(UiCall::WindowTitle(title));
     }
 
     fn send_to_status_bar(&self, script: String) {

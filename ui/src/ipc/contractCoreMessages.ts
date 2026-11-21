@@ -2,6 +2,9 @@
 // contract fixtures that `contract.test.ts` holds to `contract-fixtures.json`.
 
 import { videoMessages } from './contractVideoMessages';
+import { galleryCoreMessages } from './contractGalleryMessages';
+import { bugReportCoreMessages } from './contractBugReportMessages';
+import { mcpSetupCoreMessages } from './contractMcpSetupMessages';
 import { recordingCoreMessages } from './contractRecordingMessages';
 import type { CoreToShell } from './protocol';
 
@@ -75,8 +78,17 @@ export const coreToShell = [
     detected: [{ width: 768, kind: 'min', label: 'md', count: 12, heuristic: false }],
     devtools: { view: 1, mode: 'docked-bottom' },
     recorder: { phase: 'recording', name: 'login', steps: 3 },
-    video: { views: [1, 2], startedAtMs: 1763380800000, maxDurationSec: 600 },
+    video: { views: [1, 2], startedAtMs: 1763380800000, maxDurationSec: 600, pausedAtMs: 1763380830000, pausedMs: 5000 },
     activityBar: { place: 'top', collapsed: ['video', 'desync'], recorded: 'login' },
+    timeControl: {
+      clock: { start: '2026-12-24T10:00:00', local: true, speed: 1.5 },
+      animations: [{ view: 2, rate: 0.25 }],
+    },
+    pluginProgress: [
+      { plugin: 'width-sweep', name: 'Width sweep', done: 12, total: 160, cancel: 'plugin.width_sweep.cancel' },
+      { plugin: 'seo', name: 'SEO', done: 0, total: 0 },
+    ],
+    forcedStates: [{ view: 1, states: ['hover', 'focus-within'] }],
     bookmarks: [
       {
         id: 'checkout',
@@ -106,6 +118,7 @@ export const coreToShell = [
   },
   { type: 'settings', values: [{ key: 'ui.theme', value: 'dark', origin: 'user' }] },
   { type: 'metrics', metrics: [{ view: 1, soft: true }] },
+  { type: 'pluginProgress', progress: [{ plugin: 'seo', name: 'SEO', done: 1, total: 4, cancel: 'plugin.seo.cancel' }] },
   {
     type: 'commands',
     leader: 'Ctrl+Shift+Space',
@@ -298,6 +311,7 @@ export const coreToShell = [
     level: 'success',
     messageKey: 'diagnostics.created',
     args: { path: 'C:/logs/rbrowser-diagnostics.zip' },
+    copy: { labelKey: 'report.action.copy_markdown', report: '2026-11-20_14-03-07' }, // RB-093-04
   },
   {
     type: 'statusMessages',
@@ -383,6 +397,7 @@ export const coreToShell = [
   ...videoMessages,
   { type: 'nativeMenuClosed', menu: 'theme', item: 'dark' },
   ...recordingCoreMessages,
+  ...galleryCoreMessages, // RB-090-86
   // RB-091-05.
   {
     type: 'setup',
@@ -395,4 +410,6 @@ export const coreToShell = [
       source: 'devices',
     },
   },
+  ...bugReportCoreMessages, // RB-093-04
+  ...mcpSetupCoreMessages, // RB-091-09
 ] satisfies CoreToShell[];

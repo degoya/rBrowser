@@ -1,0 +1,26 @@
+meta {
+  name: Upload cover
+  type: http
+  seq: 4
+}
+
+put {
+  url: https://library.example/covers/{{id}}
+  body: multipartForm
+  auth: apikey
+}
+
+auth:apikey {
+  key: X-Api-Key
+  value: lib-key-1
+  placement: header
+}
+
+body:multipart-form {
+  title: Cover
+  image: @file(covers/front.png)
+}
+
+body:form-urlencoded {
+  ignored: 1
+}

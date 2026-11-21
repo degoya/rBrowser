@@ -41,14 +41,18 @@ fn text(label: &Label) -> String {
     }
 }
 
+/// The submenu labelled `key` at any depth: Run flow and Recorder hang under Flows
+/// (RB-090-92).
+fn find_menu<'a>(items: &'a [Item], key: &str) -> Option<&'a [Item]> {
+    items.iter().find_map(|item| match item {
+        Item::Menu { label, items, .. } if text(label) == key => Some(items.as_slice()),
+        Item::Menu { items, .. } => find_menu(items, key),
+        _ => None,
+    })
+}
+
 fn submenu<'a>(items: &'a [Item], key: &str) -> &'a [Item] {
-    items
-        .iter()
-        .find_map(|item| match item {
-            Item::Menu { label, items, .. } if text(label) == key => Some(items.as_slice()),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("no submenu {key}"))
+    find_menu(items, key).unwrap_or_else(|| panic!("no submenu {key}"))
 }
 
 /// The entries as `(label, enabled, command, args)`; a separator as `-`.
@@ -214,13 +218,25 @@ fn both_submenus_wait_for_their_commands() {
     let mut state = with_recorder(RecorderMenu::default(), None);
     state.known = BTreeSet::new();
     let items = build(&state);
-    let titles: Vec<String> = items
+    assert!(find_menu(&items, KEY_MENU).is_none());
+    assert!(find_menu(&items, KEY_FLOWS).is_none());
+    assert!(
+        find_menu(&items, crate::context_menu::model::KEY_FLOWS).is_none(),
+        "an empty Flows submenu is left out"
+    );
+}
+
+/// Flows holds Run flow, then the Recorder, as the main menu's Flows do (RB-090-92).
+#[test]
+fn run_flow_and_the_recorder_hang_under_flows() {
+    let items = build(&with_recorder(RecorderMenu::default(), None));
+    let flows = submenu(&items, crate::context_menu::model::KEY_FLOWS);
+    let titles: Vec<String> = flows
         .iter()
         .filter_map(|item| match item {
             Item::Menu { label, .. } => Some(text(label)),
             _ => None,
         })
         .collect();
-    assert!(!titles.contains(&KEY_MENU.to_owned()));
-    assert!(!titles.contains(&KEY_FLOWS.to_owned()));
+    assert_eq!(titles, [KEY_FLOWS, KEY_MENU]);
 }

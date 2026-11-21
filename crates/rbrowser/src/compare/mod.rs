@@ -25,7 +25,7 @@ pub mod names;
 pub mod plan;
 pub mod report;
 pub mod runs;
-mod sink;
+pub(crate) mod sink;
 pub mod tool;
 
 pub use defs::register;

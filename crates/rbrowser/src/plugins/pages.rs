@@ -21,7 +21,6 @@ use rb_plugin_host::{
 use rb_plugin_types::codes;
 use serde_json::{Value, json};
 use tokio::runtime::Handle;
-use tokio::sync::broadcast::error::RecvError;
 
 use crate::cdp::{CdpEvent, CdpRouter, lock};
 
@@ -111,24 +110,21 @@ impl PluginPages {
 
     /// The plugins whose page scripts run from now on. A plugin left out has its script removed
     /// from new documents and its running scripts stopped (`rbPlugin.onStop`); one added is
-    /// injected into every view at once, its current document included.
+    /// injected into every view at once, its current document included. A bridge is the one it
+    /// was by identity: a plugin replaced by a live change (RB-092-06) brings a new bridge under
+    /// the same id, so its old scripts stop and the new ones are injected.
     pub fn set_plugins(&self, plugins: Vec<Arc<PageBridge>>) {
         let (removed, added, sessions) = {
             let mut state = lock(&self.state);
             let removed: Vec<Arc<PageBridge>> = state
                 .plugins
                 .iter()
-                .filter(|old| !plugins.iter().any(|new| new.plugin_id == old.plugin_id))
+                .filter(|old| !plugins.iter().any(|new| Arc::ptr_eq(new, old)))
                 .cloned()
                 .collect();
             let added: Vec<Arc<PageBridge>> = plugins
                 .iter()
-                .filter(|new| {
-                    !state
-                        .plugins
-                        .iter()
-                        .any(|old| old.plugin_id == new.plugin_id)
-                })
+                .filter(|new| !state.plugins.iter().any(|old| Arc::ptr_eq(old, new)))
                 .cloned()
                 .collect();
             state.plugins = plugins;
@@ -346,18 +342,22 @@ impl PluginPages {
     }
 
     fn watch(&self) {
-        let mut events = self.cdp.subscribe();
+        // A tap of their own: no burst of other events pushes a binding call out.
+        let methods = [
+            "Runtime.bindingCalled",
+            "Runtime.executionContextCreated",
+            "Runtime.executionContextDestroyed",
+            "Runtime.executionContextsCleared",
+            "Target.detachedFromTarget",
+        ];
+        let mut events = self.cdp.tap_methods(&methods, 4096);
         let weak = self.me.clone();
         self.runtime.spawn(async move {
-            loop {
-                let event = match events.recv().await {
-                    Ok(event) => event,
-                    Err(RecvError::Lagged(missed)) => {
-                        tracing::warn!(missed, "CDP events dropped (plugin page scripts)");
-                        continue;
-                    }
-                    Err(RecvError::Closed) => return,
-                };
+            while let Some(event) = events.recv_shared().await {
+                let missed = events.take_dropped();
+                if missed > 0 {
+                    tracing::warn!(missed, "CDP events dropped (plugin page scripts)");
+                }
                 let Some(pages) = weak.upgrade() else {
                     return;
                 };

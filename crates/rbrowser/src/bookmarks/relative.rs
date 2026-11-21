@@ -69,7 +69,7 @@ pub fn invalid_ids(document: &Value) -> Vec<String> {
                     .is_some_and(rb_config::bookmarks::is_bookmark_path)
             });
             let bad_url =
-                url.is_some_and(|url| !url.as_str().is_some_and(rb_config::bookmarks::is_web_url));
+                url.is_some_and(|url| !url.as_str().is_some_and(rb_util::url::is_web_url));
             (bad_path || bad_url || (path.is_some() && url.is_some())).then(|| id.to_owned())
         })
         .collect()

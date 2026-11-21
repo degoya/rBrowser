@@ -186,3 +186,23 @@ fn the_extras_merge_breakpoint_device_defaults_and_live_overrides() {
     );
     assert_eq!(merged.paper, Some(rb_config::Paper::A4));
 }
+
+#[test]
+fn dir_and_lang_overlay_live_and_need_no_reload() {
+    let base: EmulationFields =
+        serde_json::from_value(json!({ "dir": "ltr", "lang": "en" })).expect("fields");
+    let top: EmulationFields = serde_json::from_value(json!({ "dir": "rtl" })).expect("fields");
+    let merged = overlay(&base, &top);
+    assert_eq!(merged.dir, Some(rb_config::TextDirection::Rtl));
+    assert_eq!(merged.lang.as_deref(), Some("en"), "the base's lang stays");
+    let before = Emulation::default();
+    let after = Emulation {
+        dir: Some(rb_config::TextDirection::Rtl),
+        lang: Some("ar".into()),
+        ..Emulation::default()
+    };
+    assert!(
+        !reload_required(&before, &after),
+        "the agent sets dir and lang on the live document"
+    );
+}

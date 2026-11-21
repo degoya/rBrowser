@@ -26,7 +26,7 @@ fn the_active_state_is_marked_and_a_switch_turns_it_off() {
     let state_of = EmulationState::of(Some(&emulated()), &[], &EmulationUserSettings::default());
     assert_eq!(state_of.preset.as_deref(), Some("tokyo"));
     let items = build(&state(Some(state_of)));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     assert_eq!(
         radio_group(block),
         [
@@ -70,7 +70,7 @@ fn exactly_one_colour_scheme_choice_is_marked() {
         let mut emulation = emulation();
         emulation.color_scheme = scheme;
         let items = build(&state(Some(emulation)));
-        let block = submenu(&items, "contextmenu.emulation.menu");
+        let block = submenu(&items, "shell.menu.emulation");
         let marked = radio_group(block)
             .into_iter()
             .filter(|(_, chosen)| *chosen)
@@ -101,7 +101,7 @@ fn all_views_are_marked_by_what_every_view_has() {
             views,
             &settings,
         ))));
-        let block = submenu(&items, "contextmenu.emulation.menu");
+        let block = submenu(&items, "shell.menu.emulation");
         let all = submenu(block, "contextmenu.emulation.all_views").to_vec();
         let motion = entry(&all, "emulation.toolbar.reducedMotion").clone();
         (radio_group(&all), motion)

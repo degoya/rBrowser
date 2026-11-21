@@ -18,8 +18,10 @@ excluded) `settings_key: Some(<target>)`, `warning_notification(..., Some(<targe
 `<target>` is a string literal or a constant (`SETTINGS_KEY`, `rb_config::bookmarks::BOOKMARKS_KEY`)
 defined as `const NAME: &str = "..."` in the same file, else anywhere in the tree; a lower-case
 name is a value only known at run time and is skipped. In TypeScript and Vue (`ui/src/`,
-`plugins/*/web/`, `plugins/*/panel/`, tests excluded) `type: 'openSettings', key: '<target>'` and
-`settingsKey: '<target>'`. Used by scripts/lib/settings_lint.py.
+`plugins/*/web/`, `plugins/*/panel/`, tests excluded) `type: 'openSettings', key: '<target>'`,
+`settingsKey: '<target>'`, a panel's `openSettings('<target>')` and its status line's
+`setting: { key: '<target>' }`, and a page's `setting-key="<target>"` (RB-094-21; a bound
+`:setting-key` is a value only known at run time). Used by scripts/lib/settings_lint.py.
 """
 
 import re
@@ -42,6 +44,11 @@ CONST = re.compile(r'const (?P<name>[A-Z][A-Z0-9_]*): &str = "(?P<value>[^"\\]*)
 TS_PATTERNS = [
     re.compile(r"type:\s*'openSettings',\s*key:\s*'(?P<lit>[^']*)'"),
     re.compile(r"settingsKey:\s*'(?P<lit>[^']*)'"),
+    # A panel's settings link and a page's `SettingLink` (RB-094-21).
+    re.compile(r"\bopenSettings\(\s*'(?P<lit>[^']*)'"),
+    re.compile(r"(?<![:\w-])setting-key=\"(?P<lit>[^\"]*)\""),
+    # A panel's status line with its settings link (RB-094-21).
+    re.compile(r"setting:\s*\{\s*key:\s*'(?P<lit>[^']*)'"),
 ]
 
 

@@ -38,7 +38,7 @@ on:
 env:
   # The rBrowser release whose `rb-plugin-pack index` runs here (scripts/set-version.sh keeps it
   # at the release the SDK comes with).
-  RBROWSER_VERSION: 0.9.0-beta.2
+  RBROWSER_VERSION: 0.9.6
   # The commit of that release in github.com/degoya/rBrowser (`git ls-remote` its tag): the
   # packer is built from it, so a moved tag cannot change what runs with your key.
   RBROWSER_REV: REPLACE_WITH_THE_40_CHARACTER_COMMIT_OF_THE_RELEASE

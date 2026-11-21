@@ -32,19 +32,25 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
 /// The run going on - its id, flow and the views' statuses so far - and the last run's folder.
 fn run_state() -> (Option<FlowRunning>, Option<PathBuf>) {
     let state = lock(&super::app::STATE);
-    let running = state.running.as_ref().map(|running| FlowRunning {
-        run_id: running.run_id.clone(),
-        flow: running.flow.clone(),
-        views: running
-            .statuses
-            .iter()
-            .map(|(view, status)| FlowViewStatus {
-                view: *view,
-                status: status.clone(),
-            })
-            .collect(),
-        started_at_ms: running.started_at_ms,
-        queued: super::queue::waiting(),
+    let running = state.running.as_ref().map(|running| {
+        // The step each view is at (RB-090-68).
+        let (total_steps, steps) = super::run_steps::current(&running.run_id).unwrap_or_default();
+        FlowRunning {
+            run_id: running.run_id.clone(),
+            flow: running.flow.clone(),
+            views: running
+                .statuses
+                .iter()
+                .map(|(view, status)| FlowViewStatus {
+                    view: *view,
+                    status: status.clone(),
+                    step: steps.get(view).cloned(),
+                })
+                .collect(),
+            started_at_ms: running.started_at_ms,
+            queued: super::queue::waiting(),
+            total_steps,
+        }
     });
     (running, state.last.as_ref().map(|last| last.dir.clone()))
 }

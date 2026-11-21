@@ -22,9 +22,9 @@ use crate::host::Host;
 pub const ENGINE_RESTART_TOOL: &str = "engine_restart";
 /// The tool's description for the MCP tool list.
 pub const ENGINE_RESTART_DESCRIPTION: &str = "Restart an external engine's views: `engine: \
-     \"firefox\"` or `\"webkit\"`, and optionally `viewId` for one view. Each view opens again \
-     with its last URL. Fails with a readable message when no view of that engine is open or the \
-     engine is not available. Answers the restarted view ids.";
+     \"firefox\"`, `\"webkit\"` or `\"safari\"` (macOS), and optionally `viewId` for one view. \
+     Each view opens again with its last URL. Fails with a readable message when no view of that \
+     engine is open or the engine is not available. Answers the restarted view ids.";
 
 /// The engines `engine_restart` takes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,6 +34,10 @@ pub enum ExternalEngine {
     Firefox,
     /// WebKit (RB-040-04).
     Webkit,
+    /// Safari, macOS only (RB-095-03).
+    Safari,
+    /// iOS on the Simulator or a device, macOS only (RB-095-04).
+    Ios,
 }
 
 impl From<ExternalEngine> for EngineKind {
@@ -41,6 +45,8 @@ impl From<ExternalEngine> for EngineKind {
         match engine {
             ExternalEngine::Firefox => EngineKind::Firefox,
             ExternalEngine::Webkit => EngineKind::Webkit,
+            ExternalEngine::Safari => EngineKind::Safari,
+            ExternalEngine::Ios => EngineKind::Ios,
         }
     }
 }

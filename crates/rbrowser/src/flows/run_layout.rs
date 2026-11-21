@@ -183,7 +183,7 @@ pub fn restore(core: &Core, replaced: Replaced) {
 }
 
 /// Waits until every Chromium view has its page, at most [`PAGES_WAIT`].
-async fn wait_for_pages(core: &Core) {
+pub(super) async fn wait_for_pages(core: &Core) {
     let deadline = tokio::time::Instant::now() + PAGES_WAIT;
     loop {
         let host = core.host();

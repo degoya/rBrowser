@@ -1,4 +1,5 @@
-//! The shell's requests ([`ShellToCore`]); what `setSync` switches is `sync_feature.rs`.
+//! The shell's requests ([`ShellToCore`]); what `setSync` switches is `sync_feature.rs`, the
+//! Videos panel's payloads `video_requests.rs` (both re-exported from `messages`).
 
 use rb_config::AnalyzerMode;
 use rb_engine::{Target, ViewId};
@@ -396,36 +397,14 @@ pub enum ShellToCore {
     GetTextScale,
     /// The open project's recordings for the Videos panel (RB-110-12); answered with `videos`.
     GetVideos,
-    /// Delete recording `recording` (every video file of it) or its file `file`, after the
-    /// person confirmed it in the Videos panel (RB-110-12); answered with `videos`. Only the
-    /// shell sends this, never MCP; the running recording is refused.
-    DeleteVideo {
-        /// The recording's id (its folder name).
-        recording: String,
-        /// One of its files; absent: the whole recording.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        file: Option<String>,
-    },
-    /// Show recording `recording`, or its file `file`, in the file manager (RB-110-12);
-    /// answered with `ack`.
-    RevealVideo {
-        /// The recording's id.
-        recording: String,
-        /// One of its files; absent: the recording's folder.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        file: Option<String>,
-    },
-    /// Make video `file` of recording `recording` into `to` beside it (RB-090-52): a WebM
-    /// exported as MP4, an old MP4 recording converted to WebM. Queued in the background, one at
-    /// a time; answered with `videos`, which lists it among the conversions.
-    ConvertVideo {
-        /// The recording's id.
-        recording: String,
-        /// The video, `mobile.webm`.
-        file: String,
-        /// What it is made into.
-        to: crate::VideoTarget,
-    },
+    /// Delete a recording (every video file of it) or one file, after the person confirmed it in
+    /// the Videos panel (RB-110-12); answered with `videos`. Shell only; the running one refused.
+    DeleteVideo(super::video_requests::VideoFileRef),
+    /// Show a recording, or one file, in the file manager (RB-110-12); answered with `ack`.
+    RevealVideo(super::video_requests::VideoFileRef),
+    /// Make a video into another format beside it (RB-090-52): a WebM exported as MP4, an old MP4
+    /// converted to WebM; queued, one at a time. Answered with `videos`, which lists it.
+    ConvertVideo(super::video_requests::ConvertVideoRequest),
     /// The Recorder panel (RB-090-60): the stored recordings; answered with `recordings`.
     GetRecordings,
     /// One stored recording as its file holds it; answered with `recording`.
@@ -433,17 +412,15 @@ pub enum ShellToCore {
         /// Its name.
         name: String,
     },
-    /// Write the edited recording `recording` (schema `recording.v1`) over the file `name`;
-    /// answered with `recordings`. Only the shell sends this.
+    /// Write `recording` (schema `recording.v1`) over file `name`; answers `recordings`; shell only.
     SaveRecording {
         /// The file's name; the recording keeps it.
         name: String,
         /// The recording, checked against the model before it is written.
         recording: Value,
     },
-    /// Render recording `name` as `format` through `recorder-export`; with `write` the flow goes
-    /// into the flows folder and the test into a new export folder (RB-090-66). Answered with
-    /// `recordingExport`. Only the shell sends this.
+    /// Render `name` as `format` (`recorder-export`); `write` puts the flow into the flows folder
+    /// and the test into a new export folder (RB-090-66). Answers `recordingExport`; shell only.
     ExportRecording {
         /// The recording.
         name: String,
@@ -458,9 +435,10 @@ pub enum ShellToCore {
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         overwrite: bool,
     },
-    /// The Flows panel (RB-090-60): the run going on and the last result; answered with
-    /// `flowRun`.
+    /// The Flows panel (RB-090-60): the run going on and the last result; answers `flowRun`.
     GetFlowRun,
+    /// Push every step of the recording that runs again (a panel catching up, RB-090-89); `ack`.
+    ResendRecordingSteps,
     /// A pulldown of the toolbar (RB-090-41): `rows` open as a native menu under `anchor`, the
     /// button's rectangle (DIP from the shell view's top-left corner), in front of the views
     /// and painted in rBrowser's theme. Answered with `ack`; once the menu closed the core
@@ -476,8 +454,8 @@ pub enum ShellToCore {
     /// The activity bar (RB-090-67): the shell page asks for its room at `place` while it has
     /// entries to show, without `place` it gives the room back. The core makes the toolbar's or
     /// the status bar's view that much higher and the views smaller, and names the place in the
-    /// state, where the page draws it. Answered with `ack`; refused for a place the settings
-    /// do not name, or any while `ui.activityBar.mode` is `indicator`.
+    /// state, where the page draws it. `ack`; refused for a place the settings do not name, or
+    /// any while `ui.activityBar.mode` is `indicator`.
     ActivityBar {
         /// `top` or `bottom`; absent: no bar.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -491,9 +469,24 @@ pub enum ShellToCore {
         /// Folded or open.
         collapsed: bool,
     },
+    /// The sitemap gallery page's run (RB-090-86); answered with `sitemapGallery`.
+    GetSitemapGallery(crate::SitemapGalleryRequest),
     /// The setup wizard's requests (RB-091-05), from the pages window only.
     Setup {
         /// The request; answered with `setup` or `ack`.
         request: crate::SetupRequest,
+    },
+    /// The bug report's preview page and the status bar's "Copy Markdown" (RB-093-04); answered
+    /// with `bugReport` or `ack`. Only the shell sends this, never MCP; a decision only the pages
+    /// window.
+    BugReport {
+        /// The request.
+        request: crate::BugReportRequest,
+    },
+    /// The MCP setup of the wizard and Settings > Automation > MCP (RB-091-09), from the pages
+    /// window only; answered with `ack`, the `mcpSetup` event follows.
+    McpSetup {
+        /// The request.
+        request: crate::McpSetupRequest,
     },
 }

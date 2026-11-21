@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { effectScope } from 'vue';
 import { parseRoute, routeHash, useHashRoute } from './route';
 
@@ -62,14 +62,47 @@ describe('the pages router', () => {
 describe('the pages of the page windows', () => {
   it('has a page for the palette popup; the findings live in the panels page (RB-080-69)', async () => {
     const { PAGES, pageOf } = await import('./routes');
-    expect(pageOf('palette')).toBe(PAGES.palette);
-    expect(PAGES.palette).not.toBe(PAGES.settings);
+    const { default: PalettePage } = await import('../palette/PalettePage.vue');
+    expect(pageOf('palette')).toBe(pageOf('palette'));
+    expect(pageOf('palette')).not.toBe(pageOf('settings'));
+    expect((await PAGES.palette!()).default).toBe(PalettePage);
     expect(PAGES.findings).toBeUndefined();
+    expect(pageOf('findings')).toBe(pageOf('settings'));
   });
 
   it('has the setup wizard, opened at its project step by the hint (RB-091-05)', async () => {
-    const { PAGES, pageOf } = await import('./routes');
-    expect(pageOf('setup')).toBe(PAGES.setup);
+    const { PAGES } = await import('./routes');
+    const { default: SetupWizard } = await import('../firstrun/SetupWizard.vue');
+    expect((await PAGES.setup!()).default).toBe(SetupWizard);
     expect(parseRoute('#/setup/project')).toEqual({ page: 'setup', key: 'project', tab: null });
+  });
+
+  it('has the sitemap gallery under the route its page names (RB-090-86)', async () => {
+    const { PAGES } = await import('./routes');
+    const { GALLERY_ROUTE } = await import('../sitemap/gallery/gallery');
+    const { default: SitemapGalleryPage } = await import('../sitemap/gallery/SitemapGalleryPage.vue');
+    expect((await PAGES[GALLERY_ROUTE]!()).default).toBe(SitemapGalleryPage);
+  });
+
+  // RB-090-38: the palette's popup and the panels window loaded the whole settings page with
+  // them; each page now loads when its route is first shown.
+  it('loads no page before its route is shown', async () => {
+    vi.resetModules();
+    const evaluated: string[] = [];
+    vi.doMock('./SettingsPage.vue', () => {
+      evaluated.push('settings');
+      return { default: { name: 'SettingsPage' } };
+    });
+    try {
+      const { PAGES, pageOf } = await import('./routes');
+      pageOf('palette');
+      pageOf('settings');
+      expect(evaluated).toEqual([]);
+      await PAGES.settings!();
+      expect(evaluated).toEqual(['settings']);
+    } finally {
+      vi.doUnmock('./SettingsPage.vue');
+      vi.resetModules();
+    }
   });
 });

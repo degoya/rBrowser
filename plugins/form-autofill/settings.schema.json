@@ -69,6 +69,44 @@
       "x-section": "form-autofill",
       "x-order": 6,
       "x-scope": ["user", "project", "local"]
+    },
+    "settleMilliseconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000,
+      "default": 300,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 7,
+      "x-scope": ["user", "project", "local"]
+    },
+    "maxPasses": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "default": 3,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 8,
+      "x-scope": ["user", "project", "local"]
+    },
+    "fillBudgetSeconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 300,
+      "default": 30,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 9,
+      "x-scope": ["user", "project", "local"]
+    },
+    "tickConsent": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "form-autofill",
+      "x-order": 10,
+      "x-scope": ["user", "project", "local"]
     }
   }
 }

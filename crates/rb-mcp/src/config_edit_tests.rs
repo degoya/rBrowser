@@ -33,6 +33,24 @@ fn trust_guarded_keys_are_refused() {
     assert!(refusal("startUrl").is_none());
 }
 
+/// RB-094-08: which environments get their Basic auth answered is a person's choice; MCP can
+/// neither turn it on for another environment nor smuggle a credential into the section.
+#[test]
+fn the_basic_auth_section_is_refused_whole() {
+    for key in ["basicAuth", "basicAuth.environments", "basicAuth.password"] {
+        assert_eq!(
+            refusal(key).map(|failure| failure.code),
+            Some(PROTECTED.to_owned()),
+            "{key}"
+        );
+    }
+    let value = serde_json::json!({ "environments": ["staging"] });
+    assert_eq!(
+        write_refusal("basicAuth", &value).map(|failure| failure.code),
+        Some(PROTECTED.to_owned())
+    );
+}
+
 /// The screenshot folder is a person's choice (batch-3 security review, finding 1): refused as
 /// a key and inside the value of its group, which `config_set` and `settings_set` both ask.
 #[test]
@@ -89,6 +107,30 @@ fn the_recorder_folders_and_secret_fields_are_refused_as_key_and_inside_their_gr
         Some(PROTECTED.to_owned())
     );
     assert!(write_refusal("automation.recorder", &json!({ "recordHover": true })).is_none());
+}
+
+/// Where a bug report goes and the preview before it is saved are the person's (RB-093-04):
+/// refused as keys and inside the value of their group; the parts stay an agent's to pick.
+#[test]
+fn the_report_folder_and_preview_are_refused_as_key_and_inside_their_group() {
+    let code = |failure: Option<super::ToolFailure>| failure.map(|failure| failure.code);
+    for key in ["report.folder", "report.preview"] {
+        assert_eq!(code(refusal(key)), Some(PROTECTED.to_owned()), "{key}");
+    }
+    assert!(refusal("report.include").is_none());
+    assert!(refusal("report.annotate").is_none());
+    assert_eq!(
+        code(write_refusal(
+            "report",
+            &json!({ "folder": "C:/elsewhere" })
+        )),
+        Some(PROTECTED.to_owned())
+    );
+    assert_eq!(
+        code(write_refusal("report", &json!({ "preview": false }))),
+        Some(PROTECTED.to_owned())
+    );
+    assert!(write_refusal("report", &json!({ "include": ["console"] })).is_none());
 }
 
 #[test]

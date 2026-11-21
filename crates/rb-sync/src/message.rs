@@ -11,8 +11,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::bus::{BusMessage, BusPayload, PageState};
-use crate::event::{ChangeData, ElementTarget, PROTOCOL_VERSION, ScrollData, SyncEvent};
+use crate::event::{ChangeData, ElementTarget, PROTOCOL_VERSION, PathPoint, ScrollData, SyncEvent};
 use crate::framework::FrameworkMessage;
+use crate::locale::PageLocale;
 use crate::vitals::VitalsMessage;
 
 /// The largest binding payload the core reads.
@@ -55,6 +56,10 @@ pub struct EventMessage {
     pub time: u64,
     /// The event.
     pub event: SyncEvent,
+    /// The pointer's way to the event, from the top frame while a recording keeps it
+    /// (RB-090-87); empty otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<PathPoint>,
 }
 
 /// A tool that syncs the views by itself (RB-020-06).
@@ -85,8 +90,8 @@ pub struct Detected {
 pub enum AgentMessage {
     /// The agent started.
     Ready(Ready),
-    /// An event was captured.
-    Event(EventMessage),
+    /// An event was captured (boxed: an event with its pointer path is far larger than the rest).
+    Event(Box<EventMessage>),
     /// A page sent a bus message (RB-020-08).
     Bus(BusMessage),
     /// A tool that syncs by itself is in the page (RB-020-06).
@@ -148,6 +153,36 @@ pub struct AgentConfig {
     /// for the wheel only in [`AgentScrollMode::Wheel`].
     #[serde(default)]
     pub scroll_mode: AgentScrollMode,
+    /// What the agent does for a running recording, in the view it records from (RB-090-87);
+    /// absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub record: Option<AgentRecord>,
+}
+
+/// A running recording's wishes for the agent of the view it records from (RB-090-87).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentRecord {
+    /// Report a hover on a menu's entry once the pointer rests there (`recordHover` not `off`).
+    pub menu_hovers: bool,
+    /// How long the pointer rests, in ms (`automation.recorder.hoverDwellMs`).
+    pub hover_dwell_ms: u32,
+    /// Which of the pointer's way goes with the events (`automation.recorder.recordPointer`).
+    pub record_pointer: AgentRecordPointer,
+}
+
+/// `automation.recorder.recordPointer` as the agent knows it (`rb_config::RecordPointer`, which this
+/// crate does not depend on).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentRecordPointer {
+    /// The way to a menu's hover, and to a click into a menu or while one is open.
+    #[default]
+    Menu,
+    /// The way to every hover step and click.
+    All,
+    /// No way.
+    Off,
 }
 
 /// `sync.scrollMode` as the agent knows it (`rb_config::ScrollMode`, which this crate does not
@@ -227,6 +262,12 @@ pub enum AgentCommand {
     Navigate {
         /// The URL, of the document's origin.
         url: String,
+    },
+    /// The page's direction, language and pseudo-localisation (RB-092-02): what the locale
+    /// leaves out goes back to the page's own, without a reload (`Done`).
+    Locale {
+        /// What to force.
+        locale: PageLocale,
     },
 }
 

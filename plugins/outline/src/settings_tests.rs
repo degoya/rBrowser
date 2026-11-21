@@ -67,3 +67,52 @@ fn the_longest_heading_is_read_and_held_to_its_bounds() {
         .insert("headingMaxLength".to_owned(), "\"long\"".to_owned());
     assert_eq!(Settings::read(&mut host).heading_max_chars, 120);
 }
+
+#[test]
+fn the_breakpoint_diff_compares_the_chosen_elements_in_their_sections() {
+    let defaults = Settings::default();
+    assert_eq!(defaults.diff_elements, DIFF_ELEMENTS.map(str::to_owned));
+    assert_eq!(
+        defaults.diff_sections(&[]),
+        ["focus", "headings", "landmarks"]
+    );
+    let only_headings = ["headings".to_owned(), "links".to_owned()];
+    assert_eq!(defaults.diff_sections(&only_headings), ["headings"]);
+
+    let mut host = MemoryHost::new();
+    host.settings.insert(
+        "diff.elements".to_owned(),
+        r#"["landmarks", "nonsense", "interactive", "landmarks"]"#.to_owned(),
+    );
+    let settings = Settings::read(&mut host);
+    assert_eq!(settings.diff_elements, ["interactive", "landmarks"]);
+    assert_eq!(settings.diff_sections(&[]), ["focus", "landmarks"]);
+
+    host.settings
+        .insert("diff.elements".to_owned(), "[]".to_owned());
+    let none = Settings::read(&mut host);
+    assert!(none.diff_elements.is_empty());
+    assert!(none.diff_sections(&[]).is_empty(), "nothing compared");
+
+    host.settings
+        .insert("diff.elements".to_owned(), "\"headings\"".to_owned());
+    assert_eq!(
+        Settings::read(&mut host).diff_elements,
+        defaults.diff_elements
+    );
+}
+
+#[test]
+fn the_reading_order_tolerance_is_read_and_held_to_its_bounds() {
+    assert_eq!(Settings::default().tolerance_px, 4);
+    let mut host = MemoryHost::new();
+    host.settings
+        .insert("readingOrder.tolerancePx".to_owned(), "500".to_owned());
+    assert_eq!(Settings::read(&mut host).tolerance_px, MAX_TOLERANCE_PX);
+    host.settings
+        .insert("readingOrder.tolerancePx".to_owned(), "0".to_owned());
+    assert_eq!(Settings::read(&mut host).tolerance_px, 0);
+    host.settings
+        .insert("readingOrder.tolerancePx".to_owned(), "-3".to_owned());
+    assert_eq!(Settings::read(&mut host).tolerance_px, 4);
+}

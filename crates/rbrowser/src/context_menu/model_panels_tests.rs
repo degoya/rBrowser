@@ -41,7 +41,7 @@ fn panels(items: &[Item]) -> Vec<Entry> {
         .iter()
         .find_map(|item| match item {
             Item::Menu {
-                label: Label::Key("contextmenu.panels.menu"),
+                label: Label::Key("shell.menu.panels"),
                 items,
                 ..
             } => Some(

@@ -187,6 +187,11 @@ pub struct MouseData {
     pub modifiers: u8,
     /// Where.
     pub target: ElementTarget,
+    /// A click on the label of a checkbox or radio: the CSS path of that control (RB-090-93).
+    /// The engine's own click on the control that follows is not sent; the control's `change`
+    /// belongs to this click.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub control: Option<String>,
 }
 
 /// An event with only a target (`focus`).
@@ -201,10 +206,25 @@ pub struct TargetData {
 pub struct HoverData {
     /// The element.
     pub target: ElementTarget,
-    /// Not a move: the agent's hover on a menu entry, sent at a mouse press inside its
-    /// hover-only submenu (`agent/src/menu-trigger.ts`, RB-090-76). Absent for a move.
+    /// Not a move: a hover the recorder keeps as a step - the agent's hover on a menu entry,
+    /// sent at a mouse press inside its hover-only submenu (`agent/src/menu-trigger.ts`,
+    /// RB-090-76), or, while a recording runs, on a menu's entry where the pointer rested
+    /// (`agent/src/record-hover.ts`, RB-090-87). Absent for a move.
     #[serde(default, skip_serializing_if = "is_false")]
     pub menu: bool,
+}
+
+/// A point of the pointer's way to an event while a recording keeps it (RB-090-87): CSS px of
+/// the viewport, rounded, `t` ms after the way's first point.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PathPoint {
+    /// Horizontal, CSS px of the viewport.
+    pub x: i32,
+    /// Vertical, CSS px of the viewport.
+    pub y: i32,
+    /// Ms after the way's first point.
+    pub t: u32,
 }
 
 /// `wheel`, deltas summed over about a frame.

@@ -8,7 +8,7 @@ import '../../../../web-common/panel/texts.js';
 import type { StatusLine, Tone } from '../../../../web-common/panel-ui/src/status';
 
 export const PREFIX = 'plugin.outline.';
-export const TABS = ['headings', 'landmarks', 'links', 'images', 'forms', 'focus', 'axtree', 'custom'] as const;
+export const TABS = ['headings', 'landmarks', 'links', 'images', 'forms', 'focus', 'breakpoints', 'order', 'axtree', 'custom'] as const;
 export type Tab = (typeof TABS)[number];
 export type Strings = Record<string, string>;
 
@@ -58,6 +58,8 @@ export interface Finding {
   view: number;
   path?: string;
   selector?: string;
+  /** Details: a reading-order finding's other element (RB-094-02). */
+  data?: { other?: { selector?: string; path?: string } };
 }
 
 /** The icon of each severity, beside its colour. */
@@ -111,34 +113,38 @@ export interface Item {
   href?: string;
 }
 
-const RULES_OF: Record<string, Tab> = {
-  'heading-skip': 'headings',
-  'multiple-h1': 'headings',
-  'h1-missing': 'headings',
-  'heading-first-not-h1': 'headings',
-  'heading-empty': 'headings',
-  'heading-image-no-alt': 'headings',
-  'heading-too-long': 'headings',
-  'heading-differs': 'headings',
-  'landmark-main-missing': 'landmarks',
-  'landmark-main-multiple': 'landmarks',
-  'landmark-banner-multiple': 'landmarks',
-  'landmark-contentinfo-multiple': 'landmarks',
-  'landmark-banner-nested': 'landmarks',
-  'landmark-contentinfo-nested': 'landmarks',
-  'landmark-unique': 'landmarks',
-  'content-outside-landmarks': 'landmarks',
-  'landmark-differs': 'landmarks',
-  'link-empty': 'links',
-  'link-broken': 'links',
-  'img-alt-missing': 'images',
-  'form-label-missing': 'forms',
-  'focus-order-jump': 'focus',
+/** The tabs each rule's findings show in: its section's, and the Breakpoints and Reading order
+ * tabs for the rules over the breakpoints and the order (RB-094-02). */
+const RULES_OF: Record<string, Tab[]> = {
+  'heading-skip': ['headings'],
+  'multiple-h1': ['headings'],
+  'h1-missing': ['headings'],
+  'heading-first-not-h1': ['headings'],
+  'heading-empty': ['headings'],
+  'heading-image-no-alt': ['headings'],
+  'heading-too-long': ['headings'],
+  'heading-differs': ['headings', 'breakpoints'],
+  'landmark-main-missing': ['landmarks'],
+  'landmark-main-multiple': ['landmarks'],
+  'landmark-banner-multiple': ['landmarks'],
+  'landmark-contentinfo-multiple': ['landmarks'],
+  'landmark-banner-nested': ['landmarks'],
+  'landmark-contentinfo-nested': ['landmarks'],
+  'landmark-unique': ['landmarks'],
+  'content-outside-landmarks': ['landmarks'],
+  'landmark-differs': ['landmarks', 'breakpoints'],
+  'link-empty': ['links'],
+  'link-broken': ['links'],
+  'img-alt-missing': ['images'],
+  'form-label-missing': ['forms'],
+  'focus-order-jump': ['focus', 'order'],
+  'interactive-differs': ['focus', 'breakpoints'],
+  'reading-order': ['order'],
 };
 
 /** The findings of `tab`'s rules. */
 export function findingsOf(answer: Answer, tab: Tab): Finding[] {
-  return answer.findings.filter((finding) => RULES_OF[finding.rule] === tab);
+  return answer.findings.filter((finding) => RULES_OF[finding.rule]?.includes(tab) ?? false);
 }
 
 const WORST: Severity[] = ['error', 'warning', 'info'];
@@ -162,7 +168,8 @@ export function tabBadge(findings: Finding[]): { label: string; color: Severity 
   return { label: String(one.length), color };
 }
 
-function names(views: View[], ids: number[]): string {
+/** The labels of the views `ids`, joined. */
+export function names(views: View[], ids: number[]): string {
   return ids.map((id) => views.find((view) => view.id === id)?.label ?? String(id)).join(', ');
 }
 
@@ -207,9 +214,10 @@ export function label(strings: Strings, tab: Tab, item: Record<string, unknown>)
   }
 }
 
-function presence(views: View[], row: Row): Item['presence'] {
+/** What each of `views` shows of an entry with `cells`, for the dots. */
+export function presenceOf(views: View[], cells: Record<string, Cell>): Item['presence'] {
   return views.map((view) => {
-    const cell = row.views[String(view.id)];
+    const cell = cells[String(view.id)];
     return { view, state: !cell ? 'missing' : cell.visible ? 'visible' : 'hidden' };
   });
 }
@@ -256,8 +264,9 @@ export function problemsOnly(list: Item[]): Item[] {
   return list.filter((item) => item.notes.length > 0);
 }
 
-function targetsOf(row: Row): MarkTarget[] {
-  return Object.entries(row.views).map(([id, cell]) => ({ view: Number(id), selector: cell.selector }));
+/** Where a click on an entry with `cells` marks: its element in every view that has it. */
+export function targetsOf(cells: Record<string, Cell>): MarkTarget[] {
+  return Object.entries(cells).map(([id, cell]) => ({ view: Number(id), selector: cell.selector }));
 }
 
 function rowItems(strings: Strings, tab: Tab, answer: Answer, rows: Row[], depthOf: (row: Row) => number): Item[] {
@@ -267,8 +276,8 @@ function rowItems(strings: Strings, tab: Tab, answer: Answer, rows: Row[], depth
     label: label(strings, tab, row.item),
     badge: badge(strings, answer.views, row),
     notes: notesAt(strings, findings, row),
-    presence: presence(answer.views, row),
-    targets: targetsOf(row),
+    presence: presenceOf(answer.views, row.views),
+    targets: targetsOf(row.views),
     href: tab === 'links' ? s(row.item.href) : undefined,
   }));
 }

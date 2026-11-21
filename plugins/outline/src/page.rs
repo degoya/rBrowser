@@ -90,6 +90,9 @@ pub struct Located {
 pub struct Heading {
     #[serde(flatten)]
     pub at: Located,
+    /// Its place in the document, comparable with a focusable element's (RB-094-02).
+    #[serde(deserialize_with = "number")]
+    pub order: i64,
     #[serde(deserialize_with = "number")]
     pub level: i64,
     #[serde(deserialize_with = "text")]
@@ -177,6 +180,9 @@ pub struct Field {
 pub struct Focusable {
     #[serde(flatten)]
     pub at: Located,
+    /// Its place in the document (the focus list is in focus order).
+    #[serde(deserialize_with = "number")]
+    pub order: i64,
     #[serde(deserialize_with = "text")]
     pub tag: String,
     #[serde(deserialize_with = "text")]
@@ -229,6 +235,9 @@ pub struct PageOutline {
     pub url: String,
     #[serde(deserialize_with = "text")]
     pub lang: String,
+    /// The writing direction of the content, `ltr` or `rtl` ([`PageOutline::is_rtl`]).
+    #[serde(deserialize_with = "text")]
+    pub dir: String,
     pub headings: Vec<Heading>,
     pub landmarks: Vec<Landmark>,
     /// Read with the landmarks.
@@ -242,6 +251,12 @@ pub struct PageOutline {
 }
 
 impl PageOutline {
+    /// The content reads right to left: the reading order runs from the right.
+    #[must_use]
+    pub fn is_rtl(&self) -> bool {
+        self.dir == "rtl"
+    }
+
     /// The collector's answer, its lists capped.
     ///
     /// # Errors

@@ -105,6 +105,7 @@ fn only_an_absolute_ffmpeg_path_is_taken() {
     const DRIVE: &str = "C:\\tools\\ffmpeg.exe";
     let tools = |path: &str| ToolsSettings {
         ffmpeg_path: Some(path.to_owned()),
+        ..ToolsSettings::default()
     };
     let none = VideoConfig::default();
     let (relatives, absolutes): (&[&str], &[&str]) = if cfg!(windows) {

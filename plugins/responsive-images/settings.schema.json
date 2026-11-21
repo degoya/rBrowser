@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the responsive images check (RB-093-02): Settings > Checks > Responsive images",
+  "type": "object",
+  "properties": {
+    "oversizeFactor": {
+      "type": "number",
+      "minimum": 1.1,
+      "maximum": 10,
+      "default": 1.5,
+      "description": "An image file with more than this many times the pixels its rendered size needs at the view's density is too large (1.1 to 10).",
+      "x-category": "checks",
+      "x-section": "responsive-images",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "undersizeFactor": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 1,
+      "default": 1,
+      "description": "An image file with less than this many times the pixels its rendered size needs at the view's density is too small and looks blurred (0.1 to 1).",
+      "x-category": "checks",
+      "x-section": "responsive-images",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    },
+    "checkLcp": {
+      "type": "boolean",
+      "default": true,
+      "description": "Check that the page's Largest Contentful Paint image loads eagerly and with fetchpriority=\"high\".",
+      "x-category": "checks",
+      "x-section": "responsive-images",
+      "x-order": 3,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

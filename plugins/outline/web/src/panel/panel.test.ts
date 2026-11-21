@@ -97,7 +97,7 @@ describe('the Outline panel', () => {
 
   it('shows the sections as tabs, not as a row of buttons', () => {
     const tabs = [...document.querySelectorAll<HTMLElement>('#tabs [role="tab"]')];
-    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(['Headings', 'Landmarks', 'Links', 'Images', 'Forms', 'Focus', 'A11y tree', 'Custom']);
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(['Headings', 'Landmarks', 'Links', 'Images', 'Forms', 'Focus', 'Breakpoints', 'Reading order', 'A11y tree', 'Custom']);
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
   });
 
@@ -240,5 +240,67 @@ describe('the findings in the Outline panel (RB-091-03)', () => {
     });
     const tabs = [...document.querySelectorAll<HTMLElement>('#tabs [role="tab"]')].map((tab) => tab.textContent?.replace(/\s+/g, ''));
     expect(tabs.slice(0, 4)).toEqual(['Headings', 'Landmarks1', 'Links1', 'Images']);
+  });
+});
+
+describe('the tabs over the breakpoints (RB-094-02)', () => {
+  const tabNamed = (name: string): HTMLElement =>
+    [...document.querySelectorAll<HTMLElement>('#tabs [role="tab"]')].find((tab) => tab.textContent?.trim() === name) as HTMLElement;
+  const open = async (name: string): Promise<void> => {
+    tabNamed(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    await settle();
+  };
+
+  it('reads the Breakpoints tab from breakpoint_diff and shows each element with the breakpoints missing it', async () => {
+    await answer('get', HEADINGS);
+    await open('Breakpoints');
+    expect(posted.filter((m) => m.type === 'call').at(-1)).toMatchObject({ tool: 'breakpoint_diff', args: { budget: 1024 * 1024 - 5536 } });
+    await answer('breakpoint_diff', {
+      views: [
+        { id: 1, label: 'Desktop' },
+        { id: 2, label: 'Phone' },
+      ],
+      findings: [],
+      rows: [{ kind: 'interactive', label: 'link "Pricing"', views: { '1': cell('pricing') }, shown: [1], missing: [2] }],
+    });
+    expect(rows().map((row) => row.querySelector('[data-label]')?.textContent)).toEqual(['Interactive elements', 'link "Pricing"']);
+    expect(rows()[1]?.querySelector('[data-badge]')?.textContent).toBe('missing in Phone');
+    expect($('#problems')).toBeNull();
+  });
+
+  it('says so when every view shows the same elements', async () => {
+    await answer('get', HEADINGS);
+    await open('Breakpoints');
+    await answer('breakpoint_diff', { views: [{ id: 1, label: 'Desktop' }], findings: [], rows: [] });
+    expect($('#empty')?.textContent).toBe('Every view shows the same elements.');
+  });
+
+  it('shows the tab a command posts and reads it from reading_order', async () => {
+    await answer('get', HEADINGS);
+    await fromHost({ type: 'event', message: { type: 'show', tab: 'order' } });
+    expect(tabNamed('Reading order').getAttribute('aria-selected')).toBe('true');
+    expect(posted.filter((m) => m.type === 'call').at(-1)?.tool).toBe('reading_order');
+    await answer('reading_order', {
+      views: [{ id: 1, label: 'Desktop' }],
+      findings: [
+        {
+          rule: 'reading-order',
+          severity: 'warning',
+          message: 'plugin.outline.findings.reading-order',
+          params: { from: 'button "A"', to: 'button "B"' },
+          view: 1,
+          path: 'b',
+          selector: '#b',
+          data: { other: { selector: '#a', path: 'a' } },
+        },
+      ],
+    });
+    expect(rows().map((row) => row.querySelector('[data-label]')?.textContent)).toEqual([
+      'Desktop',
+      'The button "B" comes first on the screen but after the button "A" in the source, which screen readers and the keyboard follow (WCAG 1.3.2).',
+    ]);
+    rows()[1]?.click();
+    await settle();
+    expect(posted.find((m) => m.tool === 'mark')?.args).toEqual({ targets: [{ view: 1, selector: '#b' }, { view: 1, selector: '#a' }] });
   });
 });

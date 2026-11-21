@@ -89,9 +89,12 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
         .or_else(|| crate::activity_bar::ipc(core, message))
         .or_else(|| crate::text_scale::ipc(core, message))
         .or_else(|| crate::video::panel::ipc(core, message))
+        .or_else(|| crate::sitemap::gallery_page::ipc(core, message))
         .or_else(|| recorder::panel::ipc(core, message))
         .or_else(|| crate::flows::panel::ipc(core, message))
         .or_else(|| crate::first_run::ipc(core, message))
+        .or_else(|| crate::bug_report::preview::ipc(core, message))
+        .or_else(|| crate::mcp::setup::ipc(core, message))
 }
 
 /// The core is up and the project's grid is built: each module starts what it needs (the
@@ -124,6 +127,9 @@ pub fn on_start(core: &Core) {
     // plugs into it (RB-020-07).
     nav_sync::on_start(core);
     sessions::policy::on_start(core);
+    // After the environment in effect and navigation sync: the last pages open there, and a
+    // view decoupled before is decoupled again (RB-092-04).
+    crate::restore_last::on_start(core);
     // After the breakpoints: a bookmark's shortcut yields to theirs (RB-070-06).
     crate::bookmarks::on_start(core);
     crate::mcp::on_start(core);
@@ -136,6 +142,8 @@ pub fn on_start(core: &Core) {
     crate::vitals::on_start(core);
     // The Framework DevTools probe and hooks follow the user settings (RB-080-24).
     crate::sync_agent::framework_tasks::on_start(core);
+    // The page clock and the animation rates forget closed views (RB-094-07).
+    crate::time_control::on_start(core);
     crate::cookies::on_start(core);
     // The trust check off the CEF UI thread - it hashes the protected folders (RB-090-36) - and
     // after it, on its thread, what follows the checked trust: a trusted project's extension

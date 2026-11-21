@@ -21,6 +21,8 @@ pub struct Options {
     pub strategy: Strategy,
     pub seed: u64,
     pub profile: Option<Profile>,
+    /// A valid fill ticks the consent checkboxes (`tickConsent`).
+    pub tick_consent: bool,
 }
 
 /// One field of the plan.
@@ -41,6 +43,10 @@ pub struct Planned {
     pub required: bool,
     /// Its form, by position among the page's forms.
     pub form: Option<u32>,
+    /// It held a value when the page was read (a later pass leaves it alone, RB-094-22).
+    pub filled: bool,
+    /// The page script's identity of the element (`Field::uid`), 0 for none.
+    pub uid: u32,
 }
 
 impl Planned {
@@ -52,6 +58,17 @@ impl Planned {
         object.insert("index".to_owned(), json!(self.index));
         object.insert("sig".to_owned(), json!(self.sig));
         Some(action)
+    }
+
+    /// The field across the reads of one view's passes: the page script's identity, else (none
+    /// given) its key. Unlike the key it does not move when the page inserts a field before it.
+    #[must_use]
+    pub fn identity(&self) -> String {
+        if self.uid > 0 {
+            format!("#{}", self.uid)
+        } else {
+            self.key.clone()
+        }
     }
 }
 
@@ -105,7 +122,8 @@ fn from_profile(profile: &Profile, field: &Field, kind: Kind, named_only: bool) 
 /// The plan of `page`.
 #[must_use]
 pub fn plan(page: &Collected, options: &Options) -> Vec<Planned> {
-    let ctx = Ctx::new(options.seed, Lang::from_locale(&page.locale));
+    let mut ctx = Ctx::new(options.seed, Lang::from_locale(&page.locale));
+    ctx.tick_consent = options.tick_consent;
     page.fields
         .iter()
         .map(|field| {
@@ -122,6 +140,8 @@ pub fn plan(page: &Collected, options: &Options) -> Vec<Planned> {
                 profile: false,
                 required: field.required,
                 form: field.form,
+                filled: field.filled,
+                uid: field.uid,
             };
             if !field.skip.is_empty() {
                 return planned;

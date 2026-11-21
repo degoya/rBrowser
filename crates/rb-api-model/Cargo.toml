@@ -1,0 +1,15 @@
+[package]
+name = "rb-api-model"
+description = "The API client's request model (RB-096-01): a request with its body and auth, its one-request `.http` file under `.rbrowser/api/`, the `{{var}}` templates, the JetBrains-style environment file, the request paths and the secret mask - pure, `std` + serde, for the app and later the importers and exporters (RB-096-02, RB-096-03)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -31,6 +31,8 @@ fn bad_list_arguments_are_refused() {
         json!({ "status": "weird" }),
         json!({ "limit": 0 }),
         json!({ "types": "Image" }),
+        json!({ "endpoint": 3 }),
+        json!({ "endpoint": "" }),
     ] {
         assert!(list(&mut host, &args).is_err(), "{args}");
     }

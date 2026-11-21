@@ -50,7 +50,9 @@ fn click(seq: u64) -> EventMessage {
         frame: None,
         seq,
         time: 0,
+        path: Vec::new(),
         event: SyncEvent::Click(MouseData {
+            control: None,
             button: MouseButton::Left,
             detail: 1,
             modifiers: 0,
@@ -185,4 +187,29 @@ async fn the_sync_hub_routes_to_grid_and_external_views_together() {
     .await
     .expect("replayed");
     assert_eq!(setup.firefox.calls_for(FIREFOX).len(), 1);
+}
+
+/// RB-090-32: each engine's replays are counted apart (`sync.replay.<engine>`), so K1 and K11
+/// read from one snapshot.
+#[test]
+fn the_counter_of_a_view_names_its_engine() {
+    use rb_util::perf::names;
+    let setup = setup();
+    assert_eq!(setup.router.counter(GRID), names::SYNC_REPLAY_CHROMIUM);
+    assert_eq!(
+        setup.router.counter(ViewId(99)),
+        names::SYNC_REPLAY_CHROMIUM
+    );
+    assert_eq!(setup.router.counter(FIREFOX), names::SYNC_REPLAY_FIREFOX);
+    assert_eq!(setup.router.counter(WEBKIT), names::SYNC_REPLAY_WEBKIT);
+    assert_eq!(setup.router.counter(ENDED), names::SYNC_REPLAY);
+    assert_eq!(
+        engine_counter(EngineKind::Android),
+        names::SYNC_REPLAY_ANDROID
+    );
+    assert_eq!(
+        engine_counter(EngineKind::Safari),
+        names::SYNC_REPLAY_SAFARI
+    );
+    assert_eq!(engine_counter(EngineKind::Ios), names::SYNC_REPLAY_IOS);
 }

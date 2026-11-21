@@ -33,6 +33,7 @@ fn options(mode: Mode) -> Options {
         strategy: Strategy::Mixed,
         seed: 42,
         profile: None,
+        tick_consent: true,
     }
 }
 
@@ -241,4 +242,20 @@ fn a_hidden_input_takes_a_value_by_its_name_or_id_never_by_its_kind() {
         planned[1].fill.as_ref().map(Fill::shown).as_deref(),
         Some("by-id")
     );
+}
+
+#[test]
+fn the_plan_says_which_fields_held_a_value_when_read() {
+    // RB-094-22: a later pass leaves a field alone the page filled itself.
+    let mut held = field(1, "text", "company");
+    held.filled = true;
+    let planned = plan(
+        &page("en-US", vec![field(0, "text", "city"), held]),
+        &options(Mode::Valid),
+    );
+    assert_eq!(
+        planned.iter().map(|entry| entry.filled).collect::<Vec<_>>(),
+        [false, true]
+    );
+    assert!(planned.iter().all(|entry| entry.fill.is_some()));
 }

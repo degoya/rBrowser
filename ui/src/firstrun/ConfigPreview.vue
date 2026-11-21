@@ -34,6 +34,7 @@ function sizeText(view: (typeof views.value)[number]): string {
     <pre
       class="max-h-72 overflow-auto rounded-md bg-elevated p-3 font-mono text-xs text-default"
       tabindex="0"
+      role="region"
       :aria-label="t('firstrun.project.config_label')"
       data-testid="preview-json"
     ><template v-for="(line, row) in lines" :key="row"><template v-for="(token, column) in line" :key="column"><span v-if="token.kind !== 'space'" :class="JSON_TOKEN_CLASSES[token.kind]">{{ token.text }}</span><template v-else>{{ token.text }}</template></template>{{ '\n' }}</template></pre>

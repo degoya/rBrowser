@@ -84,7 +84,11 @@ fn the_result_is_written_whole_and_read_back() {
     let result = run(vec![view(1, ViewStatus::Passed)]);
     let path = write(&folder, &result).expect("writes");
     assert!(path.ends_with(".rbrowser/out/flows/20261111-101500-a1b2c3/result.json"));
-    assert!(!folder.join("result.json.partial").exists());
+    let names: Vec<_> = std::fs::read_dir(&folder)
+        .expect("listed")
+        .map(|entry| entry.expect("entry").file_name())
+        .collect();
+    assert_eq!(names, ["result.json"], "no temporary file is left");
     assert_eq!(read(&folder), Some(result));
 }
 

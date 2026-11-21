@@ -16,6 +16,10 @@
 //!   RB-090-84). The
 //!   recording is read and rendered off the calling thread (a WSL project's disk is a network
 //!   share, the plugin call blocks); what goes wrong before the run starts is a notice.
+//! - RB-092-01: both also take `fromStep` ("Play from here"), `onlyStep` ("Try": one step,
+//!   even one switched off) and `draft` (the Recorder panel's unsaved recording, checked as a
+//!   save checks it, never written); the steps switched off never play, and the editor's fixed
+//!   waits add to the run's timeout ([`select`], [`waits_ms`]).
 //! - `recorder_play` (a host tool): `{ recordingId?, views?, pace?, wait? }`, the result as `flow_run`
 //!   answers it - per view passed, failed, skipped or timed out - or the `runId` at once with
 //!   `wait: false`.
@@ -27,7 +31,7 @@ use rb_config::PlaybackPace;
 use rb_engine::ViewHost as _;
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use rb_mcp::ToolFailure;
-use rb_sync::recorder::Recording;
+use rb_sync::recorder::{Action, MAX_PAUSE_MS, Recording, edit};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -64,6 +68,62 @@ pub struct PlayArgs {
     /// `recorder_play` only: wait for the result (the default).
     #[serde(default)]
     pub wait: Option<bool>,
+    /// "Play from here" (RB-092-01): the playable steps from this step on.
+    #[serde(default)]
+    pub from_step: Option<u32>,
+    /// "Try" (RB-092-01): this step alone, even when it is switched off.
+    #[serde(default)]
+    pub only_step: Option<u32>,
+    /// The Recorder panel's unsaved draft of the recording (RB-092-01), checked as a save
+    /// checks it and played without being written.
+    #[serde(default)]
+    pub draft: Option<Value>,
+}
+
+/// Which part of a recording plays and where it comes from (RB-092-01).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Part {
+    /// From this step on.
+    pub from_step: Option<u32>,
+    /// This step alone.
+    pub only_step: Option<u32>,
+    /// The steps up to this one (before "Continue recording from here").
+    pub up_to: Option<u32>,
+    /// The panel's draft instead of the file.
+    pub draft: Option<Value>,
+}
+
+/// The steps of `recording` that `part` plays: never the ones switched off, except a step tried
+/// alone.
+///
+/// # Errors
+///
+/// [`CommandError::InvalidArgs`] for a step the recording does not have.
+pub fn select(recording: &Recording, part: &Part) -> Result<Recording, CommandError> {
+    let chosen = if let Some(id) = part.only_step {
+        edit::only_step(recording, id)
+    } else if let Some(id) = part.from_step {
+        edit::from_step(recording, id)
+    } else if let Some(id) = part.up_to {
+        edit::up_to(recording, id)
+    } else {
+        Ok(edit::playable(recording))
+    };
+    chosen.map_err(|error| CommandError::InvalidArgs(error.to_string()))
+}
+
+/// The fixed waits of `recording` (RB-092-01), each at most [`MAX_PAUSE_MS`]: the run's
+/// timeout grows by them at every pace.
+#[must_use]
+pub fn waits_ms(recording: &Recording) -> u64 {
+    recording
+        .steps
+        .iter()
+        .filter_map(|step| match step.action {
+            Action::Wait { ms } => Some(u64::from(ms.min(MAX_PAUSE_MS))),
+            _ => None,
+        })
+        .sum()
 }
 
 /// `args` (an object or null) as [`PlayArgs`].
@@ -139,6 +199,7 @@ pub fn prepare(
     core: &Core,
     id: Option<String>,
     pace: Option<PlaybackPace>,
+    part: &Part,
 ) -> Result<(String, InlineFlow), CommandError> {
     let root = core
         .host()
@@ -154,7 +215,11 @@ pub fn prepare(
             )
         })?,
     };
-    let recording = store.load(&id).map_err(export::store_failed)?;
+    let recording = match &part.draft {
+        Some(draft) => super::panel::edited(&id, draft).map_err(CommandError::InvalidArgs)?,
+        None => store.load(&id).map_err(export::store_failed)?,
+    };
+    let recording = select(&recording, part)?;
     let file = store.path_of(&id).map_or_else(
         |_| format!("{id}.json"),
         |path| export::relative(&root, &path),
@@ -169,7 +234,7 @@ pub fn prepare(
             .map(|pause| pause.ms)
             .sum(),
         PlaybackPace::Fast => 0,
-    };
+    } + waits_ms(&recording);
     let flow = played_flow(&recording, files, file, pause_ms)?;
     Ok((id, flow))
 }
@@ -186,8 +251,17 @@ pub fn run(core: &Core, raw: &Value) -> Result<Value, CommandError> {
         recording_id,
         views,
         pace,
+        from_step,
+        only_step,
+        draft,
         ..
     } = args(raw)?;
+    let part = Part {
+        from_step,
+        only_step,
+        up_to: None,
+        draft,
+    };
     let core = core
         .arc()
         .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
@@ -197,7 +271,7 @@ pub fn run(core: &Core, raw: &Value) -> Result<Value, CommandError> {
     let asked_for = recording_id.clone();
     let runtime = core.runtime().clone();
     runtime.spawn_blocking(move || {
-        let failed = match prepare(&core, recording_id, pace) {
+        let failed = match prepare(&core, recording_id, pace, &part) {
             // An untrusted workspace has the runner's own notice, with the way to trust it.
             Ok((name, flow)) => match start_inline(&core, &name, flow, views) {
                 Ok(_) | Err(FlowError::Untrusted) => None,
@@ -228,14 +302,24 @@ pub async fn tool(core: &Arc<Core>, raw: Value) -> Result<Value, ToolFailure> {
         views,
         pace,
         wait,
+        from_step,
+        only_step,
+        draft,
     } = args(&raw).map_err(ToolFailure::from)?;
+    let part = Part {
+        from_step,
+        only_step,
+        up_to: None,
+        draft,
+    };
     let views = resolve_views(&core.host().views(), views.as_ref().unwrap_or(&Value::Null))
         .map_err(|error| flow_failure(&error))?;
     let blocking = Arc::clone(core);
-    let (name, flow) = tokio::task::spawn_blocking(move || prepare(&blocking, recording_id, pace))
-        .await
-        .map_err(|_| ToolFailure::new("internal", "the recording could not be read"))?
-        .map_err(ToolFailure::from)?;
+    let (name, flow) =
+        tokio::task::spawn_blocking(move || prepare(&blocking, recording_id, pace, &part))
+            .await
+            .map_err(|_| ToolFailure::new("internal", "the recording could not be read"))?
+            .map_err(ToolFailure::from)?;
     let started = start_inline(core, &name, flow, views).map_err(|error| flow_failure(&error))?;
     if !wait.unwrap_or(true) {
         return Ok(json!({ "recordingId": name, "runId": started.run_id }));

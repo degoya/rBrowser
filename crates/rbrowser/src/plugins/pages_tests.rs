@@ -329,3 +329,35 @@ async fn switched_on_again_in_the_same_document_the_world_is_reached_without_a_n
     let requests = inbox.clone();
     until(move || lock(&requests.requests).len() == 1).await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_replaced_plugin_s_scripts_are_stopped_and_its_new_ones_injected() {
+    // RB-092-06: an update brings a new bridge under the same plugin id; the same bridge given
+    // again (a switch of another plugin) changes nothing.
+    let (fake, _, pages) = setup();
+    let first = bridge("hello");
+    pages.set_plugins(vec![first.clone()]);
+    pages.attach(ViewId(1), "S1").await;
+    assert_eq!(fake.sent("Page.addScriptToEvaluateOnNewDocument").len(), 1);
+
+    pages.set_plugins(vec![first]);
+    tokio::time::sleep(Duration::from_millis(30)).await;
+    assert_eq!(fake.sent("Page.addScriptToEvaluateOnNewDocument").len(), 1);
+    assert!(
+        fake.sent("Page.removeScriptToEvaluateOnNewDocument")
+            .is_empty()
+    );
+
+    let updated = Arc::new(PageBridge {
+        binding: "__rbp_hello_2".to_owned(),
+        receiver: "__rbr_hello_2".to_owned(),
+        ..(*bridge("hello")).clone()
+    });
+    pages.set_plugins(vec![updated.clone()]);
+    until(|| fake.sent("Page.addScriptToEvaluateOnNewDocument").len() == 2).await;
+    assert_eq!(
+        fake.sent("Page.removeScriptToEvaluateOnNewDocument").len(),
+        1
+    );
+    assert!(Arc::ptr_eq(&pages.plugins()[0], &updated));
+}

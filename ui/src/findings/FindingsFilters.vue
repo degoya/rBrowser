@@ -2,13 +2,16 @@
 // The findings panel's filters (RB-060-01, Nuxt UI since RB-080-88): a checkbox per severity with
 // its count, and a select each for the plugin and the view, "all" first. The panel is a window, so
 // the selects' popovers are fine (design.md, "A popup in a strip view is native"). reka's select
-// takes no empty value, so "all" is `ALL` here and the empty filter (`''`) in the panel.
+// takes no empty value, so "all" is `ALL` here and the empty filter (`''`) in the panel. With a
+// plugin chosen, "Run <plugin> again" runs that check again (`rerun`, RB-094-17).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import UButton from '@nuxt/ui/components/Button.vue';
 import UCheckbox from '@nuxt/ui/components/Checkbox.vue';
 import UFormField from '@nuxt/ui/components/FormField.vue';
 import USelect from '@nuxt/ui/components/Select.vue';
 import { SEVERITIES } from './findings';
+import { FINDINGS_ICONS } from './icons';
 import type { Severity } from './types';
 
 /** The select's "all": no plugin id or view id is `*`. */
@@ -18,7 +21,10 @@ const props = defineProps<{
   counts: Record<Severity, number>;
   plugins: string[];
   views: { id: number; name: string }[];
+  /** "Run again" is off: checks run. */
+  busy?: boolean;
 }>();
+const emit = defineEmits<{ rerun: [plugin: string] }>();
 const severities = defineModel<Severity[]>('severities', { required: true });
 const plugin = defineModel<string>('plugin', { required: true });
 const view = defineModel<number | ''>('view', { required: true });
@@ -79,6 +85,19 @@ const severityClass: Record<Severity, string> = {
     <UFormField :label="t('findings.filter.plugin')" size="sm">
       <USelect v-model="pluginChoice" :items="pluginItems" size="sm" class="min-w-40" data-testid="plugin" />
     </UFormField>
+    <!-- A secondary action: an icon, named and explained by its tooltip. -->
+    <UButton
+      v-if="plugin !== ''"
+      size="sm"
+      color="neutral"
+      variant="ghost"
+      :icon="FINDINGS_ICONS.rerun"
+      :aria-label="t('findings.rerun.one', { plugin })"
+      :title="t('findings.rerun.one', { plugin })"
+      :disabled="busy"
+      data-testid="rerun-filtered"
+      @click="emit('rerun', plugin)"
+    />
     <UFormField v-if="views.length > 0" :label="t('findings.filter.view')" size="sm">
       <USelect v-model="viewChoice" :items="viewItems" size="sm" class="min-w-32" data-testid="view" />
     </UFormField>

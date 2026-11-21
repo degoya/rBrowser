@@ -6,8 +6,10 @@
 # lib/plugin-fixture.sh) and a temp wiki: it writes reference/mcp-tools.md with an overview row
 # per tool, an area heading, a section per tool with its target, command, guard and parameter
 # table, a section per plugin with its tools (marked; a core tool's name and a TEST-ONLY plugin
-# left out), the coming tools and the commands without a tool; --check then passes, finds the page stale after a tool is added, and passes without a
-# page or a wiki (nothing generated yet). The repository's own data reads.
+# left out), the prompts with their arguments and the resources with their URIs (RB-095-01), the
+# coming tools and the commands without a tool; --check then passes, finds the page stale after a
+# tool is added, and passes without a page or a wiki (nothing generated yet); a tools file without
+# prompts and resources has neither section. The repository's own data reads.
 #
 # Python only, compiles nothing: check.sh --preflight runs it.
 #
@@ -49,7 +51,19 @@ cat > "$fixture/schema/mcp-tools.v1.json" << 'EOF'
       "withoutCommand": "writes one setting as the settings window does",
       "inputSchema": { "type": "object", "properties": {} } }
   ],
-  "pending": [ { "tool": "click", "job": "RB-020-03" } ]
+  "pending": [ { "tool": "click", "job": "RB-020-03" } ],
+  "prompts": [
+    { "name": "bug_repro", "description": "Reproduce a bug in every view.",
+      "arguments": [ { "name": "url", "description": "The page.", "required": false } ] }
+  ],
+  "resources": [
+    { "uri": "rbrowser://views", "name": "views", "mimeType": "application/json",
+      "description": "The views of the grid." }
+  ],
+  "resourceTemplates": [
+    { "uriTemplate": "rbrowser://screenshots/latest/{index}", "name": "screenshot",
+      "mimeType": "image/png", "description": "One PNG." }
+  ]
 }
 EOF
 cat > "$fixture/schema/commands.v1.json" << 'EOF'
@@ -94,7 +108,7 @@ expect_true "the overview has a row per tool with area, target, command and guar
 expect_true "a guarded tool without a command says so in the overview" \
     'grep -qxF "| [\`settings_set\`](#settings_set) | Project and settings | - | - | yes |" "$page"'
 expect_true "the areas are headings in the page's order, the plugins after the core's" \
-    'grep "^## " "$page" | tr "\n" "|" | grep -qF "## Views and navigation|## Project and settings|## App|## Plugin: Sample Tool|## Coming tools|## Commands without a tool|"'
+    'grep "^## " "$page" | tr "\n" "|" | grep -qF "## Views and navigation|## Project and settings|## App|## Plugin: Sample Tool|## Prompts|## Resources|## Coming tools|## Commands without a tool|"'
 expect_true "a tool is a section of its own" 'grep -qxF "### \`navigate\`" "$page"'
 expect_true "a view tool takes all" \
     'grep -qxF -- "- **Target:** \`\"all\"\` (default), a view id or a breakpoint id" "$page"'
@@ -132,6 +146,13 @@ expect_true "a plugin tool running the caller's script is guarded" \
 expect_true "a plugin tool with a core tool's name is left out" \
     '[[ "$(grep -cxF "### \`settings_set\`" "$page")" == 1 ]] && ! grep -qF "Core Twin" "$page"'
 expect_true "a TEST-ONLY plugin is not listed" '! grep -qF "testonly_hidden" "$page"'
+expect_true "a prompt is a section with its description" \
+    'grep -qxF "### \`bug_repro\`" "$page" && grep -qxF "Reproduce a bug in every view." "$page"'
+expect_true "a prompt's argument is a row" 'grep -qxF "| \`url\` | no | The page. |" "$page"'
+expect_true "a resource is a row with its type" \
+    'grep -qxF "| \`rbrowser://views\` | application/json | The views of the grid. |" "$page"'
+expect_true "a resource template is a row too" \
+    'grep -qxF "| \`rbrowser://screenshots/latest/{index}\` | image/png | One PNG. |" "$page"'
 expect_true "a plugin's omitted command gives the reason, marked" \
     'grep -qxF "| \`plugin.sample_tool.panel\` (Open the sample panel) *(plugin: Sample Tool)* | ui-only: a panel |" "$page"'
 
@@ -154,6 +175,18 @@ expect_output "it names the generator" "scripts/mcp-reference.sh"
 run_status env RB_WIKI="$wiki" "$GENERATOR" "$fixture"
 run_status env RB_WIKI="$wiki" "$GENERATOR" --check "$fixture"
 expect_status "regenerating makes it current again" 0
+
+python3 - "$fixture/schema/mcp-tools.v1.json" << 'EOF'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path))
+for key in ("prompts", "resources", "resourceTemplates"):
+    del data[key]
+json.dump(data, open(path, "w"))
+EOF
+run_status env RB_WIKI="$wiki" "$GENERATOR" "$fixture"
+expect_status "a tools file without prompts and resources is written" 0
+expect_true "it has neither section" '! grep -qE "^## (Prompts|Resources)$" "$page"'
 
 sed -i 's/"target": "one"/"target": "some"/' "$fixture/schema/mcp-tools.v1.json"
 run_status env RB_WIKI="$wiki" "$GENERATOR" --check "$fixture"

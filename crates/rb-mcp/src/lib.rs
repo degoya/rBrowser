@@ -12,10 +12,14 @@
 //!   every view tool takes `target`: `"all"`, a view id or a breakpoint id ([`target`]).
 //! - [`coverage`]: every command's MCP entry resolves to a tool or a reason, every tool is
 //!   described, typed and targeted (RB-030-08); `schema/mcp-tools.v1.json` for the reference.
+//! - [`prompts`], [`resources`]: the workflows as MCP prompts and rBrowser's state as read-only
+//!   MCP resources (RB-095-01), behind `mcp.prompts` and `mcp.resources`, with the tools' token
+//!   and limits; `rbrowser://config` leaves every `x-protected` key out ([`protected_keys`]).
 //!
 //! MCP can never grant workspace trust, install or trust a plugin, or write an `x-protected`
 //! setting: there is no tool for the first two, and `settings_set` writes as an MCP caller.
 
+pub mod activity;
 pub mod answer;
 pub mod backend;
 pub mod config_edit;
@@ -24,6 +28,9 @@ pub mod http;
 pub mod instance;
 mod issues;
 pub mod logs;
+pub mod prompts;
+pub mod protected_keys;
+pub mod resources;
 pub mod secret;
 pub mod server;
 pub mod settings_view;

@@ -3,7 +3,9 @@
 // differences only), the session's switches for mocks and the cache - each saying its state in
 // words and as pressed -, what the list cannot show (notes, each once), the requests and the
 // selected one's detail beside them (below them when narrow). A saved session open instead of
-// the live list says so in the status line, with Back to live requests here.
+// the live list says so in the status line, with Back to live requests here. The Endpoints
+// tab's jump filters the list by an endpoint (RB-096-06), shown above it with the way back. Save
+// shown as requests takes the live list as filtered into the API client (RB-096-08).
 import { computed, watch } from 'vue';
 import { STATUSES, TYPES } from './model';
 import RequestDetail from './RequestDetail.vue';
@@ -88,6 +90,17 @@ const notes = computed(() => {
         @click="net.act({ command: 'cache_toggle' }, {}, 'done.cache')"
       />
       <UButton
+        v-if="!net.session.value"
+        id="api-save-shown"
+        size="xs"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-save-all"
+        :disabled="!(net.answer.value?.rows.length ?? 0)"
+        :label="t('api.saveShown')"
+        @click="net.api.saveShown()"
+      />
+      <UButton
         v-if="net.session.value"
         id="session-close"
         size="xs"
@@ -97,6 +110,11 @@ const notes = computed(() => {
         :label="t('sessions.close')"
         @click="net.sessions.close()"
       />
+    </div>
+
+    <div v-if="net.filters.endpoint" id="endpoint-filter" class="flex min-w-0 flex-wrap items-center gap-1.5">
+      <UBadge color="primary" variant="subtle" icon="i-lucide-route" class="min-w-0" :ui="{ label: 'truncate' }" :label="t('endpoints.filtered', { endpoint: net.filters.endpoint })" />
+      <UButton id="endpoint-filter-clear" size="xs" variant="ghost" color="neutral" icon="i-lucide-x" :label="t('endpoints.clearFilter')" @click="net.filters.endpoint = ''" />
     </div>
 
     <div v-if="notes.length" id="notes" class="flex flex-col gap-1.5">

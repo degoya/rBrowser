@@ -17,14 +17,17 @@ longer goes unnoticed while you look at another.
   you work in; a view that drifts out of step is marked and brought back.
 - **Shared with the team**: the grid, the devices and the settings live in the project, in
   `.rbrowser/config.json`, checked in with the code, so everyone opens the same setup.
-- **Three engines**: Chromium in the grid, plus your installed Firefox and Playwright's WebKit
-  as synchronised windows of their own.
+- **More than one engine**: Chromium in the grid, plus your installed Firefox and Playwright's
+  WebKit as synchronised windows of their own, and Chrome on an Android phone over USB.
 - **Built for AI and automation**: a built-in MCP server whose tools address one view or all of
   them, and a token-protected endpoint for Playwright's `connectOverCDP`. Flows, a recorder that
   writes Playwright tests, and a page API for your own scripts.
 - **The tools of the job**: DevTools for every view, overlays, rulers and guides, a colour picker,
   network mocks, screenshots of every view at once with an editor, video, visual regression, and
   checks for accessibility, SEO and PWA, all in one list of findings.
+- **APIs too**: an API client that reads Postman, Insomnia, Bruno, HTTPie, `.http`, OpenAPI, HAR
+  and curl, takes the requests a page made from the network panel (secrets kept out of
+  checked-in files), runs checks and benchmarks, and a load test for your own servers.
 - **WSL aware**: opens projects inside a WSL distribution, reloads when you save, and takes
   commands from tools and AI agents running in WSL.
 - **Plugins**: most features beyond the core are sandboxed WebAssembly plugins. The SDK, with
@@ -33,8 +36,8 @@ longer goes unnoticed while you look at another.
 
 ## Status
 
-**Beta.** rBrowser is young: expect rough edges and changes between releases. What each release
-changed is in [CHANGELOG.md](CHANGELOG.md).
+**Before 1.0.** rBrowser is young: expect rough edges and changes between releases. What each
+release changed is in [CHANGELOG.md](CHANGELOG.md).
 
 rBrowser runs on **Windows 10 and 11 (x64)** and on **macOS 13 or later** (Apple Silicon and
 Intel). Linux follows later.

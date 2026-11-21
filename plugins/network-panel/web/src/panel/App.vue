@@ -2,8 +2,10 @@
 // The network panel (RB-070-02, RB-080-37) on Nuxt UI (RB-080-84). It asks `list` every POLL_MS
 // while visible, marks the requests only some views loaded (`partial`) or saw differently
 // (`differs`), shows a request's views and body, and drives the session's switches; the tabs
-// Breakpoints and Compose are the HTTP debugger, Sessions the saved captures, Mocks the rules.
-// Clearing the site data asks first, inline (the frame shows no dialogs).
+// Breakpoints and Compose are the HTTP debugger, Sessions the saved captures, Mocks the rules,
+// Endpoints the requests grouped by endpoint (RB-096-06). Clearing the site data asks first,
+// inline (the frame shows no dialogs). The commands api_open and api_save post `apiOpen` and
+// `apiSave`: the selected request into the API client, the shown ones saved (RB-096-08).
 import { computed, nextTick, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { onPanelEvent } from '../../../../web-common/panel-ui/src/events';
@@ -12,10 +14,11 @@ import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFram
 import PanelTabs from '../../../../web-common/panel-ui/src/components/PanelTabs.vue';
 import BreakpointsTab from './BreakpointsTab.vue';
 import ComposeTab from './ComposeTab.vue';
+import EndpointsTab from './EndpointsTab.vue';
 import MocksTab from './MocksTab.vue';
 import RequestsTab from './RequestsTab.vue';
 import SessionsTab from './SessionsTab.vue';
-import { NETWORK_KEY, createNetwork, type Tab } from './store';
+import { NETWORK_KEY, TABS, createNetwork, type Tab } from './store';
 
 const POLL_MS = 2000;
 const panel = usePanel();
@@ -29,6 +32,7 @@ const tabs = computed(() =>
   (
     [
       ['requests', 'i-lucide-list'],
+      ['endpoints', 'i-lucide-route'],
       ['breakpoints', 'i-lucide-octagon-pause'],
       ['compose', 'i-lucide-send'],
       ['sessions', 'i-lucide-history'],
@@ -45,6 +49,7 @@ function askClear(): void {
 watch(net.tab, (now: Tab) => {
   if (now === 'breakpoints' || now === 'compose') void net.debug.refresh();
   if (now === 'sessions') void net.sessions.refresh();
+  if (now === 'endpoints') void net.endpoints.refresh();
 });
 
 const stopEvents = onPanelEvent((raw) => {
@@ -54,6 +59,10 @@ const stopEvents = onPanelEvent((raw) => {
   if ('mocksChanged' in message) void net.mocks.refresh();
   if ('breakpointsChanged' in message || 'breakpointsEnabled' in message) void net.debug.refresh();
   if ('sessionsChanged' in message) void net.sessions.refresh();
+  if (TABS.includes(message.tab as Tab)) net.tab.value = message.tab as Tab;
+  // The commands api_open and api_save (RB-096-08).
+  if (message.apiOpen === true) void net.api.open();
+  if (message.apiSave === true) void net.api.saveShown();
   void net.refresh();
 });
 
@@ -66,6 +75,7 @@ const timer = setInterval(() => {
   if (document.hidden) return;
   void net.poll();
   if (net.tab.value === 'breakpoints' || net.tab.value === 'compose') void net.debug.poll();
+  if (net.tab.value === 'endpoints') void net.endpoints.poll();
 }, POLL_MS);
 onBeforeUnmount(() => {
   clearInterval(timer);
@@ -113,6 +123,9 @@ onBeforeUnmount(() => {
       >
         <template #requests>
           <RequestsTab />
+        </template>
+        <template #endpoints>
+          <EndpointsTab />
         </template>
         <template #breakpoints>
           <BreakpointsTab />

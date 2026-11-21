@@ -45,12 +45,12 @@ pub fn answer(message: &str, why: &str) -> Option<Value> {
 }
 
 /// The `initialize` result: the protocol version ([`negotiate`]), the tools capability - with
-/// `listChanged`, which the bridge sends once it reaches rBrowser - and the state in the
-/// instructions.
+/// `listChanged`, which the bridge sends once it reaches rBrowser -, the prompts and resources
+/// the server declares (RB-095-01) and the state in the instructions.
 fn initialize(request: &Value, why: &str) -> Value {
     json!({
         "protocolVersion": negotiate(request["params"]["protocolVersion"].as_str()),
-        "capabilities": { "tools": { "listChanged": true } },
+        "capabilities": { "tools": { "listChanged": true }, "prompts": {}, "resources": {} },
         "serverInfo": { "name": crate::instance::APP, "version": env!("CARGO_PKG_VERSION") },
         "instructions": format!(
             "rBrowser is not reachable yet: {why}. Tool calls fail until it runs; this bridge \

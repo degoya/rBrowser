@@ -19,8 +19,13 @@ describe('the canvas board', () => {
     expect(two.attributes('aria-label')).toBe(`${second.label}  768 × 1024 @2x, outside the visible area`);
   });
 
-  it('moves a dragged label live and lets go with the end', async () => {
+  // RB-094-18: the board drew a dragged label at the pointer while the core moved the view on a
+  // clock of its own - frame and view drifted apart. The board draws the label, the frame and
+  // the frame around the footer where the core says (`canvasLive`) and answers once it painted
+  // them; the core moves the view then, as for a zoom.
+  it('draws a dragged label where the core put it, not at the pointer, and lets go with the end', async () => {
     const { wrapper, mock, first } = await setup();
+    const strip = () => wrapper.get(`[data-testid="board-strip-${first.id}"]`).attributes('style');
     const label = wrapper.get(`[data-testid="board-label-${first.id}"]`).element;
     label.dispatchEvent(pointer('pointerdown', 10, 10));
     label.dispatchEvent(pointer('pointermove', 40, 30));
@@ -28,9 +33,16 @@ describe('the canvas board', () => {
     expect(sentOf(mock, 'canvasDrag')).toEqual([
       { type: 'canvasDrag', view: first.id, dx: 30, dy: 20, phase: 'move' },
     ]);
-    expect(wrapper.get(`[data-testid="board-strip-${first.id}"]`).attributes('style')).toContain(
-      'translate(30px, 20px)',
-    );
+    expect(strip(), 'not at the pointer').toContain('left: 0px');
+    expect(strip()).not.toContain('translate');
+    const board = structuredClone(mock.state.layout.modes!.board!);
+    board.items[0]!.label.x = 30;
+    board.items[0]!.rect.x = 30;
+    mock.emit({ type: 'canvasLive', board, seq: 9 });
+    await settle();
+    await settle();
+    expect(strip()).toContain('left: 30px');
+    expect(sentOf(mock, 'canvasPainted')).toEqual([{ type: 'canvasPainted', seq: 9 }]);
     label.dispatchEvent(pointer('pointerup', 50, 30));
     await settle();
     expect(sentOf(mock, 'canvasDrag').at(-1)).toEqual({
@@ -40,6 +52,7 @@ describe('the canvas board', () => {
       dy: 20,
       phase: 'end',
     });
+    expect(strip(), 'the core\'s last frame until its state').toContain('left: 30px');
     expect(sentOf(mock, 'setActiveView')).toEqual([]);
   });
 
@@ -109,6 +122,7 @@ describe('the canvas board', () => {
     const area = wrapper.get('[data-testid="board"]').element;
     area.dispatchEvent(pointer('pointerdown', 600, 600));
     area.dispatchEvent(pointer('pointermove', 580, 640));
+    await settle();
     await settle();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await settle();

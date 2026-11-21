@@ -44,6 +44,63 @@ pub fn string(text: &str) -> String {
     out
 }
 
+/// A regular expression literal that matches an element whose whole text is `text` (RB-090-93).
+/// Playwright tests it against the element's raw text; the agent compares the text with its
+/// white space collapsed and trimmed (`normalize` in `agent/src/role.ts`). So white space
+/// around it is optional and each run of it inside is `\s+` - white space as JavaScript's `\s`
+/// knows it. Every other character is literal: the pattern characters and the `/` that would end
+/// the literal escaped, controls as `\xHH`. The pattern has no nested repetition.
+pub fn whole_text(text: &str) -> String {
+    let text = text.trim_matches(js_space);
+    if text.is_empty() {
+        return r"/^\s*$/".to_owned();
+    }
+    let mut out = String::with_capacity(text.len() + 12);
+    out.push_str(r"/^\s*");
+    let mut space = false;
+    for c in text.chars() {
+        if js_space(c) {
+            if !space {
+                out.push_str(r"\s+");
+            }
+            space = true;
+            continue;
+        }
+        space = false;
+        match c {
+            '\\' | '^' | '$' | '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
+            | '/' => {
+                out.push('\\');
+                out.push(c);
+            }
+            c if c.is_control() => {
+                let code = u32::from(c);
+                out.push_str(&format!("\\x{code:02x}"));
+            }
+            c => out.push(c),
+        }
+    }
+    out.push_str(r"\s*$/");
+    out
+}
+
+/// Whether JavaScript's `\s` matches `c`: its white space and line terminators.
+fn js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\t' | '\n'
+            | '\u{b}'
+            | '\u{c}'
+            | '\r'
+            | ' '
+            | '\u{a0}'
+            | '\u{1680}'
+            | '\u{2028}'
+            | '\u{2029}'
+    ) || ('\u{2000}'..='\u{200a}').contains(&c)
+        || matches!(c, '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
+}
+
 /// The environment variables of the secrets a file uses.
 #[derive(Clone, Debug, Default)]
 pub struct Secrets(BTreeSet<String>);

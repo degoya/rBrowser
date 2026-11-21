@@ -63,6 +63,8 @@ export const DEVTOOLS_MENU: readonly MenuNode[] = [
   sep,
   cmd('debug.vitals', { checked: (ctx) => settingOn(ctx, 'vitals.enabled') }),
   cmd('debug.resources', { checked: (ctx) => settingOn(ctx, 'resources.enabled') }),
+  // The timing counters' summary (RB-090-32; MCP app_perf has them all).
+  cmd('debug.perf_counters'),
   { kind: 'plugins', group: 'devtools' },
 ];
 
@@ -83,6 +85,11 @@ export const CAPTURE_MENU: readonly MenuNode[] = [
 export const VIDEO_MENU: readonly MenuNode[] = [
   cmd('capture.video.toggle'),
   cmd('capture.video.toggle_all'),
+  // RB-090-68: checked while the running recording is paused; no choice without one.
+  cmd('capture.video.pause', {
+    checked: (ctx) => ctx.state?.video?.pausedAtMs !== undefined,
+    enabled: (ctx) => ctx.state?.video !== undefined,
+  }),
   cmd('capture.video.panel'),
   sep,
   cmd('recorder.start'),
@@ -91,6 +98,7 @@ export const VIDEO_MENU: readonly MenuNode[] = [
 export const CHECKS_MENU: readonly MenuNode[] = [
   cmd('checks.run_all'),
   cmd('checks.cancel'),
+  cmd('checks.export'),
   sep,
   { kind: 'plugins', group: 'checks' },
   sep,

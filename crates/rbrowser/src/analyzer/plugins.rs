@@ -10,31 +10,51 @@
 //! is refused with `plugins.error.untrusted_workspace` and its capabilities, for the trust
 //! dialog. Every plugin reaches the app through [`crate::plugins::services::AppServices`].
 //!
-//! One load per process, on first use; a call runs the plugin's export on the core's runtime
-//! from a blocking thread ([`block_on`]), never on the UI thread: a thread without the runtime
-//! gets an error, not a runtime of its own (RB-080-28).
+//! The first load on first use; a call runs the plugin's export on the core's runtime from a
+//! blocking thread ([`block_on`]), never on the UI thread: a thread without the runtime gets an
+//! error, not a runtime of its own (RB-080-28). RB-091-08: at the very first start, while the
+//! first-run wizard's plugin choice is open, that load waits for the answer ([`hold()`]); no
+//! caller before it keeps an empty load. RB-092-06: the plugins are a snapshot every caller takes
+//! as an [`Arc`]; an install, update, removal or a project's trust loads them again
+//! ([`reload`]) and puts the new snapshot in place, and the window follows
+//! (`crate::plugins::live`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use rb_config::UserSettings;
 use rb_plugin_host::{
-    HostServices as _, LoadContext, LoadReport, LocaleSink, PluginHealths, PluginOptions,
-    PluginSource, PluginVerifier, Registry, SettingsSink, Sources, load_all,
+    LoadContext, LoadReport, LocaleSink as _, PluginHealths, PluginOptions, PluginSource,
+    PluginVerifier, Registry, Sources, load_all,
 };
-use rb_settings::SettingsRegistry;
 use serde_json::Value;
 use tokio::runtime::Handle;
 
-use crate::cdp::lock;
+#[path = "plugins_call.rs"]
+mod call;
+#[path = "plugins_hold.rs"]
+mod hold;
+#[path = "plugins_sinks.rs"]
+mod sinks;
+#[path = "plugins_snapshot.rs"]
+mod snapshot;
+
+pub use call::PluginError;
+pub(crate) use call::{NoRuntime, block_on};
+pub use hold::{abandon, held, hold, release};
+pub use sinks::{I18nLocales, SchemaSink};
 
 /// The folder of the bundled plugins beside the executable.
 pub const BUNDLED_DIR: &str = "plugins";
 
-/// The plugins of this process.
-static BUNDLED: OnceLock<LoadedPlugins> = OnceLock::new();
+/// The plugins of this process in effect now, replaced whole by a live change (RB-092-06).
+static PLUGINS: snapshot::Snapshots<LoadedPlugins> = snapshot::Snapshots::new();
+/// One load at a time - the first and every [`reload`].
+static LOADING: Mutex<()> = Mutex::new(());
+/// No plugin: what [`bundled`] gives while the first choice holds the load, never kept as it.
+static NOTHING: LazyLock<Arc<LoadedPlugins>> = LazyLock::new(|| Arc::new(empty()));
 /// The project whose `.rbrowser/plugins/` the load reads: the instance's one project.
 static PROJECT: OnceLock<Option<PathBuf>> = OnceLock::new();
 /// Every plugin's own health for the life of the process (RB-090-59).
@@ -64,76 +84,6 @@ pub struct LoadedPlugins {
     pub schemas: Vec<(String, Value)>,
     /// How many settings keys each plugin's schema registered, by plugin id (RB-080-51).
     pub settings_counts: BTreeMap<String, usize>,
-}
-
-/// Locales go to the one catalogue of `rb_i18n`.
-pub struct I18nLocales;
-
-impl LocaleSink for I18nLocales {
-    fn register(&self, plugin_id: &str, language: &str, bytes: &[u8]) -> Result<(), String> {
-        rb_i18n::register_plugin_locale(plugin_id, language, bytes)
-            .map(|_| ())
-            .map_err(|error| error.to_string())
-    }
-
-    fn unregister(&self, plugin_id: &str) {
-        rb_i18n::unregister_plugin_locales(plugin_id);
-    }
-}
-
-/// A plugin's settings schema, checked against a registry holding the core keys (an unknown
-/// category, a key that is taken or one without its annotations is refused) and kept for the
-/// settings window.
-pub struct SchemaSink {
-    registry: Mutex<SettingsRegistry>,
-    taken: Mutex<Vec<(String, Value)>>,
-    counts: Mutex<BTreeMap<String, usize>>,
-}
-
-impl SchemaSink {
-    /// A sink over the core schemas.
-    pub fn new() -> Self {
-        Self {
-            registry: Mutex::new(crate::control::settings::settings_registry().0),
-            taken: Mutex::new(Vec::new()),
-            counts: Mutex::new(BTreeMap::new()),
-        }
-    }
-
-    /// How many keys each plugin registered, by plugin id.
-    pub fn counts(&self) -> BTreeMap<String, usize> {
-        lock(&self.counts).clone()
-    }
-
-    /// The schemas taken, by plugin id.
-    pub fn into_schemas(self) -> Vec<(String, Value)> {
-        self.taken
-            .into_inner()
-            .unwrap_or_else(|poison| poison.into_inner())
-    }
-}
-
-impl Default for SchemaSink {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl SettingsSink for SchemaSink {
-    fn register_plugin_schema(&self, plugin_id: &str, schema: &Value) -> Result<usize, String> {
-        let count = lock(&self.registry)
-            .register_plugin_schema(plugin_id, schema)
-            .map_err(|issues| {
-                issues
-                    .iter()
-                    .map(|issue| format!("{}: {}", issue.key, issue.error))
-                    .collect::<Vec<_>>()
-                    .join("; ")
-            })?;
-        lock(&self.taken).push((plugin_id.to_owned(), schema.clone()));
-        lock(&self.counts).insert(plugin_id.to_owned(), count);
-        Ok(count)
-    }
 }
 
 /// The folder of the bundled plugins: `plugins` beside the executable (in the macOS bundle in
@@ -285,27 +235,113 @@ fn process_sources() -> Sources {
     }
 }
 
-/// The plugins of this process - bundled, user-installed, the project's - loaded on first use
-/// with the user settings in effect then.
-pub fn bundled() -> &'static LoadedPlugins {
-    BUNDLED.get_or_init(|| {
-        let user = crate::control::settings::load_user().settings;
-        let sources = process_sources();
-        if sources.bundled.is_none() && sources.user.is_none() && sources.project_root.is_none() {
-            return LoadedPlugins {
-                report: LoadReport::default(),
-                registry: Registry::new(),
-                schemas: Vec::new(),
-                settings_counts: BTreeMap::new(),
-            };
-        }
-        load_sources(&sources, &user)
-    })
+/// No plugin at all.
+fn empty() -> LoadedPlugins {
+    LoadedPlugins {
+        report: LoadReport::default(),
+        registry: Registry::new(),
+        schemas: Vec::new(),
+        settings_counts: BTreeMap::new(),
+    }
 }
 
-/// The plugins when their load is done; `None` while it runs or before it started.
-pub fn loaded() -> Option<&'static LoadedPlugins> {
-    BUNDLED.get()
+/// The plugins of this process in effect now - bundled, user-installed, the project's - loaded
+/// on first use with the user settings in effect then. While the first choice holds the load
+/// ([`held`]) no plugin, and nothing is kept: the load comes after the answer (RB-091-08). The
+/// snapshot stays whole for its holder while a live change puts another in place (RB-092-06).
+pub fn bundled() -> Arc<LoadedPlugins> {
+    if let Some(loaded) = PLUGINS.get() {
+        return loaded;
+    }
+    // One decision under the gate's lock: the load begins (and a later hold is refused), or the
+    // gate holds it (review of RB-091-08).
+    if !hold::begin_load() {
+        return Arc::clone(&NOTHING);
+    }
+    let _loading = rb_util::lock(&LOADING);
+    // Another caller's load may have ended while this one waited for the lock.
+    if let Some(loaded) = PLUGINS.get() {
+        return loaded;
+    }
+    let loaded = Arc::new(load_process());
+    PLUGINS.put(Arc::clone(&loaded));
+    loaded
+}
+
+/// The process's load: its folders under the user settings in effect now.
+fn load_process() -> LoadedPlugins {
+    let user = crate::control::settings::load_user().settings;
+    let sources = process_sources();
+    if sources.bundled.is_none() && sources.user.is_none() && sources.project_root.is_none() {
+        return empty();
+    }
+    load_sources(&sources, &user)
+}
+
+/// Loads the plugins again from their folders, as a start would - the person's choice, a newer
+/// copy, `plugins.disabled`, the project's trust and the keys all apply anew - and puts the new
+/// snapshot in effect (RB-092-06): an install, update or removal and a project trusted after the
+/// start take effect without a restart. The locales of a plugin no longer loaded leave the
+/// catalogue. `false` when nothing loaded: the first choice holds the load (its answer loads the
+/// plugins) or the app quits. A blocking thread with the core's runtime entered; the window
+/// follows with `crate::plugins::live::follow`.
+pub fn reload() -> bool {
+    if !hold::begin_load() {
+        return false;
+    }
+    let _loading = rb_util::lock(&LOADING);
+    let new = Arc::new(load_process());
+    let old = PLUGINS.put(Arc::clone(&new));
+    let kept = loaded_ids(&new);
+    for gone in old.as_deref().map(loaded_ids).unwrap_or_default() {
+        if !kept.contains(&gone) {
+            I18nLocales.unregister(&gone);
+        }
+    }
+    tracing::info!(
+        generation = PLUGINS.generation(),
+        loaded = new.report.loaded.len(),
+        "plugins: loaded again; the new set is in effect"
+    );
+    true
+}
+
+/// The ids of the plugins `loaded` loaded.
+fn loaded_ids(loaded: &LoadedPlugins) -> BTreeSet<String> {
+    loaded
+        .report
+        .loaded
+        .iter()
+        .map(|entry| entry.plugin.manifest().id.clone())
+        .collect()
+}
+
+/// How many snapshots were put in effect so far: 0 before the first load, one more with each
+/// [`reload`] - for a cache built from the plugins.
+pub fn generation() -> u64 {
+    PLUGINS.generation()
+}
+
+/// [`bundled`] once the first choice is answered: waits for the answer (a blocking thread only).
+/// The window's plugin runtime starts with it, so commands, panels, page scripts and MCP tools
+/// come as at a normal start, where the load ends after the window is up as well.
+pub fn bundled_when_answered() -> Arc<LoadedPlugins> {
+    hold::wait_released();
+    bundled()
+}
+
+/// [`bundled`], `None` while the first choice holds the load: for a cache built from the
+/// plugins, which must not be built empty.
+pub fn unless_held() -> Option<Arc<LoadedPlugins>> {
+    if PLUGINS.get().is_none() && held() {
+        return None;
+    }
+    Some(bundled())
+}
+
+/// The plugins in effect once a load is done; `None` while the first runs or before it started.
+pub fn loaded() -> Option<Arc<LoadedPlugins>> {
+    PLUGINS.get()
 }
 
 /// Starts loading the plugins on a thread of its own (compiling takes a moment) that borrows
@@ -325,152 +361,22 @@ pub(crate) fn claim(flag: &AtomicBool) -> bool {
 }
 
 /// Starts the load on its thread unless it runs or is done: Settings > Plugins asks for the
-/// list and must get one even when nothing loaded the plugins yet (RB-080-51). Never waits.
+/// list and must get one even when nothing loaded the plugins yet (RB-080-51). Never waits; the
+/// thread waits for the first choice's answer when it holds the load (RB-091-08).
 pub fn ensure_loading(runtime: Handle) {
-    if BUNDLED.get().is_some() || !claim(&STARTED) {
+    if PLUGINS.get().is_some() || !claim(&STARTED) {
         return;
     }
     if let Err(error) = std::thread::Builder::new()
         .name("rb-plugins".to_owned())
         .spawn(move || {
             let _runtime = runtime.enter();
-            let _ = bundled();
+            let _ = bundled_when_answered();
         })
     {
         STARTED.store(false, Ordering::Release);
         tracing::warn!(%error, "the plugins are loaded on first use");
     }
-}
-
-/// A plugin call that failed: the stable code (`plugins.error.*` or the plugin's own key) and
-/// its parameters - no English text, no secret.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PluginError {
-    pub code: String,
-    pub params: Vec<(String, String)>,
-}
-
-impl std::fmt::Display for PluginError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.code)?;
-        for (key, value) in &self.params {
-            write!(formatter, " {key}={value}")?;
-        }
-        Ok(())
-    }
-}
-
-/// The code `plugins.error.not_available` with the plugin's id.
-const NOT_AVAILABLE: &str = "plugins.error.not_available";
-
-impl LoadedPlugins {
-    /// Calls `tool` of plugin `id` with `args`; the answer as JSON.
-    ///
-    /// # Errors
-    ///
-    /// The plugin is not loaded (its refusal, else `plugins.error.not_available`), it is a
-    /// project plugin and the workspace is not trusted now (`plugins.error.untrusted_workspace`,
-    /// review M2 of Charge 6), or the call failed.
-    pub fn call_tool(&self, id: &str, tool: &str, args: &Value) -> Result<Value, PluginError> {
-        let Some(entry) = self
-            .report
-            .loaded
-            .iter()
-            .find(|entry| entry.plugin.manifest().id == id)
-        else {
-            return Err(self.refusal(id).unwrap_or_else(|| PluginError {
-                code: NOT_AVAILABLE.to_owned(),
-                params: vec![("service".to_owned(), id.to_owned())],
-            }));
-        };
-        if entry.source == PluginSource::Project
-            && !crate::plugins::services::shared().workspace_trusted()
-        {
-            return Err(PluginError {
-                code: rb_plugin_types::codes::UNTRUSTED_WORKSPACE.to_owned(),
-                params: vec![("plugin".to_owned(), id.to_owned())],
-            });
-        }
-        let answer = block_on(entry.plugin.call_tool(tool, &args.to_string()))
-            .map_err(PluginError::from)?
-            .map_err(|failure| PluginError {
-                code: failure.code().unwrap_or(NOT_AVAILABLE).to_owned(),
-                params: failure.params.into_iter().collect(),
-            })?;
-        serde_json::from_str(&answer).map_err(|_| PluginError {
-            code: "plugins.error.bad_output".to_owned(),
-            params: Vec::new(),
-        })
-    }
-
-    /// The grants of plugin `id`'s manifest, when it is loaded: the `project-read` globs bound
-    /// the files the static source hands it (RB-030-07).
-    pub fn grants(&self, id: &str) -> Option<&rb_plugin_host::Grants> {
-        self.report
-            .loaded
-            .iter()
-            .find(|entry| entry.plugin.manifest().id == id)
-            .map(|entry| &entry.plugin.manifest().grants)
-    }
-
-    /// Why plugin `id` did not load, when its package was refused.
-    pub fn refusal(&self, id: &str) -> Option<PluginError> {
-        self.report
-            .refused
-            .iter()
-            .find(|refused| {
-                refused
-                    .path
-                    .file_stem()
-                    .is_some_and(|stem| stem.to_string_lossy().starts_with(id))
-            })
-            .map(|refused| PluginError {
-                code: refused.failure.code().unwrap_or(NOT_AVAILABLE).to_owned(),
-                params: refused
-                    .failure
-                    .params
-                    .iter()
-                    .map(|(key, value)| (key.clone(), value.clone()))
-                    .collect(),
-            })
-    }
-}
-
-impl From<NoRuntime> for PluginError {
-    fn from(error: NoRuntime) -> Self {
-        Self {
-            code: rb_plugin_types::codes::HOST_FAILED.to_owned(),
-            params: vec![("detail".to_owned(), error.to_string())],
-        }
-    }
-}
-
-/// The calling thread has no tokio runtime: the CEF UI thread, or a thread started without
-/// entering the core's runtime. Waiting there would hang the window (CDP answers on the UI
-/// thread), so nothing runs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct NoRuntime;
-
-impl std::fmt::Display for NoRuntime {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("no runtime on this thread: plugin calls run on a blocking thread of the core's runtime")
-    }
-}
-
-impl std::error::Error for NoRuntime {}
-
-/// Runs `future` to its end from a thread that is no async task - a blocking task of the core's
-/// runtime, or a thread that entered its handle - on that runtime. Like
-/// [`crate::reload::ReloadService::block_on`], a thread without a runtime gets [`NoRuntime`]
-/// instead of a runtime of its own: from the UI thread that would be a deadlock until the
-/// plugin's timeout.
-///
-/// # Errors
-///
-/// [`NoRuntime`]: no runtime is entered on this thread.
-pub(crate) fn block_on<F: std::future::Future>(future: F) -> Result<F::Output, NoRuntime> {
-    let handle = Handle::try_current().map_err(|_| NoRuntime)?;
-    Ok(handle.block_on(future))
 }
 
 #[cfg(test)]

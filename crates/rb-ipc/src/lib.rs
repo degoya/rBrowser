@@ -16,34 +16,48 @@
 //! shell side.
 
 mod activity;
+mod bug_report;
 mod checks;
+mod devices_menu;
+mod forced_states;
 mod frameworks;
 mod layout_modes;
 mod lists;
+mod mcp_setup;
 mod messages;
 mod metrics;
 mod native_menu;
 mod payloads;
+mod plugin_progress;
 mod portal;
 mod recordings;
 mod setup;
 mod sitemap;
+mod sitemap_gallery;
 mod status;
+mod time_control;
 mod videos;
 
 use serde::Serialize;
 
 pub use activity::{Activity, ActivityBarState, VideoActivity};
+pub use bug_report::{BugReportAnswer, BugReportRequest, ReportPreview};
 pub use checks::{CheckJob, CheckJobState, ChecksProgress};
+pub use devices_menu::{AndroidDeviceRow, AndroidDeviceState, DevicesMenu};
+pub use forced_states::ViewForcedStates;
 pub use frameworks::ViewFrameworks;
 pub use layout_modes::{
     BoardCamera, BoardItem, BoardPiece, BoardState, DragPhase, LabelPiece, MapRect, MinimapItem,
     MinimapState, ModeState, SplitState, StripState,
 };
 pub use lists::{FlowList, FlowSummary, ProjectShortcut, ProjectShortcutList};
+pub use mcp_setup::{
+    McpClient, McpClientPlan, McpCommandLine, McpFilePlan, McpFileStatus, McpSetupAnswer,
+    McpSetupRequest, McpShell, McpWrittenFile,
+};
 pub use messages::{
-    CoreToShell, LayoutState, ProjectInfo, SettingValue, ShellToCore, StateSnapshot, SyncFeature,
-    SyncState,
+    ConvertVideoRequest, CoreToShell, LayoutState, ProjectInfo, SettingValue, ShellToCore,
+    StateSnapshot, SyncFeature, SyncState, VideoFileRef,
 };
 pub use metrics::{Rating, ResourceReading, Unavailable, ViewMetrics, ViewThrottle, VitalReading};
 pub use native_menu::NativeMenuRow;
@@ -55,20 +69,31 @@ pub use payloads::{
     SettingIssue, StylesheetSource, TrustDecision, TrustInfo, TrustPrompt, TrustStatus,
     TrustedProject, WebStoreExtension,
 };
-pub use portal::{PortalDevice, PortalPairing, PortalState};
+pub use plugin_progress::PluginProgress;
+pub use portal::{
+    PortalDevice, PortalPairing, PortalPresentation, PortalState, PresentationDownload,
+    PresentationPhase,
+};
 pub use rb_commands::{WhichKey, WhichKeyEntry};
 pub use rb_config::trust::{BlockedItem, ProtectedKind};
 pub use rb_engine::ViewId;
 pub use rb_settings::Scope;
 pub use recordings::{
-    FlowRunState, FlowRunning, FlowStep, FlowViewStatus, RecordingEntry, RecordingExport,
-    RecordingExportFile, RecordingExportFormat, RecordingList, StepPause,
+    FlowRunState, FlowRunning, FlowStep, FlowStepAt, FlowViewStatus, LiveState, PickedElement,
+    RecordingEntry, RecordingExport, RecordingExportFile, RecordingExportFormat, RecordingList,
+    RecordingSteps, StepPause,
 };
 pub use setup::{
-    SetupAnswer, SetupLayout, SetupProject, SetupRequest, SetupSource, SetupStep, SetupTemplate,
+    SetupAnswer, SetupLayout, SetupProject, SetupReason, SetupReasonCode, SetupRequest,
+    SetupSource, SetupStep, SetupTemplate,
 };
 pub use sitemap::{SitemapRunState, SitemapStatus};
-pub use status::{StatusAction, StatusMessage};
+pub use sitemap_gallery::{
+    GalleryBreakpoint, GalleryCompare, GalleryPage, GalleryShot, SitemapGalleryPage,
+    SitemapGalleryRequest,
+};
+pub use status::{StatusAction, StatusCopy, StatusMessage};
+pub use time_control::{ClockActivity, TimeControlActivity, ViewRate};
 pub use videos::{VideoConversion, VideoFile, VideoList, VideoRecording, VideoTarget};
 
 /// The protocol version; raised by the coordinator on an incompatible change.

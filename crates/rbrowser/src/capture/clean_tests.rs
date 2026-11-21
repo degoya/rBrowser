@@ -184,6 +184,34 @@ async fn an_unknown_rate_is_put_back_as_one() {
     assert_eq!(rates[1]["playbackRate"], 1.0);
 }
 
+/// A view whose animations the user stopped (RB-094-07) answers 0: the undo puts the 0 back
+/// that the view holds, not a running timeline; without a held rate 0 is put back as one.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stopped_view_stays_stopped_after_the_capture() {
+    let (script, router) = page();
+    script.answer("Animation.getPlaybackRate", json!({ "playbackRate": 0.0 }));
+    let (_fake, hooks_router) = crate::cdp::fake::FakeBrowser::connect();
+    let hooks = crate::time_control::hooks();
+    hooks
+        .attach(&hooks_router, rb_engine::ViewId(70), "S70")
+        .await;
+    hooks
+        .set_rate(&hooks_router, &[rb_engine::ViewId(70)], 0.0)
+        .await;
+    prepare(&router, "S70", &plan(0), &media())
+        .await
+        .undo(&router)
+        .await;
+    let rates = script.params("Animation.setPlaybackRate");
+    assert_eq!(rates[1]["playbackRate"], 0.0, "stopped as the user left it");
+    prepare(&router, "S1", &plan(0), &media())
+        .await
+        .undo(&router)
+        .await;
+    let rates = script.params("Animation.setPlaybackRate");
+    assert_eq!(rates[3]["playbackRate"], 1.0, "a 0 nobody holds runs again");
+}
+
 #[tokio::test]
 async fn the_settle_wait_comes_after_the_preparation() {
     let (_script, router) = page();

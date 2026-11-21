@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Changed (RB-094-10): the element path is `schema-org`'s (one Rust copy, re-exported) and, like
+  the page copy in `src/collect.js`, writes camel-case SVG tags in lower case
+  (`svg > defs > lineargradient`), as every other plugin does; both are held to the shared cases
+  `tests/fixtures/element-path/cases.json`. Findings at such elements are re-identified once.
+- Added (RB-090-95): the search result preview - above the cards the page as a Google search
+  result on a desktop and on a phone (favicon, site name, breadcrumb, title and description cut by
+  pixel width at a word end, characters and width per text, what was cut), from `serp` in the
+  answer of `social_preview` (the favicon fetched once and inlined before the share images; the
+  limits per device, unverified). Setting `seo.serpPreview`: `both`, `desktop`, `mobile`, `off`.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility > Text
   size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with panel-ui's root
   font size from `ui.textScale`. The card preview's domain line is sized in rem, so it grows too.

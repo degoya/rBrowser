@@ -3,15 +3,17 @@
 // and saves them (`save`) and runs them (`run`) view by view in parallel - each call answers
 // within the shell's time - joining the views' results into one list. The host's events reload
 // the list (`changed`) and show a run the command `run_last` made (`ran`). It takes no focus by
-// itself: the sandboxed frame refuses focus without a user's action.
+// itself: the sandboxed frame refuses focus without a user's action. The texts that name
+// Settings > DevTools & Debugging > Snippets link there (RB-094-21).
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { onPanelEvent } from '../../../../web-common/panel-ui/src/events';
 import { errorText } from '../../../../web-common/panel-ui/src/format';
-import type { StatusLine, Tone } from '../../../../web-common/panel-ui/src/status';
+import type { StatusLine } from '../../../../web-common/panel-ui/src/status';
 import { highlighter } from '../../../../web-common/panel-ui/src/code/highlight';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
+import SettingLink from '../../../../web-common/panel-ui/src/components/SettingLink.vue';
 import RunResults from './RunResults.vue';
 import SnippetEditor from './SnippetEditor.vue';
 import SnippetList from './SnippetList.vue';
@@ -24,7 +26,11 @@ const t = panel.t;
 const catalog = ref<ListAnswer | null>(null);
 const selected = ref<SnippetEntry | null>(null);
 const runs = ref<RunRecord[]>([]);
-const note = ref<{ tone: Tone; text: string } | null>(null);
+const note = ref<StatusLine | null>(null);
+/** The setting the snippets' texts name: Settings > DevTools & Debugging > Snippets (RB-094-21). */
+const LIBRARY_SETTING = 'snippets.library';
+/** The save failures that say to keep the snippet in the settings instead. */
+const KEEP_IN_SETTINGS = [PREFIX + 'errors.save_untrusted', PREFIX + 'errors.no_project'];
 const query = ref('');
 const name = ref('');
 const code = ref('');
@@ -100,7 +106,9 @@ async function save(): Promise<void> {
     selected.value = { source: 'local', name: saved, code: code.value, description: '', world: 'isolated', target: 'all', timeoutMs: 0 };
     await refresh();
   } catch (error) {
-    note.value = { tone: 'error', text: panel.error(error) };
+    const line: StatusLine = { tone: 'error', text: panel.error(error) };
+    const keep = KEEP_IN_SETTINGS.includes(error instanceof Error ? error.message : '');
+    note.value = keep ? { ...line, setting: { key: LIBRARY_SETTING, label: t('panel.setting_link') } } : line;
   }
 }
 
@@ -187,7 +195,11 @@ onBeforeUnmount(stopEvents);
       <div class="grid gap-3 md:grid-cols-[minmax(200px,2fr)_3fr]">
         <div class="min-w-0">
           <SnippetList ref="list" :entries="shown" :selected="selected" @open="open" />
-          <UEmpty v-if="shown.length === 0" id="empty" icon="i-lucide-code" :title="t('panel.empty')" variant="naked" />
+          <UEmpty v-if="shown.length === 0" id="empty" icon="i-lucide-code" :title="t('panel.empty')" variant="naked">
+            <template #actions>
+              <SettingLink :setting-key="LIBRARY_SETTING" :label="t('panel.setting_link')" />
+            </template>
+          </UEmpty>
         </div>
         <SnippetEditor
           ref="editor"

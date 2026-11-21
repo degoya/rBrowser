@@ -88,6 +88,15 @@ impl LoadTable {
         }
     }
 
+    /// When the hub gave `view` the load it has pending at `now`; `None` without one, and for a
+    /// load that never started within [`LOAD_START_GRACE`].
+    pub fn given_at(&self, view: ViewId, now: Instant) -> Option<Instant> {
+        self.pending
+            .get(&view)
+            .filter(|pending| pending.counts(now))
+            .map(|pending| pending.since)
+    }
+
     /// Whether `view` loads a URL the hub gave it at `now`.
     pub fn is_loading(&self, view: ViewId, now: Instant) -> bool {
         self.pending

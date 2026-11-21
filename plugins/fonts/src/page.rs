@@ -28,11 +28,8 @@ pub const MAX_URL: usize = 2048;
 /// The largest number taken (a size in px or bytes); beyond it the page lies.
 const MAX_NUMBER: f64 = 1.0e12;
 
-/// `text` cut to `max` characters.
-#[must_use]
-pub fn cut(text: &str, max: usize) -> String {
-    text.chars().take(max).collect()
-}
+/// `text` cut to `max` characters, the app's own (RB-094-10).
+pub use rb_util::text::cut;
 
 fn text<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
     let value = Value::deserialize(deserializer)?;

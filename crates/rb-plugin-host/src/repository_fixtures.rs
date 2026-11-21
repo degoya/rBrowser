@@ -73,6 +73,6 @@ pub(crate) fn folders() -> (tempfile::TempDir, CatalogStore, PathBuf) {
 }
 
 /// The fixture clock.
-pub(crate) fn at() -> chrono::DateTime<chrono::Utc> {
+pub(crate) fn at() -> time::OffsetDateTime {
     now()
 }

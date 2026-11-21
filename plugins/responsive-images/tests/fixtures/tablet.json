@@ -1,0 +1,232 @@
+{
+  "url": "https://example.test/",
+  "dpr": 2,
+  "viewport": {
+    "width": 768,
+    "height": 1024
+  },
+  "images": [
+    {
+      "selector": "#hero",
+      "path": "1,HTML,1,BODY,0,MAIN,0,IMG",
+      "src": "https://example.test/img/hero.jpg",
+      "currentSrc": "https://example.test/img/hero-1536.jpg",
+      "srcset": "hero-800.jpg 800w, hero-1600.jpg 1600w, hero-3200.jpg 3200w",
+      "sizes": "100vw",
+      "picture": false,
+      "source": null,
+      "sourceWithoutSizes": false,
+      "loading": "lazy",
+      "fetchpriority": "high",
+      "rendered": {
+        "width": 768,
+        "height": 384
+      },
+      "natural": {
+        "width": 768,
+        "height": 384
+      },
+      "file": {
+        "width": 1536,
+        "height": 768
+      },
+      "fileFrom": "probe",
+      "vector": false,
+      "loaded": true,
+      "visible": true,
+      "lcp": true,
+      "needed": {
+        "width": 1536,
+        "height": 768
+      },
+      "ratio": 1,
+      "issues": [
+        {
+          "rule": "lcp",
+          "variant": "lazy",
+          "params": {
+            "dpr": "2"
+          }
+        }
+      ]
+    },
+    {
+      "selector": "#large",
+      "path": "1,HTML,1,BODY,0,MAIN,1,IMG",
+      "src": "https://example.test/img/large.jpg",
+      "currentSrc": "https://example.test/img/large-1200.jpg",
+      "srcset": "",
+      "sizes": "",
+      "picture": false,
+      "source": null,
+      "sourceWithoutSizes": false,
+      "loading": "",
+      "fetchpriority": "",
+      "rendered": {
+        "width": 300,
+        "height": 200
+      },
+      "natural": {
+        "width": 600,
+        "height": 400
+      },
+      "file": {
+        "width": 1200,
+        "height": 800
+      },
+      "fileFrom": "probe",
+      "vector": false,
+      "loaded": true,
+      "visible": true,
+      "lcp": false,
+      "needed": {
+        "width": 600,
+        "height": 400
+      },
+      "ratio": 2,
+      "issues": [
+        {
+          "rule": "oversized",
+          "params": {
+            "dpr": "2",
+            "rendered": "300 × 200",
+            "needed": "600 × 400",
+            "file": "1200 × 800",
+            "ratio": "2",
+            "factor": "1.5"
+          }
+        }
+      ]
+    },
+    {
+      "selector": "#small",
+      "path": "1,HTML,1,BODY,0,MAIN,2,IMG",
+      "src": "https://example.test/img/small.jpg",
+      "currentSrc": "https://example.test/img/small-600.jpg",
+      "srcset": "",
+      "sizes": "",
+      "picture": false,
+      "source": null,
+      "sourceWithoutSizes": false,
+      "loading": "",
+      "fetchpriority": "",
+      "rendered": {
+        "width": 600,
+        "height": 450
+      },
+      "natural": {
+        "width": 300,
+        "height": 225
+      },
+      "file": {
+        "width": 600,
+        "height": 450
+      },
+      "fileFrom": "probe",
+      "vector": false,
+      "loaded": true,
+      "visible": true,
+      "lcp": false,
+      "needed": {
+        "width": 1200,
+        "height": 900
+      },
+      "ratio": 0.5,
+      "issues": [
+        {
+          "rule": "undersized",
+          "params": {
+            "dpr": "2",
+            "rendered": "600 × 450",
+            "needed": "1200 × 900",
+            "file": "600 × 450",
+            "ratio": "0.5",
+            "factor": "1"
+          }
+        }
+      ]
+    },
+    {
+      "selector": "#no-sizes",
+      "path": "1,HTML,1,BODY,0,MAIN,3,IMG",
+      "src": "https://example.test/img/no-sizes.jpg",
+      "currentSrc": "https://example.test/img/no-sizes-640.jpg",
+      "srcset": "card-320.jpg 320w, card-640.jpg 640w, card-960.jpg 960w",
+      "sizes": "",
+      "picture": false,
+      "source": null,
+      "sourceWithoutSizes": false,
+      "loading": "",
+      "fetchpriority": "",
+      "rendered": {
+        "width": 320,
+        "height": 240
+      },
+      "natural": {
+        "width": 320,
+        "height": 240
+      },
+      "file": {
+        "width": 640,
+        "height": 480
+      },
+      "fileFrom": "probe",
+      "vector": false,
+      "loaded": true,
+      "visible": true,
+      "lcp": false,
+      "needed": {
+        "width": 640,
+        "height": 480
+      },
+      "ratio": 1,
+      "issues": [
+        {
+          "rule": "sizes-missing",
+          "variant": "img",
+          "params": {
+            "dpr": "2"
+          }
+        }
+      ]
+    },
+    {
+      "selector": "#right",
+      "path": "1,HTML,1,BODY,0,MAIN,4,IMG",
+      "src": "https://example.test/img/right.jpg",
+      "currentSrc": "https://example.test/img/right-400.jpg",
+      "srcset": "logo-200.jpg 200w, logo-400.jpg 400w, logo-600.jpg 600w",
+      "sizes": "200px",
+      "picture": false,
+      "source": null,
+      "sourceWithoutSizes": false,
+      "loading": "lazy",
+      "fetchpriority": "",
+      "rendered": {
+        "width": 200,
+        "height": 200
+      },
+      "natural": {
+        "width": 200,
+        "height": 200
+      },
+      "file": {
+        "width": 400,
+        "height": 400
+      },
+      "fileFrom": "probe",
+      "vector": false,
+      "loaded": true,
+      "visible": true,
+      "lcp": false,
+      "needed": {
+        "width": 400,
+        "height": 400
+      },
+      "ratio": 1,
+      "issues": []
+    }
+  ],
+  "more": 0,
+  "lcpKnown": true
+}

@@ -2,14 +2,14 @@ use rb_plugin_types::codes;
 use serde_json::{Value, json};
 
 use super::{
-    PLUGIN_CDP_METHODS, Pending, allowed, check, domain_allowed, domain_matches, guard, origin,
-    view_allows,
+    MAX_PLUGIN_WIDTH, MIN_PLUGIN_WIDTH, PLUGIN_CDP_METHODS, Pending, allowed, check,
+    domain_allowed, domain_matches, guard, origin, view_allows,
 };
 
 /// What the first-party plugins send today (grep of `plugins/*/src`), plus storage-panel's
 /// cookies, network-panel's response bodies, simulators' vision deficiencies, color-picker's
-/// pixels, coverage's rule usage, precise coverage and sheet texts, and pwa-check's
-/// installability verdict.
+/// pixels, coverage's rule usage, precise coverage and sheet texts, pwa-check's
+/// installability verdict, and width-sweep's width lease (RB-093-01).
 const FIRST_PARTY: &[&str] = &[
     "Accessibility.getFullAXTree",
     "Accessibility.getPartialAXTree",
@@ -26,6 +26,8 @@ const FIRST_PARTY: &[&str] = &[
     "DOM.pushNodesByBackendIdsToFrontend",
     "DOM.querySelector",
     "DOM.scrollIntoViewIfNeeded",
+    "Emulation.clearDeviceMetricsOverride",
+    "Emulation.setDeviceMetricsOverride",
     "Emulation.setEmulatedVisionDeficiency",
     "Emulation.setScriptExecutionDisabled",
     "Network.deleteCookies",
@@ -364,6 +366,42 @@ fn the_view_decides_which_cookies_a_plugin_reaches() {
 #[test]
 fn params_must_be_an_object() {
     let answer = check("sample", "DOM.getDocument", &Value::Array(Vec::new()));
+    assert_eq!(refused_reason(answer), "params");
+}
+
+#[test]
+fn a_width_override_names_one_width_in_range_and_nothing_else() {
+    let set = "Emulation.setDeviceMetricsOverride";
+    for width in [MIN_PLUGIN_WIDTH, 720, MAX_PLUGIN_WIDTH] {
+        let answer = check("width-sweep", set, &json!({ "width": width }));
+        assert_eq!(answer, Ok(Pending::None), "{width}");
+    }
+    for params in [
+        json!({}),
+        json!({ "width": 0 }),
+        json!({ "width": MIN_PLUGIN_WIDTH - 1 }),
+        json!({ "width": MAX_PLUGIN_WIDTH + 1 }),
+        json!({ "width": -720 }),
+        json!({ "width": 720.5 }),
+        json!({ "width": "720" }),
+        json!({ "width": 720, "height": 800 }),
+        json!({ "width": 720, "deviceScaleFactor": 1 }),
+        json!({ "width": 720, "mobile": true }),
+        json!({ "width": 720, "scale": 2 }),
+        json!({ "width": 720, "screenWidth": 5000 }),
+        json!({ "width": 720, "positionX": 0 }),
+        json!({ "width": 720, "dontSetVisibleSize": false }),
+    ] {
+        let answer = check("width-sweep", set, &params);
+        assert_eq!(refused_reason(answer), "width", "{params}");
+    }
+}
+
+#[test]
+fn the_width_lease_ends_without_parameters() {
+    let clear = "Emulation.clearDeviceMetricsOverride";
+    assert_eq!(check("width-sweep", clear, &json!({})), Ok(Pending::None));
+    let answer = check("width-sweep", clear, &json!({ "width": 720 }));
     assert_eq!(refused_reason(answer), "params");
 }
 

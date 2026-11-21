@@ -11,9 +11,16 @@
 //! - `element`: `DOM.querySelector` (or a picked node), `DOM.getBoxModel`'s border box plus
 //!   the padding, moved into the page by the scroll offset, `captureBeyondViewport`, so an
 //!   element out of the viewport is captured as well.
+//!
+//! A windowless render view (RB-090-83) paints only its own rectangle: with the page's height in
+//! the emulation alone its full-page image repeated the top viewport down the page (RB-090-88).
+//! Its [`Surface`] grows the view to the page's height after the override and before the shot,
+//! and gives it its own size back after the restore ([`capture_on`]); a grid view is a window
+//! and needs none ([`FixedSurface`]).
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use base64::Engine as _;
 use rb_engine::EngineError;
 use serde_json::{Value, json};
@@ -114,9 +121,10 @@ pub fn element_clip(quad: &[f64], padding: u32, page: (f64, f64), scale: f64) ->
 }
 
 /// The CSS height of a full-page capture: the page's, at least the viewport's, at most
-/// [`MAX_DEVICE_PX`] device pixels.
+/// [`MAX_DEVICE_PX`] device pixels - and at most that many CSS px at a pixel ratio below 1.
 pub fn full_page_height(content: f64, viewport: f64, dpr: f64, scale: f64) -> f64 {
-    let device = if dpr > 0.0 { dpr } else { 1.0 } * scale.max(f64::EPSILON);
+    // A ratio below 1 (or none) counts as 1: the cap in CSS px is never above the device one.
+    let device = dpr.max(1.0) * scale.max(f64::EPSILON);
     content
         .max(viewport)
         .ceil()
@@ -139,6 +147,32 @@ fn number(value: &Value, pointer: &str) -> Result<f64, EngineError> {
         .ok_or_else(|| EngineError::Invalid(format!("CDP answered without {pointer}")))
 }
 
+/// What a full-page capture does to the view's painted area besides the emulation.
+#[async_trait]
+pub trait Surface: Send + Sync {
+    /// Grows the view to `height` CSS px and waits (bounded) for its frame at that size.
+    ///
+    /// # Errors
+    ///
+    /// The view cannot be resized (it is gone) or painted no frame that tall: a frame of the old
+    /// size is never captured as the full page.
+    async fn fit(&self, height: f64) -> Result<(), EngineError>;
+    /// Gives the view its own size back; after every [`Surface::fit`], also a failed one.
+    async fn restore(&self);
+}
+
+/// The surface of a view in a window: it paints the whole emulated page already.
+pub struct FixedSurface;
+
+#[async_trait]
+impl Surface for FixedSurface {
+    async fn fit(&self, _height: f64) -> Result<(), EngineError> {
+        Ok(())
+    }
+
+    async fn restore(&self) {}
+}
+
 /// Captures `shot` of the view behind `target` as PNG bytes at `scale`. `restore` gives the
 /// metrics to send back afterwards (the host's at that moment; `None`: the view is gone).
 pub async fn capture(
@@ -147,6 +181,20 @@ pub async fn capture(
     shot: &Shot,
     scale: f64,
     restore: &(dyn Fn() -> Option<Value> + Send + Sync),
+) -> Result<Vec<u8>, EngineError> {
+    capture_on(cdp, target, shot, scale, restore, &FixedSurface).await
+}
+
+/// [`capture`] of a view whose painted area is `surface`: a full page grows it to the page's
+/// height after the override and before the shot, and shrinks it after the restore - also when
+/// the capture failed.
+pub async fn capture_on(
+    cdp: &Arc<CdpRouter>,
+    target: &CaptureTarget,
+    shot: &Shot,
+    scale: f64,
+    restore: &(dyn Fn() -> Option<Value> + Send + Sync),
+    surface: &dyn Surface,
 ) -> Result<Vec<u8>, EngineError> {
     let session = Some(target.session.as_str());
     let current = number(&target.metrics, "/height")?;
@@ -157,6 +205,8 @@ pub async fn capture(
     };
     // Set before each override call: one that failed may still have taken effect.
     let mut overridden = false;
+    // Set before the surface grows: a fit that failed may still have resized it.
+    let mut grown = false;
     let mut result = Ok(());
     if (nominal_height - current).abs() > f64::EPSILON {
         overridden = true;
@@ -170,7 +220,13 @@ pub async fn capture(
             .map(|_| ());
     }
     let result = match result {
-        Ok(()) => shoot(cdp, target, shot, scale, nominal_height, &mut overridden).await,
+        Ok(()) => {
+            let changed = Changed {
+                overridden: &mut overridden,
+                grown: &mut grown,
+            };
+            shoot(cdp, target, shot, scale, nominal_height, changed, surface).await
+        }
         Err(error) => Err(error),
     };
     // Back to the host's metrics whatever happened; a failed restore wins over the image (the
@@ -182,7 +238,16 @@ pub async fn capture(
             .map(|_| ()),
         None => Ok(()),
     };
+    if grown {
+        surface.restore().await;
+    }
     restored.and(result)
+}
+
+/// What a shot changed of the view, for [`capture_on`] to put back.
+struct Changed<'a> {
+    overridden: &'a mut bool,
+    grown: &'a mut bool,
 }
 
 async fn shoot(
@@ -191,7 +256,8 @@ async fn shoot(
     shot: &Shot,
     scale: f64,
     nominal_height: f64,
-    overridden: &mut bool,
+    changed: Changed<'_>,
+    surface: &dyn Surface,
 ) -> Result<Vec<u8>, EngineError> {
     let session = Some(target.session.as_str());
     let width = number(&target.metrics, "/width")?;
@@ -212,13 +278,16 @@ async fn shoot(
         Shot::FullPage => {
             let content = number(&metrics, "/cssContentSize/height")?;
             let height = full_page_height(content, nominal_height, target.dpr, scale);
-            *overridden = true;
+            *changed.overridden = true;
             cdp.call(
                 "Emulation.setDeviceMetricsOverride",
                 with_height(&target.metrics, height),
                 session,
             )
             .await?;
+            // The frame the shot copies is painted at the view's size: the page's height too.
+            *changed.grown = true;
+            surface.fit(height).await?;
             let clip = Clip {
                 x: 0.0,
                 y: 0.0,

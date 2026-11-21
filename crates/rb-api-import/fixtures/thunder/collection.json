@@ -1,0 +1,44 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "Weather",
+  "collectionId": "c0a1",
+  "dateExported": "2026-10-02T08:00:00.000Z",
+  "version": "1.2",
+  "folders": [
+    { "_id": "f1", "name": "Forecast", "containerId": "", "created": "2026-10-01T00:00:00.000Z", "sortNum": 10000 },
+    { "_id": "f2", "name": "Daily", "containerId": "f1", "created": "2026-10-01T00:00:00.000Z", "sortNum": 20000,
+      "settings": { "auth": { "type": "bearer", "bearer": "{{token}}" } } }
+  ],
+  "requests": [
+    {
+      "_id": "r1", "colId": "c0a1", "containerId": "f2", "name": "Today",
+      "url": "{{baseUrl}}/forecast/today?city=Berlin", "method": "GET", "sortNum": 10000,
+      "headers": [
+        { "name": "Accept", "value": "application/json" },
+        { "name": "X-Trace", "value": "1", "isDisabled": true }
+      ],
+      "params": [{ "name": "city", "value": "Berlin", "isPath": false }],
+      "auth": { "type": "inherit" },
+      "tests": [{ "type": "res-code", "custom": "", "action": "equal", "value": "200" }]
+    },
+    {
+      "_id": "r2", "colId": "c0a1", "containerId": "", "name": "Report",
+      "url": "https://weather.example/report?api_key=wk-123", "method": "POST", "sortNum": 20000,
+      "headers": [],
+      "body": { "type": "json", "raw": "{\"city\": \"Berlin\", \"id\": \"{{#guid}}\"}", "form": [] },
+      "auth": { "type": "basic", "basic": { "username": "met", "password": "rain" } }
+    },
+    {
+      "_id": "r3", "colId": "c0a1", "containerId": "", "name": "Upload",
+      "url": "https://weather.example/upload", "method": "POST", "sortNum": 30000,
+      "body": { "type": "formdata", "raw": "", "form": [{ "name": "station", "value": "B1" }], "files": [{ "name": "data", "value": "C:\\data\\b1.csv" }] },
+      "auth": { "type": "aws" }
+    },
+    {
+      "_id": "r4", "colId": "c0a1", "containerId": "", "name": "Login",
+      "url": "https://weather.example/login", "method": "POST", "sortNum": 40000,
+      "body": { "type": "formencoded", "raw": "", "form": [{ "name": "user", "value": "met" }, { "name": "debug", "value": "1", "isDisabled": true }] }
+    }
+  ],
+  "settings": { "headers": [{ "name": "X-App", "value": "weather" }], "options": { "baseUrl": "" } }
+}

@@ -6,7 +6,9 @@ use rb_commands::CommandError;
 use rb_config::{LayoutMode, ProjectConfig, UserSettings, Zoom};
 use rb_engine::{EngineError, Target, ViewHost, ViewId};
 
-use super::env::{frame_argb, initial_environment, is_web_url, next_environment, rewrite_url};
+use rb_util::url::is_web_url;
+
+use super::env::{frame_argb, initial_environment, next_environment, rewrite_url};
 use super::layouts::{
     PresetError, Selection, fitted, next_preset, preset_at, resolve, start_selection,
 };

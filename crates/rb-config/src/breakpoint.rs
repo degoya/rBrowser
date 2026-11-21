@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Geolocation, Paper};
+use crate::{Geolocation, Paper, TextDirection};
 
 /// The `navigator.platform` values the settings window suggests (`x-options`, RB-080-20); any
 /// other string stays allowed.
@@ -50,6 +50,13 @@ pub enum EngineKind {
     Firefox,
     /// Playwright's WebKit build ("WebKit, not Safari").
     Webkit,
+    /// Chrome on an Android device on USB, over ADB (RB-095-02): the device's own size.
+    Android,
+    /// The real Safari over `safaridriver`, macOS only (RB-095-03).
+    Safari,
+    /// Mobile Safari on iOS over `safaridriver`, macOS only: the iOS Simulator or a connected
+    /// iPhone or iPad (RB-095-04).
+    Ios,
 }
 
 impl EngineKind {
@@ -61,6 +68,9 @@ impl EngineKind {
             EngineKind::Chromium => "chromium",
             EngineKind::Firefox => "firefox",
             EngineKind::Webkit => "webkit",
+            EngineKind::Android => "android",
+            EngineKind::Safari => "safari",
+            EngineKind::Ios => "ios",
         }
     }
 }
@@ -94,6 +104,11 @@ pub struct Breakpoint {
     /// The engine; `chromium` by default.
     #[serde(default)]
     pub engine: EngineKind,
+    /// With engine `ios` (RB-095-04): the simulator model (`iPhone 16`) or the UDID of a
+    /// simulator or a connected device; absent, `engines.ios.defaultSimulator` or the one
+    /// device connected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ios_device: Option<String>,
     /// The session (cookie/storage partition) of `sessions[]`; `default` when absent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session: Option<String>,
@@ -194,6 +209,14 @@ pub struct EmulationFields {
     /// (RB-080-10).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paper: Option<Paper>,
+    /// The text direction forced on the page's `<html dir>`, live (RB-092-02).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dir: Option<TextDirection>,
+    /// The language forced on the page's `<html lang>` (BCP 47), live; empty keeps the page's
+    /// (RB-092-02).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("x-options" = LOCALES))]
+    pub lang: Option<String>,
 }
 
 /// `prefers-color-scheme`.

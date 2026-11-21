@@ -1,6 +1,7 @@
 //! Where a comparison's shots go (split from [`super::runs`]): each is written into the run's
 //! folder, and once every environment of a breakpoint and path is in, they are diffed across
-//! every environment pair on a blocking thread.
+//! every environment pair on a blocking thread. The engine comparison (RB-094-03) takes the same
+//! sink with its engines as the environments.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -21,15 +22,15 @@ type Group = Vec<Option<Option<Vec<u8>>>>;
 
 /// Where the shots go: each is written into the run's folder, and once every environment of a
 /// breakpoint and path is in, they are diffed.
-pub(super) struct Sink {
-    pub(super) run: Arc<Mutex<EnvRun>>,
-    pub(super) store: RunStore,
+pub(crate) struct Sink {
+    pub(crate) run: Arc<Mutex<EnvRun>>,
+    pub(crate) store: RunStore,
     /// `(path, breakpoint)` -> each environment's PNG (`Some(None)` for a failed shot).
-    pub(super) groups: Mutex<BTreeMap<(usize, usize), Group>>,
-    pub(super) pairs: Vec<(usize, usize)>,
-    pub(super) options: DiffOptions,
-    pub(super) max_ratio: f64,
-    pub(super) events: Arc<dyn RunEvents>,
+    pub(crate) groups: Mutex<BTreeMap<(usize, usize), Group>>,
+    pub(crate) pairs: Vec<(usize, usize)>,
+    pub(crate) options: DiffOptions,
+    pub(crate) max_ratio: f64,
+    pub(crate) events: Arc<dyn RunEvents>,
 }
 
 impl Sink {
@@ -125,6 +126,7 @@ impl Sink {
                 diff.different_pixels = found.different_pixels;
                 diff.total_pixels = found.total_pixels;
                 diff.image = image;
+                diff.regions = found.regions;
                 diff.error = found.error;
             }
         }

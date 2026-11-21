@@ -29,8 +29,10 @@ Project and settings:
 
 Reading the pages:
 - `snapshot` answers the accessibility tree of each view - the cheapest way to see a page.
-- `console_logs`, `network_requests` and `errors` answer what each view reported since the
-  server started (requests without headers or bodies).
+- `console_logs` and `errors` answer what each view reported since the server started;
+  `network_requests` answers the requests from its first call on (from the start with the
+  setting `mcp.collectNetwork`), without headers or bodies - reload the page after that first
+  call to see a page load's requests.
 - `evaluate` runs JavaScript in the page; it is off unless a person switched it on, and then
   answers an error that names the setting.
 - `view_metrics` answers each view's Web Vitals (LCP, CLS, INP, FCP, TTFB) with their rating
@@ -48,6 +50,8 @@ Interacting and sync:
   between the views and answers its state; `bus_send` sends a message on the page API's bus.
 - `screenshot` captures views as PNG, `checks_run` runs the check plugins and answers their
   findings, `session_assign` and `session_clear` move views between sessions and clear one.
+- `bug_report` writes a masked bug report of the views (screenshots, console errors, failed
+  requests, emulation) below `.rbrowser/out/reports/` and answers its paths, never its content.
 
 Changing the config: `config_set` writes one key of `.rbrowser/config.json`;
 `breakpoint_add`, `breakpoint_update` and `breakpoint_remove` edit the breakpoints. Keys that
@@ -72,9 +76,16 @@ this installation updates, `update_check` checks the release channel now, and `u
 only asks the person: rBrowser shows the offer with its Install and restart button, and nothing
 installs without their click.
 
+Prompts and resources: prompts/list offers ready workflows - responsive review, accessibility
+triage, bug reproduction - each taking url and breakpoints. The resources are read only:
+`rbrowser://views` (what `views_list` answers), `rbrowser://findings/latest` (the last
+`checks_run`), `rbrowser://screenshots/latest` (paths and per file a URI; the PNG only when that
+URI is read) and `rbrowser://config` (the project config without its protected keys).
+
 Other tools: `devtools_open`, `devtools_inspect_at` (DevTools with the element at a point
 selected; it opens them whatever `devtools.openOnInspect` says), `app_info`, `wsl_info`, `diagnostics`, `plugins_list`,
-`project_open`.
+`project_open`, `app_perf` (the timing counters: sync replay per engine, plugin calls, shell IPC,
+start-up; `reset` measures afresh).
 
 Playwright and other CDP clients: `cdp_endpoint` answers the URL for
 `connectOverCDP(url, { headers })` with its token (and the URL from WSL); a person switches the

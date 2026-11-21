@@ -59,6 +59,10 @@ pub struct McpOptions {
     pub allow_evaluate: bool,
     /// `mcp.maxAnswerBytes`: the most bytes `evaluate` and `snapshot` answer; more is cut.
     pub max_answer_bytes: usize,
+    /// `mcp.prompts`: the prompts are listed and answered (RB-095-01).
+    pub prompts: bool,
+    /// `mcp.resources`: the resources are listed and read (RB-095-01).
+    pub resources: bool,
 }
 
 impl Default for McpOptions {
@@ -67,6 +71,8 @@ impl Default for McpOptions {
             navigation_timeout: DEFAULT_NAVIGATION_TIMEOUT,
             allow_evaluate: false,
             max_answer_bytes: DEFAULT_MAX_ANSWER_BYTES,
+            prompts: true,
+            resources: true,
         }
     }
 }
@@ -214,6 +220,36 @@ pub trait Backend: Send + Sync + 'static {
     ) -> Result<Value, ToolFailure> {
         let _ = (name, views, wait);
         Err(no_flows())
+    }
+
+    /// The last check run (RB-060-01) as `{ run, messages }`: the run's `findings.json` and the
+    /// texts of its message keys (`rbrowser://findings/latest`, RB-095-01). `None` before the
+    /// first run, and by default.
+    fn latest_findings(&self) -> Option<Value> {
+        None
+    }
+
+    /// The last screenshots saved below the project's screenshot folder (RB-050-03) as
+    /// `{ folder, shots, overview }`, each shot `{ view, label, width, height, path, error }`
+    /// and never the image (`rbrowser://screenshots/latest`, RB-095-01). `None` before the
+    /// first, and by default.
+    fn latest_screenshots(&self) -> Option<Value> {
+        None
+    }
+
+    /// The PNG of file `index` of [`Backend::latest_screenshots`] - the shots with a `path` in
+    /// their order, the overview last - when it has at most `max_bytes`; refused with
+    /// `answer_too_large` over it. Only those files: the index never names a path of its own.
+    fn latest_screenshot_png(
+        &self,
+        index: usize,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, ToolFailure> {
+        let _ = (index, max_bytes);
+        Err(ToolFailure::new(
+            "screenshots_none",
+            "no screenshot was saved yet: take one with screenshot",
+        ))
     }
 }
 

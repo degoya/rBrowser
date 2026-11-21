@@ -71,6 +71,20 @@ describe('the sitemap bar', () => {
     });
   });
 
+  it('opens the gallery of a running capture before its index.html exists (RB-090-88)', async () => {
+    // The app's gallery window reads run.json; the core tells the person when the system
+    // browser's HTML export comes only at the end.
+    const { wrapper, mock } = await bar(run);
+    await wrapper.get('[data-testid="sitemap-gallery"]').trigger('click');
+    await settle();
+    expect(mock.sent).toContainEqual({ type: 'runCommand', id: 'sitemap.gallery', args: { runId: 'r1' } });
+  });
+
+  it('offers no gallery before any capture', async () => {
+    const { wrapper } = await bar();
+    expect(wrapper.find('[data-testid="sitemap-gallery"]').exists()).toBe(false);
+  });
+
   it('opens by itself when a capture starts, without taking the focus (RB-090-83)', async () => {
     const result = await mountWithShell(SitemapBar, { mount: { props: { subscribe: () => () => undefined } } });
     current = result.wrapper;

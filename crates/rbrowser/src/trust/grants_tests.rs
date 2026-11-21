@@ -108,3 +108,19 @@ fn the_sidecar_is_risky_too() {
     let shown = details(&grants(&[Capability::Sidecar, Capability::Views]));
     assert_eq!(shown.risky, ["sidecar"]);
 }
+
+#[test]
+fn the_consent_probe_is_risky_too() {
+    // The core loads any http(s) address the plugin names - intranet ones included - in a
+    // browser of its own (RB-094-09).
+    let shown = details(&grants(&[Capability::ConsentProbe, Capability::Views]));
+    assert_eq!(shown.risky, ["consent-probe"]);
+}
+
+#[test]
+fn the_api_client_is_risky_too() {
+    // The core sends what the plugin names to the hosts a person allowed and writes the
+    // project's .rbrowser/api/ (RB-096-01).
+    let shown = details(&grants(&[Capability::ApiClient, Capability::Views]));
+    assert_eq!(shown.risky, ["api-client"]);
+}

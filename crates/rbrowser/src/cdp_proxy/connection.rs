@@ -36,7 +36,7 @@ where
 {
     let router = server.router.clone();
     let filter = server.hooks.filter;
-    let mut events = router.subscribe();
+    let mut events = router.subscribe_raw();
     let mut revoked = server.revocations();
     let (mut sink, mut stream) = ws.split();
     let mut client = match open(&router, filter, &endpoint).await {
@@ -201,7 +201,7 @@ fn call_result(reply: Result<Value, EngineError>) -> Result<Value, CallError> {
 
 /// Takes the events already received; `true` when the client's session is gone.
 fn drain(
-    events: &mut broadcast::Receiver<CdpEvent>,
+    events: &mut broadcast::Receiver<Arc<CdpEvent>>,
     client: &mut ClientSession,
     router: &Arc<CdpRouter>,
     filter: &dyn rb_cdp::TargetFilter,

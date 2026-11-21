@@ -10,7 +10,8 @@
 // The endpoint comes from the environment, as in examples/playwright/endpoint.ts:
 // RBROWSER_CDP_URL (+ RBROWSER_CDP_TOKEN), or RBROWSER_CDP_ENDPOINT naming a file with the
 // answer of the MCP tool `cdp_endpoint` (inside WSL its `wsl` route). No message here carries
-// the token. Node's own fetch and WebSocket, no packages.
+// the token. Node's own fetch and WebSocket, no packages. The CDP helpers are shared with
+// scripts/lib/perf-k1.mjs (the click latency, K1).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -47,7 +48,7 @@ function text(value) {
 }
 
 /** The proxy URL and headers from the environment (endpoint.ts's rules). */
-function endpoint(env) {
+export function endpoint(env) {
   const url = text(env.RBROWSER_CDP_URL);
   if (url !== undefined) {
     const token = text(env.RBROWSER_CDP_TOKEN);
@@ -77,7 +78,7 @@ function endpoint(env) {
 }
 
 /** The browser's WebSocket URL behind the proxy URL. */
-async function browserSocket(proxy) {
+export async function browserSocket(proxy) {
   if (proxy.url.startsWith('ws://') || proxy.url.startsWith('wss://')) return proxy.url;
   const base = proxy.url.endsWith('/') ? proxy.url : `${proxy.url}/`;
   const answer = await fetch(new URL('json/version', base), { headers: proxy.headers });
@@ -89,7 +90,7 @@ async function browserSocket(proxy) {
 }
 
 /** A flat-session CDP client over one WebSocket. */
-async function connect(url, headers) {
+export async function connect(url, headers) {
   const socket = new WebSocket(url, { headers });
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
@@ -131,7 +132,7 @@ async function connect(url, headers) {
   return { call, close: () => socket.close() };
 }
 
-async function evaluate(cdp, session, expression) {
+export async function evaluate(cdp, session, expression) {
   const answer = await cdp.call(
     'Runtime.evaluate',
     { expression, returnByValue: true, awaitPromise: true },

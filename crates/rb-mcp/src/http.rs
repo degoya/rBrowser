@@ -122,6 +122,8 @@ pub async fn serve_http(
 ) -> std::io::Result<HttpHandle> {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, config.port)).await?;
     let addr = listener.local_addr()?;
+    // A new server: no client has reached it yet (RB-091-09).
+    crate::activity::SERVER.reset();
     let tools = Arc::clone(&backend);
     let service = StreamableHttpService::new(
         move || Ok(RbMcpServer::new(Arc::clone(&backend))),
@@ -221,14 +223,15 @@ async fn revision(
     response
 }
 
-/// The revision of the tools `backend` serves: a hash over the plugin tools' names (the core
-/// tools are fixed for a build).
+/// The revision of the tools `backend` serves: a hash over the plugin tools' names and their
+/// argument schemas (the core tools are fixed for a build) - a plugin updated live may keep a
+/// tool's name and change its arguments (RB-092-06).
 #[must_use]
 pub fn tools_revision(backend: &dyn Backend) -> String {
-    let mut names: Vec<String> = backend
+    let mut names: Vec<(String, String)> = backend
         .plugin_tools()
         .into_iter()
-        .map(|tool| tool.name)
+        .map(|tool| (tool.name, tool.input_schema.to_string()))
         .collect();
     names.sort();
     let mut hasher = std::hash::DefaultHasher::new();
@@ -239,7 +242,11 @@ pub fn tools_revision(backend: &dyn Backend) -> String {
 /// Host, Origin and token, before anything else runs.
 async fn guard(State(token): State<Arc<McpToken>>, request: Request, next: Next) -> Response {
     match check(&token, request.headers()) {
-        Ok(()) => next.run(request).await,
+        Ok(()) => {
+            // "Check connection" of the MCP setup: a client reached the server (RB-091-09).
+            crate::activity::SERVER.record(std::time::SystemTime::now());
+            next.run(request).await
+        }
         Err(refusal) => {
             tracing::debug!(code = refusal.code, "an MCP request was refused");
             refusal.into_response()

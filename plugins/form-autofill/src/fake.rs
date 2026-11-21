@@ -1,8 +1,9 @@
 //! A host for the native tests: views, the page script's answers per view (one for `collect`, one
-//! for `apply`), settings, a clock, every evaluated script recorded, and the project's files the
-//! plugin reads and writes (`.rbrowser/out/form-autofill/`), or no project at all.
+//! for `apply`, and queued ones for a fill's later passes, RB-094-22), settings, a clock, every
+//! evaluated script recorded, and the project's files the plugin reads and writes
+//! (`.rbrowser/out/form-autofill/`), or no project at all.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 use rb_plugin_api::{
     Capability, Failure, FailureKind, Finding, HttpRequest, HttpResponse, PluginHost, ViewId,
@@ -24,10 +25,16 @@ pub struct FakeHost {
     pub collected: BTreeMap<ViewId, Result<Value, Failure>>,
     /// What `apply` answers, by view; none answers `{}`.
     pub applied: BTreeMap<ViewId, Value>,
+    /// What the second, third, ... `collect` of a view answers, in turn; then `collected`.
+    pub later_collects: BTreeMap<ViewId, VecDeque<Value>>,
+    /// What the view's `apply` calls answer, in turn; then `applied`.
+    pub later_applies: BTreeMap<ViewId, VecDeque<Value>>,
     /// Every script evaluated, as `(view, script)`.
     pub evaluated: Vec<(ViewId, String)>,
     pub settings: BTreeMap<String, String>,
     pub now: u64,
+    /// The seconds each `evaluate` adds to `now`: a page that takes its time.
+    pub tick: u64,
     pub progress: Vec<(u32, u32)>,
     /// The project's files by path (`.rbrowser/out/form-autofill/presets.json`).
     pub files: BTreeMap<String, Vec<u8>>,
@@ -54,6 +61,24 @@ impl FakeHost {
 
     pub fn collect(&mut self, view: ViewId, answer: Value) -> &mut Self {
         self.collected.insert(view, Ok(answer));
+        self
+    }
+
+    /// What the view's next later `collect` answers (a fill's second pass, then its third).
+    pub fn collect_next(&mut self, view: ViewId, answer: Value) -> &mut Self {
+        self.later_collects
+            .entry(view)
+            .or_default()
+            .push_back(answer);
+        self
+    }
+
+    /// What the view's next `apply` answers.
+    pub fn apply_next(&mut self, view: ViewId, answer: Value) -> &mut Self {
+        self.later_applies
+            .entry(view)
+            .or_default()
+            .push_back(answer);
         self
     }
 
@@ -87,9 +112,14 @@ impl FakeHost {
 }
 
 /// The request of a script: the JSON the page script is called with, before the agent's
-/// selector (src/fill.rs `script`).
+/// selector and the settle runner (src/fill.rs `script`).
 pub fn request_of(script: &str) -> Option<Value> {
-    let script = script.strip_suffix(&format!(", (\n{}\n)())", include_str!("target.js")))?;
+    let suffix = format!(
+        ", (\n{}\n)(), (\n{}\n)())",
+        include_str!("target.js"),
+        include_str!("settle.js")
+    );
+    let script = script.strip_suffix(&suffix)?;
     let start = script.rfind("\n)(")? + 3;
     serde_json::from_str(script.get(start..)?).ok()
 }
@@ -118,14 +148,34 @@ impl PluginHost for FakeHost {
     }
 
     fn evaluate(&mut self, view: ViewId, script: &str) -> Result<String, Failure> {
+        self.now += self.tick;
+        let earlier = self.requests(view);
         self.evaluated.push((view, script.to_owned()));
-        if request_of(script).is_some_and(|request| request["op"] == "apply") {
+        let op = request_of(script).map(|request| request["op"].clone());
+        if op.as_ref().is_some_and(|op| op == "apply") {
+            if let Some(next) = self
+                .later_applies
+                .get_mut(&view)
+                .and_then(VecDeque::pop_front)
+            {
+                return Ok(next.to_string());
+            }
             return Ok(self
                 .applied
                 .get(&view)
                 .cloned()
                 .unwrap_or_else(|| Value::Object(serde_json::Map::new()))
                 .to_string());
+        }
+        let collects = earlier.iter().filter(|r| r["op"] == "collect").count();
+        if op.is_some_and(|op| op == "collect")
+            && collects > 0
+            && let Some(next) = self
+                .later_collects
+                .get_mut(&view)
+                .and_then(VecDeque::pop_front)
+        {
+            return Ok(next.to_string());
         }
         match self.collected.get(&view) {
             Some(Ok(value)) => Ok(value.to_string()),

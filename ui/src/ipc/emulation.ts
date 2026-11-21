@@ -5,6 +5,8 @@
 export type ColorScheme = 'light' | 'dark';
 /** rb-config `Orientation`. */
 export type Orientation = 'portrait' | 'landscape';
+/** rb-config `TextDirection`: `<html dir>` forced on the page (RB-092-02). */
+export type TextDirection = 'ltr' | 'rtl' | 'auto';
 
 /** rb-config `SafeAreaInsets`, CSS px. */
 export interface SafeAreaInsets {
@@ -62,6 +64,9 @@ export interface Emulation {
   geolocation?: Geolocation;
   timezone?: string;
   cpuThrottling?: number;
+  /** RB-092-02: `<html dir>` and `<html lang>` forced on the page. */
+  dir?: TextDirection;
+  lang?: string;
 }
 
 /** rb-config `DevicePreset` (RB-010-12); a built-in one is named by the i18n key `devices.<id>`. */

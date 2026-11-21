@@ -11,25 +11,37 @@
 // `automation.recorder.playbackPace`); it waits while a recording runs, while edits are unsaved
 // and while a run goes on - which shows here with "Cancel" (`flows.cancel`; the core's
 // `flowRunChanged` asks again). While no recording runs, "Start recording" starts one
-// (`recorder.start`); the core's `recordingsChanged` (a recording stopped or saved) refreshes the
+// (`recorder.start`) and, while one runs, "Stop recording" in its place stops it (`recorder.stop`,
+// RB-090-94); the core's `recordingsChanged` (a recording stopped or saved) refreshes the
 // list, and a recording with unsaved edits is never replaced under the person's hands. While the
 // chosen recording plays (RB-090-84) its steps follow the run (`playback.ts`): the step a view
 // runs is marked, a failed one red with its reason, and with `automation.recorder.followPlayback`
 // the running step scrolls into sight; each step shows the pause Play waits before it at the pace
 // As recorded - the exporter's, answered with the recording, left out while edits are unsaved.
+// While a recording runs (RB-090-89, `automation.recorder.showLiveSteps`) its steps show as they
+// are taken (`LiveSteps.vue`; a panel opened meanwhile catches up); once it is saved the panel
+// opens it unless edits are unsaved, and the setting switched off only hides the list. The list
+// of recordings is `RecordingNav.vue`, with "Delete" beside each (RB-090-91, `recorder.delete`,
+// asking first while `automation.recorder.confirmDelete` is on); a recording gone from the list
+// closes here; another recording chosen over unsaved edits asks first, and the chosen one
+// changed on disk is read again - or, over unsaved edits, waits for Revert (`RecordingBar.vue`,
+// `draftGuard.ts`). The step list is `StepList.vue` with the recording editor (RB-092-01): steps added,
+// changed, switched off, tried, played from, continued from - the edits stay in the draft until
+// "Save"; "Try" and "Play from here" take the draft along.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
-import USelect from '@nuxt/ui/components/Select.vue';
+import { RECORDER_CONFIRM_KEY, confirmOf } from '../flows/confirmDelete';
 import { flowsChannel } from '../flows/host';
 import { useShell } from '../state/shell';
 import type { IpcClient } from '../ipc/client';
-import type { FlowRunState, JsonValue, RecordingList } from '../ipc/protocol';
+import type { FlowRunState, JsonValue, RecordingEntry, RecordingList } from '../ipc/protocol';
 import { windowEvents, type Subscribe } from '../whichkey/whichkey';
 import ExportDialog from './ExportDialog.vue';
 import { recorderChannel } from './host';
-import { RECORDER_ICONS } from './icons';
+import { withLiveSteps, type LiveRecording } from './live';
+import LiveSteps from './LiveSteps.vue';
 import { PACE_KEY, PACES, paceOf, type Pace } from './pace';
 import { pauseMap } from './pauses';
 import {
@@ -41,8 +53,12 @@ import {
   withStep,
   type Playback,
 } from './playback';
-import { deleteStep, moveStep, renameStep, setStepValue, type Recording } from './recording';
-import StepRow from './StepRow.vue';
+import { stepValue, type Recording } from './recording';
+import RecordingBar from './RecordingBar.vue';
+import RecordingNav from './RecordingNav.vue';
+import { changedOnDisk, entryOf } from './draftGuard';
+import { INSERTED_PAUSE_KEY, insertedPauseOf, pickedOnce } from './editor';
+import StepList from './StepList.vue';
 
 defineOptions({ inheritAttrs: false });
 const props = withDefaults(
@@ -56,7 +72,6 @@ const props = withDefaults(
   { subscribe: undefined, clipboard: undefined, inlineDialog: false },
 );
 const { t } = useI18n();
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const channel = recorderChannel(props.client, props.subscribe ?? windowEvents);
 const runs = flowsChannel(props.client, props.subscribe ?? windowEvents);
 const shell = useShell();
@@ -73,16 +88,33 @@ const flowRun = ref<FlowRunState | null>(null);
 const pace = ref<Pace>('fast');
 const playback = ref<Playback>(NO_PLAYBACK);
 const follow = ref(true);
+/** "Delete" asks first (`automation.recorder.confirmDelete`). */
+const confirmDelete = ref(true);
 /** By step id: the pause before it, as the recording's file holds it. */
 const pauses = ref<Map<number, number>>(new Map());
-const stepList = ref<HTMLElement | null>(null);
+const stepList = ref<InstanceType<typeof StepList> | null>(null);
+/** An added step's pause (`automation.recorder.insertedStepPauseMs`, RB-092-01). */
+const insertedPause = ref(500);
+/** The recording that runs, its steps as they are taken. */
+const live = ref<LiveRecording | null>(null);
+/** The chosen recording's entry as the panel read it; another recording asked for over edits;
+ *  the file changed on disk under unsaved edits; a save going on (RB-092-01 review). */
+const known = ref<RecordingEntry | undefined>(undefined);
+const pendingChoice = ref<string | null>(null);
+const stale = ref(false);
+let saving = false;
 
 const dirty = computed(
   () => draft.value !== null && JSON.stringify(draft.value) !== JSON.stringify(original.value),
 );
-const steps = computed(() => draft.value?.steps ?? []);
+/** The URLs the recording knows, proposed for a step's URL (RB-092-01). */
+const urls = computed(() => {
+  const known = (draft.value?.steps ?? []).filter((step) => ['navigate', 'waitForUrl'].includes(step.action.type));
+  return [...new Set([draft.value?.startUrl ?? '', ...known.map((step) => stepValue(step.action) ?? '')])].filter((url) => url !== '');
+});
 const runningIds = computed(() => runningSteps(playback.value));
 const running = computed(() => flowRun.value?.running ?? null);
+const recordingNow = computed(() => live.value?.name ?? list.value?.recordingNow);
 const paces = computed(() => PACES.map((value) => ({ value, label: t(`recorder.panel.pace.${value}`) })));
 /** "Play"'s tooltip: what it does, and its shortcut from the registry. */
 const playHint = computed(() => {
@@ -91,7 +123,7 @@ const playHint = computed(() => {
 });
 /** Why "Play" waits, or null. */
 const playBlocked = computed(() => {
-  if (list.value?.recordingNow !== undefined) {
+  if (recordingNow.value !== undefined) {
     return t('recorder.panel.play_recording');
   }
   if (dirty.value) {
@@ -108,21 +140,47 @@ async function load(): Promise<void> {
   try {
     list.value = await channel.list();
     error.value = list.value.error ?? null;
+    const gone =
+      !list.value.error && !list.value.recordings.some((entry) => entry.name === chosen.value);
+    if (chosen.value !== null && gone) {
+      // Deleted (RB-090-91): nothing is left to show or save. A list the core could not read
+      // says nothing about it, and unsaved edits stay.
+      chosen.value = null;
+      original.value = null;
+      draft.value = null;
+      playback.value = NO_PLAYBACK;
+    } else if (!saving && changedOnDisk(known.value, entryOf(list.value, chosen.value))) {
+      // Written meanwhile (an agent's step tools, a continued recording): read again, never
+      // over unsaved edits - those wait for Revert.
+      if (dirty.value) {
+        stale.value = true;
+      } else if (chosen.value !== null) {
+        await choose(chosen.value, true);
+      }
+    }
   } catch (caught) {
     error.value = t('recorder.panel.error.list', { reason: reason(caught) });
   }
 }
 
-async function choose(name: string): Promise<void> {
+/** Opens the recording `name`; over unsaved edits only once the person said so (`force`). */
+async function choose(name: string, force = false): Promise<void> {
+  if (dirty.value && !force) {
+    pendingChoice.value = name;
+    return;
+  }
+  pendingChoice.value = null;
   error.value = null;
   notice.value = null;
   try {
-    const { recording, pauses: known } = await channel.get(name);
+    const { recording, pauses: read } = await channel.get(name);
     chosen.value = name;
     playback.value = NO_PLAYBACK;
     original.value = recording;
     draft.value = recording;
-    pauses.value = pauseMap(known);
+    pauses.value = pauseMap(read);
+    known.value = entryOf(list.value, name);
+    stale.value = false;
   } catch (caught) {
     error.value = t('recorder.panel.error.open', { name, reason: reason(caught) });
   }
@@ -136,24 +194,28 @@ function edit(change: (recording: Recording) => Recording): void {
 }
 
 async function save(): Promise<void> {
-  if (chosen.value === null || draft.value === null) {
+  if (chosen.value === null || draft.value === null || stale.value) {
     return;
   }
   error.value = null;
+  saving = true;
   try {
     list.value = await channel.save(chosen.value, draft.value);
+    known.value = entryOf(list.value, chosen.value);
     original.value = draft.value;
     notice.value = t('recorder.panel.saved', { name: chosen.value });
     // The saved order has pauses of its own.
     pauses.value = pauseMap((await channel.get(chosen.value)).pauses);
   } catch (caught) {
     error.value = t('recorder.panel.error.save', { reason: reason(caught) });
+  } finally {
+    saving = false;
   }
 }
 
 function revert(): void {
   if (chosen.value !== null) {
-    void choose(chosen.value);
+    void choose(chosen.value, true);
   }
 }
 
@@ -175,13 +237,33 @@ function exported(folder: string): void {
   notice.value = t('recorder.export.saved', { folder });
 }
 
+/** An editor command on step `stepId` of the chosen recording (RB-092-01). */
+function runStep(id: string, stepId: number, extra: Record<string, JsonValue> = {}): void {
+  if (chosen.value !== null) {
+    run(id, { recordingId: chosen.value, stepId, ...extra });
+  }
+}
+
+/** "Try": the step alone in the active view, from the draft when it has unsaved edits. */
+function tryStep(stepId: number, draftToTry: Recording | null): void {
+  const sent = draftToTry ?? (dirty.value ? draft.value : null);
+  runStep('recorder.step_try', stepId, sent === null ? {} : { draft: sent as unknown as JsonValue });
+}
+
+/** "Pick in view": the element the next click in the active view picks, or null. */
+function pickElement() {
+  return pickedOnce(channel, chosen.value, (caught) => {
+    error.value = t('recorder.panel.error.command', { reason: reason(caught) });
+  });
+}
+
 /** Scrolls step `id` into sight when the panel follows the playback. */
 function reveal(id: number | null | undefined): void {
   if (!follow.value || id === null || id === undefined) {
     return;
   }
   void nextTick(() => {
-    const row = stepList.value?.querySelector(`[data-testid="step-${id}"]`);
+    const row = document.querySelector(`[data-testid="recorder-steps"] [data-testid="step-${id}"]`);
     if (row !== null && row !== undefined && typeof row.scrollIntoView === 'function') {
       row.scrollIntoView({ block: 'nearest' });
     }
@@ -219,6 +301,8 @@ async function loadSettings(): Promise<void> {
     const value = (key: string) => answer.values.find((entry) => entry.key === key)?.value;
     pace.value = paceOf(value(PACE_KEY));
     follow.value = followOf(value(FOLLOW_KEY));
+    confirmDelete.value = confirmOf(value(RECORDER_CONFIRM_KEY));
+    insertedPause.value = insertedPauseOf(value(INSERTED_PAUSE_KEY));
   } catch {
     // The defaults stay: fast, following.
   }
@@ -235,16 +319,37 @@ const stopSteps = channel.onStep((step) => {
     reveal(step.stepId);
   }
 });
+// A shortcut's editor command acts on the step in focus (RB-092-01).
+const stopCommands = channel.onStepCommand((command) => stepList.value?.runCommand(command));
+const stopLive = channel.onLive((steps) => {
+  const ended = steps.state === 'ended' && live.value !== null;
+  live.value = withLiveSteps(live.value, steps);
+  if (ended) {
+    void openSaved();
+  }
+});
+/** The recording just saved (the newest), unless the person has unsaved edits. */
+async function openSaved(): Promise<void> {
+  await load();
+  const newest = list.value?.recordings[0];
+  if (newest !== undefined && !dirty.value) {
+    await choose(newest.name);
+  }
+}
 onMounted(() => {
   shell.loadCommands();
   void load();
   void loadRun();
   void loadSettings();
+  // A recording that runs already: its steps so far (an older core answers nothing).
+  channel.catchUp().catch(() => undefined);
 });
 onBeforeUnmount(() => {
   stop();
   stopRuns();
   stopSteps();
+  stopLive();
+  stopCommands();
 });
 </script>
 
@@ -253,11 +358,20 @@ onBeforeUnmount(() => {
     <header class="flex flex-wrap items-center gap-2 border-b border-default px-3 py-2">
       <h2 class="text-sm font-semibold">{{ t('recorder.panel.title') }}</h2>
       <UBadge
-        v-if="list?.recordingNow !== undefined"
+        v-if="recordingNow !== undefined"
         color="error"
         variant="soft"
-        :label="t('recorder.panel.recording_now', { name: list.recordingNow })"
+        :label="t('recorder.panel.recording_now', { name: recordingNow })"
         data-testid="recording-now"
+      />
+      <UButton
+        v-if="recordingNow !== undefined"
+        size="sm"
+        color="error"
+        variant="outline"
+        :label="t('recorder.panel.stop')"
+        data-testid="recorder-stop"
+        @click="run('recorder.stop')"
       />
       <UButton
         v-else-if="list?.project === true"
@@ -278,120 +392,54 @@ onBeforeUnmount(() => {
       {{ t('recorder.panel.no_project') }}
     </p>
     <div v-else-if="list !== null" class="flex min-h-0 flex-1 flex-col sm:flex-row">
-      <nav
-        class="max-h-48 shrink-0 overflow-auto border-b border-default sm:max-h-none sm:w-56 sm:border-e sm:border-b-0"
-        :aria-label="t('recorder.panel.list')"
-      >
-        <p v-if="list !== null && list.recordings.length === 0" class="p-3 text-sm text-muted" data-testid="recorder-empty">
-          {{ t('recorder.panel.empty') }}
-        </p>
-        <ul>
-          <li v-for="entry in list?.recordings ?? []" :key="entry.name">
-            <UButton
-              block
-              color="neutral"
-              :variant="entry.name === chosen ? 'soft' : 'ghost'"
-              class="justify-start rounded-none text-start"
-              :aria-current="entry.name === chosen ? 'true' : undefined"
-              :data-testid="`recording-${entry.name}`"
-              @click="choose(entry.name)"
-            >
-              <span class="flex min-w-0 flex-col">
-                <span class="truncate font-medium">{{ entry.name }}</span>
-                <span class="text-xs text-muted">
-                  {{ t('recorder.panel.entry', { steps: entry.steps, when: when.format(entry.modifiedMs) }) }}
-                </span>
-              </span>
-            </UButton>
-          </li>
-        </ul>
-      </nav>
+      <RecordingNav
+        :list="list"
+        :chosen="chosen"
+        :confirm="confirmDelete"
+        :recording-now="recordingNow"
+        :playing="running?.flow ?? null"
+        @choose="choose"
+        @delete="(name) => run('recorder.delete', { recordingId: name })"
+      />
       <section class="flex min-h-0 min-w-0 flex-1 flex-col" :aria-label="t('recorder.panel.steps')">
-        <p v-if="draft === null" class="p-3 text-sm text-muted" data-testid="recorder-pick">{{ t('recorder.panel.pick') }}</p>
+        <LiveSteps v-if="live !== null" :live="live" />
+        <p v-else-if="draft === null" class="p-3 text-sm text-muted" data-testid="recorder-pick">{{ t('recorder.panel.pick') }}</p>
         <template v-else>
-          <div class="flex flex-wrap items-center gap-2 border-b border-default px-3 py-2">
-            <span class="truncate text-sm font-medium">{{ chosen }}</span>
-            <span v-if="dirty" class="text-xs text-warning" data-testid="recorder-dirty">{{ t('recorder.panel.unsaved') }}</span>
-            <span v-if="notice !== null" class="text-xs text-success" role="status" data-testid="recorder-notice">{{ notice }}</span>
-            <span class="text-xs text-muted" role="status" aria-live="polite" data-testid="recorder-running">{{
-              running === null ? '' : t('recorder.panel.running', { flow: running.flow })
-            }}</span>
-            <span class="ms-auto flex flex-wrap items-center gap-1">
-              <USelect
-                v-model="pace"
-                :items="paces"
-                size="sm"
-                class="w-40"
-                :aria-label="t('recorder.panel.pace.label')"
-                data-testid="recorder-pace"
-              />
-              <UButton
-                v-if="running !== null"
-                :icon="RECORDER_ICONS.flowCancel"
-                size="sm"
-                color="error"
-                variant="soft"
-                :label="t('recorder.panel.cancel')"
-                data-testid="recorder-cancel"
-                @click="run('flows.cancel')"
-              />
-              <UButton
-                :icon="RECORDER_ICONS.flowRun"
-                size="sm"
-                :label="t('recorder.panel.play')"
-                :disabled="playBlocked !== null"
-                :title="playBlocked ?? playHint"
-                data-testid="recorder-play"
-                @click="play"
-              />
-              <UButton
-                :icon="RECORDER_ICONS.recorderRevert"
-                size="sm"
-                color="neutral"
-                variant="ghost"
-                :label="t('recorder.panel.revert')"
-                :disabled="!dirty"
-                data-testid="recorder-revert"
-                @click="revert"
-              />
-              <UButton
-                :icon="RECORDER_ICONS.recorderSave"
-                size="sm"
-                :label="t('recorder.panel.save')"
-                :disabled="!dirty"
-                data-testid="recorder-save"
-                @click="save"
-              />
-              <UButton
-                :icon="RECORDER_ICONS.recorderExport"
-                size="sm"
-                color="neutral"
-                variant="outline"
-                :label="t('recorder.panel.export')"
-                :disabled="dirty"
-                :title="dirty ? t('recorder.panel.export_unsaved') : undefined"
-                data-testid="recorder-export"
-                @click="exporting = true"
-              />
-            </span>
-          </div>
-          <p v-if="steps.length === 0" class="p-3 text-sm text-muted">{{ t('recorder.panel.no_steps') }}</p>
-          <ol ref="stepList" class="min-h-0 flex-1 overflow-auto" data-testid="recorder-steps">
-            <StepRow
-              v-for="(step, index) in steps"
-              :key="step.id"
-              :step="step"
-              :index="index"
-              :count="steps.length"
-              :running="runningIds.has(step.id)"
-              :failure="playback.failed[step.id] ?? null"
-              :pause-ms="dirty ? 0 : (pauses.get(step.id) ?? 0)"
-              @rename="(name) => edit((recording) => renameStep(recording, step.id, name))"
-              @value="(value) => edit((recording) => setStepValue(recording, step.id, value))"
-              @move="(by) => edit((recording) => moveStep(recording, step.id, by))"
-              @remove="edit((recording) => deleteStep(recording, step.id))"
-            />
-          </ol>
+          <RecordingBar
+            v-model:pace="pace"
+            :name="chosen ?? ''"
+            :dirty="dirty"
+            :notice="notice"
+            :running-flow="running?.flow ?? null"
+            :paces="paces"
+            :play-blocked="playBlocked"
+            :play-hint="playHint"
+            :stale="stale"
+            :pending-choice="pendingChoice"
+            @play="play"
+            @cancel-run="run('flows.cancel')"
+            @revert="revert"
+            @save="save"
+            @export="exporting = true"
+            @discard="pendingChoice !== null && choose(pendingChoice, true)"
+            @keep="pendingChoice = null"
+          />
+          <StepList
+            ref="stepList"
+            :recording="draft"
+            :running-ids="runningIds"
+            :failed="playback.failed"
+            :pauses="pauses"
+            :dirty="dirty"
+            :recording-now="recordingNow"
+            :inserted-pause="insertedPause"
+            :urls="urls"
+            :pick-element="pickElement"
+            @edit="edit"
+            @try="tryStep"
+            @play-from="(stepId) => runStep('recorder.play_from', stepId, { pace, ...(dirty && draft !== null ? { draft } : {}) })"
+            @continue-from="(stepId) => runStep('recorder.continue_from', stepId)"
+          />
         </template>
       </section>
     </div>

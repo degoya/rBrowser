@@ -143,10 +143,11 @@ describe('the main menu', () => {
 
   it('just clicks a control whose menu the core draws: it needs no room in the row', async () => {
     const { wrapper, mock } = await setup(500);
-    // The "+" asks for a native menu under itself (`aria-haspopup`, RB-080-46).
+    // The "+" asks for a native menu under itself (`aria-haspopup`, RB-080-46), its rows the
+    // shell's since RB-094-20.
     const add = await chooseInMenu(wrapper, 'Add view');
     expect(add?.kind === 'item' && add.disabled).toBe(false);
-    expect(mock.sent.at(-1)).toMatchObject({ type: 'addViewMenu' });
+    expect(mock.sent.at(-1)).toMatchObject({ type: 'nativeMenu', menu: expect.stringMatching(/^add-\d+$/) });
     expect(states(wrapper).layout).toBe('hidden');
   });
 

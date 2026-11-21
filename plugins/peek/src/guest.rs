@@ -16,118 +16,13 @@ wit_bindgen::generate!({
 
 use exports::rbrowser::plugin::feature::Guest;
 use rb_plugin_api::feature::Feature;
-use rb_plugin_api::{
-    Capability, Failure, FailureKind, Finding, HttpRequest, HttpResponse, PluginHost, ViewId,
-    ViewInfo,
-};
-use rbrowser::plugin::{cdp, evaluate, host, settings, types, views};
+use rbrowser::plugin::types;
 
 use crate::Peek;
 
-fn from_wit(failure: types::Failure) -> Failure {
-    let kind = match failure.kind {
-        types::FailureKind::NotFound => FailureKind::NotFound,
-        types::FailureKind::AccessDenied => FailureKind::AccessDenied,
-        types::FailureKind::NotSupported => FailureKind::NotSupported,
-        types::FailureKind::BadData => FailureKind::BadData,
-        types::FailureKind::Cancelled => FailureKind::Cancelled,
-        types::FailureKind::Io => FailureKind::Io,
-        types::FailureKind::Limit => FailureKind::Limit,
-        types::FailureKind::Other => FailureKind::Other,
-    };
-    Failure {
-        kind,
-        code: failure.code,
-        params: failure.params.into_iter().collect(),
-    }
-}
-
-fn to_wit(failure: Failure) -> types::Failure {
-    let kind = match failure.kind {
-        FailureKind::NotFound => types::FailureKind::NotFound,
-        FailureKind::AccessDenied => types::FailureKind::AccessDenied,
-        FailureKind::NotSupported => types::FailureKind::NotSupported,
-        FailureKind::BadData => types::FailureKind::BadData,
-        FailureKind::Cancelled => types::FailureKind::Cancelled,
-        FailureKind::Io => types::FailureKind::Io,
-        FailureKind::Limit => types::FailureKind::Limit,
-        FailureKind::Other => types::FailureKind::Other,
-    };
-    types::Failure {
-        kind,
-        code: failure.code,
-        params: failure.params.into_iter().collect(),
-    }
-}
-
-/// The host as the plugin sees it.
-struct GuestHost;
-
-impl PluginHost for GuestHost {
-    fn log(&mut self, level: &str, message: &str) {
-        host::log(level, message);
-    }
-
-    fn now_unix_seconds(&mut self) -> u64 {
-        host::now_unix_seconds()
-    }
-
-    fn setting(&mut self, key: &str) -> Option<String> {
-        settings::get(key)
-    }
-
-    fn views(&mut self) -> Result<Vec<ViewInfo>, Failure> {
-        Ok(views::list()
-            .into_iter()
-            .map(|view| ViewInfo {
-                id: view.id,
-                label: view.label,
-                breakpoint: view.breakpoint,
-                engine: view.engine,
-                width: view.width,
-                height: view.height,
-                dpr: view.dpr,
-                url: view.url,
-                title: view.title,
-            })
-            .collect())
-    }
-
-    fn active_view(&mut self) -> Result<Option<ViewId>, Failure> {
-        Ok(views::active())
-    }
-
-    fn evaluate(&mut self, view: ViewId, script: &str) -> Result<String, Failure> {
-        evaluate::evaluate(view, script).map_err(from_wit)
-    }
-
-    fn cdp_send(&mut self, view: ViewId, method: &str, params: &str) -> Result<String, Failure> {
-        cdp::send(view, method, params).map_err(from_wit)
-    }
-
-    fn fetch(&mut self, _request: &HttpRequest) -> Result<HttpResponse, Failure> {
-        Err(Capability::Http.denied())
-    }
-
-    fn project_read(&mut self, _path: &str) -> Result<Vec<u8>, Failure> {
-        Err(Capability::ProjectRead.denied())
-    }
-
-    fn project_list(&mut self, _dir: &str) -> Result<Vec<String>, Failure> {
-        Err(Capability::ProjectRead.denied())
-    }
-
-    fn out_write(&mut self, _path: &str, _bytes: &[u8]) -> Result<(), Failure> {
-        Err(Capability::OutWrite.denied())
-    }
-
-    fn report_findings(&mut self, _items: &[Finding]) -> Result<(), Failure> {
-        Err(Capability::Findings.denied())
-    }
-
-    fn sidecar_call(&mut self, _method: &str, _params: &str) -> Result<String, Failure> {
-        Err(Capability::Sidecar.denied())
-    }
+rb_plugin_api::guest_host! {
+    /// The host as the plugin sees it.
+    struct GuestHost grants [settings, views, evaluate, cdp]
 }
 
 struct Component;

@@ -5,11 +5,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, Weak};
 
 use rb_engine::{EngineError, ViewId};
-use rb_sync::{AgentCommand, AgentConfig, AgentMessage, BINDING_NAME, CommandResult, WORLD_NAME};
+use rb_sync::{
+    AgentCommand, AgentConfig, AgentMessage, BINDING_NAME, CommandResult, PageLocale, WORLD_NAME,
+};
 use serde_json::{Value, json};
 use tokio::runtime::Handle;
 use tokio::sync::broadcast;
-use tokio::sync::broadcast::error::RecvError;
 
 use super::contexts::ContextTable;
 use super::{AGENT_SOURCE, boot_source, command_expression, inject};
@@ -17,6 +18,18 @@ use crate::cdp::{CdpEvent, CdpRouter, lock};
 
 /// Reports kept for a subscriber that falls behind.
 const REPORT_BUFFER: usize = 1024;
+/// The events the agents follow, on a tap of their own: no burst of others (screencast frames,
+/// network) pushes a binding call or a context out.
+const EVENTS: &[&str] = &[
+    "Runtime.bindingCalled",
+    "Runtime.executionContextCreated",
+    "Runtime.executionContextDestroyed",
+    "Runtime.executionContextsCleared",
+    "Target.attachedToTarget",
+    "Target.detachedFromTarget",
+];
+/// Events of [`EVENTS`] kept while the agents are busy.
+const TAP_CAPACITY: usize = 4096;
 /// How often a new document's agent is configured again when the configuration changed while
 /// it was being configured.
 const READY_ROUNDS: usize = 4;
@@ -51,6 +64,8 @@ struct State {
     /// The views whose last configuration did not reach every agent: the next reconfigure
     /// sends it again.
     unconfirmed: HashSet<ViewId>,
+    /// The page locale of each view that has one (RB-092-02, `agents_locale.rs`).
+    locales: HashMap<ViewId, PageLocale>,
 }
 
 impl State {
@@ -290,6 +305,7 @@ impl SyncAgents {
         state.drop_sessions_of(view);
         state.configs.remove(&view);
         state.unconfirmed.remove(&view);
+        state.locales.remove(&view);
     }
 
     async fn evaluate(
@@ -335,18 +351,14 @@ impl SyncAgents {
     }
 
     fn watch(&self) {
-        let mut events = self.cdp.subscribe();
+        let mut events = self.cdp.tap_methods(EVENTS, TAP_CAPACITY);
         let weak = self.me.clone();
         self.runtime.spawn(async move {
-            loop {
-                let event = match events.recv().await {
-                    Ok(event) => event,
-                    Err(RecvError::Lagged(missed)) => {
-                        tracing::warn!(missed, "CDP events dropped (sync agents)");
-                        continue;
-                    }
-                    Err(RecvError::Closed) => return,
-                };
+            while let Some(event) = events.recv_shared().await {
+                let missed = events.take_dropped();
+                if missed > 0 {
+                    tracing::warn!(missed, "CDP events dropped (sync agents)");
+                }
                 let Some(agents) = weak.upgrade() else {
                     return;
                 };
@@ -465,6 +477,8 @@ impl SyncAgents {
             let session = session.to_owned();
             self.runtime.spawn(async move {
                 agents.configure_ready(view, &session, context).await;
+                // Then the page's direction, language and pseudo-localisation (RB-092-02).
+                agents.locale_ready(view, &session, context).await;
             });
         }
         // No subscriber is not an error.
@@ -475,6 +489,9 @@ impl SyncAgents {
         });
     }
 }
+
+#[path = "agents_locale.rs"]
+mod locale;
 
 #[cfg(test)]
 #[path = "agents_tests.rs"]

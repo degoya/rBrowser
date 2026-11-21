@@ -29,14 +29,20 @@ const REFUSED_ROOTS: &[&str] = &[
     "mocks",
     "snippets",
     "pageScripts",
+    // Which environments get their Basic auth answered (RB-094-08).
+    "basicAuth",
 ];
-/// Single keys refused with what lies below them: where screenshots, recordings and exports are
-/// written is a person's choice, and only a person shortens the recorder's secret list.
+/// Single keys refused with what lies below them: where screenshots, recordings, exports and bug
+/// reports are written is a person's choice, only a person shortens the recorder's secret list,
+/// and only a person skips the look at a bug report's texts before it is saved (RB-093-04).
 const REFUSED_KEYS: &[&str] = &[
     "capture.dir",
     "automation.recorder.dir",
     "automation.recorderExport.dir",
     "automation.recorder.secretFields",
+    "checks.export.dir",
+    "report.folder",
+    "report.preview",
 ];
 /// A segment refused wherever it stands: request headers (`emulation.headers`,
 /// `breakpoints[].headers`).

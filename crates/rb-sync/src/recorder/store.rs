@@ -6,11 +6,14 @@
 //! recording written there would take the trust away), also after links are followed. A file
 //! is never overwritten: [`RecordingStore::save`] refuses an existing name, and
 //! [`RecordingStore::save_new`] picks the next free one (`name-2`, `name-3`, ...); only the
-//! Recorder panel's save writes over its own file ([`RecordingStore::replace`]).
+//! Recorder panel's save writes over its own file ([`RecordingStore::replace`]) and its "Delete"
+//! removes one ([`RecordingStore::delete`]). Every read-modify-write of a recording holds
+//! [`write_lock`], and each replace writes through a temporary file of its own (RB-092-01).
 
 use std::fs;
 use std::io::{ErrorKind, Write as _};
 use std::path::{Component, Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
 
 use super::export::{ExportError, from_json, to_json};
 use super::model::Recording;
@@ -25,6 +28,16 @@ pub const EXTENSION: &str = "json";
 pub const MAX_NAME: usize = 64;
 /// How many suffixes [`RecordingStore::save_new`] tries.
 const MAX_SUFFIX: u32 = 999;
+
+/// The lock every read-modify-write of a stored recording holds (RB-092-01): the MCP step
+/// tools, the Recorder panel's save and a continued recording's save, so none loses another's
+/// update. Process-wide: one app writes a project's recordings.
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+/// Takes the lock of every read-modify-write of a stored recording; held until dropped.
+pub fn write_lock() -> MutexGuard<'static, ()> {
+    rb_util::lock(&WRITE_LOCK)
+}
 
 /// Why a recording could not be stored or read.
 #[derive(Debug, thiserror::Error)]
@@ -153,17 +166,8 @@ impl RecordingStore {
             return Err(StoreError::NotFound(recording.name.clone()));
         }
         let text = to_json(recording)?;
-        let temporary = self
-            .dir
-            .join(format!(".{}.{EXTENSION}.tmp", recording.name));
-        let written = fs::File::create(&temporary).and_then(|mut file| {
-            file.write_all(text.as_bytes())?;
-            file.sync_all()
-        });
-        if let Err(error) = written.and_then(|()| fs::rename(&temporary, &path)) {
-            let _ = fs::remove_file(&temporary);
-            return Err(error.into());
-        }
+        // A temporary file of its own per write, so two writers never share one (RB-092-01).
+        rb_util::fs::write_atomic(&path, text.as_bytes())?;
         Ok(path)
     }
 
@@ -179,6 +183,19 @@ impl RecordingStore {
             Err(error) => return Err(error.into()),
         };
         Ok(from_json(&text)?)
+    }
+
+    /// Deletes the recording `name` (the Recorder panel's "Delete", RB-090-91); refuses a name
+    /// without a file.
+    pub fn delete(&self, name: &str) -> Result<(), StoreError> {
+        let path = self.path_of(name)?;
+        self.inside()?;
+        // A link goes alone; what it points to stays.
+        if !path.is_file() {
+            return Err(StoreError::NotFound(name.to_owned()));
+        }
+        fs::remove_file(&path)?;
+        Ok(())
     }
 
     /// The names of the stored recordings, sorted.

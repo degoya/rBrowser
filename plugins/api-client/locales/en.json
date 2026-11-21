@@ -1,0 +1,538 @@
+{
+  "plugin": {
+    "api-client": {
+      "commands": {
+        "panel": "Show the API client",
+        "run_collection": "Run the API client's saved requests with their checks",
+        "send": "Send the API client's request"
+      },
+      "errors": {
+        "auth_not_supported": "This auth ({auth}) is kept in the file but not sent yet; choose basic, bearer or an API key to send the request.",
+        "bad_args": "The API client got arguments it cannot read: {reason}",
+        "bad_folder": "\"{folder}\" is no folder of .rbrowser/api.",
+        "bad_format": "\"{format}\" is no format the API client imports.",
+        "bad_host": "That is no host name.",
+        "bad_id": "\"{id}\" is no request in .rbrowser/api: letters, digits, spaces, - _ . and folders, ending in .http.",
+        "bad_variable": "\"{name}\" cannot be a variable or environment here: a variable's name is a letter or _, then letters, digits, _ - and dots; a value holds at most 8 KiB.",
+        "capture_gone": "The views no longer hold this request; load the page again and take it from the network panel.",
+        "capture_template": "This request holds variable placeholders (double braces) the page wrote; it is not taken, so sending it can never fill in a secret.",
+        "capture_unavailable": "Captured requests are taken in by the window that captured them.",
+        "env_changed": "The environment file .rbrowser/api/http-client.env.json changed since the Variables tab read it; read it again, then make your change.",
+        "env_unreadable": "The environment file .rbrowser/api/http-client.env.json does not read: {reason}",
+        "exists": "\"{name}\" is already there; choose another name.",
+        "file_too_large": "The file is larger than {limit, plural, one {# byte} other {# bytes}}.",
+        "file_unreadable": "The body's file cannot be read.",
+        "folder_not_found": "There is no collection \"{folder}\".",
+        "grant_not_saved": "The host could not be kept in the project's local settings.",
+        "host_not_allowed": "This project does not send to {host} yet.",
+        "import_empty": "There is nothing to import: pick files or paste a text.",
+        "import_too_large": "That is more than one import reads (2 MiB and 500 files together); import fewer at a time.",
+        "import_unknown_format": "\"{source}\" is no collection the API client reads; choose its format.",
+        "import_unreadable": "\"{source}\" does not read: {reason}",
+        "invalid_json": "The JSON does not read: {reason}",
+        "invalid_request": "The request cannot be sent: {reason}",
+        "link": "A folder or file on the way is a link; the API client follows none.",
+        "no_core": "This rBrowser cannot run the API client.",
+        "no_project": "No project is open; the API client keeps its requests in the project's .rbrowser/api folder.",
+        "not_exported": "The export could not be written to .rbrowser/out/api-client/exports: {reason}",
+        "not_found": "There is no request \"{id}\".",
+        "not_written": "The request could not be written.",
+        "nothing_captured": "No captured request was named.",
+        "nothing_to_export": "There is no saved request to export there.",
+        "outside": "A body's file lies in the project, outside .git and outside rBrowser's own files.",
+        "secrets_not_saved": "The private values could not be kept in the project's local settings (config.local.json).",
+        "secrets_unreadable": "The private values (Settings > Network > API client) do not read: {reason}",
+        "send_failed": "The request got no answer: {reason}",
+        "too_deep": "\"{folder}\" would put its subfolders deeper than {most, plural, one {# level} other {# levels}}, which the API client does not list; choose a folder higher up.",
+        "too_many_captures": "At most {most} captured requests are taken at once; filter the list further.",
+        "too_many_environments": "A benchmark compares at most {most, plural, one {# environment} other {# environments}}.",
+        "too_many_hosts": "The project allows the most hosts it can keep; remove one in Settings > Network > API client.",
+        "too_many_names": "At most {most, plural, one {# secret is} other {# secrets are}} checked at once.",
+        "unreadable": "The request's file does not read (line {line}: {reason}).",
+        "unresolved": "These variables have no value: {names}. Set them in .rbrowser/api/http-client.env.json, in the private values or as RB_SECRET_ variables.",
+        "untrusted": "The API client works in a trusted workspace only: the project's requests run once you trust it."
+      },
+      "findings": {
+        "check_bad_path": "{request}: the check \"{check}\" has no JSONPath rBrowser reads - write it like $.items[0].id, $..name or $.items[*].",
+        "check_failed": "{request}: the check \"{check}\" failed - found {actual}.",
+        "check_missing": "{request}: the check \"{check}\" found nothing there.",
+        "check_not_json": "{request}: the check \"{check}\" reads JSON, and the answer is no JSON.",
+        "request_failed": "{request} got no answer in the collection run; send it in the API client to see why."
+      },
+      "name": "API client",
+      "panel": {
+        "allow": {
+          "description": "Only you can allow a host. The choice is kept for this project on this machine (config.local.json); take it back in Settings > Network > API client.",
+          "no": "Not now",
+          "title": "Send requests to {host} from this project?",
+          "yes": "Allow and send"
+        },
+        "auth": {
+          "authorizationCode": "Authorization code with PKCE",
+          "clientCredentials": "Client credentials",
+          "fields": {
+            "authUrl": "Authorization URL",
+            "clientId": "Client id",
+            "clientSecret": "Client secret",
+            "name": "Name",
+            "password": "Password",
+            "redirectUri": "Redirect URI",
+            "scope": "Scope",
+            "token": "Token",
+            "tokenUrl": "Token URL",
+            "username": "User name",
+            "value": "Value"
+          },
+          "grant": "Grant",
+          "inHeader": "In a header",
+          "inQuery": "In the query",
+          "notSent": "Kept in the request's file; sending it follows in a later version.",
+          "place": "Where the key goes",
+          "secretHint": "Write a secret as a variable - {variable} from the private values, or {secret} for RB_SECRET_TOKEN - so it never lands in the checked-in file.",
+          "type": "Auth",
+          "types": {
+            "apiKey": "API key",
+            "basic": "Basic",
+            "bearer": "Bearer token",
+            "digest": "Digest",
+            "none": "None",
+            "oauth2": "OAuth 2"
+          }
+        },
+        "bench": {
+          "compareWith": "Compare with an environment",
+          "comparison": "{second} against {first}: median {median}, p95 {p95}.",
+          "errors": "{count} without an answer",
+          "hint": "Sends this saved request a few times (Settings > Network > API client) and measures each phase - no load test.",
+          "noCompare": "One environment only",
+          "phase": "Phase",
+          "run": "Benchmark",
+          "running": "Benchmarking...",
+          "savedOnly": "Save the request first: a benchmark sends a saved request.",
+          "sent": "{count, plural, one {# send} other {# sends}}, {concurrency} at once",
+          "stats": {
+            "max": "Max",
+            "median": "Median",
+            "min": "Min",
+            "p95": "p95"
+          },
+          "table": "Times by phase",
+          "title": "Benchmark"
+        },
+        "body": {
+          "addFile": "Add a file",
+          "addText": "Add a value",
+          "file": "File, relative to the request's file (./logo.png)",
+          "fileHint": "A file is read from the project when the request is sent, never from .git or rBrowser's own files.",
+          "jsonProblem": "Not JSON yet: {reason}",
+          "kind": "Body",
+          "kinds": {
+            "binary": "Binary file",
+            "form": "Form",
+            "graphql": "GraphQL",
+            "json": "JSON",
+            "multipart": "Multipart",
+            "none": "None",
+            "raw": "Raw text"
+          },
+          "partType": "Content-Type",
+          "query": "Query",
+          "text": "Body",
+          "variables": "Variables (JSON)"
+        },
+        "capture": {
+          "body": {
+            "tooLong": "The request's body was too large to take; add it yourself.",
+            "unchecked": "The request's body could not be checked for secrets, or a line of it would send a file, so it was left out; add it yourself.",
+            "unread": "The view could not hand over the request's body (another engine, a blob or a stream); add it yourself."
+          },
+          "incomplete": "The capture held the address shortened or masked (***); check the URL before you send.",
+          "missing": "No value yet for {names}: set it in Settings > Network > API client (private values) or as an RB_SECRET_ variable.",
+          "opened": "Opened {name} from the network panel; not saved yet.",
+          "replaced": "{names} got a new value in place of the one kept before.",
+          "replace": {
+            "description": "The editor holds changes that are not saved. Replace drops them; Keep mine leaves the editor as it is, and the network panel can open the request again.",
+            "no": "Keep mine",
+            "title": "Replace your unsaved changes with {name} from the network panel?",
+            "yes": "Replace"
+          },
+          "secretsNotKept": "The captured values could not be kept in the project's local settings; the variables have no value yet."
+        },
+        "checks": {
+          "add": "Add a check",
+          "belowMs": "Under this many milliseconds",
+          "compare": "Comparison",
+          "compares": {
+            "contains": "contains",
+            "equals": "equals"
+          },
+          "expected": "Status: a code like 201 or a class like 2xx",
+          "header": "Header name",
+          "hint": "Kept in the request's file as # @rb-check lines. Values are compared as written, not as variables.",
+          "kind": "Check",
+          "kinds": {
+            "header": "Header",
+            "json": "JSON value",
+            "status": "Status",
+            "time": "Time"
+          },
+          "path": "JSONPath, like $.user.id",
+          "remove": "Remove the check",
+          "value": "Value: JSON, or the text as it is"
+        },
+        "code": {
+          "close": "Close the code",
+          "copied": "Copied as {language}.",
+          "copy": "Copy as code",
+          "env": "Set these environment variables first: {names}",
+          "language": "Language of the code",
+          "languages": {
+            "curl": "curl",
+            "fetch": "fetch (Node)",
+            "httpie": "HTTPie",
+            "playwright": "Playwright test"
+          },
+          "notCopied": "The clipboard could not be reached: select the code below and copy it.",
+          "notes": {
+            "digest": "Digest auth is not in this language's code.",
+            "duplicateNames": "A name given twice keeps its last value here.",
+            "insecure": "fetch checks every certificate: the request's TLS check off is not in the code.",
+            "lineBreaks": "The command prompt holds no line break in an argument: each became a space.",
+            "oauth2": "OAuth 2 is not in the code: fetch a token first and send it as a bearer token.",
+            "timeout": "The format keeps no timeout of its own."
+          },
+          "title": "The request as code"
+        },
+        "collectionMenu": "Collection {folder}: open its menu",
+        "collections": "Collections",
+        "confirmDelete": "Delete {id}?",
+        "copyName": "{name} (copy)",
+        "delete": "Delete",
+        "deleted": "Deleted {id}.",
+        "dialog": {
+          "badFolder": "Letters, digits, spaces, - _ and dots, at most four levels; no name starts with a dot or ends in .http.",
+          "cancel": "Cancel",
+          "deleteFolder": "Delete the collection {folder} with {count, plural, =0 {no request} one {# request} other {# requests}} in it?",
+          "move": "Move {id} to",
+          "newFolder": "Name of the new collection",
+          "newFolderIn": "Name of the new collection in {folder}",
+          "noName": "A title is needed.",
+          "ok": "OK",
+          "rename": "New title for {id}",
+          "renameFolder": "New name for the collection {folder}"
+        },
+        "duplicated": "Duplicated as {id}.",
+        "environment": "Environment",
+        "export": {
+          "all": "Every request",
+          "done": "{count, plural, one {# request} other {# requests}} exported to {path}.",
+          "folder": "Folder to export",
+          "format": "Export format",
+          "formats": {
+            "curl": "curl script",
+            "http": ".http file",
+            "postman": "Postman collection (v2.1)"
+          },
+          "nothing": "There is no saved request to export yet.",
+          "run": "Export",
+          "skipped": "Not exported, they do not read: {ids}",
+          "title": "Export"
+        },
+        "failed": "failed",
+        "filter": "Find a request",
+        "folder": "Folder",
+        "folderDeleted": "Deleted the collection {folder} and {count, plural, =0 {no request} one {# request} other {# requests}}.",
+        "folderDuplicated": "Duplicated as {folder} with {count, plural, =0 {no request} one {# request} other {# requests}}.",
+        "folderMade": "Made the collection {folder}.",
+        "folderRenamed": "Renamed the collection to {folder}.",
+        "hints": {
+          "private": "{name} is a private value; it is not shown.",
+          "secret": "$secret {name} has a value.",
+          "secretMissing": "$secret {name} has no value yet.",
+          "title": "Variables of this request",
+          "unknown": "{name} has no value in this environment.",
+          "value": "{name} = {value}"
+        },
+        "history": "Recent",
+        "import": {
+          "description": "Reads the requests and environments of another tool into .rbrowser/api; the files you pick stay as they are. Secrets become placeholders, never written to a file.",
+          "done": "Imported {count, plural, one {# request} other {# requests}} into .rbrowser/api/{folder}.",
+          "dropped": "Left out",
+          "environments": "Add the environments to .rbrowser/api/http-client.env.json",
+          "failed": "{name} could not be written; open it from the preview's source and save it again.",
+          "files": "Files to import",
+          "filesHint": "Postman, Insomnia, Thunder Client, HTTPie, OpenAPI or Swagger, HAR, .http files or the .bru files of a Bruno collection.",
+          "folder": "Folder below .rbrowser/api",
+          "folderHint": "Empty: named after the collection.",
+          "format": "Format",
+          "formats": {
+            "auto": "Tell by the files",
+            "bruno": "Bruno",
+            "curl": "curl command",
+            "har": "HAR (network log)",
+            "http": ".http files (REST Client, JetBrains)",
+            "httpie": "HTTPie",
+            "insomnia": "Insomnia",
+            "openApi": "OpenAPI or Swagger",
+            "postman": "Postman",
+            "thunderClient": "Thunder Client"
+          },
+          "kept": "Already set in http-client.env.json, kept as they were: {names}",
+          "more": "... and {count, plural, one {# more request} other {# more requests}}",
+          "notes": {
+            "auth": "{at}: the auth {detail} is not sent by rBrowser; the request was taken without it.",
+            "body": "{at}: the body ({detail}) was not taken.",
+            "disabled": "{at}: the disabled {detail} was left out.",
+            "environment": "{at}: \"{detail}\" was not taken; a variable's name is a letter or _, then letters, digits, _ - and dots.",
+            "examples": "{at}: the saved example answers ({detail}) were not taken.",
+            "file": "{at}: put the file {detail} next to the request's file; an import copies no file.",
+            "folder": "{at}: folders deeper than the API client keeps were joined: {detail}.",
+            "invalid": "{at}: not a request the API client can keep ({detail}).",
+            "item": "{at}: {detail} was not taken.",
+            "limit": "{at}: over the limit ({detail}); the rest was not taken.",
+            "option": "{at}: the option {detail} has no counterpart and was left out.",
+            "script": "{at}: the {detail} script does not run in rBrowser.",
+            "server": "{at}: another server, {detail}; the requests use the first one.",
+            "setting": "{at}: the setting {detail} has no counterpart in rBrowser.",
+            "skipped": "{at}: the requests for images, styles, scripts, fonts and media were not taken ({detail}).",
+            "template": "{at}: the template tag {detail} is kept as written; rBrowser does not run it.",
+            "tests": "{at}: tests ({detail}) do not run in rBrowser yet.",
+            "transport": "{at}: the headers the connection sets were left out: {detail}.",
+            "variable": "{at}: the variable {detail} has no counterpart in rBrowser; it stays as written."
+          },
+          "open": "Import a collection",
+          "paste": "Or paste a text",
+          "pastePlaceholder": "A curl command, an .http request or a collection's JSON",
+          "pickFolder": "Pick a Bruno folder",
+          "preview": "Preview",
+          "previewNote": "Nothing is written yet; Import writes it.",
+          "reported": "Taken without",
+          "run": "Import",
+          "secretItem": "{at}: {name} - set RB_SECRET_ variable {variable}, or {name} in the private values (Settings > Network > API client).",
+          "secrets": "Secrets of the source became placeholders:",
+          "summary": "{requests, plural, one {# request} other {# requests}} and {environments, plural, one {# environment} other {# environments}} to import.",
+          "title": "Import a collection",
+          "tooLarge": "These files are larger than one import reads (2 MiB together); import fewer at a time."
+        },
+        "keep": "Keep",
+        "menu": {
+          "delete": "Delete",
+          "duplicate": "Duplicate",
+          "export": "Export",
+          "move": "Move to a collection",
+          "newFolder": "New collection",
+          "newRequest": "New request here",
+          "open": "Open",
+          "rename": "Rename"
+        },
+        "method": "Method",
+        "moved": "Moved to {id}.",
+        "name": "Title",
+        "new": "New request",
+        "noEnvironment": "No environment",
+        "noRequests": "No requests yet",
+        "noRequestsHint": "Save a request to keep it as a .http file in .rbrowser/api, for the team to share through Git.",
+        "options": {
+          "redirects": "Follow redirects",
+          "redirectsHint": "Up to ten, each to a host the project allows.",
+          "timeout": "Timeout (ms)",
+          "tls": "Check the TLS certificate",
+          "tlsHint": "Off accepts any certificate - for a local server with its own."
+        },
+        "problem": "Does not read: {problem}",
+        "refresh": "Read the collections again",
+        "response": {
+          "asTree": "As a tree",
+          "binary": "{size} of binary data.",
+          "empty": "The answer has no body.",
+          "image": "The image of the answer",
+          "noCookies": "The answer sets no cookie.",
+          "phases": {
+            "connect": "Connection",
+            "dns": "DNS",
+            "firstByte": "First byte",
+            "tls": "TLS",
+            "total": "Total"
+          },
+          "redirects": "{count, plural, one {Redirected once} other {Redirected # times}}, last to {last}",
+          "tabs": {
+            "body": "Body",
+            "cookies": "Cookies",
+            "headers": "Headers",
+            "timings": "Timings"
+          },
+          "title": "Answer",
+          "truncated": "Cut at the size limit"
+        },
+        "run": {
+          "clean": "Every request passed its checks.",
+          "close": "Close the report",
+          "cut": "Only the first {count, plural, one {# request} other {# requests}} ran.",
+          "findings": "The failures are in the findings panel too.",
+          "running": "Running the collections...",
+          "start": "Run every saved request with its checks",
+          "tally": "{requests, plural, one {# request} other {# requests}}: {passed} passed, {failed} failed, {errors} without an answer",
+          "title": "Last run"
+        },
+        "save": "Save",
+        "saveCopy": "Save as new",
+        "saveNew": "Save",
+        "saved": "Saved as {id}.",
+        "secretValue": {
+          "description": "Set it here - it is kept in the private values on this machine - or as an RB_SECRET_ variable; the private value comes first.",
+          "done": "Kept the value of {name}; the next send uses it.",
+          "everyEnvironment": "For every environment",
+          "scope": "For which environments",
+          "set": "Set value",
+          "setFor": "Set the value of {name}",
+          "thisEnvironment": "For {environment}",
+          "title": "No value yet: {names}",
+          "value": "Value of {name}"
+        },
+        "send": "Send",
+        "sending": "Sending...",
+        "side": {
+          "export": "Export",
+          "import": "Import",
+          "requests": "Requests",
+          "variables": "Variables"
+        },
+        "table": {
+          "add": "Add",
+          "enabled": "Sent",
+          "name": "Name",
+          "remove": "Remove",
+          "value": "Value"
+        },
+        "tabs": {
+          "auth": "Auth",
+          "body": "Body",
+          "checks": "Checks",
+          "headers": "Headers",
+          "options": "Options",
+          "params": "Parameters"
+        },
+        "top": "Top of the collections",
+        "tree": {
+          "close": "Close",
+          "cut": "The tree shows the first rows; the source view shows the whole answer.",
+          "invalidPath": "Not a path: write it like $.items[0].id, $..name or $.items[*].",
+          "items": "{count, plural, one {# item} other {# items}}",
+          "keys": "{count, plural, one {# key} other {# keys}}",
+          "open": "Open",
+          "path": "JSONPath, $.items[*].id",
+          "search": "Find in the answer",
+          "selected": "{count, plural, one {# match} other {# matches}}"
+        },
+        "url": "URL",
+        "variables": {
+          "addEnvironment": "Add an environment",
+          "description": "The values the requests' variables take, by environment, in .rbrowser/api/http-client.env.json, which is checked in. A row marked private is kept in the private values on this machine only, never in the file.",
+          "environmentName": "Environment name",
+          "kept": "Kept privately - type to replace",
+          "otherName": "Another name",
+          "private": "Private",
+          "reload": "Read again",
+          "removeEnvironment": "Remove the environment {name}",
+          "saved": "Saved the variables.",
+          "shared": "$shared - every environment",
+          "title": "Variables"
+        },
+        "verdicts": {
+          "actual": "found {actual}",
+          "fail": "Failed",
+          "pass": "Passed",
+          "problems": {
+            "badPath": "no JSONPath rBrowser reads",
+            "missing": "nothing found there",
+            "notJson": "the answer is no JSON"
+          },
+          "summary": "{passed} of {count, plural, one {# check} other {# checks}} passed",
+          "title": "Checks"
+        },
+        "waiting": "Waiting for the API client's running call...",
+        "openSetting": "Open the setting"
+      },
+      "panels": {
+        "api-client": "API client"
+      },
+      "settings": {
+        "allowedHosts": {
+          "description": "The hosts this project sends requests to, each allowed by you at its first send; kept on this machine only. Remove one to be asked again. Not writable over MCP.",
+          "help": "The hosts this project's API client may send to, without scheme or port (api.example.com, localhost). Each is added when you allow it at its first send and kept in config.local.json; remove one and the next send asks again. Not writable over MCP.",
+          "label": "Allowed hosts"
+        },
+        "benchConcurrency": {
+          "description": "How many sends of a benchmark run at the same time (1 to 4).",
+          "help": "1 sends one after the other, as a single client does; at most 4, so a benchmark never turns into a load test.",
+          "label": "Benchmark sends at once"
+        },
+        "benchRepeats": {
+          "description": "How often a benchmark sends the request in each environment (1 to 100).",
+          "help": "A benchmark of a saved request sends it this many times per environment and reports min, median, p95 and max of each phase. Small on purpose: it measures a request, it does not load the server.",
+          "label": "Benchmark repeats"
+        },
+        "captureSecrets": {
+          "description": "What becomes of the cookies, tokens and keys of a request taken from the network panel: they are always variables in the saved file; their values go to the private values or nowhere.",
+          "help": "A request taken from the network panel keeps its Cookie, Authorization, API key and token headers, its secret query parameters and its secret body fields as variables named after the host, so the files below .rbrowser/api stay free of secrets. Private values: the values the page sent go to the private values in config.local.json, which is not checked in, and the request sends as the page did. Leave out: the variables stay without a value until you set them. A value the capture held masked (***) is never known; MCP never keeps a value either way.",
+          "label": "Secrets of captured requests"
+        },
+        "codeShell": {
+          "description": "The shell curl and HTTPie commands are written for: PowerShell, the Windows command prompt, or a POSIX shell.",
+          "help": "How \"Copy as\" and a curl script export quote a command: PowerShell 7.3 or later (curl.exe), the Windows command prompt (cmd) or a POSIX shell - bash, zsh, Git Bash, WSL, macOS. fetch and Playwright code is the same in every shell.",
+          "label": "Shell for copied commands"
+        },
+        "codeVariables": {
+          "description": "Plain values of the environment put in and secrets read from environment variables, or every variable kept as the request's file writes it.",
+          "help": "Environment variables: the environment's plain values (baseUrl, the variables of http-client.env.json) are put in, and every secret or unknown variable becomes an environment variable the code reads - $token in a POSIX shell, $env:token in PowerShell, %token% in cmd, process.env.token in JavaScript - so the code runs once you set them. Templates: every variable stays as the request's file writes it. A secret's value is never in the code either way.",
+          "label": "Variables in copied code"
+        },
+        "historySize": {
+          "description": "How many recent sends the panel keeps (0 to 500, 0 keeps none), in .rbrowser/out/api-client.",
+          "help": "How many recent sends the panel lists, each with its method, URL template, status and time - never a secret. 0 keeps none.",
+          "label": "Recent sends"
+        },
+        "importEnvironments": {
+          "description": "Whether an import adds a collection's environments and variables to .rbrowser/api/http-client.env.json, which is checked in; its secrets are placeholders either way.",
+          "help": "When an import has environments (a Postman environment, Insomnia's, a Bruno folder's), they go into .rbrowser/api/http-client.env.json beside the variables already there, which keep their values. Each import can still choose; this is its default.",
+          "label": "Import environments"
+        },
+        "maxResponseBytes": {
+          "description": "The largest answer body read, in bytes (1 KiB to 2 MiB); a larger one is cut and marked.",
+          "help": "The most bytes of an answer's body the API client reads and shows (1 KiB to 2 MiB). A larger body is cut there, and the answer says so.",
+          "label": "Largest answer"
+        },
+        "option": {
+          "captureSecrets": {
+            "drop": "Leave the values out",
+            "private": "Into the private values"
+          },
+          "codeShell": {
+            "cmd": "Command prompt (cmd)",
+            "posix": "POSIX shell (bash, zsh)",
+            "powershell": "PowerShell"
+          },
+          "codeVariables": {
+            "environment": "Environment variables",
+            "template": "Templates, as in the file"
+          }
+        },
+        "secrets": {
+          "description": "Private values of the API environments - tokens, passwords - by environment ($shared for all), kept on this machine only and masked wherever they could show. Not writable over MCP.",
+          "help": "Private values for the requests' variables, by environment ($shared for every one), in the form of .rbrowser/api/http-client.env.json. Kept in config.local.json, never checked in, masked in every answer. Not writable over MCP.",
+          "label": "Private values"
+        }
+      },
+      "tools": {
+        "bench": "Benchmarks the saved request id: sent as often as api-client.benchRepeats says (10 by default, at most 100) in each of up to two environments - staging against production -, at most api-client.benchConcurrency at once, only to the hosts the project allows. Answers min, median, p95 and max of DNS, connection, TLS, first byte and total per environment, the statuses and failures, and the second environment's difference to the first. No load test.",
+        "code": "A saved request (id, as api_collections lists it) as code: language curl, httpie, fetch (Node) or playwright (a @playwright/test test). The plain variables of the environment the views show, or the one named, are put in; every secret stays a variable the code reads from the shell's or the process's environment, named in env - never a value. The shell is the setting api-client.codeShell. Read-only: nothing is sent, nothing is written.",
+        "collections": "The API client's saved requests below .rbrowser/api (one .http file each): id, title, method and URL template; with id, that request as the model (method, url, headers, body, auth, options - templates with their variables, never a secret's value) and as its file's text. Only in a trusted workspace.",
+        "history": "The API client's recent sends: time, saved id, method, URL template, environment, status and total time, or the failure's code. Never a secret.",
+        "panel": "The API client panel's own calls; not an MCP tool.",
+        "report": "The last collection run's report (api_run_collection), or null before the first run.",
+        "run": "Sends the saved request id (as api_collections lists it) from rBrowser's core in the environment the views show or the one named, and answers status, phases (dns, connect, tls, firstByte, total in ms), size, headers and body (text or base64), every secret masked. Only to a host a person allowed for the project (else host_not_allowed with the host); no free requests over MCP.",
+        "run_collection": "Runs every saved request below .rbrowser/api - or those of folder - in environment (the views' without one), only to the hosts the project allows, and judges each by its checks (# @rb-check: status, JSONPath equals or contains, header, time). Answers the report - per request its status, time and verdicts, every secret masked - and puts the failures into the findings panel."
+      }
+    }
+  }
+}

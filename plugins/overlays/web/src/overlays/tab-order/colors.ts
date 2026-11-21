@@ -12,3 +12,7 @@ export const REVERSE = '#c2410c';
 export const RING = '#ffffff';
 /** The live highlight: the stop focused in one of the views. */
 export const LIVE = '#ff6a00';
+/** The reading order arrows (RB-094-02): an arrow between stops in source order. */
+export const READING = '#6d28d9';
+/** An element the reading order reaches out of place, its frame and the arrow to it. */
+export const MISREAD = '#be185d';

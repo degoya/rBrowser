@@ -71,7 +71,7 @@ pub fn session_id() -> &'static str {
                 });
             bytes = now.to_le_bytes();
         }
-        bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+        rb_util::hex(&bytes)
     })
 }
 

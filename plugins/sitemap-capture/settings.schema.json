@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the sitemap capture (RB-090-86): Settings > Capture > Sitemap",
+  "type": "object",
+  "properties": {
+    "thumbnailWidth": {
+      "type": "integer",
+      "enum": [160, 240, 320, 480, 640],
+      "default": 320,
+      "description": "The width of a shot in the gallery's contact sheet, in CSS pixels; a gallery takes it when a capture writes it.",
+      "x-category": "capture",
+      "x-section": "sitemap",
+      "x-order": 1,
+      "x-scope": ["user"]
+    }
+  }
+}

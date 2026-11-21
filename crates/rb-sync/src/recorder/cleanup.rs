@@ -4,20 +4,25 @@
 //!   that only confirms it adds nothing.
 //! - A click that a `change` follows on the same checkbox, radio or select becomes `check`,
 //!   `uncheck` or `select`; two clicks and the `dblclick` on one element are one `dblclick`.
+//!   A click on a checkbox's or radio's label stays a click, its control's `change` part of it
+//!   (`cleanup_label.rs`, RB-090-93).
 //!   A checkbox or radio is never filled: its `input` (no text, the value `on`) is no step, and
 //!   a `fill` its `change` follows becomes the `check` or `uncheck` (RB-090-76).
 //! - Keys that type text are in the `fill`; only the others (Enter, Escape, Tab, shortcuts) are
 //!   `press` steps, and Backspace or Delete in a field never are. In a password field only a
 //!   named key is a step, in clear ([`super::keys::shown`]).
-//! - Hover is a heuristic: of the hovers since the last step, a click keeps the latest one on
-//!   an element with a test id or a role that is neither the clicked element nor one of its
-//!   ancestors (by CSS path) - the menu trigger whose submenu it clicks into; the agent reports
-//!   that trigger's hover at the press (`agent/src/menu-trigger.ts`). A hover on the element of
+//! - A hover the agent marked (`menu`) is a step at once (RB-090-87): its rest on a menu's
+//!   entry while recording (`agent/src/record-hover.ts`), or the trigger's hover at a press into
+//!   its submenu (`agent/src/menu-trigger.ts`, RB-090-76); the same entry twice in a row is one
+//!   step. With `recordHover: all` the other hovers are a heuristic: of those since the last
+//!   step, a click keeps the latest one on an element with a test id or a role that is neither
+//!   the clicked element nor one of its ancestors (by CSS path). Such a hover on the element of
 //!   the click before (same CSS path, or same best selector after a navigation) is the pointer
-//!   resting where it clicked, never a step - unless the agent marked it as the menu entry's
-//!   (`menu`, RB-090-76). Every other move is dropped. `recordHover` (RB-090-81) decides which
-//!   hovers wait for a click at all: `menu` (the default) only the agent's, `all` every one,
-//!   `off` none.
+//!   resting where it clicked, never a step. Every other move is dropped. `recordHover`
+//!   (RB-090-81) decides which hovers count at all: `menu` (the default) only the agent's, `all`
+//!   every one, `off` none.
+//! - The pointer's way (RB-090-87) goes with the step it led to: a marked hover, a click, a
+//!   double click (its first click's way).
 //! - Scroll only with `recordScroll`, consecutive scrolls of one container as one step.
 //! - Pointer, key-up, focus, wheel, context menu and submit events are no steps.
 //!
@@ -29,7 +34,7 @@ use std::collections::BTreeSet;
 use rb_engine::ViewId;
 
 use super::keys::is_press;
-use super::model::{Action, Locator, Selector, Step, secret_placeholder};
+use super::model::{Action, Locator, PathPoint, Selector, Step, secret_placeholder};
 use super::record::HoverCapture;
 use super::secrets::{is_secret, secret_name};
 use crate::event::{ElementSelector, ElementTarget, InputData, MouseButton, SyncEvent};
@@ -74,6 +79,8 @@ pub(crate) struct Capture<'a> {
     pub views: BTreeSet<ViewId>,
     /// Ms after the start.
     pub at_ms: u64,
+    /// The pointer's way to the event (RB-090-87), at most `MAX_PATH_POINTS`.
+    pub path: &'a [PathPoint],
     /// `automation.recorder.recordHover`.
     pub record_hover: HoverCapture,
     /// `automation.recorder.recordScroll`.
@@ -90,19 +97,20 @@ pub(crate) struct Builder {
     next_id: u32,
     /// When the last step that can navigate (a click, Enter, a submit) happened.
     pub last_trigger_ms: Option<u64>,
-    /// The element of the last click: a hover on it is no step...
+    /// The element of the last click: a guessed hover on it is no step.
     last_click: Option<Locator>,
-    /// ...unless it is the agent's hover on a menu entry (`menu`), whose CSS path this is.
-    menu_hover: Option<String>,
+    /// The click step on a label and the CSS path of its checkbox or radio (RB-090-93).
+    label_control: Option<(u32, String)>,
+    /// The first place a step changed since the recorder last handed the changes over.
+    dirty: Option<usize>,
 }
 
 impl Builder {
     /// Adds a step; drops the hovers waiting for a click.
     pub fn push(&mut self, action: Action, view: &str, at_ms: u64, trail: Trail) {
         self.hovers.clear();
-        self.menu_hover = None;
         self.next_id += 1;
-        self.entries.push(Entry {
+        self.push_entry(Entry {
             step: Step {
                 id: self.next_id,
                 name: None,
@@ -110,9 +118,21 @@ impl Builder {
                 view: view.to_owned(),
                 at_ms,
                 only_in: Vec::new(),
+                path: Vec::new(),
+                disabled: false,
+                pause_ms: None,
             },
             trail,
         });
+    }
+
+    /// The last step's way is `path`, when there is one.
+    fn set_path(&mut self, path: &[PathPoint]) {
+        if !path.is_empty()
+            && let Some(last) = self.last_entry()
+        {
+            last.step.path = path.to_vec();
+        }
     }
 
     /// Forgets the hovers waiting for a click.
@@ -122,7 +142,7 @@ impl Builder {
 
     /// Takes the last step out; its id is free again.
     pub fn pop_last(&mut self) {
-        if let Some(entry) = self.entries.pop()
+        if let Some(entry) = self.pop_entry()
             && entry.step.id == self.next_id
         {
             self.next_id -= 1;
@@ -141,6 +161,7 @@ impl Builder {
             trail.add_origin(kind, path);
             trail
         };
+        self.label_event(event, capture.frame);
         match event {
             SyncEvent::Click(mouse) => {
                 let target = locator(&mouse.target);
@@ -160,18 +181,24 @@ impl Builder {
                     modifiers: mouse.modifiers,
                 };
                 self.push_kept_hovers(capture.view, capture.at_ms, action, trail(&path));
+                self.set_path(capture.path);
+                self.label_clicked(mouse.control.as_deref());
             }
             SyncEvent::Dblclick(mouse) => {
                 let target = locator(&mouse.target);
                 let path = target.css_path().to_owned();
                 let mut merged = trail(&path);
+                let mut way = capture.path.to_vec();
                 for _ in 0..2 {
                     let same = |action: &Action| matches!(action, Action::Click { target, .. } if target.css_path() == path);
                     if self.last_is(same)
-                        && let Some(entry) = self.entries.pop()
+                        && let Some(entry) = self.pop_entry()
                     {
                         merged.origins.extend(entry.trail.origins);
                         merged.views.retain(|view| entry.trail.views.contains(view));
+                        if !entry.step.path.is_empty() {
+                            way = entry.step.path;
+                        }
                     }
                 }
                 self.push(
@@ -180,12 +207,21 @@ impl Builder {
                     capture.at_ms,
                     merged,
                 );
+                self.set_path(&way);
             }
             SyncEvent::Hover(data) if capture.record_hover.keeps(data.menu) => {
                 let target = locator(&data.target);
                 let path = target.css_path().to_owned();
                 if data.menu {
-                    self.menu_hover = Some(path.clone());
+                    let again = self.last_is(|last| {
+                        matches!(last, Action::Hover { target: last } if same_element(last, &target))
+                    });
+                    if !again {
+                        let action = Action::Hover { target };
+                        self.push(action, capture.view, capture.at_ms, trail(&path));
+                        self.set_path(capture.path);
+                    }
+                    return;
                 }
                 if self.hovers.len() == MAX_HOVERS {
                     self.hovers.remove(0);
@@ -198,6 +234,9 @@ impl Builder {
                         view: capture.view.to_owned(),
                         at_ms: capture.at_ms,
                         only_in: Vec::new(),
+                        path: Vec::new(),
+                        disabled: false,
+                        pause_ms: None,
                     },
                     trail: trail(&path),
                 });
@@ -219,7 +258,7 @@ impl Builder {
                 let mut carried = None;
                 if change.checked.is_some()
                     && self.last_is(|last| matches!(last, Action::Fill { target, .. } if target.css_path() == path))
-                    && let Some(fill) = self.entries.pop()
+                    && let Some(fill) = self.pop_entry()
                 {
                     // The fill of a toggle's `input` (an unnamed checkbox): the check replaces it,
                     // in the views both ran in, and its id is free again.
@@ -227,6 +266,9 @@ impl Builder {
                         self.next_id -= 1;
                     }
                     carried = Some(fill.trail);
+                }
+                if change.checked.is_some() && self.label_change(&path, kind, &mut carried) {
+                    return;
                 }
                 let action = if let Some(checked) = change.checked {
                     if checked {
@@ -251,7 +293,7 @@ impl Builder {
                 };
                 // The click that opened or toggled the control is part of this step.
                 if self.last_is(|last| matches!(last, Action::Click { target, .. } if target.css_path() == path))
-                    && let Some(last) = self.entries.last_mut()
+                    && let Some(last) = self.last_entry()
                 {
                     last.step.action = action;
                     merge(&mut last.trail, carried);
@@ -281,7 +323,8 @@ impl Builder {
             SyncEvent::Scroll(scroll) if capture.record_scroll => {
                 let target = scroll.container.as_ref().map(locator);
                 let path = target.as_ref().map_or("", Locator::css_path).to_owned();
-                if let Some(last) = self.entries.last_mut()
+                let at = self.entries.len().saturating_sub(1);
+                if let Some(last) = self.last_entry_untouched()
                     && let Action::Scroll {
                         target: last_target,
                         x,
@@ -291,6 +334,7 @@ impl Builder {
                 {
                     *x = scroll.x;
                     *y = scroll.y;
+                    self.touch(at);
                     return;
                 }
                 let action = Action::Scroll {
@@ -308,71 +352,22 @@ impl Builder {
     /// A view's replay of the event `(kind, path)` failed: it drops out of the latest step that
     /// came from such an event and ran there.
     pub fn failed(&mut self, view: ViewId, kind: &'static str, path: &str) {
-        let hit = self
-            .hovers
-            .iter_mut()
-            .rev()
-            .chain(self.entries.iter_mut().rev())
-            .find(|entry| {
-                entry.trail.views.contains(&view)
-                    && entry
-                        .trail
-                        .origins
-                        .iter()
-                        .any(|(k, p)| *k == kind && p == path)
-            });
-        if let Some(entry) = hit {
-            entry.trail.views.remove(&view);
-        }
-    }
-
-    fn fill(
-        &mut self,
-        capture: &Capture<'_>,
-        target: Locator,
-        value: Option<String>,
-        data: Option<&str>,
-        kind: &'static str,
-        secret: bool,
-    ) {
-        let path = target.css_path().to_owned();
-        if let Some(last) = self.entries.last_mut()
-            && let Action::Fill {
-                target: last_target,
-                value: last_value,
-                secret: last_secret,
-            } = &mut last.step.action
-            && last_target.css_path() == path
-        {
-            match value {
-                Some(value) => {
-                    *last_value = value;
-                    *last_secret = secret;
-                }
-                // A placeholder is never typed onto.
-                None if *last_secret => {}
-                None => last_value.push_str(data.unwrap_or("")),
-            }
-            last.trail.views.retain(|view| capture.views.contains(view));
-            last.trail.add_origin(kind, &path);
-            return;
-        }
-        let value = value.unwrap_or_else(|| data.unwrap_or("").to_owned());
-        let mut trail = Trail {
-            views: capture.views.clone(),
-            ..Trail::default()
+        let ran = |entry: &Entry| {
+            entry.trail.views.contains(&view)
+                && entry
+                    .trail
+                    .origins
+                    .iter()
+                    .any(|(k, p)| *k == kind && p == path)
         };
-        trail.add_origin(kind, &path);
-        self.push(
-            Action::Fill {
-                target,
-                value,
-                secret,
-            },
-            capture.view,
-            capture.at_ms,
-            trail,
-        );
+        if let Some(hover) = self.hovers.iter_mut().rev().find(|entry| ran(entry)) {
+            hover.trail.views.remove(&view);
+        } else if let Some(at) = self.entries.iter().rposition(ran) {
+            self.touch(at);
+            if let Some(entry) = self.entries.get_mut(at) {
+                entry.trail.views.remove(&view);
+            }
+        }
     }
 
     fn last_is(&self, test: impl Fn(&Action) -> bool) -> bool {
@@ -389,8 +384,7 @@ impl Builder {
             let Action::Hover { target } = &hover.step.action else {
                 return false;
             };
-            let menu = self.menu_hover.as_deref() == Some(target.css_path());
-            if !menu && clicked_before.is_some_and(|before| same_element(before, target)) {
+            if clicked_before.is_some_and(|before| same_element(before, target)) {
                 return false;
             }
             let path = target.css_path();
@@ -413,7 +407,7 @@ impl Builder {
             self.next_id += 1;
             let mut step = hover.step;
             step.id = self.next_id;
-            self.entries.push(Entry {
+            self.push_entry(Entry {
                 step,
                 trail: hover.trail,
             });
@@ -450,6 +444,19 @@ fn is_toggle(input: &InputData) -> bool {
         )
 }
 
+#[path = "cleanup_dirty.rs"]
+mod dirty;
+
+#[path = "cleanup_fill.rs"]
+mod fill;
+
+#[path = "cleanup_label.rs"]
+mod label;
+
 #[cfg(test)]
 #[path = "cleanup_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "cleanup_hover_tests.rs"]
+mod hover_tests;

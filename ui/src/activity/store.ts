@@ -13,7 +13,7 @@ import type { ChecksProgress, CoreToShell, FlowRunState, PortalState } from '../
 import { loadPortal } from '../portal/portal';
 import { useShell, type Shell } from '../state/shell';
 import type { Subscribe } from '../whichkey/whichkey';
-import { barEntries, barSettings, drawnAt, ended, running, wantedPlace, type ActivityInputs } from './activities';
+import { barEntries, barSettings, drawnAt, ended, running, wantedPlace, withStep, type ActivityInputs } from './activities';
 import type { EntryData } from './entries';
 
 /** Where the store reads the activities that are not in the snapshot. */
@@ -80,6 +80,8 @@ export function createActivities(shell: Shell, source: ActivitySource | null) {
     read(source.portal, portal);
     source.subscribe((message) => {
       if (message.type === 'flowRunChanged') read(source.flowRun, flowRun);
+      // The step each view is at (RB-090-68), between the reads.
+      if (message.type === 'flowStep') flowRun.value = withStep(flowRun.value, message);
       if (message.type === 'portalChanged') read(source.portal, portal);
       if (message.type === 'checksProgress') checks.value = withoutType(message);
     });
@@ -122,7 +124,7 @@ export function createActivities(shell: Shell, source: ActivitySource | null) {
   /** Folded by its close button while it runs, and the bar would take it back. */
   function folded(activity: Activity): boolean {
     const { mode, show } = settings.value;
-    return mode === 'bar' && show[activity] && collapsed.value.includes(activity) && run.value.includes(activity);
+    return mode !== 'indicator' && show[activity] && collapsed.value.includes(activity) && run.value.includes(activity);
   }
 
   /** Folds `activity` into its toolbar indicator, or shows it in the bar again. */
@@ -141,8 +143,8 @@ export function createActivities(shell: Shell, source: ActivitySource | null) {
   }
 
   /**
-   * The toolbar's page only: asks the core for the bar's room while it has entries, gives it back
-   * after the last, and opens a folded entry again once its activity ended.
+   * The toolbar's page only: asks the core for the bar's room while it has entries - always with
+   * `ui.activityBar.mode` `always` - gives it back after the last, and opens a folded entry again once its activity ended.
    */
   function manageRoom(): void {
     let asked: ActivityBarPosition | null | undefined;

@@ -17,6 +17,8 @@ publish = false
 # `crates/rb-plugin-api/wit`, so the native build neither builds nor links it.
 [dependencies]
 rb-plugin-api = { path = "../../crates/rb-plugin-api" }
+# Whether a URL is a web page, as the app reads it (RB-094-10).
+rb-util = { path = "../../crates/rb-util" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 

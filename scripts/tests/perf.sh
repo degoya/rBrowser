@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# scripts/perf.sh (RB-020-09, K3) without Windows and without CDP: --fake hands it the runs and
-# memory samples a measurement would give, so the JSON it writes, its summary and its exit code
-# are checked here; --dry-run, the usage errors, the baseline comparison of
-# scripts/lib/perf_report.py and the frame statistics of scripts/lib/perf-measure.mjs (when a
-# node is on PATH) too.
+# scripts/perf.sh (RB-020-09, K3; RB-090-32, K1, K11, start-up) without Windows and without CDP:
+# --fake hands it the runs, memory samples and click run a measurement would give and
+# --counters an app_perf answer, so the JSON it writes, its summary and its exit code are checked
+# here; --dry-run, the usage errors, the baseline comparison of scripts/lib/perf_report.py, the
+# frame statistics of scripts/lib/perf-measure.mjs and the click latency of
+# scripts/lib/perf-k1.mjs (when a node is on PATH) too.
 #
 #   scripts/tests/perf.sh
 # shellcheck disable=SC2016  # single-quoted on purpose: expect_true evaluates them
@@ -141,6 +142,61 @@ expect_output "nothing to compare says so" "no measurement"
 run_status "$ROOT/scripts/perf.sh" --compare "$result"
 expect_status "the checked-in baseline compares" 0
 
+# K1, K11 and the start-up time (RB-090-32): the click run's result and the app_perf answer.
+fake_dir "$SCRATCH/k" 58 60 59 $((2 * GIB))
+k1_file() {
+    printf '{"clicks": 100, "overall": {"pairs": 700, "p50Ms": %s, "p95Ms": %s, "maxMs": 200, "missed": 0}, "views": []}\n' "$2" "$3" > "$1"
+}
+counters_file() {
+    printf '{"enabled": true, "counters": [
+  {"name": "sync.replay.chromium", "count": 700, "p95Ms": 40},
+  {"name": "sync.replay.firefox", "count": 90, "p95Ms": %s},
+  {"name": "sync.replay.webkit", "count": 90, "p95Ms": 120},
+  {"name": "sync.navigation", "count": 5, "p95Ms": 410},
+  {"name": "startup.firstView", "count": 1, "p95Ms": 2350.5}]}\n' "$2" > "$1"
+}
+k1_file "$SCRATCH/k/k1.json" 35 90
+counters_file "$SCRATCH/counters.json" 180
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/k" --counters "$SCRATCH/counters.json" --out "$SCRATCH/out-k"
+expect_status "K1, K11 and K3 within budget exit 0" 0
+expect_output "the summary says K1 is met" "K1 met"
+expect_output "the summary says K11 is met" "K11 met"
+expect_output "the summary names the start-up time" "2350.5 ms"
+result_k="$(only_json "$SCRATCH/out-k")"
+expect "the K1 p95 is kept" "90" "$(json_field "$result_k" k1.p95Ms)"
+expect "the K11 p95 is the slower engine" "180" "$(json_field "$result_k" k11.p95Ms)"
+expect "the navigation p95 is kept" "410" "$(json_field "$result_k" k11.navigationP95Ms)"
+expect "the start-up time is kept" "2350.5" "$(json_field "$result_k" coldStartMs)"
+expect "the hub's K1 is kept" "40" "$(json_field "$result_k" k1.hubP95Ms)"
+
+k1_file "$SCRATCH/k/k1.json" 80 170
+counters_file "$SCRATCH/counters-slow.json" 320
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/k" --counters "$SCRATCH/counters-slow.json" --out "$SCRATCH/out-kslow"
+expect_status "K1 or K11 missed exits 1" 1
+expect_output "the summary names K1" "K1 missed: p95 170 ms"
+expect_output "the summary names K11" "K11 missed: p95 320 ms"
+expect_output "K3 still met on its own" "K3 met"
+
+echo "not json" > "$SCRATCH/counters-bad.json"
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/k" --counters "$SCRATCH/counters-bad.json" --out "$SCRATCH/out-kbad"
+expect_status "an app_perf answer that does not read exits 2" 2
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/good" --counters "$SCRATCH/missing.json" --out "$SCRATCH/out-kmissing"
+expect_status "a missing app_perf answer exits 2" 2
+# The counters alone: no scroll run, no click run (the Firefox and WebKit windows are no CDP
+# views, so a K3 run would see fewer views than the grid has).
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/k" --runs 0 --clicks 0 --counters "$SCRATCH/counters.json" --out "$SCRATCH/out-konly"
+expect_status "the counters alone exit 0" 0
+expect_output "K3 is not measured then" "K3 not measured"
+expect_output "K11 still is" "K11 met"
+run_status "$ROOT/scripts/perf.sh" --fake "$SCRATCH/k" --runs 0 --clicks 0 --out "$SCRATCH/out-nothing"
+expect_status "nothing to measure exits 2" 2
+run_status "$ROOT/scripts/perf.sh" --clicks lots
+expect_status "a word for the clicks exits 2" 2
+run_status "$ROOT/scripts/perf.sh" --dry-run --clicks 50 --out "$SCRATCH/out-dry2"
+expect_output "the dry run names the click run" "perf-k1.mjs --clicks 50 --view 0"
+run_status "$ROOT/scripts/perf.sh" --dry-run --clicks 0 --out "$SCRATCH/out-dry3"
+expect_true "no clicks, no click run" '[[ "$output" != *perf-k1.mjs* ]]'
+
 # The frame statistics of the measuring script.
 if command -v node > /dev/null; then
     stats="$(cd "$ROOT" && node --input-type=module -e '
@@ -148,6 +204,15 @@ import { frameStats } from "./scripts/lib/perf-measure.mjs";
 const frames = Array.from({ length: 61 }, (_, i) => i * 1000 / 60);
 console.log(JSON.stringify(frameStats(frames)), JSON.stringify(frameStats([5])));')"
     expect "60 frames in a second are 60 fps" '{"fps":60,"p95FrameMs":16.7,"frames":61} {"fps":0,"p95FrameMs":0,"frames":1}' "$stats"
+    k1="$(cd "$ROOT" && node --input-type=module -e '
+import { clickLatency } from "./scripts/lib/perf-k1.mjs";
+const leader = [{ target: "t1", at: 1000 }, { target: "t2", at: 2000 }, { target: "t1", at: 3000 }];
+const views = [
+  [{ target: "t1", at: 1010 }, { target: "t2", at: 2030 }, { target: "t1", at: 3020 }],
+  [{ target: "t1", at: 1100 }, { target: null, at: 2050 }],
+];
+console.log(JSON.stringify(clickLatency(leader, views)));')"
+    expect "the click latency per view and overall" '{"views":[{"pairs":3,"missed":0,"p50Ms":20,"p95Ms":30,"maxMs":30},{"pairs":1,"missed":2,"p50Ms":100,"p95Ms":100,"maxMs":100}],"overall":{"pairs":4,"missed":2,"p50Ms":20,"p95Ms":100,"maxMs":100}}' "$k1"
 else
     ok "node is not on PATH: the frame statistics are checked where it is"
 fi

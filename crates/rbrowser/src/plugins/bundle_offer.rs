@@ -4,15 +4,16 @@
 //! ([`bundled_rows`]) and the updates `plugins.catalog.autoUpdate` installs by itself
 //! ([`auto_update`]).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use chrono::Utc;
 use rb_config::UserSettings;
 use rb_plugin_host::{
-    OFFICIAL_REPOSITORY, Offer, PluginManifest, PluginSource, Shipped, newer_than, replacement,
+    BundleState, LoadReport, OFFICIAL_REPOSITORY, Offer, PluginManifest, PluginSource, Shipped,
+    newer_than, replacement,
 };
 use serde_json::{Value, json};
+use time::OffsetDateTime;
 
 use super::bundle_install::{install_offer, offers_of, open};
 use crate::control::Core;
@@ -25,9 +26,18 @@ pub(crate) struct BundledPlugin {
     pub(crate) installed: bool,
 }
 
-/// The bundle of this start, by id. Waits for the load: a blocking thread only.
+/// The bundle of this start, by id. Waits for the load - a blocking thread only - except while
+/// the first choice holds it (RB-091-08): then the packages' own manifests, read without the load
+/// (as the load lists the bundled plugins not chosen), so the wizard's `available` and
+/// `installChosen` never start it.
 pub(crate) fn bundled_plugins() -> BTreeMap<String, BundledPlugin> {
-    let report = &crate::analyzer::plugins::bundled().report;
+    match crate::analyzer::plugins::unless_held() {
+        Some(loaded) => from_report(&loaded.report),
+        None => from_manifests(),
+    }
+}
+
+fn from_report(report: &LoadReport) -> BTreeMap<String, BundledPlugin> {
     let mut found = BTreeMap::new();
     let mut add = |manifest: &PluginManifest, path: &PathBuf, installed: bool| {
         found
@@ -54,6 +64,37 @@ pub(crate) fn bundled_plugins() -> BTreeMap<String, BundledPlugin> {
     }
     for entry in &report.available {
         add(&entry.manifest, &entry.path, false);
+    }
+    found
+}
+
+/// The bundle's packages as they declare themselves, each installed when the answered choice
+/// holds it - what the load will give.
+fn from_manifests() -> BTreeMap<String, BundledPlugin> {
+    let Some(dir) = crate::analyzer::plugins::bundled_dir() else {
+        return BTreeMap::new();
+    };
+    let chosen = super::catalog::store_dir()
+        .and_then(|store| BundleState::load(&store))
+        .filter(|state| !state.pending)
+        .map(|state| state.chosen)
+        .unwrap_or_default();
+    with_choice(rb_plugin_host::bundle_manifests(&dir), &chosen)
+}
+
+/// `manifests` by id, the first package of an id kept, each installed when `chosen` holds it.
+pub(crate) fn with_choice(
+    manifests: BTreeMap<PathBuf, PluginManifest>,
+    chosen: &BTreeSet<String>,
+) -> BTreeMap<String, BundledPlugin> {
+    let mut found = BTreeMap::new();
+    for (path, manifest) in manifests {
+        let installed = chosen.contains(&manifest.id);
+        found.entry(manifest.id.clone()).or_insert(BundledPlugin {
+            manifest,
+            path,
+            installed,
+        });
     }
     found
 }
@@ -106,7 +147,7 @@ pub fn available(core: &Core) -> Value {
     let opened = open(&user, prefer);
     let entries = opened
         .as_ref()
-        .map(|(catalog, _)| catalog.entries(Utc::now()))
+        .map(|(catalog, _)| catalog.entries(OffsetDateTime::now_utc()))
         .unwrap_or_default();
     let offers = |id: &str| -> Vec<Offer> {
         entries
@@ -231,7 +272,8 @@ pub fn auto_update(core: &Core) -> usize {
         return 0;
     };
     let installs = catalog.store().installs();
-    let report = &crate::analyzer::plugins::bundled().report;
+    let loaded = crate::analyzer::plugins::bundled();
+    let report = &loaded.report;
     let mut count = 0;
     for entry in &report.loaded {
         let manifest = entry.plugin.manifest();

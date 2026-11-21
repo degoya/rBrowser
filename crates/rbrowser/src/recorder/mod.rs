@@ -15,20 +15,34 @@
 //! | The Recorder panel: list, edit, save, export preview, `panels.recorder` (RB-090-60) | [`panel`] |
 //! | A person's flow export into the flows folder, its trust kept (RB-090-66) | [`flow_file`] |
 //! | Playing a recording through the flows runner, `recorder.play`, MCP `recorder_play` (RB-090-66) | [`play`] |
+//! | Deleting a stored recording, `recorder.delete` (RB-090-91) | [`delete`] |
 //! | The form autofill's fills as steps, its `record_fill` host post (RB-090-78) | [`autofill`] |
+//! | The recorded view's agent: menu rests and the pointer's way (RB-090-87) | [`agent_record`] |
+//! | The steps of the recording that runs, live in the panel (RB-090-89) | [`live`] |
+//! | What a recording captures: no feed, the hover capture, the kinds off | [`capture`] |
+//! | The recording editor: add, change, switch off, try, play from a step (RB-092-01) | [`steps`] |
+//! | "Pick in view" and the page menu's element, named as a recorded click (RB-092-01) | [`pick_locator`] |
+//! | Continuing a recording from one of its steps, `recorder.continue_from` (RB-092-01) | [`continue_from`] |
 //!
 //! Nothing starts with the app: the window's recorder is made on its first command, on the
 //! core's runtime (never `tokio::spawn` - a command may come from the CEF UI thread).
 
+pub mod agent_record;
 pub mod autofill;
+pub mod capture;
 pub mod check;
+pub mod continue_from;
+pub mod delete;
 pub mod export;
 pub mod flow_file;
 pub mod glue;
+pub mod live;
 pub mod mcp;
 pub mod panel;
 pub mod panel_export;
+pub mod pick_locator;
 pub mod play;
+pub mod steps;
 
 use std::sync::{Arc, Mutex, Weak};
 
@@ -48,7 +62,10 @@ pub const STOP: &str = "recorder.stop";
 /// `Leader F P`: pause the recording, or resume it.
 pub const PAUSE: &str = "recorder.pause";
 pub use check::CHECK;
+pub use continue_from::CONTINUE_FROM;
+pub use delete::DELETE;
 pub use export::{EXPORT_FLOW, EXPORT_SPEC};
+pub use pick_locator::PICK_ELEMENT;
 pub use play::PLAY;
 /// `Leader F V`: the Recorder panel - the recordings, their steps, the export (RB-090-60).
 pub const PANEL: &str = "panels.recorder";
@@ -81,6 +98,7 @@ pub fn recorder_of(core: &Core) -> Arc<HostRecorder> {
     }
     let recorder = HostRecorder::new(core.host(), core.runtime());
     entries.push((Arc::downgrade(core.host()), recorder.clone()));
+    lock(&recorder.live).attach(core);
     recorder
 }
 
@@ -94,12 +112,18 @@ pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, 
     if let Some(format) = export {
         return Some(export::run_export_command(core, format, args).and_then(to_value));
     }
+    if let Some(answer) = steps::run_command(core, id, args) {
+        return Some(answer);
+    }
     let answer = match id {
         START => mcp::recorder_start(core, args),
         STOP => mcp::recorder_stop(core, &Value::Null),
         PAUSE => mcp::recorder_stop(core, &serde_json::json!({ "pause": true })),
         CHECK => return Some(check::run(core, args)),
         PLAY => return Some(play::run(core, args)),
+        DELETE => return Some(delete::run(core, args)),
+        CONTINUE_FROM => return Some(continue_from::run(core, args)),
+        PICK_ELEMENT => return Some(pick_locator::run(core, args)),
         PANEL => {
             // A person's (RB-090-71): a folded dock opens.
             let recorder = crate::panel_dock::core_panels::RECORDER;

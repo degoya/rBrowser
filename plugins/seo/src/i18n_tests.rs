@@ -174,3 +174,10 @@ fn every_text_is_below_the_plugins_prefix() {
         .collect();
     assert_eq!(plugins, ["seo"]);
 }
+
+/// RB-094-10: the catalogue is parsed once per process, not per text.
+#[test]
+fn the_catalogue_is_parsed_once() {
+    assert!(std::ptr::eq(super::catalogue(), super::catalogue()));
+    assert!(super::catalogue().is_object());
+}

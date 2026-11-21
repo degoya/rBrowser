@@ -8,6 +8,7 @@ use std::sync::Arc;
 use rb_config::LayoutMode;
 use rb_engine::{ViewEvent, ViewId};
 use rb_ipc::{DetectedBreakpoint, DevtoolsState, RecorderStatus, SyncState};
+use serde_json::Value;
 
 use tokio::runtime::Handle;
 
@@ -60,6 +61,15 @@ pub struct ShellState {
     /// Each view's label strip pieces as published last (RB-090-27, `crate::cell_info`): the
     /// canvas board draws them on its labels (RB-090-69).
     pub cell_infos: Vec<crate::cell_info::CellInfo>,
+    /// The views' clock and animation rates while changed (RB-094-07, `crate::time_control`).
+    pub time_control: Option<rb_ipc::TimeControlActivity>,
+    /// The plugin calls running that reported progress (RB-093-01,
+    /// `crate::plugins::services::progress`).
+    pub plugin_progress: Vec<rb_ipc::PluginProgress>,
+    /// The views with forced pseudo-class states (RB-094-16, `crate::force_state::publish`).
+    pub forced_states: Vec<rb_ipc::ViewForcedStates>,
+    /// The devices the menus offer (RB-094-20, `crate::engines::android::menu`).
+    pub devices: Option<rb_ipc::DevicesMenu>,
 }
 
 impl Host {
@@ -127,6 +137,26 @@ impl Host {
             dpr: entry.emulation.dpr,
             hidden: entry.hidden,
         })
+    }
+
+    /// The parameters of `Emulation.setDeviceMetricsOverride` that show `view` at `width` CSS px,
+    /// with its own height, DPR and zoom, fitted into its place as a breakpoint of that width
+    /// would be: a plugin's width lease (RB-093-01). `dontSetVisibleSize` keeps the widget as the
+    /// window laid it out, so a wide width never pushes the view over its neighbours. Nothing is
+    /// sent or kept here: the host's own metrics stay what [`Host::capture_target`] answers.
+    /// `None` before the attach.
+    pub fn width_metrics(&self, view: ViewId, width: u32) -> Option<Value> {
+        let state = self.state();
+        let entry = state.views.get(&view)?;
+        entry.session.as_ref()?;
+        let mut emulation = entry.emulation.clone();
+        emulation.width = width;
+        let metrics = state.metrics_for(entry, &emulation);
+        let mut params = metrics_params(&metrics, emulation.orientation);
+        if let Some(object) = params.as_object_mut() {
+            object.insert("dontSetVisibleSize".to_owned(), Value::Bool(true));
+        }
+        Some(params)
     }
 
     /// The runtime the host's tasks run on (RB-050-03's captures).

@@ -1,0 +1,221 @@
+{
+  "plugin": {
+    "load-test": {
+      "name": "Load test",
+      "panels": {
+        "load-test": "Load test"
+      },
+      "commands": {
+        "panel": "Show the load test",
+        "cancel": "Stop the running load test"
+      },
+      "tools": {
+        "reports": "The load test's reports, newest first: per run its id, scenario, start, how it ended (completed, stopped, aborted by a rule, closed with rBrowser), requests, requests per second, failure rate and p95 in ms. Read only: MCP can neither start, change nor stop a load test.",
+        "report": "One load test report (the newest without id): scenario, profile, targets with their standing, how it ended and which abort rule stopped it, totals (requests, failures, rate, p50/p95/p99, min, max, mean in ms), failures by kind, statuses, each step's share and the series of seconds. Read only.",
+        "compare": "Two load test reports a and b side by side - requests, requests per second, failure rate, p50, p95, p99 - and what changed from a to b. Read only.",
+        "panel": "The load test panel's own calls; not an MCP tool."
+      },
+      "settings": {
+        "maxUsers": {
+          "label": "Most virtual users",
+          "description": "The most virtual users a load test may run (50 by default). A scenario with more is refused until you raise this. Not writable over MCP.",
+          "help": "rBrowser has no ceiling of its own: this setting is the one limit of the users of a run. Raise it only for a server you own or may test, and that can take it."
+        },
+        "maxRps": {
+          "label": "Most requests per second",
+          "description": "The most requests per second of a load test, all users together (200 by default); a scenario without a rate of its own is held to it. Not writable over MCP.",
+          "help": "Every run is paced to its scenario's rate or to this one, whichever is lower; a scenario that asks for more is refused until you raise this."
+        },
+        "maxDurationS": {
+          "label": "Longest run (seconds)",
+          "description": "The longest a load test may run, ramps included (300 seconds, 5 minutes, by default). Not writable over MCP.",
+          "help": "A scenario whose ramp up, hold and ramp down add up to more is refused until you raise this. Stop ends a run at any time."
+        },
+        "allowedHosts": {
+          "label": "Confirmed hosts",
+          "description": "Hosts outside this project's own sites you confirmed are yours or yours to test; kept on this machine only. Remove one to be asked again. Not writable over MCP.",
+          "help": "Without asking, a load test sends only to the project's own sites (start URL and environments) and to this machine. Any other host needs your confirmation in the load test panel that it is yours or that you may test it; it is kept in config.local.json, without scheme or port."
+        }
+      },
+      "errors": {
+        "already_running": "A load test runs already; stop it first.",
+        "api_client_missing": "The API client plugin is not loaded, so its panel cannot open. Turn it on in Settings > Plugins, or install it in Settings > Plugins > Catalog.",
+        "bad_args": "The load test got arguments it cannot read: {reason}",
+        "bad_host": "That is no host name.",
+        "bad_id": "\"{id}\" is no scenario or report of this project.",
+        "bad_target": "The request {id} does not go to an http or https address.",
+        "file_too_large": "The file is larger than {limit, plural, one {# byte} other {# bytes}}.",
+        "grant_not_saved": "The host could not be kept in the project's local settings.",
+        "host_not_confirmed": "This load test would send to {host}: confirm first that it is yours or that you may test it.",
+        "invalid_scenario": "The scenario does not hold: check {field}.",
+        "link": "A folder or file on the way is a link; the load test follows none.",
+        "no_core": "This rBrowser cannot run the load test.",
+        "no_project": "No project is open; the load test keeps its scenarios in the project's .rbrowser/api/load folder.",
+        "no_reports": "No load test has run in this project yet.",
+        "not_confirmed": "Tick that the host is yours or that you may test it, then confirm.",
+        "not_found": "There is no scenario \"{id}\".",
+        "not_running": "No load test runs.",
+        "not_written": "The file could not be written.",
+        "over_limit": "This scenario wants {wanted} for {what}, more than the {limit} the settings allow ({setting}). Lower it, or raise the setting in Settings > Network > Load test.",
+        "report_not_found": "There is no report \"{id}\".",
+        "request_unreadable": "The saved request {id} cannot be read: {reason}",
+        "send_failed": "The request got no answer: {reason}",
+        "summary_changed": "The scenario, the settings or the hosts changed since you saw the summary: review it again before you start.",
+        "too_many_hosts": "The project keeps the most hosts it can; remove one in Settings > Network > Load test.",
+        "unreadable": "The file does not read: {reason}",
+        "unresolved": "These variables have no value: {names}. Set them in .rbrowser/api/http-client.env.json, in the API client's private values or as RB_SECRET_ variables.",
+        "untrusted": "The load test works in a trusted workspace only: the project's scenarios run once you trust it.",
+        "variables_unreadable": "The variables of the API client do not read: {reason}"
+      },
+      "panel": {
+        "waiting": "Waiting for the load test's running call...",
+        "new": "New scenario",
+        "refresh": "Refresh",
+        "ownSystems": "Only test systems you own or may test. A load test sends many requests on purpose; every one names itself as rBrowser load test.",
+        "scenarios": "Scenarios",
+        "noScenarios": "No scenario yet: make one with New scenario.",
+        "unreadable": "does not read",
+        "pick": "Open a scenario or make a new one.",
+        "review": "Review and start",
+        "save": "Save",
+        "saved": "Saved as {id}.",
+        "delete": "Delete",
+        "deleted": "Deleted {id}.",
+        "keep": "Keep",
+        "confirmDelete": "Delete {id}?",
+        "started": "The load test {name} started.",
+        "editor": {
+          "title": "Scenario",
+          "name": "Name",
+          "environment": "Environment",
+          "viewsEnvironment": "The views' environment",
+          "steps": "Steps",
+          "order": "Order of the steps",
+          "sequence": "One after the other",
+          "weighted": "At random, by weight",
+          "request": "Saved request",
+          "chooseRequest": "Choose a saved request",
+          "noRequests": "No saved requests yet. A step sends a request saved in the API client: make one there and save it, and it is listed here.",
+          "openApiClient": "Open the API client",
+          "missing": "{id} (no longer saved)",
+          "weight": "Weight",
+          "thinkMin": "Think from (ms)",
+          "thinkMax": "Think to (ms)",
+          "removeStep": "Remove the step",
+          "addStep": "Add a step",
+          "variables": "Values per user",
+          "variablesHelp": "Each user takes the next value of each variable, as {example} in its requests; {vu} is the user's number, {iteration} its round. Separate values with commas.",
+          "variableName": "Variable",
+          "variableValues": "Its values",
+          "removeVariable": "Remove the variable",
+          "addVariable": "Add a variable",
+          "profile": "Profile",
+          "shape": "Users over time",
+          "constant": "Constant",
+          "ramp": "Ramp up, hold, down",
+          "users": "Users",
+          "atMost": "at most {limit}",
+          "rampUp": "Up (s)",
+          "hold": "Hold (s)",
+          "rampDown": "Down (s)",
+          "duration": "Duration (s)",
+          "rps": "Requests per second",
+          "rpsCeiling": "up to {limit}",
+          "length": "The run takes {seconds, plural, one {# second} other {# seconds}}.",
+          "overLimits": "Above what the settings allow: {what}. Lower it, or raise it in Settings > Network > Load test.",
+          "limit": {
+            "users": "users",
+            "rps": "requests per second",
+            "duration": "duration"
+          },
+          "abort": "Stop by itself when",
+          "errorRate": "Failures over (%)",
+          "p95": "p95 over (ms)",
+          "window": "Over the last (s)",
+          "off": "off"
+        },
+        "summary": {
+          "title": "This load test will",
+          "targets": "Send to",
+          "users": "Users",
+          "rate": "Rate",
+          "rateValue": "at most {rps, plural, one {# request} other {# requests}} per second",
+          "duration": "Duration",
+          "ramp": "{total} ({up} s up, {hold} s hold, {down} s down)",
+          "environment": "Environment",
+          "standing": {
+            "own": "{host} - this project's site",
+            "local": "{host} - this machine",
+            "confirmed": "{host} - confirmed by you",
+            "unconfirmed": "{host} - not confirmed"
+          },
+          "confirmTitle": "Confirm {host}",
+          "confirmBox": "{host} is mine, or I may test it",
+          "confirmHost": "Confirm host",
+          "note": "Only test systems you own or may test. Stop ends the run and every connection at once; so does closing rBrowser.",
+          "start": "Start load test",
+          "notNow": "Not now"
+        },
+        "live": {
+          "title": "Load test run",
+          "running": "{name} runs",
+          "ended": "{name} ended",
+          "stop": "Stop",
+          "users": "Users",
+          "usersValue": "{users} of {target}",
+          "rate": "Requests per second",
+          "rateValue": "{now} now, {mean} on average",
+          "requests": "Requests",
+          "failures": "Failures",
+          "failuresValue": "{errors} ({share})",
+          "max": "max",
+          "kinds": "Failures by kind",
+          "chart": "Requests per second and p95 over time",
+          "legendRate": "Solid line: requests per second (up to {top})",
+          "legendP95": "Dashed line: p95 (up to {top})",
+          "report": "Report: .rbrowser/out/load-test/{id}.html and .json",
+          "end": {
+            "completed": "The load test ran to its end.",
+            "stopped": "The load test was stopped.",
+            "aborted": "An abort rule stopped the load test.",
+            "closed": "The load test ended when rBrowser closed."
+          },
+          "abort": {
+            "errorRate": "Stopped by its rule: failures were {value}, over {threshold}.",
+            "p95Ms": "Stopped by its rule: p95 was {value}, over {threshold}."
+          },
+          "p50": "p50",
+          "p95": "p95",
+          "p99": "p99"
+        },
+        "kind": {
+          "http4xx": "{count, plural, one {# answer} other {# answers}} 4xx",
+          "http5xx": "{count, plural, one {# answer} other {# answers}} 5xx",
+          "timeout": "{count, plural, one {# timeout} other {# timeouts}}",
+          "connection": "{count, plural, one {# connection failure} other {# connection failures}}",
+          "check": "{count, plural, one {# failed check} other {# failed checks}}",
+          "blocked": "{count, plural, one {# request} other {# requests}} not sent",
+          "other": "{count, plural, one {# other failure} other {# other failures}}"
+        },
+        "reports": {
+          "title": "Reports",
+          "none": "No report yet: each run keeps one.",
+          "pick": "Compare {id}",
+          "row": "{requests, plural, one {# request} other {# requests}}, {share}, p95 {p95}",
+          "compare": "Compare the two ticked",
+          "compared": "Two runs compared",
+          "change": "Change",
+          "figure": {
+            "requests": "Requests",
+            "rps": "Requests per second",
+            "errorRate": "Failure rate",
+            "p50": "p50",
+            "p95": "p95",
+            "p99": "p99"
+          }
+        },
+        "setting_link": "Open the setting"
+      }
+    }
+  }
+}

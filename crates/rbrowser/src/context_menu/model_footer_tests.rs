@@ -59,22 +59,38 @@ fn top(items: &[Item]) -> Vec<String> {
         .collect()
 }
 
+/// The View submenu's items, where the bars' switches hang (RB-090-92); none without it.
+fn view_menu(items: &[Item]) -> &[Item] {
+    items
+        .iter()
+        .find_map(|item| match item {
+            Item::Menu {
+                label: Label::Key(KEY_VIEW),
+                items,
+                ..
+            } => Some(items.as_slice()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
 fn footer(items: &[Item]) -> Option<&Entry> {
-    items.iter().find_map(|item| match item {
+    view_menu(items).iter().find_map(|item| match item {
         Item::Entry(entry) if entry.label == Label::Key(KEY_FOOTER) => Some(entry),
         _ => None,
     })
 }
 
 fn vitals_bar(items: &[Item]) -> Option<&Entry> {
-    items.iter().find_map(|item| match item {
+    view_menu(items).iter().find_map(|item| match item {
         Item::Entry(entry) if entry.label == Label::Key(KEY_VITALS_BAR) => Some(entry),
         _ => None,
     })
 }
 
+/// The bars hang under View as in the main menu (RB-090-92).
 #[test]
-fn the_footer_is_a_check_entry_after_the_panels_that_runs_the_toggle() {
+fn the_footer_is_a_check_entry_of_the_view_submenu_that_runs_the_toggle() {
     let items = build(&state(true));
     assert_eq!(
         top(&items),
@@ -82,16 +98,20 @@ fn the_footer_is_a_check_entry_after_the_panels_that_runs_the_toggle() {
             "contextmenu.inspect",
             "contextmenu.devtools=false",
             "-",
-            "contextmenu.screenshot.menu>",
-            "contextmenu.video.menu>",
-            "contextmenu.checks.menu>",
-            "contextmenu.panels.menu>",
-            "-",
-            "contextmenu.view_footer=true",
-            "contextmenu.vitals_bar=true",
+            "shell.menu.view>",
+            "shell.menu.capture>",
+            "shell.menu.checks>",
+            "shell.menu.panels>",
             "-",
             "sync.menu.skipNextClick",
             "popout.menu.out",
+        ]
+    );
+    assert_eq!(
+        top(view_menu(&items)),
+        [
+            "contextmenu.view_footer=true",
+            "contextmenu.vitals_bar=true"
         ]
     );
     let entry = footer(&items).expect("the footer entry");
@@ -193,36 +213,27 @@ fn devtools_is_a_check_entry_of_its_open_state() {
     );
 }
 
-/// The owner's groups (2026-11-17): DevTools; capture, runs, checks, panels and emulation; the
-/// view's analysis, forced state, sync and tools; the bars - each set apart, no empty group.
+/// Inspect element and DevTools; the submenus as the main menu has them (RB-090-92); the
+/// view's own entries - each set apart by one separator, no empty group.
 #[test]
 fn the_page_menu_is_grouped_with_one_separator_between_groups() {
     let mut full = state(true);
     full.known.insert(crate::force_state::SET.to_owned());
-    let top = top(&build(&full));
-    let separators: Vec<usize> = top
-        .iter()
-        .enumerate()
-        .filter(|(_, text)| *text == "-")
-        .map(|(at, _)| at)
-        .collect();
-    assert!(
-        separators.windows(2).all(|pair| pair[1] > pair[0] + 1),
-        "no empty group: {top:?}"
-    );
-    let devtools = top
-        .iter()
-        .position(|text| text.starts_with("contextmenu.devtools="))
-        .expect("devtools");
-    let force = top
-        .iter()
-        .position(|text| text.ends_with('>') && text.contains("force"))
-        .expect("force state");
-    assert_eq!(top[devtools + 1], "-", "{top:?}");
     assert_eq!(
-        top[force - 1],
-        "-",
-        "force state opens the view group: {top:?}"
+        top(&build(&full)),
+        [
+            "contextmenu.inspect",
+            "contextmenu.devtools=false",
+            "-",
+            "shell.menu.view>",
+            "shell.menu.capture>",
+            "shell.menu.checks>",
+            "shell.menu.tools>",
+            "shell.menu.panels>",
+            "-",
+            "sync.menu.skipNextClick",
+            "popout.menu.out",
+        ]
     );
 }
 
@@ -235,14 +246,14 @@ fn the_lighthouse_bar_is_a_check_entry_after_the_vitals_bar() {
         .insert(crate::view_footer::defs::LIGHTHOUSE_TOGGLE.to_owned());
     on.lighthouse_bar_visible = false;
     let items = build(&on);
-    let keys = top(&items);
+    let keys = top(view_menu(&items));
     let at = |key: &str| keys.iter().position(|shown| shown.starts_with(key));
     assert_eq!(
         at("contextmenu.lighthouse_bar"),
         at("contextmenu.vitals_bar").map(|vitals| vitals + 1),
         "{keys:?}"
     );
-    let entry = items
+    let entry = view_menu(&items)
         .iter()
         .find_map(|item| match item {
             Item::Entry(entry) if entry.label == Label::Key(KEY_LIGHTHOUSE_BAR) => Some(entry),

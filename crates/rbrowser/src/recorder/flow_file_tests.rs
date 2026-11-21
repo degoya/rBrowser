@@ -201,6 +201,50 @@ fn only_the_one_file_is_trusted_along_never_another_change() {
 }
 
 #[test]
+fn a_deleted_flow_keeps_the_trust_only_when_nothing_else_changed() {
+    // RB-090-91: the mirror of a save - the protected parts are the old ones without this file.
+    let before = state(
+        &[".rbrowser/flows/checkout.ts", ".rbrowser/flows/login.ts"],
+        &[],
+    );
+    let one_less = state(&[".rbrowser/flows/login.ts"], &[]);
+    assert!(only_this_removed(
+        &before,
+        &one_less,
+        ".rbrowser/flows/checkout.ts"
+    ));
+    // A subfolder that keeps other flows stays an entry.
+    let team = state(&[".rbrowser/flows/team"], &[]);
+    assert!(only_this_removed(
+        &team,
+        &team,
+        ".rbrowser/flows/team/checkout.ts"
+    ));
+    // Another flow gone, or one come, along with it.
+    let none = state(&[], &[]);
+    assert!(!only_this_removed(
+        &before,
+        &none,
+        ".rbrowser/flows/checkout.ts"
+    ));
+    let and_a_mock = state(
+        &[".rbrowser/flows/login.ts", ".rbrowser/mocks/evil.json"],
+        &[],
+    );
+    assert!(!only_this_removed(
+        &before,
+        &and_a_mock,
+        ".rbrowser/flows/checkout.ts"
+    ));
+    let linked = state(&[".rbrowser/flows/login.ts"], &[".rbrowser/flows/out"]);
+    assert!(!only_this_removed(
+        &before,
+        &linked,
+        ".rbrowser/flows/checkout.ts"
+    ));
+}
+
+#[test]
 fn a_flow_in_a_subfolder_counts_by_its_top_level_entry() {
     assert_eq!(
         top_level_entry(".rbrowser/flows/team/checkout.ts"),

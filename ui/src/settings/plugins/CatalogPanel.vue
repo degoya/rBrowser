@@ -11,9 +11,11 @@
 // catalogue installed only. RB-091-04: the bundled plugins are rows of their own, first - one
 // click installs one that is not chosen (from the repository when it offers a newer version than
 // the bundle's, from the bundle otherwise), Remove takes a chosen one out, and an update of the
-// repository opens the same review. A change takes effect at the next start. Every text is
-// rendered as text, never as HTML.
-import { computed, onMounted, ref } from 'vue';
+// repository opens the same review. A change takes effect at once (RB-092-06): the notice adds
+// "at the next start" only when the core could not load it live, and a change made elsewhere
+// (the update check, the wizard) brings the list again. Every text is rendered as text, never as
+// HTML.
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -26,6 +28,7 @@ import type { IpcClient } from '../../ipc/client';
 import type { PanelRequest } from '../../panels/protocol';
 import { SETTINGS_ICONS } from '../icons';
 import { chosenFailure } from './bundledRows';
+import { isPluginsChanged } from './loader';
 import {
   type Catalog,
   type CatalogRow,
@@ -40,6 +43,7 @@ import {
   type PackageReview,
   parseCatalog,
   parseReview,
+  restartAsked,
   rowsOf,
   SHOW,
   SHOW_KEYS,
@@ -57,6 +61,8 @@ const catalog = ref<Catalog | null>(null);
 const busy = ref(false);
 const failure = ref<string | null>(null);
 const notice = ref<string | null>(null);
+/** The last change takes effect at the next start only: the core could not load it live. */
+const restart = ref(false);
 const query = ref('');
 const kind = ref<KindFilter>('all');
 const show = ref<ShowFilter>('all');
@@ -144,7 +150,7 @@ async function sendInstall(keyConfirmed: boolean): Promise<void> {
   busy.value = true;
   failure.value = null;
   try {
-    await ask(installRequest(reviewed, keyConfirmed));
+    restart.value = restartAsked(await ask(installRequest(reviewed, keyConfirmed)));
     notice.value = t('settings.plugins.catalog.installed', { name: row.offer.entry.name });
     await load(false);
   } catch (error) {
@@ -165,6 +171,7 @@ async function choose(row: CatalogRow, chosen: boolean): Promise<void> {
       failure.value = failureText(failed);
       return;
     }
+    restart.value = restartAsked(answer);
     notice.value = t(chosen ? 'settings.plugins.catalog.installed' : 'settings.plugins.catalog.removed', { name: row.offer.entry.name });
     await load(false);
   } catch (error) {
@@ -178,7 +185,7 @@ async function remove(row: CatalogRow): Promise<void> {
   busy.value = true;
   failure.value = null;
   try {
-    await ask({ op: 'catalogRemove', id: row.offer.entry.id });
+    restart.value = restartAsked(await ask({ op: 'catalogRemove', id: row.offer.entry.id }));
     notice.value = t('settings.plugins.catalog.removed', { name: row.offer.entry.name });
     await load(false);
   } catch (error) {
@@ -199,7 +206,15 @@ function compatibilityText(row: CatalogRow): string | null {
   return null;
 }
 
-onMounted(() => void load(false));
+let stopListening: (() => void) | null = null;
+onMounted(() => {
+  void load(false);
+  // RB-092-06: a change made elsewhere took effect live; the list follows unless one is under way.
+  stopListening = props.client.on((message) => {
+    if (isPluginsChanged(message) && !busy.value) void load(false);
+  });
+});
+onUnmounted(() => stopListening?.());
 </script>
 
 <template>
@@ -232,7 +247,7 @@ onMounted(() => void load(false));
 
     <p v-if="failure !== null" class="text-sm text-error" role="alert" data-testid="catalog-failure">{{ failure }}</p>
     <p v-if="notice !== null" class="text-sm text-success" role="status" data-testid="catalog-notice">
-      {{ notice }} {{ t('settings.plugins.catalog.restart') }}
+      {{ notice }}<template v-if="restart"> {{ t('settings.plugins.catalog.restart') }}</template>
     </p>
 
     <ul v-if="catalog !== null" class="flex flex-col gap-1 text-sm" data-testid="catalog-repositories">

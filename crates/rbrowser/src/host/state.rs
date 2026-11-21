@@ -185,9 +185,15 @@ impl HostState {
     /// The device metrics `view` should have now: its measured rectangle, else its computed
     /// cell. In a window of its own the page is at its real size (RB-080-14).
     pub fn metrics_of(&self, view: &ViewState) -> DeviceMetrics {
+        self.metrics_for(view, &view.emulation)
+    }
+
+    /// The device metrics `view` would have with `emulation` in its place (a plugin's width
+    /// lease, RB-093-01, asks for another width).
+    pub fn metrics_for(&self, view: &ViewState, emulation: &Emulation) -> DeviceMetrics {
         let rect = self.rect_of(view).unwrap_or_default();
         if view.detached.is_some() {
-            return crate::pop_out::metrics(&view.emulation, rect);
+            return crate::pop_out::metrics(emulation, rect);
         }
         // A canvas view fills its place past its page's size (RB-080-94).
         let canvas = self
@@ -199,7 +205,7 @@ impl HostState {
         } else {
             crate::fit::MAX_ZOOM
         };
-        device_metrics_up_to(&view.emulation, rect, view.effective_zoom(), max)
+        device_metrics_up_to(emulation, rect, view.effective_zoom(), max)
     }
 
     /// Where `view` is: its measured rectangle, else its computed cell; `None` before the
@@ -381,6 +387,7 @@ pub fn default_config() -> ProjectConfig {
         height: Some(height),
         device: None,
         engine: EngineKind::Chromium,
+        ios_device: None,
         session: None,
         sync_navigation: true,
         shortcut: None,
@@ -402,6 +409,14 @@ pub fn default_config() -> ProjectConfig {
     };
     config.layout = layout_for(&config);
     config
+}
+
+impl super::Host {
+    /// Reads the project config in effect under the host's lock, without the deep copy of
+    /// [`super::Host::config`] (RB-090-38); `read` must not call back into the host.
+    pub fn with_config<R>(&self, read: impl FnOnce(&ProjectConfig) -> R) -> R {
+        read(&self.state().config)
+    }
 }
 
 #[cfg(test)]

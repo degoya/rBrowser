@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Added (RB-094-02): the outline across the breakpoints. The rule `interactive-differs` finds an
+  interactive element (the focus list) some views of a page show and others lack or hide; the
+  rules over the breakpoints name every view missing the element (`missing`), the same in each
+  view's run, so the findings panel merges them into one finding with its breakpoints;
+  `outline.diff.elements` chooses the kinds compared (interactive elements, headings,
+  landmarks). The rule `reading-order` (WCAG 1.3.2) finds, among the headings and interactive
+  elements in source order, one shown before its predecessor - left of it on the line, or above
+  it and not in a column to its right; right to left where the content reads so;
+  `outline.readingOrder.tolerancePx` - both elements named, the other's selector in `data.other`;
+  `focus-order-jump` names WCAG 2.4.3. The collector reads each heading's and focusable element's
+  place in the document (`order`) and the writing direction (`dir`). MCP
+  `outline_breakpoint_diff` (the table element x breakpoint) and `outline_reading_order`;
+  the panel's tabs Breakpoints and Reading order; the commands `breakpoint_diff`
+  (`Ctrl+Shift+Space B D`) and `reading_order` (`Ctrl+Shift+Space B R`) show those tabs.
+  Acceptance page `tests/fixtures/site/outline/breakpoints.html`.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

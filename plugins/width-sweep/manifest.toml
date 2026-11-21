@@ -1,0 +1,100 @@
+# The width sweep (RB-093-01, docs/plugins.md): one view driven through a range of widths - by
+# default 320 to 1920 px in steps of 10, then pixel by pixel around every change - and the layout
+# breaks between the breakpoints (horizontal overflow, text cut off, overlapping siblings)
+# reported as width ranges in the findings panel. A check for the rules' levels in checks.rules
+# (a check run of every plugin does not sweep), and a feature for the commands and the MCP tools
+# `sweep_run` and `sweep_cancel`.
+manifest_version = 1
+id = "width-sweep"
+name = "Width sweep"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "sweep"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Sweeps one view through a range of widths and reports where the layout breaks between the breakpoints: horizontal overflow, text cut off, overlapping elements."
+# Checks > Width sweep in the page's context menu: run on the clicked view, or cancel.
+context_menu = ["run", "cancel"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the view to sweep; evaluate: the detector src/detect.js in the plugin's isolated world,
+# which only reads (and notes Escape pressed in the view); cdp: the host's width lease -
+# Emulation.setDeviceMetricsOverride with only a `width` (120 to 3840 px) and
+# Emulation.clearDeviceMetricsOverride without parameters, which the host turns into the view's own
+# metrics at that width with the view out of sync, and back; findings: the ranges found.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Emulation"] }
+findings = true
+
+# Up to 3721 widths (120 to 3840 px pixel by pixel); the time in the view is credited back, the
+# compute is a JSON answer per width. Two calls at once: a sweep and the cancel that stops it.
+[limits]
+fuel = 20000000000
+timeout_milliseconds = 300000
+max_concurrent = 2
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `sweep_run`: the view `target` names (the active view without one) swept from `from` to `to`
+# in steps of `step` for the `kinds` (each the setting's value when absent); the ranges found go to
+# the findings panel and are answered.
+[[tools]]
+name = "run"
+description = "plugin.width-sweep.tools.run"
+input = { type = "object", properties = { from = { type = "integer", minimum = 120, maximum = 3840 }, to = { type = "integer", minimum = 120, maximum = 3840 }, step = { type = "integer", minimum = 1, maximum = 400 }, kinds = { type = "array", minItems = 1, uniqueItems = true, items = { type = "string", enum = ["overflow", "text-clipped", "overlap"] } } } }
+
+# MCP `sweep_cancel`: ends the sweep running in any view; its view gets its own width and sync back.
+[[tools]]
+name = "cancel"
+description = "plugin.width-sweep.tools.cancel"
+input = { type = "object", properties = {} }
+
+# MCP `sweep_show`: holds the view `target` names (the active view without one) at `width` px - a
+# finding's width - until Escape in the view, sweep_cancel, another width or the setting
+# showSeconds; the findings panel's "Show at N px" runs the command of the same name.
+[[tools]]
+name = "show"
+description = "plugin.width-sweep.tools.show"
+input = { type = "object", required = ["width"], properties = { width = { type = "integer", minimum = 120, maximum = 3840 } } }
+
+# `plugin.width-sweep.run`, Ctrl+Shift+Space B W (W for width): sweeps the view `target` names (the
+# context menu's clicked view; the active view without one). Escape in that view ends it.
+[[commands]]
+id = "run"
+title = "plugin.width-sweep.commands.run"
+shortcut = "Ctrl+Shift+Space B W"
+group = "breakpoints"
+tool = "run"
+
+# `plugin.width-sweep.cancel`, Ctrl+Shift+Space B Q (Q for quit, as checks.cancel's K Q): ends the
+# running sweep.
+[[commands]]
+id = "cancel"
+title = "plugin.width-sweep.commands.cancel"
+shortcut = "Ctrl+Shift+Space B Q"
+group = "breakpoints"
+tool = "cancel"
+
+# `plugin.width-sweep.show`: "Show at N px" on a width sweep finding in the findings panel, with
+# the finding's view as `target` and its `width`. No shortcut: it needs a width, which only a
+# finding (or MCP `sweep_show`) gives.
+[[commands]]
+id = "show"
+title = "plugin.width-sweep.commands.show"
+# Without a width (the shortcut, the palette) it answers that a finding names the width.
+shortcut = "Ctrl+Shift+Space B V"
+group = "breakpoints"
+tool = "show"

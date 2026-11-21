@@ -8,6 +8,12 @@
 # artifacts/perf/<date>.json, prints the summary and holds it to the budget (the runs no more
 # than 10 % apart).
 #
+# K1 and K11 (RB-090-32): after the runs, scripts/lib/perf-k1.mjs clicks the targets of
+# latency.html in the measured view (--clicks, default 100; 0 skips it) and reads when each
+# other view logged the replayed click - K1 is the p95 at most 150 ms. --counters names the
+# answer of the MCP tool app_perf saved after the measurement: the replays into Firefox and
+# WebKit (K11, p95 at most 300 ms), the hub's own replay times and the start-up time.
+#
 # Before a measurement (the Windows host, docs/perf-budget.md "How to measure"):
 #   - the CDP proxy on (Settings > Automation > CDP proxy), its endpoint in the environment:
 #     RBROWSER_CDP_ENDPOINT=<file with the answer of the MCP tool cdp_endpoint>, or
@@ -18,10 +24,12 @@
 #
 # Usage:
 #   scripts/perf.sh [--views 8] [--dpr3 2] [--runs 3] [--seconds 10] [--view 0] [--start]
-#                   [--out DIR]
+#                   [--clicks 100] [--counters APP_PERF.json] [--out DIR]
+#   scripts/perf.sh --runs 0 --clicks 0 --counters APP_PERF.json   # K11 and start-up alone
 #   scripts/perf.sh --compare [RESULT]   # the newest (or named) result against the baseline
 #   scripts/perf.sh --dry-run ...        # print the steps, run nothing
-#   scripts/perf.sh --fake DIR ...       # runs from DIR/run-<n>.json and DIR/memory-<n>
+#   scripts/perf.sh --fake DIR ...       # runs from DIR/run-<n>.json and DIR/memory-<n>, the
+#                                        # click run from DIR/k1.json when it is there
 #                                        # (the script test; no CDP, no Windows)
 #
 # Exit: 0 budget met, 1 budget missed, 2 usage or a run that failed.
@@ -37,6 +45,8 @@ dpr3=2
 runs=3
 seconds=10
 view=0
+clicks=100
+counters=""
 start=false
 dry_run=false
 fake=""
@@ -60,6 +70,9 @@ while [[ $# -gt 0 ]]; do
         --runs) number "$1" "${2:-}"; runs="$2"; shift 2 ;;
         --seconds) number "$1" "${2:-}"; seconds="$2"; shift 2 ;;
         --view) number "$1" "${2:-}"; view="$2"; shift 2 ;;
+        --clicks) number "$1" "${2:-}"; clicks="$2"; shift 2 ;;
+        --counters) [[ -f "${2:-}" ]] || { echo "perf.sh: --counters takes the saved app_perf answer, a file" >&2; exit 2; }
+            counters="$2"; shift 2 ;;
         --out) [[ -n "${2:-}" ]] || usage; out="$2"; shift 2 ;;
         --fake) [[ -d "${2:-}" ]] || { echo "perf.sh: --fake takes a folder" >&2; exit 2; }
             fake="$2"; shift 2 ;;
@@ -73,8 +86,13 @@ while [[ $# -gt 0 ]]; do
         *) echo "perf.sh: unknown argument $1" >&2; usage ;;
     esac
 done
-if [[ "$runs" -lt 1 || "$seconds" -lt 1 ]]; then
-    echo "perf.sh: --runs and --seconds are at least 1" >&2
+if [[ "$seconds" -lt 1 ]]; then
+    echo "perf.sh: --seconds is at least 1" >&2
+    exit 2
+fi
+# --runs 0: no scroll run, K3 not measured - the click run and the counters alone.
+if [[ "$runs" -lt 1 && "$clicks" -lt 1 && -z "$counters" ]]; then
+    echo "perf.sh: nothing to measure - --runs 0 needs --clicks or --counters" >&2
     exit 2
 fi
 
@@ -105,7 +123,7 @@ sample_memory() {
 stamp="$(date +%Y-%m-%dT%H-%M-%S)"
 work="$(mktemp -d)"
 server_pid=""
-# shellcheck disable=SC2329  # called by the trap
+# shellcheck disable=SC2317,SC2329  # called by the trap (SC2317 before shellcheck 0.11)
 cleanup() {
     if [[ -n "$server_pid" ]]; then kill "$server_pid" 2>/dev/null || true; fi
     rm -rf "$work"
@@ -121,6 +139,12 @@ if $dry_run; then
     for ((n = 1; n <= runs; n++)); do
         echo "  run $n: node scripts/lib/perf-measure.mjs --seconds $seconds --view $view, then the memory sample"
     done
+    if [[ "$clicks" -gt 0 ]]; then
+        echo "  K1: node scripts/lib/perf-k1.mjs --clicks $clicks --view $view (latency.html in every view)"
+    fi
+    if [[ -n "$counters" ]]; then
+        echo "  K11 and start-up: $counters (the app_perf answer)"
+    fi
     echo "  report: ${out#"$ROOT/"}/$stamp.json"
     exit 0
 fi
@@ -159,6 +183,24 @@ for ((n = 1; n <= runs; n++)); do
     fi
     report_args+=(--run "$run_file" "$memory")
 done
+
+k1_file="$work/k1.json"
+if [[ -n "$fake" ]]; then
+    if [[ "$clicks" -gt 0 && -f "$fake/k1.json" ]]; then
+        cp "$fake/k1.json" "$k1_file"
+        report_args+=(--k1 "$k1_file")
+    fi
+elif [[ "$clicks" -gt 0 ]]; then
+    echo "perf.sh: K1, $clicks click(s) on latency.html"
+    if ! node "$ROOT/scripts/lib/perf-k1.mjs" --clicks "$clicks" --view "$view" --out "$k1_file"; then
+        echo "perf.sh: the click run failed" >&2
+        exit 2
+    fi
+    report_args+=(--k1 "$k1_file")
+fi
+if [[ -n "$counters" ]]; then
+    report_args+=(--counters "$counters")
+fi
 
 set +e
 python3 "$ROOT/scripts/lib/perf_report.py" combine --views "$views" --dpr3 "$dpr3" \

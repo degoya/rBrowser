@@ -35,8 +35,8 @@ pub const CATEGORY: &str = "about";
 pub const APP_INFO_TOOL: &str = "app_info";
 /// The tool's description for the MCP tool list.
 pub const APP_INFO_DESCRIPTION: &str = "rBrowser's version, commit, build time and platform, the \
-     engine versions (CEF/Chromium, Firefox, WebKit, Node), the API versions and the data and \
-     log folders - the facts of Settings > About, without the licence texts.";
+     engine versions (CEF/Chromium, Firefox, WebKit, Safari on macOS, Node), the API versions and \
+     the data and log folders - the facts of Settings > About, without the licence texts.";
 /// Why the licence texts have no MCP tool.
 pub const LICENCES_OMITTED: &str = "static documents, available in NOTICE";
 
@@ -65,6 +65,8 @@ pub fn facts_of(core: &Core) -> AboutInfo {
         settings.engines.firefox_executable(),
         Path::is_file,
     );
+    // Safari's version on a Mac, as a session or the bundle named it (RB-095-03).
+    info.safari = crate::engines::safari::version();
     // How this installation updates itself (RB-091-05).
     info.updates = Some(crate::updates::about_state(
         crate::updates::SELF_UPDATE_BUILT,

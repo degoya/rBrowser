@@ -59,6 +59,7 @@ struct Active {
     max: Duration,
     stop: watch::Sender<bool>,
     done: watch::Receiver<Option<Arc<Finished>>>,
+    pauser: super::pause::Pauser,
 }
 
 /// A finished recording.
@@ -114,6 +115,9 @@ pub struct Status {
     /// Its folder.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    /// It is paused (RB-090-68): the files leave the pause out.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub paused: bool,
     /// It stops by itself after this.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_duration_sec: Option<u64>,
@@ -138,6 +142,11 @@ pub fn settings(core: &Core) -> VideoSettings {
 /// it, RB-110-12).
 pub fn running_folder() -> Option<PathBuf> {
     lock(&ACTIVE).as_ref().map(|active| active.folder.clone())
+}
+
+/// The running recording's pauser (RB-090-68); `None` without one.
+pub fn running_pauser() -> Option<super::pause::Pauser> {
+    lock(&ACTIVE).as_ref().map(|active| active.pauser.clone())
 }
 
 /// Whether a recording runs.
@@ -309,6 +318,7 @@ async fn start_inner(core: &Arc<Core>, request: &StartRequest) -> Result<Started
         max: settings.max_duration,
         stop: recording.stopper(),
         done,
+        pauser: recording.pauser(),
     });
     // The activity bar's entry and the toolbar's indicator (RB-090-67).
     crate::activity_bar::publish_video(
@@ -445,6 +455,7 @@ pub fn status(core: &Core) -> Status {
             views: active.views.clone(),
             elapsed_sec: Some(active.started.elapsed().as_secs()),
             folder: Some(active.folder.display().to_string()),
+            paused: active.pauser.is_paused(),
             max_duration_sec: Some(active.max.as_secs()),
             ffmpeg,
             last,
@@ -454,6 +465,7 @@ pub fn status(core: &Core) -> Status {
             views: Vec::new(),
             elapsed_sec: None,
             folder: None,
+            paused: false,
             max_duration_sec: None,
             ffmpeg,
             last,

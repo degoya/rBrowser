@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser clock and animations fixture</title>
+<style>
+  /* RB-094-07: what the page clock and the animation rates change, as the page sees it - the
+     date and time of `new Date()`, `Date.now()` and `Intl.DateTimeFormat().format()`, a
+     countdown to New Year, and the position of a CSS animation and of a Web Animation. The
+     values are read again every 200 ms and kept in `window.__clock`. Open it in every view:
+     with the clock at 2026-12-24 10:00 every Chromium view shows that date; with the
+     animations at 0 the positions stand still, at 100 % they move. */
+  html { font: 100% system-ui, sans-serif; }
+  body { margin: 0; padding: 12px; }
+  td { padding: 2px 8px; border-bottom: 1px solid #ccc; }
+  td:first-child { font-family: ui-monospace, monospace; }
+  .track { position: relative; height: 24px; margin: 12px 0; background: #eee; }
+  .box { position: absolute; top: 0; left: 0; width: 24px; height: 24px; }
+  #css-box { background: #e63946; animation: slide 4s linear infinite; }
+  #web-box { background: #2a9d8f; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(240px); } }
+</style>
+</head>
+<body>
+<div class="track"><div class="box" id="css-box"></div></div>
+<div class="track"><div class="box" id="web-box"></div></div>
+<table><tbody id="values"></tbody></table>
+<script>
+  // The Web Animation beside the CSS one (a DOM without Web Animations has only the CSS one).
+  const webBox = document.getElementById("web-box");
+  if (webBox && typeof webBox.animate === "function") {
+    webBox.animate(
+      [{ transform: "translateX(0)" }, { transform: "translateX(240px)" }],
+      { duration: 4000, iterations: Infinity },
+    );
+  }
+
+  const pad = (value) => String(value).padStart(2, "0");
+
+  // What the page reads now; also the fixture tests' entry.
+  function readClock() {
+    const now = new Date();
+    const local = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+      `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const newYear = new Date(now.getFullYear() + 1, 0, 1).getTime();
+    const translate = (id) => {
+      const box = document.getElementById(id);
+      if (!box || typeof getComputedStyle !== "function") return "";
+      return getComputedStyle(box).transform;
+    };
+    return {
+      local,
+      epochMs: Date.now(),
+      intl: new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(),
+      daysToNewYear: Math.ceil((newYear - Date.now()) / 86400000),
+      cssTransform: translate("css-box"),
+      webTransform: translate("web-box"),
+    };
+  }
+
+  function render() {
+    const values = readClock();
+    window.__clock = values;
+    const rows = Object.entries(values).map(([key, value]) => {
+      const row = document.createElement("tr");
+      for (const text of [key, String(value)]) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        row.append(cell);
+      }
+      return row;
+    });
+    document.getElementById("values").replaceChildren(...rows);
+  }
+
+  render();
+  setInterval(render, 200);
+</script>
+</body>
+</html>

@@ -14,14 +14,20 @@
 //! | Firefox: settings, engine, sync source, `engine.firefox.toggle` | [`firefox`] |
 //! | MCP `engine_restart`, the engine fields of `views_list` | [`mcp`] |
 //! | WebKit through Playwright in the sidecar (RB-040-04), `engine.webkit.toggle` | [`webkit`] |
+//! | Safari over `safaridriver`, macOS only (RB-095-03) | [`safari`] |
+//! | iOS on the Simulator or a device over `safaridriver`, macOS only (RB-095-04), `ios.devices` | [`ios`] |
 //! | `view.set_engine` behind the engine badge of every label strip (RB-080-33) | [`set_engine`] |
 //! | An external view in its grid cell: what is asked of the window, released, failed (RB-080-39) | [`embed`] |
+//! | Chrome on an Android device over ADB (RB-095-02), `view.add_android`, `tools.adb.install` | [`android`] |
 
+pub mod android;
 pub mod commands;
 pub mod embed;
 pub mod firefox;
 mod glue;
+pub mod ios;
 pub mod mcp;
+pub mod safari;
 pub mod set_engine;
 pub mod webkit;
 
@@ -35,7 +41,7 @@ use crate::cdp::lock;
 use crate::control::Core;
 use crate::host::Host;
 
-pub use glue::HostEngines;
+pub use glue::{HostEngines, window_title};
 
 /// `Leader V D`: place every external window again by `engines.external.placement`; with the
 /// embedding on (RB-080-39) it first shows every embedded view as a window of its own.
@@ -82,23 +88,56 @@ pub fn on_start(core: &Core) {
     start_with(core, webkit::app_port());
 }
 
-/// [`on_start`] with WebKit over `webkit_port` (`None`: no sidecar, WebKit is unavailable). Both
-/// engines are built before the first view starts, so no view starts on a stand-in.
+/// [`on_start`] with WebKit over `webkit_port` (`None`: no sidecar, WebKit is unavailable). Every
+/// engine is built before the first view starts, so no view starts on a stand-in.
 pub(crate) fn start_with(core: &Core, webkit_port: Option<Arc<dyn webkit::SidecarPort>>) {
+    start_engines(core, webkit_port, safari::app_launch());
+}
+
+/// [`start_with`] with Safari's driver from `safari_launch` (`None`: Safari is unavailable, as
+/// everywhere but on a Mac; RB-095-03).
+pub(crate) fn start_engines(
+    core: &Core,
+    webkit_port: Option<Arc<dyn webkit::SidecarPort>>,
+    safari_launch: Option<Arc<dyn rb_safari::Launch>>,
+) {
+    start_engines_with(core, webkit_port, safari_launch, ios::app_setup());
+}
+
+/// [`start_engines`] with iOS over `ios_setup` (`None`: iOS is unavailable, as everywhere but on
+/// a Mac; RB-095-04).
+pub(crate) fn start_engines_with(
+    core: &Core,
+    webkit_port: Option<Arc<dyn webkit::SidecarPort>>,
+    safari_launch: Option<Arc<dyn rb_safari::Launch>>,
+    ios_setup: Option<ios::IosSetup>,
+) {
     if for_host(core.host()).is_some() {
         return;
     }
     let firefox = firefox::prepare(core);
     let webkit = webkit::prepare(core, webkit_port);
+    let android = android::prepare(core);
+    let safari = safari::prepare(core, safari_launch);
+    let ios = ios::prepare(core, ios_setup);
     let engines = HostEngines::start_with(
         core.host(),
         core.runtime(),
         &core.user_settings().engines.external,
-        vec![firefox.engine(), webkit.engine()],
+        vec![
+            firefox.engine(),
+            webkit.engine(),
+            android.clone() as Arc<dyn rb_engine::Engine>,
+            safari.engine(),
+            ios.engine(),
+        ],
     );
     lock(registry()).push((Arc::downgrade(core.host()), engines.clone()));
     firefox.attach(&engines);
     webkit.attach(core);
+    android::attach(core, android);
+    safari.attach(core);
+    ios.attach(core);
 }
 
 /// The project or the user settings changed: the placement, the restart and the tiles follow,
@@ -109,11 +148,15 @@ pub fn on_config_changed(core: &Core) {
     }
     firefox::on_config_changed(core);
     webkit::on_config_changed(core);
+    android::on_config_changed(core);
+    safari::on_config_changed(core);
+    ios::on_config_changed(core);
 }
 
 /// Closes every external window and stops the engines (the app quits); called outside the
 /// runtime.
 pub fn shutdown(runtime: &tokio::runtime::Runtime) {
+    android::clear_on_quit(runtime, SHUTDOWN_WAIT);
     let all: Vec<Arc<HostEngines>> = lock(registry())
         .drain(..)
         .map(|(_, engines)| engines)

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the structured data panel (RB-090-96): Settings > Checks > Structured data",
+  "type": "object",
+  "properties": {
+    "richResults": {
+      "type": "boolean",
+      "default": true,
+      "description": "Check the properties the rich results of Google Search need and recommend.",
+      "x-category": "checks",
+      "x-section": "structured-data",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "minSeverity": {
+      "type": "string",
+      "enum": ["info", "warning", "error"],
+      "default": "info",
+      "description": "The mildest findings shown and reported: notes, warnings or errors only.",
+      "x-category": "checks",
+      "x-section": "structured-data",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

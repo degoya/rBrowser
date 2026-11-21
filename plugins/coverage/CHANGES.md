@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed (RB-094-10): a file at the page's origin with the default port written out
+  (`https://a.test:443/app.js` on `https://a.test/`) is no third-party file.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

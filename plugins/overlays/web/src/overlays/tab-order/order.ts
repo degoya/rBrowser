@@ -9,7 +9,8 @@
 // iframes off) is one stop.
 
 import { cssPath } from '../../selector';
-import { fullPath } from '../scan';
+import { elementPath } from '../../../../../web-common/src/element-path';
+import { pathTail } from '../scan';
 
 /** One stop of the tab order. */
 export interface TabStop {
@@ -20,6 +21,9 @@ export interface TabStop {
   frames: HTMLIFrameElement[];
   /** An iframe whose document is not walked: one stop for all of it. */
   iframe?: boolean;
+  /** Its place among the stops in source order, a scope's stops where its owner stands
+   *  (RB-094-02, the reading order arrows); set by {@link tabOrder}. */
+  source?: number;
 }
 
 export interface OrderOptions {
@@ -134,7 +138,13 @@ interface Entry {
   /** The iframe stop for an iframe not walked. */
   iframe?: boolean;
   /** The stops of the scope it owns. */
-  scope?: () => TabStop[];
+  scope?: () => Scope;
+}
+
+/** The stops of one scope, in tab order and in source order: the same objects. */
+interface Scope {
+  tab: TabStop[];
+  source: TabStop[];
 }
 
 interface Walk {
@@ -204,17 +214,24 @@ function radios(entries: Entry[]): Entry[] {
   return entries.filter((entry) => !radio(entry) || groups.some((group) => group.entry === entry));
 }
 
-/** The ordered stops of the scope of `nodes`. */
-function order(nodes: Iterable<Element>, walk: Walk, frames: HTMLIFrameElement[]): TabStop[] {
+/** The ordered stops of the scope of `nodes`; each entry's own stop and its scope's stops stand
+ *  together, at the entry's place in tab order and in tree order. */
+function order(nodes: Iterable<Element>, walk: Walk, frames: HTMLIFrameElement[]): Scope {
   const entries: Entry[] = [];
   collect(nodes, walk, frames, entries);
   const kept = radios(entries).filter((entry) => entry.order >= 0);
+  const blocks = new Map<Entry, Scope>();
+  for (const entry of kept) {
+    const own: TabStop[] = entry.self ? [{ element: entry.element, tabindex: entry.order, frames, ...(entry.iframe ? { iframe: true } : {}) }] : [];
+    const inner = entry.scope?.();
+    blocks.set(entry, { tab: [...own, ...(inner?.tab ?? [])], source: [...own, ...(inner?.source ?? [])] });
+  }
   const positive = kept.filter((entry) => entry.order > 0).sort((left, right) => left.order - right.order);
   const zero = kept.filter((entry) => entry.order === 0);
-  return [...positive, ...zero].flatMap((entry) => {
-    const stops: TabStop[] = entry.self ? [{ element: entry.element, tabindex: entry.order, frames, ...(entry.iframe ? { iframe: true } : {}) }] : [];
-    return entry.scope ? [...stops, ...entry.scope()] : stops;
-  });
+  return {
+    tab: [...positive, ...zero].flatMap((entry) => blocks.get(entry)?.tab ?? []),
+    source: kept.flatMap((entry) => blocks.get(entry)?.source ?? []),
+  };
 }
 
 function openModal(doc: Document): Element | null {
@@ -230,7 +247,11 @@ export function tabOrder(doc: Document, options: OrderOptions): TabStop[] {
   const root = doc.documentElement;
   if (!root) return [];
   const walk: Walk = { options, visited: 0, modal: openModal(doc) };
-  return order(root.children, walk, []).slice(0, MAX_STOPS);
+  const { tab, source } = order(root.children, walk, []);
+  source.forEach((stop, place) => {
+    stop.source = place;
+  });
+  return tab.slice(0, MAX_STOPS);
 }
 
 /** `parts` of the frames and shadow roots down to `element`, outermost first. */
@@ -253,6 +274,5 @@ export function composedSelector(element: Element, frames: readonly HTMLIFrameEl
 
 /** The full path of `element` through its frames and shadow hosts, the same in every view. */
 export function composedPath(element: Element, frames: readonly HTMLIFrameElement[] = []): string {
-  const path = chain(element, frames, fullPath);
-  return path.length > 300 ? path.slice(path.length - 300) : path;
+  return pathTail([...frames, element].map(elementPath).join(' >>> '));
 }

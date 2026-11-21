@@ -74,7 +74,7 @@ pub async fn pick(
 
 async fn wait(
     cdp: &Arc<CdpRouter>,
-    events: &mut tokio::sync::broadcast::Receiver<CdpEvent>,
+    events: &mut tokio::sync::broadcast::Receiver<Arc<CdpEvent>>,
     session: &str,
     timeout: Duration,
 ) -> Result<i64, EngineError> {
@@ -86,7 +86,7 @@ async fn wait(
 /// The node of the first click in the view of `session` that is not on one of rBrowser's own.
 async fn clicked(
     cdp: &Arc<CdpRouter>,
-    events: &mut tokio::sync::broadcast::Receiver<CdpEvent>,
+    events: &mut tokio::sync::broadcast::Receiver<Arc<CdpEvent>>,
     session: &str,
 ) -> Result<i64, EngineError> {
     loop {

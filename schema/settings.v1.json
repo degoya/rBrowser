@@ -318,7 +318,7 @@
         },
         "pageContextMenuEmulation": {
           "type": "boolean",
-          "description": "The page's context menu offers the toolbar's emulation switches for the clicked view -\ncolour scheme, reduced motion, offline, location, time zone, reset - in an Emulation\nsubmenu, and \"Analyze breakpoints\" beside it (RB-080-49). Off, the submenu is gone and\n\"Analyze breakpoints\" stays under Checks. Needs `ui.pageContextMenu`.",
+          "description": "The page's context menu offers the toolbar's emulation switches for the clicked view -\ncolour scheme, reduced motion, offline, location, time zone, reset - in an Emulation\nsubmenu (RB-080-49). Off, the submenu is gone. Needs `ui.pageContextMenu`.",
           "default": true,
           "x-category": "layout",
           "x-section": "grid",
@@ -480,8 +480,13 @@
               "oneOf": [
                 {
                   "type": "string",
+                  "const": "always",
+                  "description": "The bar always, empty while nothing runs: the views keep their place (RB-094-13)."
+                },
+                {
+                  "type": "string",
                   "const": "bar",
-                  "description": "The bar with the running activities' controls."
+                  "description": "The bar with the running activities' controls, only while something runs."
                 },
                 {
                   "type": "string",
@@ -489,8 +494,8 @@
                   "description": "No bar; the toolbar's compact indicators only."
                 }
               ],
-              "description": "`bar` shows the running activities' controls in the bar; `indicator` draws no bar and\nleaves each activity to its compact indicator in the toolbar.",
-              "default": "bar",
+              "description": "`always` keeps the bar's room, empty while nothing runs, so the views never move; `bar`\nshows the bar only while something runs; `indicator` draws no bar and leaves each\nactivity to its compact indicator in the toolbar.",
+              "default": "always",
               "x-category": "general",
               "x-section": "appearance",
               "x-order": 10,
@@ -566,6 +571,39 @@
                   "x-scope": [
                     "user"
                   ]
+                },
+                "time": {
+                  "type": "boolean",
+                  "description": "The page clock or the animations changed (RB-094-07): the time and rate, Step, Real\ntime and 100 %.",
+                  "default": true,
+                  "x-category": "general",
+                  "x-section": "appearance",
+                  "x-order": 17,
+                  "x-scope": [
+                    "user"
+                  ]
+                },
+                "plugins": {
+                  "type": "boolean",
+                  "description": "A plugin call that reports its progress (RB-093-01): the plugin, how far it is and\nCancel when the plugin has a cancel command.",
+                  "default": true,
+                  "x-category": "general",
+                  "x-section": "appearance",
+                  "x-order": 18,
+                  "x-scope": [
+                    "user"
+                  ]
+                },
+                "forcedStates": {
+                  "type": "boolean",
+                  "description": "Pseudo-class states forced on an element (RB-094-16): the states, the views and Reset.",
+                  "default": true,
+                  "x-category": "general",
+                  "x-section": "appearance",
+                  "x-order": 19,
+                  "x-scope": [
+                    "user"
+                  ]
                 }
               },
               "description": "Which activities have an entry in the bar; one switched off shows only its compact\nindicator in the toolbar.",
@@ -575,21 +613,27 @@
                 "flows": true,
                 "checks": true,
                 "portal": true,
-                "desync": true
+                "desync": true,
+                "time": true,
+                "plugins": true,
+                "forcedStates": true
               }
             }
           },
           "description": "The activity bar while something runs, its place and its entries (RB-090-67).",
           "default": {
             "position": "top",
-            "mode": "bar",
+            "mode": "always",
             "show": {
               "video": true,
               "recorder": true,
               "flows": true,
               "checks": true,
               "portal": true,
-              "desync": true
+              "desync": true,
+              "time": true,
+              "plugins": true,
+              "forcedStates": true
             }
           }
         },
@@ -633,12 +677,24 @@
               "x-scope": [
                 "user"
               ]
+            },
+            "addressEditable": {
+              "type": "boolean",
+              "description": "A click on the address in the label strip of a view with its own navigation (decoupled\nwith `Leader S U` or `syncNavigation: false`) opens an address field there, as does\n`view.edit_address` (`Leader S L`): Enter loads the address in that view only, Escape\ncancels (RB-092-03). Off, the address only shows and its click makes the view active.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "grid",
+              "x-order": 19,
+              "x-scope": [
+                "user"
+              ]
             }
           },
           "description": "Layout > what each view's label strip shows beside its name (RB-090-27).",
           "default": {
             "engineStatus": true,
-            "address": "differs"
+            "address": "differs",
+            "addressEditable": true
           }
         },
         "fileNameTime": {
@@ -673,6 +729,58 @@
           "x-scope": [
             "user"
           ]
+        },
+        "titleBar": {
+          "type": "object",
+          "properties": {
+            "showVersion": {
+              "type": "boolean",
+              "description": "The main window's title shows rBrowser's version after its name, as About shows it.",
+              "default": true,
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 20,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "showCredit": {
+              "type": "boolean",
+              "description": "The main window's title ends in the credit line \"made with Love by Alexander\nHerling/DEGOYA.digital\".",
+              "default": true,
+              "x-category": "general",
+              "x-section": "appearance",
+              "x-order": 21,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "What the main window's title shows after the project and the product: the version and\nthe credit line (RB-094-19).",
+          "default": {
+            "showVersion": true,
+            "showCredit": true
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "errorToast": {
+              "type": "boolean",
+              "description": "The error of an action you started - adding a device, starting a view, a menu row or a\ntoolbar button that failed - shows at the top of the window as well, in the toolbar's\nstrip, never over the views, with the message's buttons (Settings, Retry, Download).\nOff: the status bar alone.",
+              "default": true,
+              "x-category": "layout",
+              "x-section": "status-bar",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Layout > Status bar: an action's error at the top as well (RB-094-20).",
+          "default": {
+            "errorToast": true
+          }
         }
       },
       "description": "General: language and theme.",
@@ -715,22 +823,33 @@
         "followWindowsTextSize": true,
         "activityBar": {
           "position": "top",
-          "mode": "bar",
+          "mode": "always",
           "show": {
             "video": true,
             "recorder": true,
             "flows": true,
             "checks": true,
             "portal": true,
-            "desync": true
+            "desync": true,
+            "time": true,
+            "plugins": true,
+            "forcedStates": true
           }
         },
         "cellLabel": {
           "engineStatus": true,
-          "address": "differs"
+          "address": "differs",
+          "addressEditable": true
         },
         "fileNameTime": "local",
-        "firstRunWizard": true
+        "firstRunWizard": true,
+        "titleBar": {
+          "showVersion": true,
+          "showCredit": true
+        },
+        "notifications": {
+          "errorToast": true
+        }
       }
     },
     "recentProjects": {
@@ -772,12 +891,35 @@
           "x-scope": [
             "user"
           ]
+        },
+        "restore": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "startUrl",
+              "description": "The project's start URL (`startUrl`) in every view."
+            },
+            {
+              "type": "string",
+              "const": "last",
+              "description": "The page each view showed when rBrowser last closed, in the environment in effect."
+            }
+          ],
+          "description": "What the views open when the project opens (RB-092-04): `startUrl`, the project's start\nURL, or `last`, the page each view showed when rBrowser last closed (kept only in the\nproject's browser profile). A URL on the command line always wins.",
+          "default": "startUrl",
+          "x-category": "general",
+          "x-section": "startup",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
         }
       },
       "description": "General > start behaviour (RB-010-11).",
       "default": {
         "openLastProject": false,
-        "focusOnOpen": true
+        "focusOnOpen": true,
+        "restore": "startUrl"
       }
     },
     "grid": {
@@ -1152,13 +1294,25 @@
           "x-scope": [
             "user"
           ]
+        },
+        "counters": {
+          "type": "boolean",
+          "description": "The timing counters of the sync hub, the plugin calls and the shell IPC record (RB-090-32):\nthe MCP tool `app_perf` and the diagnostics ZIP (`perf.json`) read them. Off, nothing is\nrecorded; what was recorded stays readable.",
+          "default": true,
+          "x-category": "advanced",
+          "x-section": "diagnostics",
+          "x-order": 1,
+          "x-scope": [
+            "user"
+          ]
         }
       },
       "description": "Layout > grid and Advanced > experimental flags: throttling and the memory warning\n(RB-020-09).",
       "default": {
         "throttleHidden": true,
         "inactiveFps": 0,
-        "memoryWarningMb": 3072
+        "memoryWarningMb": 3072,
+        "counters": true
       }
     },
     "cdp": {
@@ -1303,6 +1457,18 @@
           ],
           "x-protected": true
         },
+        "collectNetwork": {
+          "type": "boolean",
+          "description": "Network requests are collected from the start; off, from the first time they are asked\nfor (`network_requests`, a plugin's network list) (RB-090-34).",
+          "default": false,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 7,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
         "maxAnswerBytes": {
           "type": "integer",
           "format": "uint32",
@@ -1312,7 +1478,7 @@
           "default": 262144,
           "x-category": "automation",
           "x-section": "mcp",
-          "x-order": 7,
+          "x-order": 8,
           "x-scope": [
             "user"
           ],
@@ -1324,7 +1490,7 @@
           "default": false,
           "x-category": "automation",
           "x-section": "mcp",
-          "x-order": 8,
+          "x-order": 9,
           "x-scope": [
             "user"
           ],
@@ -1336,7 +1502,74 @@
           "default": true,
           "x-category": "automation",
           "x-section": "mcp",
-          "x-order": 9,
+          "x-order": 10,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "prompts": {
+          "type": "boolean",
+          "description": "The server offers its prompts, the workflows `responsive_review`, `a11y_triage` and\n`bug_repro` (RB-095-01).",
+          "default": true,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 11,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "resources": {
+          "type": "boolean",
+          "description": "The server offers its read-only resources: `rbrowser://views`, the latest findings and\nscreenshots, the project config (RB-095-01).",
+          "default": true,
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 12,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
+        "client": {
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "claudeCode",
+              "description": "Claude Code."
+            },
+            {
+              "type": "string",
+              "const": "vscode",
+              "description": "VS Code with GitHub Copilot."
+            },
+            {
+              "type": "string",
+              "const": "claudeDesktop",
+              "description": "Claude Desktop."
+            },
+            {
+              "type": "string",
+              "const": "cursor",
+              "description": "Cursor."
+            },
+            {
+              "type": "string",
+              "const": "codex",
+              "description": "OpenAI Codex."
+            },
+            {
+              "type": "string",
+              "const": "pi",
+              "description": "The pi coding agent."
+            }
+          ],
+          "description": "The AI client the MCP setup shows first, in the setup wizard and in Settings >\nAutomation > MCP (RB-091-09).",
+          "default": "claudeCode",
+          "x-category": "automation",
+          "x-section": "mcp",
+          "x-order": 13,
           "x-scope": [
             "user"
           ],
@@ -1351,9 +1584,13 @@
         "consoleLogLimit": 500,
         "networkRequestLimit": 500,
         "errorLimit": 200,
+        "collectNetwork": false,
         "maxAnswerBytes": 262144,
         "stdioAutoStart": false,
-        "notifyOnSettingChange": true
+        "notifyOnSettingChange": true,
+        "prompts": true,
+        "resources": true,
+        "client": "claudeCode"
       }
     },
     "portal": {
@@ -1441,6 +1678,137 @@
             "user"
           ],
           "x-protected": true
+        },
+        "presentation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "A presentation over the internet may run. Off, `portal.present.start` refuses; on, it\nstill starts only when a person runs it (MCP cannot).",
+              "default": false,
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 7,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "consented": {
+              "type": "boolean",
+              "description": "The person agreed that the presentation's traffic runs through Cloudflare (a Quick\nTunnel, meant for tests and demonstrations). Set by the consent in the Portal panel.",
+              "default": false,
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 8,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "linkTtlSec": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 60,
+              "description": "How long a viewer link stays valid, in seconds. Each link works once.",
+              "maximum": 3600,
+              "default": 600,
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 9,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "maxViewers": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1,
+              "description": "How many viewers may watch at once.",
+              "maximum": 10,
+              "default": 3,
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 10,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "allowPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The paths a viewer may load (`/shop` allows `/shop` and everything below it). Empty: the\nshown environment's start page and everything below it.",
+              "default": [],
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 11,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "denyPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Paths a viewer never loads, even below an allowed one: they answer 404 and never reach\nthe dev server (`/admin` also covers `/admin/users` and `/administrator`).",
+              "default": [
+                "/admin",
+                "/.env",
+                "/.git",
+                "/_debug",
+                "/@fs/",
+                "/__open-in-editor",
+                "/__open-stack-frame-in-editor",
+                "/__nextjs_launch-editor",
+                "/__nextjs_original-stack-frame"
+              ],
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 12,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "pointer": {
+              "type": "boolean",
+              "description": "A short flash on the viewer's page where the presenter clicks.",
+              "default": true,
+              "x-category": "security",
+              "x-section": "portal",
+              "x-order": 13,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            }
+          },
+          "description": "The portal shown over the internet through a Cloudflare Quick Tunnel (RB-096-05).",
+          "default": {
+            "enabled": false,
+            "consented": false,
+            "linkTtlSec": 600,
+            "maxViewers": 3,
+            "allowPaths": [],
+            "denyPaths": [
+              "/admin",
+              "/.env",
+              "/.git",
+              "/_debug",
+              "/@fs/",
+              "/__open-in-editor",
+              "/__open-stack-frame-in-editor",
+              "/__nextjs_launch-editor",
+              "/__nextjs_original-stack-frame"
+            ],
+            "pointer": true
+          }
         }
       },
       "description": "Security & Privacy > Portal: devices in the LAN (RB-080-05).",
@@ -1449,7 +1817,26 @@
         "interface": "",
         "pairingTtlSec": 300,
         "maxDevices": 5,
-        "offerAssetOrigins": true
+        "offerAssetOrigins": true,
+        "presentation": {
+          "enabled": false,
+          "consented": false,
+          "linkTtlSec": 600,
+          "maxViewers": 3,
+          "allowPaths": [],
+          "denyPaths": [
+            "/admin",
+            "/.env",
+            "/.git",
+            "/_debug",
+            "/@fs/",
+            "/__open-in-editor",
+            "/__open-stack-frame-in-editor",
+            "/__nextjs_launch-editor",
+            "/__nextjs_original-stack-frame"
+          ],
+          "pointer": true
+        }
       }
     },
     "automation": {
@@ -1557,6 +1944,28 @@
                 "user"
               ]
             },
+            "revealRecording": {
+              "type": "boolean",
+              "description": "With `hiddenViews: skip`, a played recording whose views the layout all hides brings the\nfirst into sight - the canvas centred on it, the strip scrolled to it, focus mode on its\nbreakpoint - instead of failing (RB-090-89). Off, it fails as any run with no view shown.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 9,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "confirmDelete": {
+              "type": "boolean",
+              "description": "\"Delete\" in the Flows panel asks in the panel before the flow's file is deleted\n(RB-090-91). Off, a click deletes it at once.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "playwright",
+              "x-order": 10,
+              "x-scope": [
+                "user"
+              ]
+            },
             "runLayout": {
               "type": "string",
               "description": "The layout a run shows with `hiddenViews: layout`: `grid`, `horizontal`, `split` or\n`canvas` over the preset shown, or a preset's id.\nThe settings window offers the modes and the project's presets (source `layouts`).",
@@ -1579,6 +1988,8 @@
             "syncDuringRun": false,
             "screenshotOnFailure": true,
             "hiddenViews": "skip",
+            "revealRecording": true,
+            "confirmDelete": true,
             "runLayout": "grid"
           }
         }
@@ -1593,6 +2004,8 @@
           "syncDuringRun": false,
           "screenshotOnFailure": true,
           "hiddenViews": "skip",
+          "revealRecording": true,
+          "confirmDelete": true,
           "runLayout": "grid"
         }
       }
@@ -1929,6 +2342,91 @@
             "syncSource": true
           }
         },
+        "safari": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Breakpoints on Safari open in a Safari window on macOS (the installed Safari, driven by\n`safaridriver`); off, they stay with Chromium. Without macOS Safari is not available.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "safari",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "technologyPreview": {
+              "type": "boolean",
+              "description": "Safari Technology Preview instead of Safari, when it is installed (its own\n`safaridriver`, which needs `--enable` once as well).",
+              "default": false,
+              "x-category": "engines",
+              "x-section": "safari",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "Safari over `safaridriver`, macOS only (RB-095-03).",
+          "default": {
+            "enabled": true,
+            "technologyPreview": false
+          }
+        },
+        "ios": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "Where an iOS view runs: the simulator when Xcode is installed, else a connected device\n(`auto`); only the iOS Simulator (`simulator`, needs Xcode); only a connected iPhone or\niPad (`device`).",
+              "pattern": "^(auto|simulator|device)$",
+              "default": "auto",
+              "enum": [
+                "auto",
+                "simulator",
+                "device"
+              ],
+              "x-category": "engines",
+              "x-section": "ios",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "defaultSimulator": {
+              "type": "string",
+              "description": "The simulator model an iOS breakpoint without `iosDevice` runs on (`iPhone 16`).",
+              "default": "iPhone 16",
+              "x-category": "engines",
+              "x-section": "ios",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "bootTimeoutSec": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 10,
+              "description": "How long a simulator may take to boot, in seconds.",
+              "maximum": 600,
+              "default": 120,
+              "x-category": "engines",
+              "x-section": "ios",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "iOS over `safaridriver`: the Simulator or a connected device, macOS only (RB-095-04).",
+          "default": {
+            "mode": "auto",
+            "defaultSimulator": "iPhone 16",
+            "bootTimeoutSec": 120
+          }
+        },
         "cookies": {
           "type": "object",
           "properties": {
@@ -1998,6 +2496,55 @@
             "exclude": [],
             "reload": true
           }
+        },
+        "android": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "An Android device on USB can be added as a view: Chrome on the device over ADB, its\nDevTools port forwarded to 127.0.0.1 only. The view has the device's own size. Off by\ndefault.",
+              "default": false,
+              "x-category": "engines",
+              "x-section": "android",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "adbPath": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The adb executable; found automatically when empty (PATH, ANDROID_HOME,\nANDROID_SDK_ROOT, the usual SDK folders, then the Platform Tools rBrowser downloaded\nafter you agreed).",
+              "x-category": "engines",
+              "x-section": "android",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true,
+              "x-input": "file"
+            },
+            "reverseLocalhost": {
+              "type": "boolean",
+              "description": "A view that loads localhost, 127.0.0.1 or ::1 reaches that port of this computer: rBrowser\nsets `adb reverse` for exactly that port while the view runs and removes it afterwards.\nWhile it stands, other apps on the device can reach that one port too. Off, the device\nreaches only itself at a loopback address. On by default.",
+              "default": true,
+              "x-category": "engines",
+              "x-section": "android",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            }
+          },
+          "description": "Chrome on an Android device over ADB (RB-095-02).",
+          "default": {
+            "enabled": false,
+            "reverseLocalhost": true
+          }
         }
       },
       "description": "Engines: paths of external programs.",
@@ -2021,11 +2568,24 @@
           "enabled": true,
           "syncSource": true
         },
+        "safari": {
+          "enabled": true,
+          "technologyPreview": false
+        },
+        "ios": {
+          "mode": "auto",
+          "defaultSimulator": "iPhone 16",
+          "bootTimeoutSec": 120
+        },
         "cookies": {
           "copy": "manual",
           "domainFilter": "environment",
           "exclude": [],
           "reload": true
+        },
+        "android": {
+          "enabled": false,
+          "reverseLocalhost": true
         }
       }
     },
@@ -3067,6 +3627,131 @@
           "x-scope": [
             "user"
           ]
+        },
+        "pseudoLocale": {
+          "type": "object",
+          "properties": {
+            "factor": {
+              "type": "number",
+              "format": "double",
+              "description": "How much longer a text gets: 1.4 makes it 40 % longer, as German or Finnish often are.",
+              "minimum": 1.0,
+              "maximum": 3.0,
+              "default": 1.4,
+              "x-category": "emulation",
+              "x-section": "text-direction",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "accents": {
+              "type": "boolean",
+              "description": "Letters are swapped for accented ones (an `a` gets an acute accent), so a font without\nthem shows.",
+              "default": true,
+              "x-category": "emulation",
+              "x-section": "text-direction",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "rtl": {
+              "type": "boolean",
+              "description": "The texts also run right to left (Unicode bidi override), as an RTL language would.",
+              "default": false,
+              "x-category": "emulation",
+              "x-section": "text-direction",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The pseudo-localisation of the page's texts (RB-092-02).",
+          "default": {
+            "factor": 1.4,
+            "accents": true,
+            "rtl": false
+          }
+        },
+        "clock": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string",
+              "description": "The date and time the clock shortcut sets in every view: `2026-12-24T10:00` is each\npage's local time, `2026-12-24T10:00:00Z` or with an offset one moment for all; empty\nfor the moment the shortcut is pressed.",
+              "default": "",
+              "x-category": "emulation",
+              "x-section": "clock-animations",
+              "x-order": 1,
+              "x-scope": [
+                "user"
+              ]
+            },
+            "speed": {
+              "type": "number",
+              "format": "double",
+              "description": "How fast that clock runs: 0 holds it fixed, 1 is real time, 60 a minute per second.",
+              "minimum": 0.0,
+              "maximum": 100.0,
+              "default": 0.0,
+              "x-category": "emulation",
+              "x-section": "clock-animations",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ]
+            }
+          },
+          "description": "The page clock the clock shortcut sets in every view (RB-094-07).",
+          "default": {
+            "default": "",
+            "speed": 0.0
+          }
+        },
+        "animationRates": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "enum": [
+              0.0,
+              0.05,
+              0.1,
+              0.25,
+              0.5,
+              1.0,
+              2.0
+            ]
+          },
+          "description": "The animation rates the animations shortcut steps through: 0 stops them, 1 is normal.",
+          "default": [
+            0.0,
+            0.1,
+            0.25,
+            1.0
+          ],
+          "uniqueItems": true,
+          "x-category": "emulation",
+          "x-section": "clock-animations",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "animationStepMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "description": "How far one step moves stopped animations on, in milliseconds.",
+          "maximum": 10000,
+          "default": 100,
+          "x-category": "emulation",
+          "x-section": "clock-animations",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ]
         }
       },
       "description": "Emulation > geolocation, time zone and CPU: the shortcuts' values and own presets\n(RB-080-10).",
@@ -3074,7 +3759,23 @@
         "defaultGeolocation": "berlin",
         "geolocationPresets": [],
         "defaultTimezone": "America/New_York",
-        "defaultCpuThrottling": 4.0
+        "defaultCpuThrottling": 4.0,
+        "pseudoLocale": {
+          "factor": 1.4,
+          "accents": true,
+          "rtl": false
+        },
+        "clock": {
+          "default": "",
+          "speed": 0.0
+        },
+        "animationRates": [
+          0.0,
+          0.1,
+          0.25,
+          1.0
+        ],
+        "animationStepMs": 100
       }
     },
     "logs": {
@@ -3136,7 +3837,7 @@
           "default": 3,
           "x-category": "advanced",
           "x-section": "diagnostics",
-          "x-order": 1,
+          "x-order": 2,
           "x-scope": [
             "user"
           ]
@@ -3289,7 +3990,7 @@
           "default": true,
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 10,
+          "x-order": 11,
           "x-scope": [
             "user"
           ]
@@ -3306,6 +4007,18 @@
           ],
           "x-protected": true
         },
+        "consentProbeAnyUrl": {
+          "type": "boolean",
+          "description": "Let the consent probe of a plugin granted `consent-probe` load any address. Off holds it\nto public addresses and the trusted project's own sites, so a plugin cannot run its\nscript in a local or LAN page (RB-094-09).",
+          "default": false,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 9,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        },
         "panelMessageMaxBytes": {
           "type": "integer",
           "format": "uint32",
@@ -3315,7 +4028,7 @@
           "default": 4194304,
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 9,
+          "x-order": 10,
           "x-scope": [
             "user"
           ]
@@ -3410,6 +4123,17 @@
               "x-scope": [
                 "user"
               ]
+            },
+            "newNotice": {
+              "type": "boolean",
+              "description": "Name the plugins new in rBrowser's bundle once after the update that brought them, with\na button that installs them (RB-094-13).",
+              "default": true,
+              "x-category": "plugins",
+              "x-section": "catalog",
+              "x-order": 6,
+              "x-scope": [
+                "user"
+              ]
             }
           },
           "description": "The plugin catalogue (RB-091-01): Settings > Plugins > Catalog.",
@@ -3418,7 +4142,8 @@
             "repositories": [],
             "autoUpdate": false,
             "preferRepository": true,
-            "missingNotice": true
+            "missingNotice": true,
+            "newNotice": true
           }
         }
       },
@@ -3433,13 +4158,15 @@
         "panelsHidden": [],
         "showBundled": true,
         "lighthouseAnyUrl": false,
+        "consentProbeAnyUrl": false,
         "panelMessageMaxBytes": 4194304,
         "catalog": {
           "checkOnStart": false,
           "repositories": [],
           "autoUpdate": false,
           "preferRepository": true,
-          "missingNotice": true
+          "missingNotice": true,
+          "newNotice": true
         }
       }
     },
@@ -3457,11 +4184,24 @@
             "user"
           ],
           "x-protected": true
+        },
+        "stateExportAllDomains": {
+          "type": "boolean",
+          "description": "`session.state_export` writes the cookies and storage of every domain in the session's\njar. Off, only those of the project's environments and start URL (RB-094-08). A login\nstate file is a secret; only a person widens it.",
+          "default": false,
+          "x-category": "security",
+          "x-section": "sessions",
+          "x-order": 2,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
         }
       },
       "description": "Security > Sessions: whether session cookies outlive the app (RB-020-07).",
       "default": {
-        "persistSessionCookies": false
+        "persistSessionCookies": false,
+        "stateExportAllDomains": false
       }
     },
     "wsl": {
@@ -3545,6 +4285,21 @@
           ],
           "x-protected": true,
           "x-input": "file"
+        },
+        "cloudflaredPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A cloudflared of your own for the portal's presentation over the internet (RB-096-05):\nthe absolute path of the program. Empty uses the build rBrowser downloads after you agreed.",
+          "x-category": "security",
+          "x-section": "portal",
+          "x-order": 14,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "file"
         }
       },
       "description": "Capture > Video: an ffmpeg of the user's own, never a project's (RB-080-02)."
@@ -3599,7 +4354,7 @@
           "default": "right",
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 11,
+          "x-order": 12,
           "x-scope": [
             "user"
           ]
@@ -3616,7 +4371,7 @@
               "default": 520,
               "x-category": "plugins",
               "x-section": "installed",
-              "x-order": 12,
+              "x-order": 13,
               "x-scope": [
                 "user"
               ]
@@ -3630,7 +4385,7 @@
               "default": 520,
               "x-category": "plugins",
               "x-section": "installed",
-              "x-order": 13,
+              "x-order": 14,
               "x-scope": [
                 "user"
               ]
@@ -3644,7 +4399,7 @@
               "default": 320,
               "x-category": "plugins",
               "x-section": "installed",
-              "x-order": 14,
+              "x-order": 15,
               "x-scope": [
                 "user"
               ]
@@ -3679,7 +4434,7 @@
           "default": "rail",
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 15,
+          "x-order": 16,
           "x-scope": [
             "user"
           ]
@@ -3701,7 +4456,7 @@
           "default": "expanded",
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 16,
+          "x-order": 17,
           "x-scope": [
             "user"
           ]
@@ -3728,7 +4483,7 @@
           "default": "rail",
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 17,
+          "x-order": 18,
           "x-scope": [
             "user"
           ]
@@ -3750,7 +4505,21 @@
           "default": "rail",
           "x-category": "plugins",
           "x-section": "installed",
-          "x-order": 18,
+          "x-order": 19,
+          "x-scope": [
+            "user"
+          ]
+        },
+        "keepFrames": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "How many of the panels shown last stay loaded, hidden, beside the shown one, so\nswitching back to one does not load it again (RB-090-38); `0` loads each panel anew.",
+          "maximum": 10,
+          "default": 3,
+          "x-category": "plugins",
+          "x-section": "installed",
+          "x-order": 20,
           "x-scope": [
             "user"
           ]
@@ -3767,7 +4536,8 @@
         "dockState": "rail",
         "sidebar": "expanded",
         "dockAtStart": "rail",
-        "closeTo": "rail"
+        "closeTo": "rail",
+        "keepFrames": 3
       }
     },
     "views": {
@@ -3870,6 +4640,41 @@
       "description": "Capture > Sitemap: where a capture's gallery opens (RB-090-83).",
       "default": {
         "galleryOpensIn": "window"
+      }
+    },
+    "report": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string",
+          "description": "The folder a bug report is written into, each in a folder of its own named by the time;\nempty: the project's `.rbrowser/out/reports/`. An absolute path of an existing folder.",
+          "default": "",
+          "x-category": "capture",
+          "x-section": "report",
+          "x-order": 3,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true,
+          "x-input": "folder"
+        },
+        "preview": {
+          "type": "boolean",
+          "description": "Show the report's texts after masking before it is saved, with Save and Cancel; a\ncancelled report leaves nothing behind.",
+          "default": true,
+          "x-category": "capture",
+          "x-section": "report",
+          "x-order": 4,
+          "x-scope": [
+            "user"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "Capture > Bug report: the report's folder and the preview (RB-093-04).",
+      "default": {
+        "folder": "",
+        "preview": true
       }
     }
   },

@@ -2,16 +2,20 @@
 // them, the edited one written back, its export (a preview, or written into a new export folder)
 // and the commands of the registry it runs (`recorder.start`, ...); the core's
 // `recordingsChanged` (a recording saved or stopped) asks for the list again, and its `flowStep`
-// tells which step of a run goes on (RB-090-84).
+// tells which step of a run goes on (RB-090-84); `recordingSteps` the steps of the recording that
+// runs (RB-090-89); `recorderElementPicked` the element "Pick in view" picked and
+// `recorderStepCommand` an editor command a shortcut sent (RB-092-01).
 
 import type { IpcClient } from '../ipc/client';
 import type {
   CoreToShell,
   FlowStep,
   JsonValue,
+  PickedElement,
   RecordingExport,
   RecordingExportFormat,
   RecordingList,
+  RecordingSteps,
   StepPause,
 } from '../ipc/protocol';
 import type { Subscribe } from '../whichkey/whichkey';
@@ -36,6 +40,14 @@ export interface RecorderChannel {
   onChanged(listener: () => void): () => void;
   /** Calls `listener` with each step of a flow run that starts or ends; returns the function that stops. */
   onStep(listener: (step: FlowStep) => void): () => void;
+  /** Calls `listener` with each push of the recording that runs; returns the function that stops. */
+  onLive(listener: (steps: RecordingSteps) => void): () => void;
+  /** Asks for every step of the recording that runs again, as a push (a panel catching up). */
+  catchUp(): Promise<void>;
+  /** Calls `listener` with each element "Pick in view" picked; returns the function that stops. */
+  onPicked(listener: (picked: PickedElement) => void): () => void;
+  /** Calls `listener` with each editor command a shortcut sent; returns the function that stops. */
+  onStepCommand(listener: (command: string) => void): () => void;
 }
 
 function listOf(answer: Extract<CoreToShell, { type: 'recordings' }>): RecordingList {
@@ -79,6 +91,32 @@ export function recorderChannel(client: IpcClient, subscribe: Subscribe): Record
         if (message.type === 'flowStep') {
           const { type: _type, ...step } = message;
           listener(step);
+        }
+      });
+    },
+    async catchUp() {
+      await client.expect({ type: 'resendRecordingSteps' }, 'ack');
+    },
+    onPicked(listener) {
+      return subscribe((message: CoreToShell) => {
+        if (message.type === 'recorderElementPicked') {
+          const { type: _type, ...picked } = message;
+          listener(picked);
+        }
+      });
+    },
+    onStepCommand(listener) {
+      return subscribe((message: CoreToShell) => {
+        if (message.type === 'recorderStepCommand') {
+          listener(message.command);
+        }
+      });
+    },
+    onLive(listener) {
+      return subscribe((message: CoreToShell) => {
+        if (message.type === 'recordingSteps') {
+          const { type: _type, ...steps } = message;
+          listener(steps);
         }
       });
     },

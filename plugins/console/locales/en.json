@@ -74,8 +74,8 @@
           "label": "Run commands in"
         },
         "levels": {
-          "description": "The levels the console panel shows when it opens: error, warning, info, log, debug and network.",
-          "help": "The levels the console panel shows when it opens; the rest are hidden until you tick them. Example: error and warning only for a quiet review.",
+          "description": "The levels the console panel shows when it opens: Errors, Warnings, Info, Logs, Debug and Network.",
+          "help": "The levels the console panel shows when it opens; the rest are hidden until you tick them. Example: Errors and Warnings only for a quiet review.",
           "label": "Levels shown"
         },
         "mcpExec": {

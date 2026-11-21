@@ -8,7 +8,9 @@
 pub(crate) mod fake;
 mod frame;
 mod router;
+mod writer;
 
 pub use frame::{FrameDecoder, encode};
 pub(crate) use router::lock;
 pub use router::{CdpEvent, CdpRouter, CdpTransport, Tap};
+pub use writer::ThreadWriter;

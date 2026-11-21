@@ -103,7 +103,8 @@
           "total-blocking-time": "Total Blocking Time",
           "cumulative-layout-shift": "Cumulative Layout Shift",
           "speed-index": "Speed Index"
-        }
+        },
+        "setting_link": "Open the setting"
       },
       "panels": {
         "lighthouse": "Lighthouse"
@@ -268,7 +269,7 @@
       "settings": {
         "throttling": {
           "description": "How Lighthouse slows the network and CPU while it measures: simulated from a fast run (Lighthouse's default), applied in the browser, or not at all.",
-          "help": "How Lighthouse slows network and CPU while it measures: simulate derives mobile timings from a fast run (Lighthouse's default), devtools applies them in the browser, provided measures as the view is.",
+          "help": "How Lighthouse slows network and CPU while it measures: Simulated derives mobile timings from a fast run (Lighthouse's default), Applied in the browser slows them in the browser itself, None measures as the view is.",
           "label": "Throttling"
         },
         "option": {
@@ -284,7 +285,7 @@
         },
         "reportWindow": {
           "description": "Where a Lighthouse report opens: in the one report window, which each report replaces, or in a window of its own per report.",
-          "help": "Where a Lighthouse report opens: single shows each report in the one report window; perReport opens a window per report, so two runs stand side by side.",
+          "help": "Where a Lighthouse report opens: One report window shows each report in the one window, which the next replaces; A window per report opens a window for each, so two runs stand side by side.",
           "label": "Report window"
         },
         "keepRuns": {

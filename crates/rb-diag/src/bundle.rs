@@ -5,7 +5,8 @@
 //!
 //! Entries: `logs/<file>` (every file of the log folder, masked), `crashdumps/<file>.dmp` (the
 //! newest `max_crash_dumps` of the Crashpad database), `versions.json`, `config.effective.json`
-//! (masked; `null` without a project) and `plugins.json`. A value masked in the config (a header
+//! (masked; `null` without a project), `plugins.json` and `perf.json` (the timing counters,
+//! RB-090-32). A value masked in the config (a header
 //! value, the password of a proxy) is masked in the logs too.
 
 use std::fs::File;
@@ -29,6 +30,8 @@ pub const VERSIONS_ENTRY: &str = "versions.json";
 pub const CONFIG_ENTRY: &str = "config.effective.json";
 /// The entry of the plugin list.
 pub const PLUGINS_ENTRY: &str = "plugins.json";
+/// The entry of the timing counters (RB-090-32).
+pub const PERF_ENTRY: &str = "perf.json";
 /// The folder of the logs inside the ZIP.
 pub const LOGS_DIR: &str = "logs/";
 /// The folder of the crash dumps inside the ZIP.
@@ -87,6 +90,8 @@ pub struct BundleInput {
     pub config_effective: Option<Value>,
     /// The plugins: id, version, enabled.
     pub plugins: Value,
+    /// The timing counters of the app (`rb_util::perf`, RB-090-32): names and durations only.
+    pub perf: Value,
     /// The newest crash dumps to take (setting `logs.crashDumpsInBundle`).
     pub max_crash_dumps: usize,
 }
@@ -210,6 +215,12 @@ pub fn write_bundle(input: &BundleInput, out: &Path) -> Result<BundleReport, Dia
         &mut zip,
         PLUGINS_ENTRY.to_owned(),
         &json(&plugins.value).map_err(fail)?,
+    )
+    .map_err(fail)?;
+    add(
+        &mut zip,
+        PERF_ENTRY.to_owned(),
+        &json(&input.perf).map_err(fail)?,
     )
     .map_err(fail)?;
     zip.finish()

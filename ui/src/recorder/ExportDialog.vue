@@ -184,6 +184,7 @@ watch([format, exportName], () => {
           <pre
             class="max-h-72 overflow-auto p-2 text-xs leading-relaxed"
             tabindex="0"
+            role="region"
             :aria-label="t('recorder.export.preview', { file: file.path })"
           ><code><span
             v-for="(token, index) in file.tokens"

@@ -391,6 +391,7 @@ async fn set_engine_writes_the_project_file_when_asked() {
     );
 }
 
+/// RB-095-02: no breakpoint is switched to Android - a device is added with `view.add_android`.
 #[tokio::test]
 async fn set_engine_without_an_engine_opens_the_menu_and_refuses_bad_arguments() {
     let setup = setup(config());
@@ -407,7 +408,7 @@ async fn set_engine_without_an_engine_opens_the_menu_and_refuses_bad_arguments()
         Err(CommandError::InvalidArgs(_))
     ));
     assert!(matches!(
-        run(core, &json!({ "engine": "safari" })),
+        run(core, &json!({ "engine": "opera" })),
         Err(CommandError::InvalidArgs(_))
     ));
     assert!(matches!(
@@ -457,3 +458,6 @@ fn set_engine_has_its_chord_and_its_tool() {
     assert!(matches!(&def.default_bindings[0], Binding::Leader(chord) if chord.keys.len() == 2));
     assert_eq!(def.mcp, McpCoverage::Covered(MCP_TOOL.to_owned()));
 }
+
+#[path = "set_engine_ios_tests.rs"]
+mod ios;

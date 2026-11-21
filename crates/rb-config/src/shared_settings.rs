@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// `checks.parallel`, `checks.keepRuns`, `checks.rules`, `checks.ignore` (Checks > Findings,
-/// RB-060-01), read by `rb_plugin_host::ChecksSettings`. A key not set is `None` or empty, so
+/// RB-060-01), read by `rb_plugin_host::ChecksSettings`, and `checks.export.*` (RB-092-05). A key not set is `None` or empty, so
 /// [`FindingsSettings::over`] can let the project win per key.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", default)]
@@ -32,6 +32,9 @@ pub struct FindingsSettings {
     /// any text) must all match.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ignore: Vec<IgnoreEntry>,
+    /// The findings export (RB-092-05): `checks.export.*`.
+    #[serde(skip_serializing_if = "is_default")]
+    pub export: crate::FindingsExportSettings,
 }
 
 impl FindingsSettings {
@@ -50,6 +53,7 @@ impl FindingsSettings {
             } else {
                 self.ignore.clone()
             },
+            export: self.export.over(&user.export),
         }
     }
 }

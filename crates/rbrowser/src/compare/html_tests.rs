@@ -36,6 +36,13 @@ fn run() -> EnvRun {
     run.diffs[1].status = PairStatus::Differs;
     run.diffs[1].ratio = 0.25;
     run.diffs[1].image = Some("01-a/diff.png".to_owned());
+    run.diffs[1].regions = vec![rb_visual::regions::Region {
+        x: 4,
+        y: 8,
+        width: 30,
+        height: 12,
+        pixels: 200,
+    }];
     run.diffs[0].status = PairStatus::Same;
     run
 }
@@ -52,6 +59,7 @@ fn the_page_shows_every_pair_and_breakpoint_with_its_images_and_needs_no_network
         );
     }
     assert!(page.contains("src=\"01-a/diff.png\""));
+    assert!(page.contains("[regions]</h3><ul><li>x 4 y 8: 30 &times; 12 px</li></ul>"));
     assert!(page.contains("[slider]") && page.contains("[side_by_side]"));
     assert!(page.contains("href=\"https://staging.test/a?b=&quot;1&quot;\""));
     assert!(!page.contains("staging<x>"), "values are escaped");

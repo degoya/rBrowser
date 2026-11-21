@@ -4,6 +4,7 @@ use crate::switches::tests::target;
 
 fn click(path: &str) -> SyncEvent {
     SyncEvent::Click(MouseData {
+        control: None,
         button: MouseButton::Left,
         detail: 1,
         modifiers: 0,

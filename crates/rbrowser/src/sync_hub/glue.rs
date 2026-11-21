@@ -97,17 +97,39 @@ impl HostSync {
     /// The configuration `view`'s agent should have, with the scroll mode in effect (the one
     /// `sync_set` set at runtime, else `sync.scrollMode`; RB-090-33).
     pub fn agent_config(&self, sync: &SyncConfig, view: ViewId) -> AgentConfig {
+        let record = self.host.upgrade().and_then(|host| recording_wishes(&host));
+        self.agent_config_with(sync, view, record)
+    }
+
+    /// [`Self::agent_config`] with a running recording's wishes `record`, read once for every
+    /// view of a reconfiguration (RB-090-87); only the view that captures gets them.
+    fn agent_config_with(
+        &self,
+        sync: &SyncConfig,
+        view: ViewId,
+        record: Option<rb_sync::AgentRecord>,
+    ) -> AgentConfig {
         let mode = self
             .host
             .upgrade()
             .map_or(sync.scroll_mode, |host| crate::scroll_sync::mode(&host));
-        self.hub.with(|hub| AgentConfig {
-            active: hub.captures(view),
-            capture: hub.switches().capture(),
-            hover_throttle_ms: sync.hover_throttle_ms,
-            scroll_debounce_ms: sync.scroll_debounce_ms,
-            scroll_mode: crate::sync_agent::scroll_mode_of(mode),
+        self.hub.with(|hub| {
+            let active = hub.captures(view);
+            AgentConfig {
+                active,
+                capture: hub.switches().capture(),
+                hover_throttle_ms: sync.hover_throttle_ms,
+                scroll_debounce_ms: sync.scroll_debounce_ms,
+                scroll_mode: crate::sync_agent::scroll_mode_of(mode),
+                record: record.filter(|_| active),
+            }
         })
+    }
+
+    /// A recording started, paused, resumed or stopped: the agents follow, so only the recorded
+    /// view reports menu rests and the pointer's way (RB-090-87).
+    pub fn recorder_changed(&self) {
+        self.reconfigure();
     }
 
     /// The scroll mode changed at runtime (`sync_set { scrollMode }`): the agents follow, so
@@ -251,7 +273,7 @@ impl HostSync {
         let Some(host) = self.host.upgrade() else {
             return;
         };
-        let sync = host.config().sync;
+        let sync = host.with_config(|config| config.sync.clone());
         self.hub.with(|hub| hub.set_switches(switches_from(&sync)));
         self.hub.set_timeout(timeout_of(&sync));
         self.changed();
@@ -268,7 +290,7 @@ impl HostSync {
         let Some(host) = self.host.upgrade() else {
             return;
         };
-        let state = self.state(&host.config().sync);
+        let state = self.state(&host.with_config(|config| config.sync.clone()));
         let armed = self
             .hub
             .with(|hub| hub.active().filter(|_| hub.skip_next_armed()));
@@ -286,12 +308,13 @@ impl HostSync {
         self.runtime.spawn(async move {
             let serial = sync.configuring.lock().await;
             if let Some(host) = sync.host.upgrade() {
-                let config = host.config().sync;
+                let config = host.with_config(|config| config.sync.clone());
                 let agents = host.sync_agents().clone();
+                let record = recording_wishes(&host);
                 let mut wanted: Vec<(ViewId, AgentConfig)> = host
                     .views()
                     .iter()
-                    .map(|info| (info.id, sync.agent_config(&config, info.id)))
+                    .map(|info| (info.id, sync.agent_config_with(&config, info.id, record)))
                     .filter(|(view, wanted)| agents.needs_config(*view, wanted))
                     .collect();
                 // The old active view stops capturing before the new one starts.
@@ -406,6 +429,12 @@ impl HostSync {
 
 fn timeout_of(sync: &SyncConfig) -> Duration {
     Duration::from_millis(u64::from(sync.desync_timeout_ms))
+}
+
+/// A running recording's wishes for the agent of the view it records from (RB-090-87): held
+/// apart from the recorder, so this never waits for a recording being saved.
+fn recording_wishes(host: &Host) -> Option<rb_sync::AgentRecord> {
+    crate::recorder::agent_record::agent_record(host)
 }
 
 #[cfg(test)]

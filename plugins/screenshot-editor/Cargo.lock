@@ -299,7 +299,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -307,7 +307,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "serde",
  "serde_json",

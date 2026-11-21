@@ -1,0 +1,39 @@
+[package]
+name = "rb-safari"
+description = "Safari and iOS on macOS over safaridriver: a lean W3C WebDriver client, the driver process, the Safari engine behind rb-engine's trait (RB-095-03) and its iOS views on the Simulator or a device (RB-095-04)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# `rb_safari::testing` (the fake safaridriver) and `rb_safari::ios::fake` (the fake Mac tools)
+# for other crates' tests; never in a shipped build.
+test-support = []
+
+[dependencies]
+async-trait.workspace = true
+# The W3C input sources of a replayed event (`rb_bidi::input`): BiDi's `input.performActions`
+# and classic WebDriver's `POST /actions` take the same sources.
+rb-bidi = { path = "../rb-bidi" }
+rb-config = { path = "../rb-config" }
+rb-engine = { path = "../rb-engine" }
+rb-i18n = { path = "../rb-i18n" }
+rb-process = { path = "../rb-process" }
+rb-sync = { path = "../rb-sync" }
+rb-util = { path = "../rb-util" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# The engine conformance for the Safari engine's tests (RB-040-01).
+rb-engine = { path = "../rb-engine", features = ["test-support"] }
+# The virtual clock of the timeout tests (`start_paused`).
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

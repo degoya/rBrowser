@@ -9,7 +9,7 @@
 //! (`ui/src/panels/bridge.ts`), which this module answers.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 
 use rb_plugin_host::{LoadedEntry, PanelPlacement, PluginManifest};
 use rb_plugin_types::PluginKind;
@@ -89,33 +89,84 @@ pub fn with_csp(html: &[u8]) -> Vec<u8> {
 }
 
 /// One file a panel loads.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct PanelFile {
-    pub bytes: Vec<u8>,
+    body: Body,
     pub mime: &'static str,
 }
 
+/// Where a panel file's bytes are: its own (an HTML file with the CSP put first), or the plugin's
+/// loaded files, shared and not copied (RB-090-38).
+#[derive(Clone, Debug)]
+enum Body {
+    Own(Vec<u8>),
+    Shared {
+        files: Arc<BTreeMap<String, Vec<u8>>>,
+        path: String,
+    },
+}
+
+impl PanelFile {
+    /// A file of `bytes` of its own.
+    #[must_use]
+    pub fn owned(bytes: Vec<u8>, mime: &'static str) -> Self {
+        Self {
+            body: Body::Own(bytes),
+            mime,
+        }
+    }
+
+    /// The file with bytes of its own: a copy of a shared one, so keeping it keeps only it.
+    #[must_use]
+    pub fn detached(self) -> Self {
+        match self.body {
+            Body::Own(_) => self,
+            Body::Shared { .. } => Self::owned(self.bytes().to_vec(), self.mime),
+        }
+    }
+
+    /// The file's bytes.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        match &self.body {
+            Body::Own(bytes) => bytes,
+            Body::Shared { files, path } => files.get(path).map(Vec::as_slice).unwrap_or_default(),
+        }
+    }
+}
+
+impl PartialEq for PanelFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.mime == other.mime && self.bytes() == other.bytes()
+    }
+}
+
+impl Eq for PanelFile {}
+
 /// Every panel file of the feature plugins among `plugins` (each manifest with its `page/` and
-/// `panel/` members), by URL; an HTML file with its CSP.
+/// `panel/` members), by URL; an HTML file with its CSP, any other one the plugin's own bytes.
 pub fn panel_files<'a>(
-    plugins: impl IntoIterator<Item = (&'a PluginManifest, &'a BTreeMap<String, Vec<u8>>)>,
+    plugins: impl IntoIterator<Item = (&'a PluginManifest, &'a Arc<BTreeMap<String, Vec<u8>>>)>,
 ) -> BTreeMap<String, PanelFile> {
     let mut files = BTreeMap::new();
     for (manifest, ui_files) in plugins {
         if !manifest.is(PluginKind::Feature) || manifest.panels.is_empty() {
             continue;
         }
-        for (path, bytes) in ui_files {
+        for (path, bytes) in ui_files.iter() {
             if !path.starts_with("panel/") {
                 continue;
             }
             let mime = crate::shell::mime_type(std::path::Path::new(path));
-            let bytes = if mime == "text/html" {
-                with_csp(bytes)
+            let body = if mime == "text/html" {
+                Body::Own(with_csp(bytes))
             } else {
-                bytes.clone()
+                Body::Shared {
+                    files: Arc::clone(ui_files),
+                    path: path.clone(),
+                }
             };
-            files.insert(file_url(&manifest.id, path), PanelFile { bytes, mime });
+            files.insert(file_url(&manifest.id, path), PanelFile { body, mime });
         }
     }
     files
@@ -124,15 +175,17 @@ pub fn panel_files<'a>(
 /// Each loaded plugin's manifest with its `page/` and `panel/` members.
 pub fn with_files(
     loaded: &[LoadedEntry],
-) -> impl Iterator<Item = (&PluginManifest, &BTreeMap<String, Vec<u8>>)> {
+) -> impl Iterator<Item = (&PluginManifest, &Arc<BTreeMap<String, Vec<u8>>>)> {
     loaded
         .iter()
-        .map(|entry| (entry.plugin.manifest(), entry.ui_files.as_ref()))
+        .map(|entry| (entry.plugin.manifest(), &entry.ui_files))
 }
 
-/// The panel files of the bundled plugins, built once: they live as long as the process, so
-/// the browser may read them in place.
-static FILES: OnceLock<BTreeMap<String, PanelFile>> = OnceLock::new();
+/// The panel files of the plugins in effect, by URL, and the plugins' generation they were built
+/// for: built again after a live change (RB-092-06). Each file lives as long as the process, so
+/// the browser may read it in place ([`kept_or_leaked`]).
+type Files = (u64, BTreeMap<String, &'static PanelFile>);
+static FILES: Mutex<Option<Files>> = Mutex::new(None);
 
 /// The file at `url` (query and fragment ignored), for the scheme handler; `None` for anything
 /// else.
@@ -141,13 +194,46 @@ pub fn resource(url: &str) -> Option<&'static PanelFile> {
     if !path.starts_with(PANEL_ORIGIN) {
         return None;
     }
-    FILES
-        .get_or_init(|| {
-            panel_files(with_files(
-                &crate::analyzer::plugins::bundled().report.loaded,
-            ))
+    // The generation first: a swap after it builds once more, never a stale set for good.
+    let generation = crate::analyzer::plugins::generation();
+    // Never built empty while the first choice holds the load (RB-091-08).
+    let loaded = crate::analyzer::plugins::unless_held()?;
+    let mut files = rb_util::lock(&FILES);
+    if files.as_ref().is_none_or(|(built, _)| *built != generation) {
+        let previous = files.take().map(|(_, by_url)| by_url).unwrap_or_default();
+        let fresh = panel_files(with_files(&loaded.report.loaded));
+        *files = Some((generation, kept_or_leaked(fresh, &previous)));
+    }
+    files
+        .as_ref()
+        .and_then(|(_, by_url)| by_url.get(path).copied())
+}
+
+/// `fresh` with every file `previous` holds alike at the same URL taken from it, and each other
+/// one leaked for the process: CEF reads a file in place, also after a live change replaced the
+/// plugin (RB-092-06). Only a new or changed file costs memory; a URL left out is not served. The
+/// first set (`previous` empty) shares its plugins' files - the memory they hold anyway; after a
+/// live change a new or changed file is leaked as a copy of its own, so it never keeps a whole
+/// version of its plugin's files.
+pub fn kept_or_leaked(
+    fresh: BTreeMap<String, PanelFile>,
+    previous: &BTreeMap<String, &'static PanelFile>,
+) -> BTreeMap<String, &'static PanelFile> {
+    fresh
+        .into_iter()
+        .map(|(url, file)| {
+            let kept = previous.get(&url).copied().filter(|old| **old == file);
+            let file = kept.unwrap_or_else(|| {
+                let file = if previous.is_empty() {
+                    file
+                } else {
+                    file.detached()
+                };
+                &*Box::leak(Box::new(file))
+            });
+            (url, file)
         })
-        .get(path)
+        .collect()
 }
 
 /// A request of the panels window.

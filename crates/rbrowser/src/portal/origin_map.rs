@@ -25,6 +25,8 @@ use crate::cdp::lock;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OriginMap {
     pairs: Vec<(String, String)>,
+    /// The presentation's traffic over the internet (RB-096-05, [`super::present::headers`]).
+    public: bool,
 }
 
 impl OriginMap {
@@ -33,7 +35,22 @@ impl OriginMap {
     pub fn new(upstream: &str, portal: &str) -> Self {
         Self {
             pairs: vec![(upstream.to_owned(), portal.to_owned())],
+            public: false,
         }
+    }
+
+    /// The same map for the presentation's traffic over the internet (RB-096-05): no cookie
+    /// either way, no Cloudflare header to the upstream, no server detail to the viewer.
+    #[must_use]
+    pub fn public(mut self) -> Self {
+        self.public = true;
+        self
+    }
+
+    /// Whether it serves the presentation's traffic.
+    #[must_use]
+    pub fn is_public(&self) -> bool {
+        self.public
     }
 
     /// Adds the asset origin `upstream`, served on the device as `portal`; a pair whose either

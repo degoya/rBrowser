@@ -28,8 +28,12 @@ fn text(text: &str, nth: u32) -> Selector {
 }
 
 fn seen_text(text: &str, nth: u32, visible_nth: Option<u32>) -> Selector {
+    tagged_text("p", text, nth, visible_nth)
+}
+
+fn tagged_text(tag: &str, text: &str, nth: u32, visible_nth: Option<u32>) -> Selector {
     Selector::Text {
-        tag: "p".to_owned(),
+        tag: tag.to_owned(),
         text: text.to_owned(),
         nth,
         visible_nth,
@@ -82,10 +86,33 @@ fn a_role_without_a_name_has_no_options() {
 }
 
 #[test]
-fn a_text_becomes_exact_get_by_text() {
+fn a_text_becomes_its_tag_with_exactly_that_whole_text() {
     assert_eq!(
         auto(&of(vec![text("Welcome back", 0), css("main > p")])),
-        "page.getByText('Welcome back', { exact: true }).filter({ visible: true }).first()"
+        r"page.locator('p').filter({ hasText: /^\s*Welcome\s+back\s*$/ }).filter({ visible: true }).first()"
+    );
+}
+
+/// RB-090-93 review: the matches are the agent's own (`matchAll`): the elements of the tag
+/// whose whole text is the text. Climbing from `getByText` to the tag took a `p` whose inner
+/// `span` alone had the text, and an inner `p` of two nested ones, so `nth` counted others.
+#[test]
+fn a_text_does_not_match_an_element_that_only_contains_it() {
+    let target = auto(&of(vec![tagged_text("label", "Menu", 1, None)]));
+    assert_eq!(
+        target,
+        r"page.locator('label').filter({ hasText: /^\s*Menu\s*$/ }).nth(1)"
+    );
+    assert!(!target.contains("getByText") && !target.contains("ancestor"));
+}
+
+/// Page text reaches the regular expression escaped: nothing in it ends the literal or reads
+/// as a pattern.
+#[test]
+fn a_text_with_pattern_characters_is_escaped_in_its_expression() {
+    assert_eq!(
+        auto(&of(vec![tagged_text("a", "1/2 price (today) *", 0, None)])),
+        r"page.locator('a').filter({ hasText: /^\s*1\/2\s+price\s+\(today\)\s+\*\s*$/ }).filter({ visible: true }).first()"
     );
 }
 
@@ -121,7 +148,7 @@ fn the_cards_case_takes_the_visible_match_the_person_clicked() {
     );
     assert_eq!(
         auto(&of(vec![seen_text("Details", 2, Some(1)), css("p")])),
-        "page.getByText('Details', { exact: true }).filter({ visible: true }).nth(1)"
+        r"page.locator('p').filter({ hasText: /^\s*Details\s*$/ }).filter({ visible: true }).nth(1)"
     );
 }
 
@@ -141,7 +168,7 @@ fn the_hidden_nav_case_takes_the_first_visible_match() {
     );
     assert_eq!(
         auto(&of(vec![text("Read more", 0), css("p")])),
-        "page.getByText('Read more', { exact: true }).filter({ visible: true }).first()"
+        r"page.locator('p').filter({ hasText: /^\s*Read\s+more\s*$/ }).filter({ visible: true }).first()"
     );
 }
 
@@ -155,7 +182,7 @@ fn a_later_match_without_its_visible_index_keeps_nth() {
     );
     assert_eq!(
         auto(&of(vec![text("Read more", 3), css("p")])),
-        "page.getByText('Read more', { exact: true }).nth(3)"
+        r"page.locator('p').filter({ hasText: /^\s*Read\s+more\s*$/ }).nth(3)"
     );
 }
 
@@ -240,7 +267,7 @@ fn a_name_shown_twice_is_looked_for_inside_its_ancestor() {
     }
     assert_eq!(
         auto(&of(vec![offer])),
-        "page.locator('main').getByText('Offers', { exact: true }).filter({ visible: true }).first()"
+        r"page.locator('main').locator('p').filter({ hasText: /^\s*Offers\s*$/ }).filter({ visible: true }).first()"
     );
 }
 
@@ -249,5 +276,67 @@ fn recorded_text_cannot_break_out_of_the_literal() {
     assert_eq!(
         auto(&of(vec![css("a[title='x'); alert(1); ('")])),
         r"page.locator('a[title=\'x\'); alert(1); (\'')"
+    );
+}
+
+/// RB-090-93: a burger label whose only text is a visually hidden span. `getByText` alone
+/// finds the 1x1 span, which the label covers, and the click waits for good; the recorded
+/// tag takes the label whose text it is.
+#[test]
+fn a_text_with_its_tag_clicks_the_element_of_that_tag_not_the_hidden_span_in_it() {
+    assert_eq!(
+        auto(&of(vec![
+            tagged_text("label", "Menu", 0, None),
+            css("header > label")
+        ])),
+        r"page.locator('label').filter({ hasText: /^\s*Menu\s*$/ }).filter({ visible: true }).first()"
+    );
+    assert_eq!(
+        auto(&of(vec![tagged_text("label", "Menu", 2, Some(1))])),
+        r"page.locator('label').filter({ hasText: /^\s*Menu\s*$/ }).filter({ visible: true }).nth(1)"
+    );
+    assert_eq!(
+        auto(&of(vec![tagged_text("my-toggle", "Menu", 1, None)])),
+        r"page.locator('my-toggle').filter({ hasText: /^\s*Menu\s*$/ }).nth(1)"
+    );
+}
+
+/// The text directly in the element: the same locator.
+#[test]
+fn a_text_directly_in_its_element_is_that_element() {
+    assert_eq!(
+        auto(&of(vec![tagged_text("button", "Save", 0, None)])),
+        r"page.locator('button').filter({ hasText: /^\s*Save\s*$/ }).filter({ visible: true }).first()"
+    );
+}
+
+/// A tag that is no plain lower-case name (an SVG `foreignObject`, a forged recording) stays
+/// out of the code; the locator is the text alone, as before.
+#[test]
+fn a_tag_that_is_no_plain_name_is_left_out() {
+    for tag in ["", "foreignObject", "1p", "p]|//a", "p[1]", "-x", "label "] {
+        assert_eq!(
+            auto(&of(vec![tagged_text(tag, "Menu", 0, None)])),
+            "page.getByText('Menu', { exact: true }).filter({ visible: true }).first()",
+            "tag {tag:?}"
+        );
+    }
+}
+
+/// The tag composes with the ancestor that makes the text unique, frames and shadow hosts.
+#[test]
+fn a_tagged_text_inside_its_ancestor_frame_and_host() {
+    let mut menu = tagged_text("label", "Menu", 0, None);
+    if let Selector::Text { within, .. } = &mut menu {
+        *within = Some("header".to_owned());
+    }
+    let target = Locator {
+        selectors: vec![menu, css("header > label")],
+        hosts: vec![css("site-header")],
+        frame: Some(vec!["iframe#app".to_owned()]),
+    };
+    assert_eq!(
+        auto(&target),
+        r"page.frameLocator('iframe#app').locator('site-header').locator('header').locator('label').filter({ hasText: /^\s*Menu\s*$/ }).filter({ visible: true }).first()"
     );
 }

@@ -1,0 +1,86 @@
+# Live CSS (RB-094-04, docs/plugins.md): a CSS draft that applies at once in every view - one
+# constructed stylesheet per view, adopted by the page script in the plugin's isolated world
+# (`document.adoptedStyleSheets`; the DOM is shared, the page sees no script) -, block by block in
+# all views or in chosen breakpoints (wrapped in the media query of their widths), again after a
+# navigation. On and off without losing it; the draft is kept in `.rbrowser/out/live-css/`
+# (`draft.json`, and `draft.css` as the stylesheet to copy into the project), read and written only
+# in a trusted workspace.
+manifest_version = 1
+id = "live-css"
+name = "Live CSS"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "livecss"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "A CSS draft applied in every view at once, block by block in all views or chosen breakpoints, copied as media queries."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the breakpoints of the grid and their widths, for the media queries. project-read: the
+# draft, `.rbrowser/out/live-css/draft.json`, and the trust probe (no glob: nothing outside
+# `.rbrowser/`). out-write: `draft.json` and `draft.css`, below `.rbrowser/out/live-css/` only.
+# status: "on" and "off" in the status bar after the command `toggle`. No CDP, no evaluate: the
+# page script applies the sheet.
+[capabilities]
+views = true
+project-read = true
+out-write = true
+status = true
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `livecss_set`: `css` (one block, `breakpoints` its scope; none for every view) or `blocks`
+# (the whole draft) replaces the draft and switches it on; `enabled` alone switches it on or off;
+# without arguments it answers the draft. The page script hands the CSS to a stylesheet's
+# `replaceSync`, never into markup - but CSS the caller sends can still read a page's data out
+# (attribute selectors with `url()`, `@import`, `@font-face`), in every view and again after each
+# navigation: over MCP only while `mcp.allowEvaluate` is on (evaluate_disabled). The panel and the
+# command `toggle` are not gated; `clear` sends the pages nothing and stays open.
+[[tools]]
+name = "set"
+description = "plugin.live-css.tools.set"
+evaluates_input = true
+input = { type = "object", properties = { css = { type = "string", maxLength = 30000 }, breakpoints = { type = "array", maxItems = 32, items = { type = "string", minLength = 1, maxLength = 64 } }, blocks = { type = "array", maxItems = 32, items = { type = "object", required = ["css"], properties = { css = { type = "string", maxLength = 30000 }, breakpoints = { type = "array", maxItems = 32, items = { type = "string", minLength = 1, maxLength = 64 } } } } }, enabled = { type = "boolean" } } }
+
+# MCP `livecss_clear`: removes every block of the draft; the views show the page as it is.
+[[tools]]
+name = "clear"
+description = "plugin.live-css.tools.clear"
+input = { type = "object" }
+
+[[commands]]
+id = "panel"
+title = "plugin.live-css.commands.panel"
+shortcut = "Ctrl+Shift+Space P Q"
+group = "panels"
+mcp_omitted = "ui-only: opens the Live CSS panel; livecss_set reads and writes the draft"
+
+[[commands]]
+id = "toggle"
+title = "plugin.live-css.commands.toggle"
+shortcut = "Ctrl+Shift+Space D L"
+group = "devtools"
+tool = "set"
+
+# At document-start, so a new document gets the sheet before it first paints.
+[[page_scripts]]
+path = "page/live-css.js"
+run_at = "document-start"
+
+[[panels]]
+id = "editor"
+title = "plugin.live-css.panels.editor"
+entry = "panel/index.html"
+icon = "code"
+placement = "sidebar"

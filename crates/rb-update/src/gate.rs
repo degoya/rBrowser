@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 
 use crate::error::UpdateError;
 use crate::fetch::{BodyTooLarge, Fetcher, Url};
@@ -47,7 +47,7 @@ pub fn check(
     base: &str,
     channel: Channel,
     data: &Path,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<UpdateManifest, UpdateError> {
     if !gate.is_open() {
         return Err(UpdateError::Disabled);
@@ -69,7 +69,7 @@ pub fn check_with(
     base: &str,
     channel: Channel,
     data: &Path,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<UpdateManifest, UpdateError> {
     if !manifest::is_plain_https(base) || !base.ends_with('/') {
         return Err(UpdateError::Invalid(format!(

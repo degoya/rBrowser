@@ -1,0 +1,11 @@
+model = "gpt-5-codex"
+
+[mcp_servers.rbrowser]
+command = "D:\\old\\rbrowser.exe"
+args = ["mcp", "--project", "D:\\old\\site"]
+
+[mcp_servers.rbrowser.env]
+RB_OLD = "1"
+
+[mcp_servers.docs]
+command = "docs-mcp"

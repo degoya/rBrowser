@@ -106,6 +106,9 @@ pub fn page_state(
         EngineKind::Chromium => "chromium",
         EngineKind::Firefox => "firefox",
         EngineKind::Webkit => "webkit",
+        EngineKind::Android => "android",
+        EngineKind::Safari => "safari",
+        EngineKind::Ios => "ios",
     };
     PageState {
         info: PageInfo {

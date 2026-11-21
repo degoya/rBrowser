@@ -132,3 +132,19 @@ fn a_secret_field_entry_also_names_a_url_parameter() {
         "https://app.test/?session=********&otp=1"
     );
 }
+
+#[test]
+fn the_recorder_masks_every_name_of_the_one_list_and_drops_the_user_info() {
+    // RB-094-10: the recorder's names are `rb_util::mask`'s, its mask its own.
+    for name in rb_util::mask::SENSITIVE_PARAMS {
+        let url = format!("https://app.test/?{name}=v4lue&page=2#{name}=v4lue");
+        assert_eq!(
+            mask_url(&url, &[]),
+            format!("https://app.test/?{name}=********&page=2#{name}=********")
+        );
+    }
+    assert_eq!(
+        mask_url("https://u:pw@app.test/a@b?code=c", &[]),
+        "https://app.test/a@b?code=********"
+    );
+}

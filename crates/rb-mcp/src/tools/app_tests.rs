@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rmcp::handler::server::wrapper::Parameters;
 use serde_json::json;
 
-use super::{DevtoolsParams, DiagnosticsParams, WslParams};
+use super::{AppPerfParams, DevtoolsParams, DiagnosticsParams, WslParams};
 use crate::target::TargetArg;
 use crate::testing::{FakeBackend, answer_json, server};
 
@@ -82,4 +82,27 @@ async fn plugins_list_runs_its_command() {
     let fake = Arc::new(FakeBackend::default());
     server(&fake).plugins_list().await.expect("answer");
     assert_eq!(fake.calls()[0].0, "plugins.list");
+}
+
+/// RB-090-32: `app_perf` runs `debug.perf_counters` with named arguments (never `null`, which
+/// is the shell's call and shows a notice), `reset` only when asked.
+#[tokio::test]
+async fn app_perf_reads_the_counters_and_resets_only_when_asked() {
+    let fake = Arc::new(FakeBackend::default());
+    let server = server(&fake);
+    server
+        .app_perf(Parameters(AppPerfParams::default()))
+        .await
+        .expect("answer");
+    server
+        .app_perf(Parameters(AppPerfParams { reset: Some(true) }))
+        .await
+        .expect("answer");
+    assert_eq!(
+        fake.calls(),
+        vec![
+            ("debug.perf_counters".to_owned(), json!({})),
+            ("debug.perf_counters".to_owned(), json!({ "reset": true })),
+        ]
+    );
 }

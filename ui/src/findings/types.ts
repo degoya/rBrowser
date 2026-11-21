@@ -21,7 +21,7 @@ export type {
 } from '../ipc/findings';
 
 /** Shell -> core: run the checks, mark a finding's element, open the rule settings, run a
- * command (`checks.cancel`, RB-080-89). */
+ * command (`checks.cancel`, RB-080-89; `checks.export`, RB-092-05). */
 export type FindingsRequest = Extract<
   ShellToCore,
   { type: 'runChecks' } | { type: 'highlightFinding' } | { type: 'openSettings' } | { type: 'runCommand' }
@@ -42,4 +42,6 @@ export interface FindingsChannel {
   last(): Promise<FindingsEvent | null>;
   /** The progress of the run in progress or the last one; `null` before the first. */
   progress(): Promise<ProgressEvent | null>;
+  /** The shortcut of a command for its tooltip (`Ctrl+Shift+Space K B`); none when unbound. */
+  binding?(command: string): string | null;
 }

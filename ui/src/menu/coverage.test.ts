@@ -48,6 +48,23 @@ describe('the menu coverage', () => {
     }
   });
 
+  // The owner (2026-11-21): no feature hides behind a shortcut or the palette. Only the main
+  // menu's own opener and the numbered families another row lists may go without a way.
+  it('lets only the main menu opener and the numbered families go without a menu row', () => {
+    const allowed = (id: string) =>
+      id === 'ui.toolbar.overflow.open' || /^layout\.preset\.[1-9]$/.test(id) || /^environments\.switch\.[1-9]$/.test(id);
+    const others = Object.keys(MENU_OMITTED).filter((id) => !allowed(id));
+    expect(others, 'a feature needs a menu row or a visible control (OTHER_WAYS), not an omission').toEqual([]);
+  });
+
+  // RB-094-20: the devices, the adb download and the AI agent's setup have rows of their own.
+  it('lists the devices, the adb download, iOS, the MCP setup and the presentation in the main menu', () => {
+    const rows = namedCommands(MAIN_MENU);
+    for (const id of ['view.add_android', 'tools.adb.install', 'ios.devices', 'mcp.setup', 'portal.present.start']) {
+      expect(rows.has(id), id).toBe(true);
+    }
+  });
+
   it('gives every plugin command a row: by name or in the submenu of its leader group', () => {
     const groups = pluginGroups(MAIN_MENU);
     const commands = pluginCommands();

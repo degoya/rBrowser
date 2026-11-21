@@ -177,11 +177,12 @@ describe('the status line', () => {
       view(2, 'lg', [], { status: 'failed', error: 'plugins.error.host_failed' }),
       view(3, 'xl', [], { status: 'not-found' }),
       view(4, 'sm', [], { status: 'empty' }),
+      view(5, 'xs', [], { status: 'timeout' }),
     ]);
     expect(statusLine(t, say, answer, outcome(answer, t))).toEqual({
       tone: 'warn',
       text: 'Filled 1 field with valid values in 1 view, seed 706559. lg: failed: The view did not answer. '
-        + 'xl: nothing matches the selector. sm: no fields.',
+        + 'xl: nothing matches the selector. sm: no fields. xs: not filled, the fill ran out of its time (Time for one fill).',
     });
   });
 

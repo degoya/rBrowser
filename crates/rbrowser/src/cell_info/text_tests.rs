@@ -163,6 +163,7 @@ fn each_setting_switches_its_piece() {
     let none = CellLabelSettings {
         engine_status: false,
         address: CellAddress::Off,
+        ..CellLabelSettings::default()
     };
     let infos = cell_infos(&views, Some(ViewId(1)), &externals, &none, true);
     assert_eq!((&infos[1].address, &infos[1].engine), (&None, &None));
@@ -196,10 +197,15 @@ fn the_badge_menu_offers_what_a_click_on_the_state_did() {
         engine_click(&closed),
         Some((PieceAction::Restart, "engines.external.reopen"))
     );
-    let stopped = external(json!({ "status": "failed" }));
+    let stopped = external(json!({ "status": "exited" }));
     assert_eq!(
         engine_click(&stopped),
         Some((PieceAction::Restart, "engines.external.restart"))
+    );
+    let failed = external(json!({ "status": "failed" }));
+    assert_eq!(
+        engine_click(&failed),
+        Some((PieceAction::Restart, "engines.external.retry"))
     );
     let own = external(json!({ "status": "running" }));
     assert_eq!(
@@ -262,4 +268,31 @@ fn a_dimmed_badge_names_its_reason_and_a_running_one_the_state_first() {
         badge_words(own, false, None),
         (own.0.to_owned(), own.1.to_owned())
     );
+}
+
+// RB-094-20: a view that failed to start names its reason in the strip - cut, the whole of it
+// in the tooltip - and its click (and the badge menu's row) is Retry, the engine's restart.
+#[test]
+fn a_failed_start_names_its_reason_and_retries() {
+    let reason = "Chrome on the Android device R5CX does not answer. Open Chrome on the device \
+                  once, keep it unlocked, then try again.";
+    let failed = external(json!({ "engine": "android", "status": "failed", "reason": reason }));
+    let piece = engine_piece(&failed, true);
+    let status = rb_i18n::t_with(
+        "engines.external.status.failedBecause",
+        &[("reason", &rb_util::text::cut_ellipsis(reason, MAX_REASON))],
+    );
+    assert!(piece.text.ends_with(&status), "{}", piece.text);
+    assert!(
+        piece.text.contains("Chrome on the Android"),
+        "{}",
+        piece.text
+    );
+    assert!(piece.text.ends_with("..."), "cut: {}", piece.text);
+    assert!(piece.tooltip.contains(reason), "{}", piece.tooltip);
+    assert!(piece.tooltip.ends_with("Click: Retry"), "{}", piece.tooltip);
+    assert_eq!(piece.action, PieceAction::Restart);
+    // Without a reason the state alone.
+    let bare = engine_piece(&external(json!({ "status": "failed" })), false);
+    assert_eq!(bare.text, "Firefox: failed to start");
 }

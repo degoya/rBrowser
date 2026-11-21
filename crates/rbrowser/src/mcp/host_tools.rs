@@ -101,6 +101,10 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
             .and_then(|answer| json(&answer))
         }
         RECORDER_PLAY_TOOL => crate::recorder::play::tool(core, args).await,
+        // RB-092-01: the recording editor's steps; no tool deletes a recording.
+        step if crate::recorder::steps::TOOLS.contains(&step) => {
+            crate::recorder::steps::host_tool(core, step, args).await
+        }
         COMPARE_TOOL => {
             let args = CompareArgs::parse(&args)
                 .map_err(|message| ToolFailure::new("invalid_arguments", message))?;
@@ -131,11 +135,26 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
         compare if crate::compare::app::TOOLS.contains(&compare) => {
             crate::compare::app::host_tool(core, compare, args).await
         }
+        // RB-094-03: the engine comparison.
+        engines if crate::engine_compare::app::TOOLS.contains(&engines) => {
+            crate::engine_compare::app::host_tool(core, engines, args).await
+        }
         // RB-080-15: the status bar's messages.
         crate::status::STATUS_MESSAGES_TOOL => crate::status::mcp::status_messages(core, &args),
         // RB-080-32: the installed Firefox editions; a read, it starts nothing.
         crate::engines::firefox::installed::LIST_TOOL => {
             crate::engines::firefox::installed::host_tool(core, &args)
+        }
+        // RB-095-02: Android devices over ADB; neither tool downloads adb.
+        crate::engines::android::commands::ADD_TOOL => {
+            crate::engines::android::commands::add_tool(core, args).await
+        }
+        crate::engines::android::commands::DEVICES_TOOL => {
+            crate::engines::android::commands::devices_tool(core).await
+        }
+        // RB-095-04: the Mac's iOS simulators and devices; a read, it boots nothing.
+        crate::engines::ios::commands::DEVICES_TOOL => {
+            crate::engines::ios::commands::devices_tool(core).await
         }
         // RB-080-02: video recording; it never downloads ffmpeg.
         crate::video::app::TOOL_NAME => crate::video::defs::host_tool(core, args).await,

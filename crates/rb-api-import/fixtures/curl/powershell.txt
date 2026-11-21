@@ -1,0 +1,4 @@
+curl.exe -X PUT "https://api.example.com/v1/items/7" `
+  -u "admin:pa55word" `
+  -H "Content-Type: text/plain" `
+  -d "hello" -k -L --max-time 5

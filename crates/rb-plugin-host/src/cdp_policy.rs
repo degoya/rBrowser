@@ -21,7 +21,7 @@
 //!
 //! A refusal is `plugins.error.cdp_domain_denied` with the `domain`, the `method` and a `reason`
 //! (`method`, `params`, `world`, `context`, `url`, `urls`, `cookie`, `request`, `origin`,
-//! `clip`).
+//! `clip`, `width`).
 
 use rb_plugin_types::{Failure, FailureKind, codes, rules};
 use serde_json::{Map, Value};
@@ -64,10 +64,18 @@ pub const PLUGIN_CDP_METHODS: &[(&str, &[&str])] = &[
             "scrollIntoViewIfNeeded",
         ],
     ),
-    // overlays (js-off), simulators (the colour-vision and blur types Chromium renders itself).
+    // overlays (js-off), simulators (the colour-vision and blur types Chromium renders itself),
+    // width-sweep (RB-093-01: a view's width for the sweep, [`width_override`]). The host never
+    // sends the two metrics methods as given: the app turns them into a width lease (the view's
+    // own metrics at another width, out of sync) and its end.
     (
         "Emulation",
-        &["setEmulatedVisionDeficiency", "setScriptExecutionDisabled"],
+        &[
+            "clearDeviceMetricsOverride",
+            "setDeviceMetricsOverride",
+            "setEmulatedVisionDeficiency",
+            "setScriptExecutionDisabled",
+        ],
     ),
     // storage-panel (the view's own cookies), network-panel (a response body of the view).
     (
@@ -122,6 +130,10 @@ const MAX_COOKIE_URLS: usize = 16;
 const MAX_SCREENSHOT_AREA: f64 = 1_048_576.0;
 /// The largest `scale` of a `Page.captureScreenshot` clip.
 const MAX_SCREENSHOT_SCALE: f64 = 4.0;
+/// The narrowest width `Emulation.setDeviceMetricsOverride` may ask of a view, CSS px.
+pub(crate) const MIN_PLUGIN_WIDTH: u64 = 120;
+/// The widest, CSS px: a 4K screen's width.
+pub(crate) const MAX_PLUGIN_WIDTH: u64 = 3840;
 
 /// What the host still checks before a command passes: what needs the view or the session.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -206,6 +218,10 @@ pub(crate) fn guard(plugin_id: &str, method: &str, params: &Value) -> Result<Pen
         "Network.setCookie" | "Network.deleteCookies" => cookie_target(method, params),
         "Page.captureScreenshot" => screenshot(method, params),
         "Page.getResourceContent" => resource(method, params),
+        "Emulation.setDeviceMetricsOverride" => width_override(method, params),
+        "Emulation.clearDeviceMetricsOverride" if !params.is_empty() => {
+            Err(denied(method, "params"))
+        }
         "Network.getResponseBody" => {
             let id = params.get("requestId").and_then(Value::as_str);
             match id {
@@ -289,6 +305,21 @@ fn screenshot(method: &str, params: &Map<String, Value>) -> Result<Pending, Fail
         Ok(Pending::None)
     } else {
         Err(refused())
+    }
+}
+
+/// `Emulation.setDeviceMetricsOverride` only as `{ "width": n }`, a whole number of CSS px from
+/// [`MIN_PLUGIN_WIDTH`] to [`MAX_PLUGIN_WIDTH`] (RB-093-01): the height, the device pixel ratio,
+/// the scale, the screen and the position stay the host's, which owns the view's metrics (ADR
+/// 0001) and sends its own with only the width changed.
+fn width_override(method: &str, params: &Map<String, Value>) -> Result<Pending, Failure> {
+    let width = params.get("width").and_then(Value::as_u64);
+    let in_range =
+        width.is_some_and(|width| (MIN_PLUGIN_WIDTH..=MAX_PLUGIN_WIDTH).contains(&width));
+    if params.len() == 1 && in_range {
+        Ok(Pending::None)
+    } else {
+        Err(denied(method, "width"))
     }
 }
 

@@ -25,7 +25,7 @@ use crate::{
     link::{from_wit_finding, from_wit_severity, link},
     manifest::PluginManifest,
     runtime::{PluginStoreState, SandboxEngine},
-    services::{HostServices, NoServices},
+    services::{CallSpan, HostServices, NoServices},
 };
 
 pub(crate) mod answers;
@@ -410,7 +410,9 @@ impl LoadedPlugin {
     {
         let shared = &self.shared;
         shared.health.check()?;
+        let waiting = std::time::Instant::now();
         let _running = shared.health.enter(shared.sandbox.max_concurrent()).await;
+        let _span = CallSpan::after_wait(&shared.context.services, &shared.manifest.id, waiting);
         let result = self.call_once(operation, index, params).await;
         if let Err(failure) = &result
             && counts_as_failure(failure)

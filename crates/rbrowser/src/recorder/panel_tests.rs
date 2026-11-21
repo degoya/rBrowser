@@ -42,7 +42,15 @@ fn an_edited_recording_keeps_its_file_name_unique_ids_and_the_schema() {
     twice["steps"][1]["id"] = json!(1);
     assert_eq!(
         edited("login", &twice).expect_err("same id"),
-        "two steps have the same id"
+        "two steps have the id 1"
+    );
+    // RB-092-01: an editor's pause or wait above 10 s is refused.
+    let mut pause = recording("login");
+    pause["steps"][0]["pauseMs"] = json!(10_001);
+    assert!(
+        edited("login", &pause)
+            .expect_err("too long")
+            .contains("10000")
     );
     let mut unknown = recording("login");
     unknown["steps"][0]["colour"] = json!("red");
@@ -107,6 +115,8 @@ fn the_panels_requests_run_off_the_ui_thread() {
     }));
     assert!(is_off_thread(&ShellToCore::GetRecordings));
     assert!(is_off_thread(&ShellToCore::GetFlowRun));
+    // It waits for the recorder, which a stop holds while it writes the file (RB-090-89).
+    assert!(is_off_thread(&ShellToCore::ResendRecordingSteps));
     assert!(!is_off_thread(&ShellToCore::ListFlows));
 }
 

@@ -2,7 +2,7 @@
 //! against its schema; a missing or broken value is its default.
 
 use rb_plugin_api::PluginHost;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// The default colours: border and fill of each mark (`colors.*`).
@@ -22,6 +22,21 @@ pub const DEFAULT_SCROLLBAR_TOLERANCE_PX: u64 = 4;
 const SCROLLBAR_TOLERANCE_PX: std::ops::RangeInclusive<u64> = 0..=100;
 pub const DEFAULT_CHAOS_FACTOR: f64 = 2.0;
 const CHAOS_FACTOR: std::ops::RangeInclusive<f64> = 0.1..=10.0;
+/// The default and the bounds of `tabOrder.readingTolerancePx` (RB-094-02), as the outline
+/// plugin's `outline.readingOrder.tolerancePx`.
+pub const DEFAULT_READING_TOLERANCE_PX: u64 = 4;
+const READING_TOLERANCE_PX: std::ops::RangeInclusive<u64> = 0..=50;
+
+/// `tabOrder.readingOrder` (RB-094-02): the reading order arrows of the tab order overlay, off,
+/// beside its lines or instead of them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReadingOrder {
+    #[default]
+    Off,
+    Beside,
+    Instead,
+}
 
 /// The colours of the marks, `#rrggbb` each.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -49,6 +64,9 @@ pub struct PageSettings {
     pub tab_order_show_lines: bool,
     pub tab_order_live: bool,
     pub tab_order_include_iframes: bool,
+    /// The reading order arrows (RB-094-02).
+    pub tab_order_reading_order: ReadingOrder,
+    pub tab_order_reading_tolerance_px: u64,
 }
 
 /// The value of the plugin's key `key` (`overflow.show100vw`); the host may name it with the
@@ -134,6 +152,15 @@ pub fn page_settings(host: &mut dyn PluginHost) -> PageSettings {
         tab_order_show_lines: flag(host, "tabOrder.showLines", true),
         tab_order_live: flag(host, "tabOrder.live", true),
         tab_order_include_iframes: flag(host, "tabOrder.includeIframes", true),
+        tab_order_reading_order: get(host, "tabOrder.readingOrder")
+            .and_then(|value| serde_json::from_value(value).ok())
+            .unwrap_or_default(),
+        tab_order_reading_tolerance_px: whole(
+            host,
+            "tabOrder.readingTolerancePx",
+            READING_TOLERANCE_PX,
+            DEFAULT_READING_TOLERANCE_PX,
+        ),
     }
 }
 

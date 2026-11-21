@@ -9,7 +9,8 @@ without a tool), the tools and commands of the bundled first-party plugins (plug
 with their own locales, plugin_manifests.py) and the English texts (locales/en.json and the
 wave's parts) for the command titles. The page lists an overview, then the tools area by area with
 a parameter table each, then each plugin's tools (marked; a name a core tool has is the core's,
-as rb-mcp routes it), then the tools still to come and the commands no tool runs.
+as rb-mcp routes it), the prompts with their arguments and the resources with their URIs (when the
+tools file has them, RB-095-01), then the tools still to come and the commands no tool runs.
 
 Exit 0 when written (or, with --check, current - or no wiki, or no page yet: nothing generated
 to compare); 1 when --check finds the page stale; 2 when the data does not read.
@@ -161,6 +162,62 @@ def read_tools(root: Path):
     return tools, pending
 
 
+def read_prompts_resources(root: Path):
+    """The prompts, resources and resource templates of the tools file; empty when it has none."""
+    data = settings_schema.load_json(root / TOOLS, root)
+    prompts = data.get("prompts", [])
+    resources = data.get("resources", []) + data.get("resourceTemplates", [])
+    if not isinstance(prompts, list) or not all(
+        isinstance(p, dict) and isinstance(p.get("name"), str)
+        and isinstance(p.get("arguments", []), list) for p in prompts
+    ):
+        raise DataError(f"{TOOLS}: a prompt without name or with arguments that are no list")
+    for prompt in prompts:
+        if not all(isinstance(a, dict) and isinstance(a.get("name"), str)
+                   for a in prompt.get("arguments", [])):
+            raise DataError(f"{TOOLS}: {prompt['name']} has an argument without name")
+    if not all(isinstance(r, dict) and isinstance(r.get("uri", r.get("uriTemplate")), str)
+               for r in resources):
+        raise DataError(f"{TOOLS}: a resource without uri")
+    return prompts, resources
+
+
+def prompts_resources(prompts: list, resources: list) -> list:
+    """The page's sections of the prompts and the resources; none for a tools file without."""
+    out = []
+    if prompts:
+        out.append("## Prompts\n")
+        out.append("Ready texts for rBrowser's typical workflows, offered while the setting "
+                   "`mcp.prompts` is on (`prompts/list`, `prompts/get`). A prompt runs nothing: "
+                   "the agent calls the tools.\n")
+        for prompt in prompts:
+            out.append(f"### `{prompt['name']}`\n")
+            out.append(cell(prompt.get("description") or "-") + "\n")
+            arguments = prompt.get("arguments", [])
+            if not arguments:
+                out.extend(["No arguments.", ""])
+                continue
+            out.append("| Argument | Required | Description |")
+            out.append("| --- | --- | --- |")
+            for argument in arguments:
+                needed = "yes" if argument.get("required") else "no"
+                text = cell(argument.get("description") or "-")
+                out.append(f"| `{cell(argument['name'])}` | {needed} | {text} |")
+            out.append("")
+    if resources:
+        out.append("## Resources\n")
+        out.append("rBrowser's state to read without a tool call, read-only, offered while the "
+                   "setting `mcp.resources` is on (`resources/list`, `resources/read`).\n")
+        out.append("| Resource | Type | Description |")
+        out.append("| --- | --- | --- |")
+        for resource in resources:
+            uri = resource.get("uri", resource.get("uriTemplate"))
+            kind = cell(resource.get("mimeType") or "-")
+            out.append(f"| `{cell(uri)}` | {kind} | {cell(resource.get('description') or '-')} |")
+        out.append("")
+    return out
+
+
 def read_commands(root: Path) -> list:
     data = settings_schema.load_json(root / COMMANDS, root)
     commands = data.get("commands") if isinstance(data, dict) else None
@@ -280,6 +337,7 @@ def render(root: Path) -> str:
                 out.append(f"- **Guarded:** {lead}{note}")
             out.append("")
             out.extend(parameters(tool))
+    out.extend(prompts_resources(*read_prompts_resources(root)))
     out.append("## Coming tools\n")
     out.append("Commands name these tools already; each arrives with its job.\n")
     out.append("| Tool | Job | Command |")

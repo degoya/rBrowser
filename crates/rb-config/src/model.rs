@@ -32,6 +32,9 @@ pub struct ProjectConfig {
     /// The environments (local, staging, ...) the toolbar switches between (RB-010-12).
     #[serde(default)]
     pub environments: Vec<Environment>,
+    /// The environments behind HTTP Basic auth; their credentials never live here (RB-094-08).
+    #[serde(default, skip_serializing_if = "crate::shared_settings::is_default")]
+    pub basic_auth: crate::BasicAuthConfig,
     /// Named sessions; `default` always exists, shared by every Chromium view without one.
     #[serde(default)]
     pub sessions: Vec<String>,
@@ -80,6 +83,12 @@ pub struct ProjectConfig {
     /// defaults.
     #[serde(default, skip_serializing_if = "crate::shared_settings::is_default")]
     pub env_compare: crate::EnvCompareConfig,
+    /// Capture > Bug report (RB-093-04); written only when it differs from the defaults.
+    #[serde(default, skip_serializing_if = "crate::shared_settings::is_default")]
+    pub report: crate::BugReportConfig,
+    /// Capture > Engine compare (RB-094-03); written only when it differs from the defaults.
+    #[serde(default, skip_serializing_if = "crate::shared_settings::is_default")]
+    pub engine_compare: crate::EngineCompareConfig,
     /// Capture > Screenshots (RB-050-03); the user settings may set the same keys.
     #[serde(default, skip_serializing_if = "crate::shared_settings::is_default")]
     pub capture: crate::CaptureConfig,

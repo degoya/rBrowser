@@ -64,7 +64,7 @@ impl SubmitPolicy for SessionPolicy {
         let Some(host) = self.host.upgrade() else {
             return Vec::new();
         };
-        let per_session = host.config().sync.leader_per_session;
+        let per_session = host.with_config(|config| config.sync.leader_per_session);
         submitters(leader, targets, &host.views(), per_session)
     }
 }

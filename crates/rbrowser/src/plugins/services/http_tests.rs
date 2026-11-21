@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use rb_plugin_types::{HttpRequest, codes};
 use ureq::http::Uri;
 
-use super::{admitted, agent, fetch_blocking};
+use super::{RESPONSE_HEADERS, admitted, agent, fetch_blocking, passed_value};
 use crate::plugins::services::net::Origin;
 
 fn addresses(list: &[&str]) -> Vec<SocketAddr> {
@@ -53,4 +53,63 @@ fn a_refused_address_is_the_url_denied_code_and_nothing_connects() {
     )
     .expect_err("loopback");
     assert_eq!(refused.code(), Some(codes::HTTP_URL_DENIED));
+}
+
+#[test]
+fn the_security_headers_reach_the_plugins_and_never_a_cookie_value() {
+    for name in [
+        "content-security-policy",
+        "strict-transport-security",
+        "x-frame-options",
+        "x-content-type-options",
+        "referrer-policy",
+        "permissions-policy",
+        "access-control-allow-origin",
+        "access-control-allow-credentials",
+        "date",
+        "set-cookie",
+    ] {
+        assert!(RESPONSE_HEADERS.contains(&name), "{name}");
+    }
+    assert!(!RESPONSE_HEADERS.contains(&"cookie"));
+    assert_eq!(
+        passed_value(
+            "set-cookie",
+            "sid=SECRET123; Path=/; Secure; HttpOnly; SameSite=Lax"
+        ),
+        "sid=; Path=/; Secure; HttpOnly; SameSite=Lax"
+    );
+    assert_eq!(passed_value("set-cookie", "token=a=b=c"), "token=");
+    assert_eq!(passed_value("set-cookie", "SECRETONLY"), "");
+    assert_eq!(
+        passed_value("content-security-policy", "default-src 'self'"),
+        "default-src 'self'"
+    );
+}
+
+#[test]
+fn a_set_cookie_passes_only_its_name_and_known_attributes() {
+    // A folded second cookie, a quoted value with `;` and an unknown token leak nothing.
+    assert_eq!(
+        passed_value("set-cookie", "a=1; Path=/, b=SECRET; Secure"),
+        "a=; Secure"
+    );
+    assert_eq!(
+        passed_value("set-cookie", "sid=\"x;SECRET\"; HttpOnly"),
+        "sid=; HttpOnly"
+    );
+    assert_eq!(
+        passed_value(
+            "set-cookie",
+            "id=1; Expires=Thu, 01 Jan 2030 00:00:00 GMT; Max-Age=3600; Domain=example.test; SameSite=Lax; Partitioned; X-Secret=abc"
+        ),
+        "id=; Expires=Thu, 01 Jan 2030 00:00:00 GMT; Max-Age=3600; Domain=example.test; SameSite=Lax; Partitioned"
+    );
+    assert_eq!(
+        passed_value(
+            "set-cookie",
+            "id=1; Expires=Thu, 01 Jan 2030 00:00:00 GMT, b=SECRET"
+        ),
+        "id="
+    );
 }

@@ -56,11 +56,13 @@ pub fn on_start(core: &Core) {
     }
 }
 
-/// The user settings changed: the throttling follows at once (the memory watch reads them at
-/// every sample).
+/// The user settings changed: the throttling and the timing counters follow at once (the
+/// memory watch reads them at every sample).
 pub fn on_user_settings_changed(core: &Core) {
-    let settings = ThrottleSettings::from(&core.user_settings().performance);
-    core.host().set_throttle_settings(settings);
+    let performance = core.user_settings().performance;
+    super::counters::apply_settings(&performance);
+    core.host()
+        .set_throttle_settings(ThrottleSettings::from(&performance));
 }
 
 /// The leaders' document scrolls, as their agents report them.
@@ -117,7 +119,7 @@ pub fn catch_up(host: &Arc<Host>, view: ViewId) {
     let Some(sync) = crate::sync_hub::for_host(host) else {
         return;
     };
-    let state = sync.state(&host.config().sync);
+    let state = sync.state(&host.with_config(|config| config.sync.clone()));
     let leader = sync
         .hub()
         .with(|hub| hub.active())

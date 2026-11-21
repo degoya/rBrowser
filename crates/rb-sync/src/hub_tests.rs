@@ -19,12 +19,14 @@ fn message(event: SyncEvent) -> EventMessage {
         frame: None,
         seq: 1,
         time: 0,
+        path: Vec::new(),
         event,
     }
 }
 
 pub(super) fn click() -> EventMessage {
     message(SyncEvent::Click(MouseData {
+        control: None,
         button: MouseButton::Left,
         detail: 1,
         modifiers: 0,

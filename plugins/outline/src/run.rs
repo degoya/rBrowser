@@ -10,9 +10,6 @@ use crate::page::{self, PageOutline};
 use crate::rules::{self, Peer};
 use crate::settings::Settings;
 
-/// The sections the rules over the breakpoints compare.
-const ACROSS: [&str; 2] = ["headings", "landmarks"];
-
 /// The outlines of the views, and why the others gave none.
 #[derive(Debug, Default)]
 pub struct Collected {
@@ -109,12 +106,14 @@ pub fn across(
         let Some(own) = info(*subject) else {
             continue;
         };
-        let peers: Vec<Peer<'_>> = pool
+        // In the grid's order, so every view's run names the views alike.
+        let peers: Vec<Peer<'_>> = views
             .iter()
-            .filter_map(|(id, outline)| {
-                let view = info(*id).filter(|view| view.url == own.url)?;
+            .filter(|view| view.url == own.url)
+            .filter_map(|view| {
+                let (_, outline) = pool.iter().find(|(id, _)| *id == view.id)?;
                 Some(Peer {
-                    view: *id,
+                    view: view.id,
                     label: &view.label,
                     outline,
                 })
@@ -125,20 +124,51 @@ pub fn across(
     findings
 }
 
+/// `pool` with the other Chromium views of `all` that show a URL of a view in it, read for
+/// `sections`: the views the rules over the breakpoints compare its views with.
+pub fn add_peers(
+    host: &mut dyn PluginHost,
+    all: &[ViewInfo],
+    pool: &mut Vec<(ViewId, PageOutline)>,
+    sections: &[String],
+) {
+    let urls: Vec<&str> = pool
+        .iter()
+        .filter_map(|(id, _)| all.iter().find(|view| view.id == *id))
+        .map(|view| view.url.as_str())
+        .collect();
+    let others: Vec<ViewId> = all
+        .iter()
+        .filter(|other| {
+            other.engine == "chromium"
+                && urls.contains(&other.url.as_str())
+                && !pool.iter().any(|(id, _)| *id == other.id)
+        })
+        .map(|other| other.id)
+        .collect();
+    for other in others {
+        if let Ok(outline) = page::collect(host, other, sections, &[]) {
+            pool.push((other, outline));
+        }
+    }
+}
+
 /// Whether the run asks for a rule over the breakpoints.
 fn wants_across(enabled: &[String]) -> bool {
-    enabled.is_empty()
-        || enabled
-            .iter()
-            .any(|rule| rule == rules::HEADING_DIFFERS || rule == rules::LANDMARK_DIFFERS)
+    let across = [
+        rules::HEADING_DIFFERS,
+        rules::LANDMARK_DIFFERS,
+        rules::INTERACTIVE_DIFFERS,
+    ];
+    enabled.is_empty() || enabled.iter().any(|rule| across.contains(&rule.as_str()))
 }
 
 /// The check run of one view (or of every view when the run names none): the findings of its
 /// outline, and - when `outline.linkCheck.enabled` and the run wants `link-broken` - the broken
 /// links. The links of a page are checked once: by the first view showing that URL, over the
 /// links of every view showing it (a link only the desktop shows is checked too). The rules over
-/// the breakpoints compare each view with the other Chromium views on its URL, read for their
-/// headings and landmarks when the run did not read them.
+/// the breakpoints compare each view with the other Chromium views on its URL, read for the
+/// sections of `outline.diff.elements` when the run did not read them (none when it is empty).
 ///
 /// # Errors
 ///
@@ -181,23 +211,11 @@ pub fn check(host: &mut dyn PluginHost, ctx: &CheckContext) -> Result<Vec<Findin
         ));
         pool.push((view.id, outline));
     }
-    if wants_across(&ctx.rules) {
+    let sections = settings.diff_sections(&[]);
+    if wants_across(&ctx.rules) && !sections.is_empty() {
         let subjects: Vec<ViewId> = pool.iter().map(|(id, _)| *id).collect();
-        let sections = ACROSS.map(str::to_owned);
-        for other in &all {
-            let on_page = subjects
-                .iter()
-                .filter_map(|id| all.iter().find(|view| view.id == *id))
-                .any(|subject| subject.url == other.url);
-            if other.engine != "chromium" || !on_page || pool.iter().any(|(id, _)| *id == other.id)
-            {
-                continue;
-            }
-            if let Ok(outline) = page::collect(host, other.id, &sections, &[]) {
-                pool.push((other.id, outline));
-            }
-        }
-        findings.extend(across(&ctx.rules, &all, &pool, &subjects, &[]));
+        add_peers(host, &all, &mut pool, &sections);
+        findings.extend(across(&ctx.rules, &all, &pool, &subjects, &sections));
     }
     Ok(findings)
 }

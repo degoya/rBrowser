@@ -3,8 +3,9 @@
 //!
 //! - `onStart`: a Firefox or WebKit view that starts running (its first start, a restart, the
 //!   engine switched on) gets its session's cookies, and loads its page again with them. The
-//!   external views' status is read at each change the shell sees and every [`POLL`] (the
-//!   shell sees none with `engines.external.showTiles` off).
+//!   external views' status is read at each change the shell sees and every [`POLL`] while
+//!   there are any or a view is on another engine (the shell sees none with
+//!   `engines.external.showTiles` off; RB-090-38: a window of Chromium views alone has no timer).
 //! - `onNavigate`: a page load of a Chromium view copies its session's cookies into the
 //!   Firefox and WebKit views of that session, once the loads have been quiet for
 //!   [`SETTLE`] (a login redirects several times).
@@ -52,6 +53,13 @@ impl Mode {
     }
 }
 
+/// Whether the status poll is due: before the first look (`None`), while `seen` holds an
+/// external view and while the host has a view on another engine than Chromium (`wanted`: its
+/// window may not be listed yet); never for Chromium views alone.
+pub fn needs_poll(seen: Option<&HashMap<ViewId, ExternalStatus>>, wanted: bool) -> bool {
+    wanted || seen.is_none_or(|seen| !seen.is_empty())
+}
+
 /// The views that just started running: those `Running` in `now` that were not in `before`.
 pub fn started(
     before: &HashMap<ViewId, ExternalStatus>,
@@ -75,17 +83,21 @@ pub fn on_start(core: &Core) {
     let runtime = core.runtime().clone();
     let pending: Arc<Mutex<BTreeMap<String, u64>>> = Arc::default();
     runtime.clone().spawn(async move {
-        let mut seen: HashMap<ViewId, ExternalStatus> = HashMap::new();
+        // `None` until the first look; a missed tick is not made up in a burst.
+        let mut seen: Option<HashMap<ViewId, ExternalStatus>> = None;
         let mut poll = tokio::time::interval(POLL);
+        poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
+            let wanted = weak.upgrade().is_some_and(|core| wants_external(&core));
+            let polling = needs_poll(seen.as_ref(), wanted);
             let event = tokio::select! {
                 event = events.recv() => Some(event),
-                _ = poll.tick() => None,
+                _ = poll.tick(), if polling => None,
             };
             let Some(core) = weak.upgrade() else {
                 return;
             };
-            let mode = Mode::of(&core.user_settings().engines.cookies.copy);
+            let mode = core.with_user_settings(|user| Mode::of(&user.engines.cookies.copy));
             match event {
                 Some(Ok(ViewEvent::Navigated { view, .. })) => {
                     if mode == Mode::OnNavigate {
@@ -94,14 +106,19 @@ pub fn on_start(core: &Core) {
                     continue;
                 }
                 Some(Err(RecvError::Closed)) => return,
-                Some(Ok(ViewEvent::StateChanged | ViewEvent::Opened(_) | ViewEvent::Closed(_)))
+                Some(Ok(
+                    ViewEvent::StateChanged
+                    | ViewEvent::Opened(_)
+                    | ViewEvent::Closed(_)
+                    | ViewEvent::LayoutChanged,
+                ))
                 | Some(Err(RecvError::Lagged(_)))
                 | None => {}
                 Some(Ok(_)) => continue,
             }
             let now = statuses(&core);
-            let fresh = started(&seen, &now);
-            seen = now.into_iter().collect();
+            let fresh = started(&seen.unwrap_or_default(), &now);
+            seen = Some(now.into_iter().collect());
             if mode == Mode::OnStart && !fresh.is_empty() {
                 let args = CopyArgs {
                     target: Some(Targets::Many(fresh)),
@@ -111,6 +128,14 @@ pub fn on_start(core: &Core) {
             }
         }
     });
+}
+
+/// Whether a view of the host runs on another engine than Chromium.
+fn wants_external(core: &Core) -> bool {
+    core.host()
+        .views()
+        .iter()
+        .any(|info| info.engine != EngineKind::Chromium)
 }
 
 /// The external views and where each stands.

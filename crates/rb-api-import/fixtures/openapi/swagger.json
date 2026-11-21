@@ -1,0 +1,46 @@
+{
+  "swagger": "2.0",
+  "info": { "title": "Store", "version": "1" },
+  "host": "store.example",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "securityDefinitions": {
+    "key": { "type": "apiKey", "in": "query", "name": "api_key" },
+    "legacy": { "type": "oauth2", "flow": "implicit", "authorizationUrl": "https://store.example/auth", "scopes": {} }
+  },
+  "security": [{ "key": [] }],
+  "paths": {
+    "/orders": {
+      "post": {
+        "tags": ["orders"],
+        "summary": "Place an order",
+        "parameters": [
+          { "in": "body", "name": "order", "required": true, "schema": { "$ref": "#/definitions/Order" } }
+        ]
+      }
+    },
+    "/orders/{orderId}/receipt": {
+      "post": {
+        "operationId": "uploadReceipt",
+        "consumes": ["multipart/form-data"],
+        "security": [{ "legacy": [] }],
+        "parameters": [
+          { "in": "path", "name": "orderId", "required": true, "type": "string" },
+          { "in": "formData", "name": "note", "type": "string", "default": "paid" },
+          { "in": "formData", "name": "scan", "type": "file" }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "Order": {
+      "type": "object",
+      "properties": {
+        "item": { "type": "string", "example": "book" },
+        "quantity": { "type": "integer", "default": 1 },
+        "external": { "$ref": "other.json#/Thing" }
+      }
+    }
+  }
+}

@@ -21,3 +21,14 @@ fn a_tool_running_its_callers_script_needs_allow_evaluate() {
     assert!(allowed(&tool(true), true).is_ok());
     assert!(allowed(&tool(false), false).is_ok());
 }
+
+#[test]
+fn the_api_clients_panel_tool_is_never_an_mcp_tool() {
+    let mut panel = tool(false);
+    panel.plugin_id = "api-client".to_owned();
+    panel.tool = "panel".to_owned();
+    assert!(super::panel_only(&panel));
+    panel.tool = "run".to_owned();
+    assert!(!super::panel_only(&panel));
+    assert!(!super::panel_only(&tool(false)));
+}

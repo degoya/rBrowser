@@ -60,6 +60,7 @@ const agentToCore: AgentMessage[] = [
   {
     kind: 'event', v: 1, top: true, seq: 5, time: 1762790400004,
     event: { type: 'hover', target: at('nav > a'), menu: true },
+    path: [{ x: 12, y: 40, t: 0 }, { x: 60, y: 18, t: 48 }, { x: 96, y: 12, t: 120 }],
   },
   {
     kind: 'event', v: 1, top: true, seq: 6, time: 1762790400005,
@@ -143,6 +144,17 @@ const agentToCore: AgentMessage[] = [
     event: { type: 'focus', target: at('#q') },
   },
   {
+    kind: 'event', v: 1, top: true, seq: 17, time: 1762790400015,
+    event: {
+      type: 'click', button: 'left', detail: 1, modifiers: 0,
+      target: {
+        element: { kind: 'text', tag: 'label', text: 'Menu', path: 'header > label' },
+        offset: { x: 0.5, y: 0.5 },
+      },
+      control: '#nav-toggle',
+    },
+  },
+  {
     kind: 'bus', v: 1, top: true, time: 1762790400016, origin: 'http://localhost:5173',
     type: 'canvas:pan', payload: { x: 1, y: -2.5, tags: ['a', null, true] },
   },
@@ -175,6 +187,7 @@ const coreToAgent: AgentCommand[] = [
       hoverThrottleMs: 100,
       scrollDebounceMs: 150,
       scrollMode: 'anchor',
+      record: { menuHovers: true, hoverDwellMs: 250, recordPointer: 'menu' },
     },
   },
   { cmd: 'replay', ms: 500 },
@@ -227,6 +240,11 @@ const coreToAgent: AgentCommand[] = [
   },
   { cmd: 'bus', type: 'flow:step', payload: null },
   { cmd: 'navigate', url: 'http://localhost:5173/about' },
+  {
+    cmd: 'locale',
+    locale: { dir: 'rtl', lang: 'ar', pseudo: { factor: 1.4, accents: true, rtl: false } },
+  },
+  { cmd: 'locale', locale: {} },
 ];
 
 const results: CommandResult[] = [

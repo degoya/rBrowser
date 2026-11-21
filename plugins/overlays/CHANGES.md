@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Changed (RB-094-10): the paths of the scan and the tab order are the element path every check
+  plugin shares (`web-common/src/element-path.ts`), its end kept past 300 characters as before:
+  camel-case SVG tags are written in lower case and the top-level children of a shadow root are
+  numbered among themselves (`x-card >>> div:nth-of-type(2) > button`). Findings at such elements
+  and tab stops in shadow roots are re-identified once.
+- Reading order arrows (RB-094-02): `tabOrder.readingOrder` (`off`, `beside`, `instead`) draws
+  dashed violet arrows between the tab stops in source order, beside the tab order lines or
+  instead of them, and frames in pink each stop shown before the one before it in the source;
+  the rule is the outline plugin's `reading-order` (`web/src/overlays/tab-order/reading.ts`, the
+  shared cases `tests/fixtures/reading-order/cases.json`), right to left where the content reads
+  so, fixed, sticky and unseen stops left out; `tabOrder.readingTolerancePx` (0 to 50, 4).
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

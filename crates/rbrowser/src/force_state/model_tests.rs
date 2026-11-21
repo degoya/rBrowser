@@ -233,3 +233,40 @@ fn the_marks_are_this_views_states_and_the_ones_every_view_shares() {
     assert!(!registry.marks(ViewId(1), &[ViewId(1)]).any_view);
     assert!(registry.forced_views().is_empty());
 }
+
+/// RB-094-16: the activity bar's entry names every view with a forced state and its states, in
+/// the menu's order; a view whose states went is left out.
+#[test]
+fn the_activity_names_each_forced_view_and_its_states_in_menu_order() {
+    let mut registry = registry_with_session();
+    registry.open(ViewId(2), "F2".to_owned(), 1);
+    registry.open(ViewId(3), "F3".to_owned(), 1);
+    assert!(registry.activity().is_empty(), "nothing forced yet");
+    registry.apply(
+        ViewId(1),
+        10,
+        vec![10],
+        set(&[PseudoClass::FocusWithin, PseudoClass::Hover]),
+    );
+    registry.apply(ViewId(1), 11, vec![11], set(&[PseudoClass::Hover]));
+    registry.apply(ViewId(3), 30, vec![30], set(&[PseudoClass::Visited]));
+    let words = |registry: &Registry| -> Vec<(ViewId, Vec<String>)> {
+        registry
+            .activity()
+            .into_iter()
+            .map(|entry| (entry.view, entry.states))
+            .collect()
+    };
+    assert_eq!(
+        words(&registry),
+        [
+            (
+                ViewId(1),
+                vec!["hover".to_owned(), "focus-within".to_owned()]
+            ),
+            (ViewId(3), vec!["visited".to_owned()]),
+        ]
+    );
+    registry.clear(ViewId(1));
+    assert_eq!(words(&registry), [(ViewId(3), vec!["visited".to_owned()])]);
+}

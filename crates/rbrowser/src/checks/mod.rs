@@ -9,15 +9,20 @@
 //! The plugins run on a thread of their own (`rb-checks`), never on the UI thread, one run at a
 //! time; no check plugin loaded is an empty run, not an error. While it goes the panel hears of
 //! every plugin x view job and gets the findings of each plugin as it is through;
-//! `checks.cancel` stops it with what it found so far ([`progress`], RB-080-89).
+//! `checks.cancel` stops it with what it found so far ([`progress`], RB-080-89). A run of chosen
+//! checks over the views and page of the last run is merged into it ([`selection`], RB-094-17).
 
 pub mod cancel;
 pub mod catalog;
+pub mod export;
 pub mod highlight;
+pub mod merge;
 pub mod progress;
 pub mod reported;
 pub mod run;
+pub mod selection;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -91,6 +96,9 @@ struct Job {
     root: Option<PathBuf>,
     /// What the project turned off, named in the panel.
     project_off: rb_ipc::ProjectOff,
+    /// Whether a run of chosen checks merges into the last run (`runChecks`, `checks.run_all`);
+    /// `visual.compare`'s requested run replaces it.
+    merge: bool,
 }
 
 /// Runs the command `id` when it is this module's (`checks.run_all`); `None` otherwise.
@@ -132,14 +140,36 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
 /// `checks.run_all`: runs and waits for the run (the caller is a command thread, not the UI).
 fn run_all(core: &Core, args: &Value) -> Result<Value, CommandError> {
     let args = parse(args).map_err(CommandError::InvalidArgs)?;
+    let outcome = run_blocking(core, args)?;
+    serde_json::to_value(ChecksRunAnswer::from_outcome(&outcome))
+        .map_err(|error| CommandError::Failed(error.to_string()))
+}
+
+/// Runs `args` on the thread `rb-checks` and waits for the run - shown, written and remembered
+/// as the last run like every other (`checks.run_all`, `rbrowser check`, RB-092-05). The caller
+/// is a command or instance thread, never the UI.
+///
+/// # Errors
+///
+/// An unknown view (`InvalidArgs`), another run in progress or no runtime (`Failed`).
+pub(crate) fn run_blocking(core: &Core, args: ChecksRunArgs) -> Result<RunOutcome, CommandError> {
     let job = prepare(core, args).map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
-    let outcome = start(core, job)
+    start(core, job)
         .map_err(|error| CommandError::Failed(error.to_string()))?
         .join()
         .map_err(|_| CommandError::Failed("the check run ended without an answer".to_owned()))?
-        .map_err(|error| CommandError::Failed(error.to_string()))?;
-    serde_json::to_value(ChecksRunAnswer::from_outcome(&outcome))
         .map_err(|error| CommandError::Failed(error.to_string()))
+}
+
+/// The last run as the panel got it, and the texts of its message keys (RB-092-05); `None`
+/// before the first run or when it does not read back.
+pub(crate) fn last_run() -> Option<(FindingsFile, BTreeMap<String, String>)> {
+    match lock(&LAST).clone()? {
+        CoreToShell::Findings { run, messages, .. } => serde_json::from_value(run)
+            .ok()
+            .map(|file| (file, messages)),
+        _ => None,
+    }
 }
 
 /// `runChecks`: checked and started here, answered at once; the run follows as `findings`.
@@ -183,6 +213,7 @@ fn prepare(core: &Core, args: ChecksRunArgs) -> Result<Job, EngineError> {
         settings: run::settings(&project, &user),
         root: host.project_root(),
         project_off: run::project_off(&project, &user),
+        merge: true,
     })
 }
 
@@ -231,6 +262,7 @@ pub(crate) fn run_request(core: &Core, request: RunRequest) -> Result<FindingsFi
         settings: run::settings(&project, &user),
         root: host.project_root(),
         project_off: run::project_off(&project, &user),
+        merge: false,
     };
     Ok(execute(core, job)?.file)
 }
@@ -245,6 +277,7 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
         settings,
         root,
         project_off,
+        merge,
     } = job;
     let plugins: Vec<String> = sources
         .iter()
@@ -262,6 +295,14 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
         .iter()
         .filter_map(|view| Some((view.id, view.breakpoint.clone()?)))
         .collect();
+    // A run of chosen checks merges into the last run as it goes and at its end (RB-094-17).
+    let base = if merge {
+        let last = selection::shown(lock(&LAST).as_ref());
+        selection::Base::of(last, progress::last_progress().as_ref(), &request, &plugins)
+            .map(Arc::new)
+    } else {
+        None
+    };
     let cancel = Arc::new(Cancel::default());
     let sink = core.arc().map(|arc| {
         let estimate = estimate_ms(&progress::timings(), &plugins, settings.parallel());
@@ -272,6 +313,7 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
             estimate,
             project_off.clone(),
             Arc::clone(&cancel),
+            base.clone(),
         )
     });
     let control = RunControl {
@@ -320,11 +362,19 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
         }));
     }
     let file = &outcome.file;
-    match serde_json::to_value(file) {
+    let texts = |of: &FindingsFile| run::messages(of, rb_i18n::plugin_texts);
+    let (shown, messages) = match &base {
+        Some(base) => {
+            let (merged, messages) = base.run(file, texts);
+            (Cow::Owned(merged), messages)
+        }
+        None => (Cow::Borrowed(file), texts(file)),
+    };
+    match serde_json::to_value(&*shown) {
         Ok(run) => {
             let message = CoreToShell::Findings {
                 run,
-                messages: run::messages(file, rb_i18n::plugin_texts),
+                messages,
                 project_off,
                 partial: false,
             };

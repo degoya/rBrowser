@@ -1,16 +1,24 @@
 //! The MCP server: one [`RbMcpServer`] per session over a shared [`Backend`]. The tools live in
-//! `tools/<area>.rs`, each a thin layer over a command of the one registry or a read of the host.
+//! `tools/<area>.rs`, each a thin layer over a command of the one registry or a read of the host;
+//! the prompts in [`crate::prompts`], the read-only resources in [`crate::resources`]
+//! (RB-095-01).
 
 use std::sync::Arc;
 
 use rmcp::{
-    ServerHandler,
+    ErrorData, RoleServer, ServerHandler,
     handler::server::router::tool::ToolRouter,
-    model::{Implementation, ServerCapabilities, ServerConfig},
+    model::{
+        GetPromptRequestParams, GetPromptResponse, Implementation, ListPromptsResult,
+        ListResourceTemplatesResult, ListResourcesResult, PaginatedRequestParams,
+        ReadResourceRequestParams, ReadResourceResponse, ServerCapabilities, ServerConfig,
+    },
+    service::RequestContext,
     tool_handler,
 };
 use serde_json::Value;
 
+use crate::answer::rpc_error;
 use crate::backend::{Backend, ToolFailure};
 
 /// What the server tells an agent at the start, kept beside the code; `server_tests` holds the
@@ -48,20 +56,27 @@ impl RbMcpServer {
             + Self::config_router()
             + Self::sync_router()
             + Self::capture_router()
+            + Self::checks_export_router()
+            + Self::bug_report_router()
             + Self::cdp_router()
             + Self::flows_router()
             + Self::engines_router()
             + Self::cookies_router()
             + Self::recorder_router()
+            + Self::pseudo_locale_router()
+            + Self::time_control_router()
+            + Self::recorder_steps_router()
             + Self::visual_router()
             + Self::sitemap_router()
             + Self::env_compare_router()
+            + Self::compare_engines_router()
             + Self::metrics_router()
             + Self::video_router()
             + Self::status_router()
             + Self::extensions_router()
             + Self::network_debug_router()
             + Self::portal_router()
+            + Self::portal_present_router()
             + Self::devtools_router()
             + Self::bookmarks_router()
             + Self::panels_router()
@@ -69,6 +84,9 @@ impl RbMcpServer {
             + Self::page_zoom_router()
             + Self::force_state_router()
             + Self::updates_router()
+            + Self::restore_last_router()
+            + Self::android_router()
+            + Self::ios_router()
     }
 
     /// The names of every tool, sorted: what the coverage test holds the commands against.
@@ -113,6 +131,10 @@ impl ServerHandler for RbMcpServer {
                 .enable_tools()
                 // Sent by `rbrowser mcp` when plugin tools come or go (`http::TOOLS_REVISION`).
                 .enable_tool_list_changed()
+                // RB-095-01: always declared, as `mcp.prompts` and `mcp.resources` change at
+                // runtime; switched off, the lists are empty and a get or read is refused.
+                .enable_prompts()
+                .enable_resources()
                 .build(),
         )
         .with_instructions(INSTRUCTIONS);
@@ -122,6 +144,53 @@ impl ServerHandler for RbMcpServer {
         implementation.version = env!("CARGO_PKG_VERSION").to_owned();
         info.server_info = implementation;
         info
+    }
+
+    async fn list_prompts(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListPromptsResult, ErrorData> {
+        Ok(ListPromptsResult::with_all_items(self.prompt_list()))
+    }
+
+    async fn get_prompt(
+        &self,
+        request: GetPromptRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<GetPromptResponse, ErrorData> {
+        self.prompt_get(&request.name, request.arguments.as_ref())
+            .map(Into::into)
+            .map_err(|failure| rpc_error(&failure))
+    }
+
+    async fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourcesResult, ErrorData> {
+        Ok(ListResourcesResult::with_all_items(self.resource_list()))
+    }
+
+    async fn list_resource_templates(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, ErrorData> {
+        Ok(ListResourceTemplatesResult::with_all_items(
+            self.resource_templates(),
+        ))
+    }
+
+    async fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ReadResourceResponse, ErrorData> {
+        self.resource_read(&request.uri)
+            .await
+            .map(Into::into)
+            .map_err(|failure| rpc_error(&failure))
     }
 }
 

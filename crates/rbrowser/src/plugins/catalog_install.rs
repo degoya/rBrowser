@@ -11,12 +11,13 @@
 //! `plugins.trustedKeys`, as the settings window would pin it. RB-091-04 lifted the lock on
 //! bundled plugins: the catalogue updates them too, from a package signed by the bundle's key -
 //! one with a bundled plugin's id under another key is refused ([`refuse_foreign`]) - and an
-//! install of a bundled plugin chooses it, so its copy stands in at the next start.
+//! install of a bundled plugin chooses it, so its copy stands in for the bundled package. An
+//! install, update or removal takes effect live (RB-092-06, [`super::super::live::reload`]); the
+//! answer says `restart: true` only when no load can run.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use chrono::Utc;
 use rb_config::{TrustedPluginKey, UserSettings};
 use rb_ipc::{CoreToShell, IpcErrorCode, PluginGrantDetails};
 use rb_plugin_host::{
@@ -25,6 +26,7 @@ use rb_plugin_host::{
 use rb_settings::Scope;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use time::OffsetDateTime;
 
 use super::{open_catalog, store_dir};
 use crate::control::Core;
@@ -110,15 +112,15 @@ pub fn install(core: &Core, request: InstallRequest) -> Result<Value, Failure> {
         plugin_id = installed.id.as_str(),
         version = installed.version.as_str(),
         repository = request.repository.as_str(),
-        "a plugin was installed from the catalogue; it loads at the next start"
+        "a plugin was installed from the catalogue"
     );
     if let Some(pin) = installed.pin {
         pin_key(core, &user, pin);
     }
-    // The base of the next update check until the restart (review 6).
+    // The base of the next update check, also when it could not load live (review 6).
     crate::plugins::bundle_install::note_installed(&installed.id, &installed.version);
     // A bundled plugin installed from the catalogue is chosen: its copy stands in for the
-    // bundled package at the next start (RB-091-04).
+    // bundled package (RB-091-04).
     if bundled.contains_key(&installed.id)
         && let Err(code) = super::super::bundle::update_choice(|state| state.choose(&installed.id))
     {
@@ -127,7 +129,8 @@ pub fn install(core: &Core, request: InstallRequest) -> Result<Value, Failure> {
             "the plugin was not added to the choice"
         );
     }
-    Ok(json!({ "value": { "id": installed.id, "version": installed.version, "restart": true } }))
+    let live = super::super::live::reload(core);
+    Ok(json!({ "value": { "id": installed.id, "version": installed.version, "restart": !live } }))
 }
 
 /// The offer, downloaded and reviewed under `user`'s trusted keys.
@@ -140,7 +143,7 @@ fn fetch_and_prepare(
     let (dir, _) = folders()?;
     let (catalog, _) = open_catalog(user, dir);
     let (url, entry) = catalog
-        .offer(repository, id, version, Utc::now())
+        .offer(repository, id, version, OffsetDateTime::now_utc())
         .map_err(refusal)?;
     let bytes =
         rb_plugin_host::download_package(&HttpFetcher::new(), &url, &entry).map_err(refusal)?;
@@ -174,15 +177,16 @@ pub fn same_grants(actual: &PluginGrantDetails, shown: &PluginGrantDetails) -> b
     sorted(actual) == sorted(shown)
 }
 
-/// Removes plugin `id` the catalogue installed. Blocking.
+/// Removes plugin `id` the catalogue installed; it leaves live (RB-092-06). Blocking.
 ///
 /// # Errors
 ///
 /// The failure's code.
-pub fn remove(id: &str) -> Result<Value, Failure> {
+pub fn remove(core: &Core, id: &str) -> Result<Value, Failure> {
     let (dir, user_dir) = folders()?;
     rb_plugin_host::remove_package(id, &user_dir, &CatalogStore::new(dir)).map_err(refusal)?;
-    Ok(json!({ "value": { "id": id, "restart": true } }))
+    let live = super::super::live::reload(core);
+    Ok(json!({ "value": { "id": id, "restart": !live } }))
 }
 
 /// Refuses a package of `id` signed by the key of `fingerprint` when `bundled` ships `id` under

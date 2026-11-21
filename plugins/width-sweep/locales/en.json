@@ -1,0 +1,64 @@
+{
+  "plugin": {
+    "width-sweep": {
+      "name": "Width sweep",
+      "commands": {
+        "run": "Sweep the view through its widths",
+        "cancel": "Cancel the width sweep",
+        "show": "Show the view at a finding's width"
+      },
+      "tools": {
+        "run": "Sweeps the target view (the active view without one) from `from` to `to` px in steps of `step`, then pixel by pixel around every change, and reports where the layout breaks - horizontal overflow, text cut off, overlapping elements - as width ranges in the findings panel. The view leaves the sync while it runs and gets its own width and sync back at the end, at Escape in the view or at sweep_cancel.",
+        "cancel": "Ends the width sweep that is running; its view gets its own width and sync back.",
+        "show": "Shows the target view (the active view without one) at `width` px - a width sweep finding's width - so the layout break can be looked at. The view leaves the sync and gets its own width and sync back at Escape in the view, at sweep_cancel, when another width is set, or after the setting showSeconds."
+      },
+      "rules": {
+        "overflow": "No horizontal overflow at any width",
+        "text-clipped": "No text cut off at any width",
+        "overlap": "No overlapping elements at any width"
+      },
+      "findings": {
+        "overflow": "{from}-{to} px: horizontal overflow caused by {selector}",
+        "text-clipped": "{from}-{to} px: text cut off in {selector}",
+        "overlap": "{from}-{to} px: overlap of {selector} and {other}"
+      },
+      "error": {
+        "page": "The page did not answer the width sweep's look at it."
+      },
+      "settings": {
+        "from": {
+          "label": "First width",
+          "description": "The first width a sweep sets, in CSS px.",
+          "help": "The first width a sweep sets, in CSS px. Example: 320 for the smallest phones."
+        },
+        "to": {
+          "label": "Last width",
+          "description": "The last width a sweep sets, in CSS px.",
+          "help": "The last width a sweep sets, in CSS px. Example: 1920 for a full HD screen."
+        },
+        "step": {
+          "label": "Step",
+          "description": "How far apart the widths of the first pass are, in CSS px; around every change the sweep then looks at each pixel.",
+          "help": "How far apart the widths of the first pass are, in CSS px. Around every change the sweep then looks at each pixel, so a smaller step finds short breaks, a larger one finishes sooner. Example: 10."
+        },
+        "kinds": {
+          "label": "Look for",
+          "description": "What a sweep looks for: horizontal overflow of the page, text cut off by its box, visible neighbouring elements overlapping.",
+          "help": "What a sweep looks for: the page wider than the view (horizontal overflow), text cut off by its box, and visible neighbouring elements overlapping. Untick a kind to leave it out."
+        },
+        "showSeconds": {
+          "label": "Show a finding's width for",
+          "description": "How long \"Show at N px\" on a width sweep finding holds the view at that width, in seconds; Escape or Cancel ends it sooner.",
+          "help": "How long \"Show at N px\" on a width sweep finding holds the view at the finding's width, in seconds (10 to 240). The view leaves the sync meanwhile; Escape in the view, Cancel in the activity bar or another width ends it sooner, and the view gets its own width and sync back. Example: 120."
+        },
+        "option": {
+          "kinds": {
+            "overflow": "Horizontal overflow",
+            "text-clipped": "Text cut off",
+            "overlap": "Overlapping elements"
+          }
+        }
+      }
+    }
+  }
+}

@@ -42,7 +42,8 @@ pub(super) fn filter_for(host: Weak<Host>) -> EmulationFilter {
 
 /// The Firefox agents' configuration: the project's `sync.*` with the hub's switches over it
 /// (sync off, a kind off). They capture while Firefox may lead and sync is on; the hub routes
-/// only the active view's events.
+/// only the active view's events. While a recording takes steps they carry its wishes too
+/// (RB-090-87): its start, pause and stop change the shell's state, which reconfigures them.
 pub(super) fn agent_config(host: &Arc<Host>, sync_source: bool) -> AgentConfig {
     let mut agent = crate::sync_agent::agent_config(&host.config().sync, sync_source);
     agent.scroll_mode = crate::sync_agent::scroll_mode_of(crate::scroll_sync::mode(host));
@@ -51,6 +52,7 @@ pub(super) fn agent_config(host: &Arc<Host>, sync_source: bool) -> AgentConfig {
         agent.capture = switches.capture();
         agent.active = sync_source && switches.enabled;
     }
+    agent.record = crate::recorder::agent_record::agent_record(host).filter(|_| agent.active);
     agent
 }
 

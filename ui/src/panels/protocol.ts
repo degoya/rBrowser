@@ -90,6 +90,9 @@ export type PanelMessage =
   /** The panels offered changed - the plugins are loaded, a panel hidden, a project plugin under
    * new trust: a panels page asks for the list again (RB-080-97, `plugins/panel_list.rs`). */
   | { panelsChanged: true }
+  /** The installed plugins changed - an install, update or removal took effect live (RB-092-06,
+   * `plugins/live.rs`): Settings > Plugins and the catalogue ask for their lists again. */
+  | { pluginsChanged: true }
   /** One chosen plugin's install began or ended (RB-091-04, `plugins/bundle_install.rs`). */
   | {
       pluginInstallProgress: {

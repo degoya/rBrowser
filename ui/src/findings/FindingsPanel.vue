@@ -5,29 +5,38 @@
 // list. While checks run it shows their progress, one row per plugin, with Cancel, and after the
 // run one summary line (`FindingsProgress.vue`, RB-080-98), and each plugin's findings as soon as
 // it is through (RB-080-89); a
-// rule's Help opens through the core (`ExternalLink.vue`, RB-080-92). The logic is `findings.ts`
+// rule's Help opens through the core (`ExternalLink.vue`, RB-080-92). A finding that names a width
+// (the width sweep's) offers "Show at N px", its plugin's `show` command (RB-093-01). The logic is `findings.ts`
 // and `progress.ts`; the IPC is a `FindingsChannel` (`types.ts`). Every control is Nuxt UI
 // (RB-080-88): the filters are `FindingsFilters.vue`, each rule a `UAccordion` item, open until
-// the reader folds it, and what the project turned off a `UCollapsible`.
+// the reader folds it, and what the project turned off a `UCollapsible`. Export writes the run as a
+// file (`FindingsExport.vue`, RB-092-05). One check or a selection runs again from the progress
+// details or the plugin filter over the last run's target and page; the core merges the result
+// into the last run (RB-094-17).
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UAccordion from '@nuxt/ui/components/Accordion.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
 import UCollapsible from '@nuxt/ui/components/Collapsible.vue';
 import ExternalLink from '../links/ExternalLink.vue';
+import FindingsExport from './FindingsExport.vue';
 import FindingsFilters from './FindingsFilters.vue';
 import FindingsProgress from './FindingsProgress.vue';
+import { EXPORT_COMMAND, exportRequest, type ExportFormat } from './exporting';
 import { FINDINGS_ICONS } from './icons';
 import {
   SEVERITIES,
   countBySeverity,
+  failureParams,
   filterFindings,
   groupByRule,
   highlightRequest,
+  keepChoice,
   moveFocus,
   nestMessages,
   onlyIn,
   pluginsOf,
+  showWidthRequest,
 } from './findings';
 import type { IgnoreEntry, ProjectOff } from '../ipc/protocol';
 import type {
@@ -36,6 +45,7 @@ import type {
   ChecksProgress,
   FindingsChannel,
   FindingsEvent,
+  FindingsRequest,
   FindingsRun,
   MergedFinding,
   ProgressEvent,
@@ -157,6 +167,11 @@ const offOpen = ref(false);
 const counts = computed(() => countBySeverity(run.value?.findings ?? []));
 const plugins = computed(() => (run.value === null ? [] : pluginsOf(run.value)));
 const viewChoices = computed(() => (run.value?.views ?? []).map((checked) => ({ id: checked.id, name: viewName(checked) })));
+// A choice the run no longer has (a plugin's own run replaced it) falls back to all (RB-094-14).
+watch([plugins, viewChoices], ([ids, views]) => {
+  plugin.value = keepChoice(plugin.value, ids);
+  view.value = keepChoice(view.value, views.map((checked) => checked.id));
+});
 
 function viewName(checked: CheckedView): string {
   return checked.breakpoint ?? t('findings.view_id', { id: String(checked.id) });
@@ -198,7 +213,8 @@ let handOff = false;
 function focusLost(): boolean {
   const active = document.activeElement;
   const cancel = section.value?.querySelector('[data-testid="cancel"]');
-  return active === null || active === document.body || active === runButton.value?.$el || (active === cancel && cancel !== null);
+  const disabled = active instanceof HTMLButtonElement && active.disabled;
+  return active === null || active === document.body || disabled || active === runButton.value?.$el || (active === cancel && cancel !== null);
 }
 
 watch([running, () => progress.value !== null && !progress.value.finished], async ([on, cancellable]) => {
@@ -226,8 +242,35 @@ async function runChecks(): Promise<void> {
   }
 }
 
+/** Runs `plugins` again over the last run's target and page, merged into it by the core
+ * (RB-094-17); the focus goes to Cancel and back like Run's. */
+async function rerunChecks(plugins: string[]): Promise<void> {
+  if (plugins.length === 0 || running.value) {
+    return;
+  }
+  handOff = true;
+  failed.value = false;
+  running.value = true;
+  progress.value = null;
+  const last = run.value;
+  const request: FindingsRequest = {
+    type: 'runChecks',
+    target: last?.target ?? 'all',
+    plugins,
+    ...(last?.url === undefined ? {} : { url: last.url }),
+  };
+  if (!(await send(request))) {
+    running.value = false;
+  }
+}
+
 function cancelChecks(): void {
   void send({ type: 'runCommand', id: 'checks.cancel' });
+}
+
+/** The last run as a file (RB-092-05): the setting's format, or the one chosen. */
+function exportRun(format: ExportFormat | null): void {
+  void send(exportRequest(format));
 }
 
 /** A plugin's failure as one sentence: the view, and the reason's text when there is a code. */
@@ -237,9 +280,8 @@ function failureText(failure: CheckFailure): string {
   }
   const checked = run.value?.views.find((view) => view.id === failure.view);
   const where = checked === undefined ? '' : t('findings.plugin_failed_view', { view: viewName(checked) });
-  // The code's own parameters (`{service}`) so none shows raw (RB-080-98); the host's names of
-  // the plugin last, so a plugin cannot rename itself, and no raw engine text (`reason`).
-  const reason = t(failure.code, { ...failure.params, id: failure.plugin, plugin: failure.plugin, reason: '' });
+  // The code's parameters, the host's names of the plugin last, a plugin's own reason only.
+  const reason = t(failure.code, failureParams(failure.code, failure.plugin, failure.params));
   return t('findings.plugin_failed_reason', { plugin: failure.plugin, where, reason });
 }
 
@@ -248,6 +290,15 @@ function choose(finding: MergedFinding): void {
   const request = highlightRequest(finding);
   if (request !== null) {
     void send(request);
+  }
+}
+
+/** "Show at N px" (RB-093-01): the element marked, then the view held at the finding's width. */
+function showWidth(finding: MergedFinding): void {
+  const show = showWidthRequest(finding);
+  if (show !== null) {
+    choose(finding);
+    void send(show.request);
   }
 }
 
@@ -294,6 +345,12 @@ const severityClass: Record<Severity, string> = {
       <UButton size="sm" variant="ghost" data-testid="rules" @click="openRules">
         {{ t('findings.rules_settings') }}
       </UButton>
+      <FindingsExport
+        v-if="run"
+        :disabled="running"
+        :shortcut="channel.binding?.(EXPORT_COMMAND) ?? null"
+        @export="exportRun"
+      />
       <p v-if="run && !running" class="text-sm text-muted" data-testid="summary">
         {{ t('findings.summary_count', { total: run.summary.total, plugins: run.plugins.length }) }}
       </p>
@@ -321,7 +378,14 @@ const severityClass: Record<Severity, string> = {
       </template>
     </UCollapsible>
 
-    <FindingsProgress v-if="progress" :progress="progress" :elapsed-ms="elapsedMs" @cancel="cancelChecks" />
+    <FindingsProgress
+      v-if="progress"
+      :progress="progress"
+      :elapsed-ms="elapsedMs"
+      :can-rerun="run !== null && !running"
+      @cancel="cancelChecks"
+      @rerun="rerunChecks"
+    />
     <p v-else-if="running" role="status" class="text-sm">{{ t('findings.running') }}</p>
     <p v-if="!running && progress?.cancelled" class="text-sm text-muted" data-testid="cancelled">
       {{ t('findings.cancelled') }}
@@ -337,6 +401,8 @@ const severityClass: Record<Severity, string> = {
         :counts="counts"
         :plugins="plugins"
         :views="viewChoices"
+        :busy="running"
+        @rerun="(id) => rerunChecks([id])"
       />
 
       <p
@@ -385,6 +451,19 @@ const severityClass: Record<Severity, string> = {
                   </span>
                   <span v-if="onlyInText(finding)" class="text-xs" data-testid="only-in">{{ onlyInText(finding) }}</span>
                 </UButton>
+                <!-- A secondary action: an icon, named and explained by its tooltip. -->
+                <UButton
+                  v-if="showWidthRequest(finding)"
+                  :data-testid="`show-width-${finding.id}`"
+                  size="sm"
+                  color="neutral"
+                  variant="ghost"
+                  class="shrink-0"
+                  :icon="FINDINGS_ICONS.showWidth"
+                  :aria-label="t('findings.show_width', { width: showWidthRequest(finding)?.width ?? 0 })"
+                  :title="t('findings.show_width_hint', { width: showWidthRequest(finding)?.width ?? 0 })"
+                  @click="showWidth(finding)"
+                />
                 <ExternalLink
                   v-if="finding.helpUrl"
                   :href="finding.helpUrl"

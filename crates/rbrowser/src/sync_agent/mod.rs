@@ -68,6 +68,7 @@ pub fn agent_config(sync: &SyncConfig, active: bool) -> AgentConfig {
         hover_throttle_ms: sync.hover_throttle_ms,
         scroll_debounce_ms: sync.scroll_debounce_ms,
         scroll_mode: scroll_mode_of(sync.scroll_mode),
+        record: None,
     }
 }
 

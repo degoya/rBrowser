@@ -6,7 +6,12 @@
 // transitions and the caret, and pauses every video on its first frame; it answers a token.
 // `undo(token)` puts everything back as it was: the times of the animations and videos, the
 // playing videos playing again, the inline styles, the style element gone. The selectors come
-// in as JSON data, never as code. Defines `__rbCaptureClean` once per world.
+// in as JSON data, never as code. With `mask` (a bug report, RB-093-04) the password fields -
+// also one a page shows in clear through its autocomplete hint, one a show-password toggle turned
+// into text (marked `data-rbrowser-was-password` from the first time the script sees it as a
+// password, for the rest of the document) and one whose name, id, autocomplete, label or
+// placeholder says password, secret, token or PIN (marked for the capture alone) - are painted
+// black, text and caret transparent. Defines `__rbCaptureClean` once per world.
 (function () {
   'use strict';
   if (globalThis.__rbCaptureClean) {
@@ -16,6 +21,20 @@
   var FREEZE_RULE =
     '*, *::before, *::after { animation-play-state: paused !important; ' +
     'transition: none !important; caret-color: transparent !important; }';
+  var MASK_ATTR = 'data-rbrowser-mask';
+  var WAS_PASSWORD_ATTR = 'data-rbrowser-was-password';
+  var MASK_RULE =
+    'input[type="password" i], input[autocomplete~="current-password" i], ' +
+    'input[autocomplete~="new-password" i], input[data-rbrowser-was-password], ' +
+    'input[data-rbrowser-mask] { background: #000 !important; ' +
+    'background-image: none !important; color: transparent !important; ' +
+    '-webkit-text-fill-color: transparent !important; text-shadow: none !important; ' +
+    'caret-color: transparent !important; }';
+  // The attributes that may name a secret field, and the words that do (a word of its own after
+  // `camelCase` and `snake_case` are split: `userPassword`, `pin_code`, `otp`, not `shipping`).
+  var HINT_ATTRIBUTES = ['name', 'id', 'autocomplete', 'aria-label', 'placeholder'];
+  var SECRET_HINT =
+    /(^|[^a-z])(pass(word|wd|code|phrase)?|pwd|secret|token|pin(code)?|otp|one-time-code)([^a-z]|$)/;
   // The longest wait for the videos to show their first frame.
   var SEEK_WAIT_MS = 1000;
   var states = new Map();
@@ -115,10 +134,68 @@
     ]);
   }
 
+  function isPassword(element) {
+    return (
+      element instanceof HTMLInputElement && String(element.type).toLowerCase() === 'password'
+    );
+  }
+
+  // Marks every password field of the document from now on: one shown now, and one whose type
+  // the page changes away from password (a show-password toggle) while this world lives.
+  function watchPasswordFields() {
+    var fields = document.querySelectorAll('input');
+    for (var i = 0; i < fields.length; i += 1) {
+      if (isPassword(fields[i])) {
+        fields[i].setAttribute(WAS_PASSWORD_ATTR, '');
+      }
+    }
+    if (watchPasswordFields.observer || typeof MutationObserver !== 'function') {
+      return;
+    }
+    watchPasswordFields.observer = new MutationObserver(function (records) {
+      for (var j = 0; j < records.length; j += 1) {
+        var record = records[j];
+        if (
+          record.target instanceof HTMLInputElement &&
+          String(record.oldValue).toLowerCase() === 'password'
+        ) {
+          record.target.setAttribute(WAS_PASSWORD_ATTR, '');
+        }
+      }
+    });
+    watchPasswordFields.observer.observe(document, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['type'],
+      attributeOldValue: true,
+    });
+  }
+
+  function namesSecret(element) {
+    for (var i = 0; i < HINT_ATTRIBUTES.length; i += 1) {
+      var value = element.getAttribute(HINT_ATTRIBUTES[i]);
+      if (value && SECRET_HINT.test(value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Marks the fields that name a secret for this capture; the undo takes the marks off.
+  function markSecretFields(state) {
+    var fields = document.querySelectorAll('input');
+    for (var i = 0; i < fields.length; i += 1) {
+      if (!isPassword(fields[i]) && namesSecret(fields[i])) {
+        fields[i].setAttribute(MASK_ATTR, '');
+        state.marked.push(fields[i]);
+      }
+    }
+  }
+
   async function prepare(options) {
     next += 1;
     var token = next;
-    var state = { style: null, inline: [], animations: [], videos: [] };
+    var state = { style: null, inline: [], animations: [], videos: [], marked: [] };
     states.set(token, state);
     var answer = { token: token, rules: 0, matched: 0, animations: 0, videos: 0 };
     var style = document.createElement('style');
@@ -144,6 +221,16 @@
         unlockScroll(state);
       }
     }
+    if (options.mask) {
+      watchPasswordFields();
+      markSecretFields(state);
+      try {
+        sheet.insertRule(MASK_RULE, sheet.cssRules.length);
+      } catch (error) {
+        // An engine without the case flag of attribute selectors: the type alone.
+        sheet.insertRule(MASK_RULE.replace(/ i\]/g, ']'), sheet.cssRules.length);
+      }
+    }
     if (options.freeze) {
       freezeAnimations(sheet, state);
       await freezeVideos(state);
@@ -157,10 +244,14 @@
     var state = states.get(token);
     states.delete(token);
     if (!state) {
-      // The world lost its state: at least the style element goes.
+      // The world lost its state: at least the style element and the capture's marks go.
       var left = document.querySelectorAll('style[' + ATTR + '="' + String(Number(token)) + '"]');
       for (var k = 0; k < left.length; k += 1) {
         left[k].remove();
+      }
+      var marked = document.querySelectorAll('[' + MASK_ATTR + ']');
+      for (var m = 0; m < marked.length; m += 1) {
+        marked[m].removeAttribute(MASK_ATTR);
       }
       return false;
     }
@@ -189,6 +280,9 @@
     if (state.style) {
       state.style.remove();
     }
+    state.marked.forEach(function (element) {
+      element.removeAttribute(MASK_ATTR);
+    });
     state.inline.reverse().forEach(function (entry) {
       if (entry.style === null) {
         entry.element.removeAttribute('style');

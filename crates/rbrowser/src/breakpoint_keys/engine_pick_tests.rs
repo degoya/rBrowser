@@ -5,7 +5,7 @@ use serde_json::json;
 use super::*;
 
 #[test]
-fn engine_badge_lists_the_three_engines_with_the_current_one_checked() {
+fn engine_badge_lists_the_engines_with_the_current_one_checked() {
     let items = items(EngineKind::Firefox, |_| None);
     let engines: Vec<EngineKind> = items.iter().map(|item| item.engine).collect();
     assert_eq!(
@@ -13,11 +13,14 @@ fn engine_badge_lists_the_three_engines_with_the_current_one_checked() {
         [
             EngineKind::Chromium,
             EngineKind::Firefox,
-            EngineKind::Webkit
+            EngineKind::Webkit,
+            EngineKind::Safari,
+            EngineKind::Ios
         ]
     );
     let checked: Vec<bool> = items.iter().map(|item| item.checked).collect();
-    assert_eq!(checked, [false, true, false]);
+    assert_eq!(checked, [false, true, false, false, false]);
+    assert!(items.iter().all(|item| item.ios_device.is_none()));
     assert!(items.iter().all(EngineItem::available));
     assert_eq!(items[0].label, "Chromium");
     assert_eq!(items[1].label, "Firefox");
@@ -97,5 +100,36 @@ async fn engine_badge_reads_the_views_engine_and_runs_nothing_for_a_disabled_row
     assert_eq!(
         core.host().view(ids[0]).expect("exists").engine,
         EngineKind::Chromium
+    );
+}
+
+#[test]
+fn safari_outside_macos_is_a_disabled_row_with_its_reason() {
+    let items = items(EngineKind::Chromium, |engine| {
+        (engine == EngineKind::Safari).then(|| "Safari runs only on macOS".to_owned())
+    });
+    let safari = items
+        .iter()
+        .find(|item| item.engine == EngineKind::Safari)
+        .expect("a Safari row");
+    assert!(!safari.available());
+    assert_eq!(safari.reason.as_deref(), Some("Safari runs only on macOS"));
+    assert_eq!(command_args(safari, ViewId(3))["engine"], "safari");
+}
+
+#[test]
+fn an_ios_device_row_writes_its_device_beside_the_engine() {
+    let mut row = items(EngineKind::Chromium, |_| None)
+        .pop()
+        .expect("the iOS row");
+    assert_eq!(row.engine, EngineKind::Ios);
+    assert_eq!(
+        command_args(&row, ViewId(3)),
+        json!({ "view": 3, "engine": "ios" })
+    );
+    row.ios_device = Some("iPhone 16".to_owned());
+    assert_eq!(
+        command_args(&row, ViewId(3)),
+        json!({ "view": 3, "engine": "ios", "iosDevice": "iPhone 16" })
     );
 }

@@ -15,6 +15,7 @@ pub mod cdp_extras;
 pub mod devices;
 pub mod extras;
 pub mod fields;
+pub mod page_locale;
 
 use std::collections::BTreeMap;
 
@@ -93,16 +94,19 @@ pub fn on_config_changed(core: &Core) {
 
 /// `emulation.set`: the fields over the target views. From a shortcut (no arguments) it opens
 /// Settings > Emulation, where the fields are chosen. `fields.colorScheme: null` drops the live
-/// colour scheme override - the view is back at its breakpoint's (RB-080-49); every other
-/// absent or `null` field stays as it is.
+/// colour scheme override - the view is back at its breakpoint's (RB-080-49) - and
+/// `fields.dir: null` / `fields.lang: null` the live text direction / language (RB-092-02);
+/// every other absent or `null` field stays as it is.
 fn set(core: &Core, args: &Value) -> Result<Value, CommandError> {
     if args.is_null() {
         core.run_command("settings.open", json!({ "key": SETTINGS_KEY }))?;
         return Ok(Value::Null);
     }
-    let no_scheme = args
-        .pointer("/fields/colorScheme")
-        .is_some_and(Value::is_null);
+    let cleared = |field: &str| {
+        args.pointer(&format!("/fields/{field}"))
+            .is_some_and(Value::is_null)
+    };
+    let (no_scheme, no_dir, no_lang) = (cleared("colorScheme"), cleared("dir"), cleared("lang"));
     let args: EmulationSetArgs = serde_json::from_value(args.clone())
         .map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
     // A header set live may be a token: never in a log from here on.
@@ -111,12 +115,14 @@ fn set(core: &Core, args: &Value) -> Result<Value, CommandError> {
     }
     let views = core.host().target_views(args.target).map_err(failed)?;
     change(core, views, |host, view| {
-        let reload = host.set_emulation_fields(view, &args.fields)?;
-        Ok(if no_scheme {
-            host.clear_color_scheme(view)? || reload
-        } else {
-            reload
-        })
+        let mut reload = host.set_emulation_fields(view, &args.fields)?;
+        if no_scheme {
+            reload |= host.clear_color_scheme(view)?;
+        }
+        if no_dir || no_lang {
+            reload |= host.clear_text_direction(view, no_dir, no_lang)?;
+        }
+        Ok(reload)
     })
 }
 

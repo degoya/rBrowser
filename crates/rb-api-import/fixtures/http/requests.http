@@ -1,0 +1,36 @@
+@host = https://todo.example
+@apiToken = t0d0-secret
+
+### List todos
+GET {{host}}/todos?done=false
+Accept: application/json
+
+### Create todo
+# @name createTodo
+POST {{host}}/todos
+Content-Type: application/json
+Authorization: Bearer {{apiToken}}
+
+{
+  "title": "Write tests"
+}
+
+> {%
+  client.global.set("id", response.body.id);
+%}
+
+###
+// A note of the person
+< {%
+  request.variables.set("t", Date.now());
+%}
+DELETE {{host}}/todos/1?stamp={{$randomInt}}
+Authorization: Basic dXNlcjpwYXNz
+
+>> ./out.json
+
+### Login form
+POST {{host}}/login
+Content-Type: application/x-www-form-urlencoded
+
+user=ada&password=letmein

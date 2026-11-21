@@ -82,3 +82,21 @@ fn a_camera_kept_or_put_back_ends_the_trial_and_every_hold() {
         "a frame painted after the end moves nothing"
     );
 }
+
+// RB-094-18: a label dragged tries its view's place out as a gesture tries a camera out; the
+// end, a cancel or another mode ends it.
+#[test]
+fn a_dragged_place_is_on_trial_until_the_views_are_placed_for_good() {
+    let mut hold = CanvasHold::default();
+    assert_eq!(hold.moved(), None);
+    let moved = Moved {
+        index: 1,
+        x: -30,
+        y: 12,
+    };
+    hold.try_moved(moved);
+    assert_eq!(hold.moved(), Some(moved));
+    assert_eq!(hold.live(), None, "the camera is not on trial");
+    hold.settle();
+    assert_eq!(hold.moved(), None);
+}

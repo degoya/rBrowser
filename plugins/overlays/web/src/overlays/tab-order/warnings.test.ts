@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contrast } from '../../layer';
-import { MARKER, REVERSE, RING, WARNED } from './colors';
+import { MARKER, MISREAD, READING, REVERSE, RING, WARNED } from './colors';
 import { displaced, hiddenReason, isReverse, visualOrder } from './warnings';
 
 const rect = (x: number, y: number, width = 40, height = 20) => ({ x, y, width, height });
@@ -64,7 +64,7 @@ describe('a focusable element nobody sees', () => {
 
 describe('the marker colours', () => {
   it('give their white numbers WCAG AA contrast and show on light pages; the white ring on dark ones', () => {
-    for (const color of [MARKER, WARNED, REVERSE]) {
+    for (const color of [MARKER, WARNED, REVERSE, READING, MISREAD]) {
       expect(contrast(color, RING)).toBeGreaterThanOrEqual(4.5);
     }
     expect(contrast(RING, '#000000')).toBeGreaterThanOrEqual(3);

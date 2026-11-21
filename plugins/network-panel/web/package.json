@@ -1,7 +1,7 @@
 {
   "name": "rbrowser-plugin-network-panel",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The network panel plugin's panel (RB-070-02), on Nuxt UI since RB-080-84: web/src/panel built by Vite into ../panel/dist.",
   "license": "GPL-3.0-or-later",
   "type": "module",

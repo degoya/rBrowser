@@ -15,7 +15,7 @@ fn choices(throttling: Option<f64>) -> Vec<(String, bool, serde_json::Value)> {
     };
     let state_of = EmulationState::of(Some(&emulated), &[], &EmulationUserSettings::default());
     let items = build(&state(Some(state_of)));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     submenu(block, "emulation.extras.cpu")
         .iter()
         .filter_map(|item| match item {
@@ -79,7 +79,7 @@ fn no_throttling_at_factor_one_and_another_factor_is_shown_marked() {
 #[test]
 fn the_cpu_entry_runs_the_toolbars_command() {
     let items = build(&state(Some(emulation())));
-    let block = submenu(&items, "contextmenu.emulation.menu");
+    let block = submenu(&items, "shell.menu.emulation");
     let cpu = submenu(block, "emulation.extras.cpu");
     assert_eq!(
         action(entry(cpu, "emulation.extras.off")).0,

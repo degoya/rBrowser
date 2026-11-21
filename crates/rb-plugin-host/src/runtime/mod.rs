@@ -42,6 +42,8 @@ pub(crate) struct PluginStoreState {
     pub(crate) log_budget: LogBudget,
     /// The plugin's host functions behind its grants.
     pub(crate) context: Arc<PluginContext>,
+    /// The epoch moves as long as the store lives, one call (RB-090-38).
+    _ticking: crate::engine::Ticking,
 }
 
 impl PluginStoreState {
@@ -131,6 +133,7 @@ impl SandboxEngine {
             execution_deadline: Instant::now() + self.timeout,
             log_budget: LogBudget::new(context.plugin_id.clone(), context.version.clone()),
             context,
+            _ticking: self.shared.ticking(),
         };
         let mut store = Store::new(self.engine(), state);
         store.limiter(|state| &mut state.limits);

@@ -1,0 +1,27 @@
+meta {
+  name: Search
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    books(first: 2) { title }
+  }
+}
+
+body:graphql:vars {
+  {
+    "first": 2
+  }
+}
+
+vars:pre-request {
+  limit: 2
+}

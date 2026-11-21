@@ -3,6 +3,8 @@
 
 import type { ShellToCore } from './protocol';
 import { recordingShellMessages } from './contractRecordingMessages';
+import { bugReportShellMessages } from './contractBugReportMessages';
+import { mcpSetupShellMessages } from './contractMcpSetupMessages';
 
 export const shellToCore = [
   { type: 'getState' },
@@ -94,9 +96,12 @@ export const shellToCore = [
   ...recordingShellMessages,
   { type: 'activityBar', place: 'top' },
   { type: 'collapseActivity', activity: 'video', collapsed: true },
+  { type: 'getSitemapGallery', runId: '2026-11-11_10-00-00' }, // RB-090-86
   // RB-091-05.
   {
     type: 'setup',
     request: { op: 'preview', requestId: 7, root: 'C:/work/shop', url: 'http://localhost:5173', template: 'devices', devices: ['iphone-15'] },
   },
+  ...bugReportShellMessages, // RB-093-04
+  ...mcpSetupShellMessages, // RB-091-09
 ] satisfies ShellToCore[];

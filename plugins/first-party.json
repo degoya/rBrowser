@@ -3,6 +3,10 @@
     "category": "checks",
     "recommended": true
   },
+  "api-client": {
+    "category": "tools",
+    "recommended": false
+  },
   "breakpoint-analyzer": {
     "category": "tools",
     "recommended": true
@@ -11,9 +15,17 @@
     "category": "overlays",
     "recommended": true
   },
+  "consent-check": {
+    "category": "checks",
+    "recommended": false
+  },
   "console": {
     "category": "devtools",
     "recommended": true
+  },
+  "container-queries": {
+    "category": "overlays",
+    "recommended": false
   },
   "coverage": {
     "category": "checks",
@@ -35,6 +47,10 @@
     "category": "devtools",
     "recommended": false
   },
+  "html-validate": {
+    "category": "checks",
+    "recommended": false
+  },
   "image-overlay": {
     "category": "overlays",
     "recommended": true
@@ -46,6 +62,14 @@
   "lighthouse": {
     "category": "checks",
     "recommended": true
+  },
+  "live-css": {
+    "category": "devtools",
+    "recommended": false
+  },
+  "load-test": {
+    "category": "tools",
+    "recommended": false
   },
   "network-panel": {
     "category": "devtools",
@@ -71,6 +95,10 @@
     "category": "capture",
     "recommended": true
   },
+  "responsive-images": {
+    "category": "checks",
+    "recommended": false
+  },
   "rulers-guides": {
     "category": "overlays",
     "recommended": true
@@ -78,6 +106,10 @@
   "screenshot-editor": {
     "category": "capture",
     "recommended": true
+  },
+  "security-headers": {
+    "category": "checks",
+    "recommended": false
   },
   "seo": {
     "category": "checks",
@@ -99,11 +131,19 @@
     "category": "devtools",
     "recommended": true
   },
+  "structured-data": {
+    "category": "checks",
+    "recommended": false
+  },
   "todo": {
     "category": "tools",
     "recommended": false
   },
   "visual-regression": {
+    "category": "checks",
+    "recommended": true
+  },
+  "width-sweep": {
     "category": "checks",
     "recommended": true
   }

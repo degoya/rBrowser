@@ -18,8 +18,11 @@ const props = withDefaults(defineProps<{ client: IpcClient; subscribe?: Subscrib
   subscribe: undefined,
 });
 const shell = useShell();
-const channel = findingsChannel(shell.send, props.subscribe ?? windowEvents, (message) =>
-  props.client.request(message),
+const channel = findingsChannel(
+  shell.send,
+  props.subscribe ?? windowEvents,
+  (message) => props.client.request(message),
+  (command) => shell.bindingOf(command),
 );
 const host = ref<HTMLElement | null>(null);
 

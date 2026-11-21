@@ -97,6 +97,9 @@ function licencePlugin(options: PanelBuild): Plugin {
   };
 }
 
+/** The icons panel-ui's own components name, which the scan of a panel's folder does not see. */
+const PANEL_UI_ICONS = ['lucide:settings'];
+
 /** The Vite configuration of a panel. */
 export function panelConfig(options: PanelBuild): InlineConfig {
   return {
@@ -110,7 +113,9 @@ export function panelConfig(options: PanelBuild): InlineConfig {
         colorMode: false,
         dts: false,
         ui: { colors: { primary: 'teal', neutral: 'slate' } },
-        icon: { clientBundle: { scan: true } },
+        // The scan reads the panel's own folder; the icons panel-ui's components name themselves
+        // are listed (SettingLink's, RB-094-21).
+        icon: { clientBundle: { scan: true, icons: PANEL_UI_ICONS } },
       }),
       licencePlugin(options),
     ],
@@ -152,8 +157,9 @@ export function builtFiles(options: PanelBuild): Map<string, string> {
 }
 
 /** The size budget of a panel's built files, in bytes: Vue, the Nuxt UI components a panel uses
- * and the compiled styles, with a margin (RB-080-83, the spike's figures). */
-export const BUDGET: Record<string, number> = { 'panel.js': 640 * 1024, 'panel.css': 256 * 1024 };
+ * and the compiled styles, with a margin (RB-080-83, the spike's figures; Nuxt UI 4.13 added about
+ * 5 KiB to every panel, the largest - form autofill - then stood at 644 KiB). */
+export const BUDGET: Record<string, number> = { 'panel.js': 672 * 1024, 'panel.css': 256 * 1024 };
 
 /** The built files of `options` that differ from those in its `outDir` (missing, stale, or one
  * there that the build no longer writes), and those over the budget. */

@@ -113,6 +113,33 @@ async fn attaching_sends_the_metrics_then_loads_the_start_url() {
 }
 
 #[tokio::test]
+async fn a_width_lease_fits_another_width_into_the_view_and_keeps_its_widget() {
+    let setup = setup(fixture());
+    attach_first(&setup, 480).await;
+    let params = setup
+        .host
+        .width_metrics(ViewId(1), 960)
+        .expect("an attached view");
+    assert_eq!(params["width"], 960);
+    let scale = params["scale"].as_f64().expect("scale");
+    assert!((scale - 0.5).abs() < 1e-9, "fitted into the 480 px cell");
+    assert_eq!(params["height"], 600);
+    assert_eq!(params["dontSetVisibleSize"], true);
+    assert_eq!(
+        setup.host.width_metrics(ViewId(2), 960),
+        None,
+        "not attached"
+    );
+    let own = setup.host.capture_target(ViewId(1)).expect("attached");
+    assert_eq!(own.metrics["width"], 1440, "the host's own metrics stay");
+    assert_eq!(
+        setup.fake.sent("Emulation.setDeviceMetricsOverride").len(),
+        1,
+        "the lease's metrics are only computed here, not sent"
+    );
+}
+
+#[tokio::test]
 async fn a_resize_sends_new_metrics_and_an_unchanged_size_sends_none() {
     let setup = setup(fixture());
     attach_first(&setup, 480).await;

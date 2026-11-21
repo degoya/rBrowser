@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // The activities' compact form in the toolbar (RB-090-67): a running video, flow run or check
-// run that is not in the activity bar - its entry folded, its switch `ui.activityBar.show.*`
-// off, or `ui.activityBar.mode` = `indicator` - shows here as its icon and counter (the state in
+// run, a changed clock or animation rate (RB-094-07), a plugin call that reports its progress
+// (RB-093-01) or forced pseudo-class states (RB-094-16) that is not in the activity bar - its
+// entry folded, its switch `ui.activityBar.show.*` off, or `ui.activityBar.mode` = `indicator` -
+// shows here as its icon and counter (the state in
 // words as tooltip and name) beside its primary control, the same entry as in the bar
 // (`entries.ts`). The recording, the views out of sync and the portal have their indicators of
 // old (`RecordIndicator.vue`, `DesyncIndicator.vue`, `PortalButton.vue`). A folded entry also
@@ -18,7 +20,7 @@ import { entryView, type EntryAction, type EntryView } from './entries';
 import { useActivities } from './store';
 
 /** The activities whose compact form is drawn here. */
-const COMPACT: readonly Activity[] = ['video', 'flows', 'checks'];
+const COMPACT: readonly Activity[] = ['video', 'flows', 'checks', 'time', 'plugins', 'forcedStates'];
 
 const shell = useShell();
 const store = useActivities();

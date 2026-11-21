@@ -125,6 +125,33 @@ fn the_filter_narrows_by_text_type_status_and_differences() {
         ..Filter::default()
     };
     assert_eq!(shown(&search), ["index.html"]);
+    let endpoint = Filter {
+        endpoint: Some("GET http://127.0.0.1:8080/api/user".to_owned()),
+        ..Filter::default()
+    };
+    assert_eq!(shown(&endpoint), ["user"]);
+}
+
+#[test]
+fn the_endpoint_filter_finds_every_id_of_a_templated_endpoint() {
+    let capture = capture(&json!({ "$console": { "views": [{ "view": 1, "network": [
+        entry("1.1", "https://a.test/api/users/1", "Fetch", 200, 1.0, 1.0),
+        entry("1.2", "https://a.test/api/users/2?x=1", "Fetch", 200, 1.0, 2.0),
+        entry("1.3", "https://a.test/api/users/me", "Fetch", 200, 1.0, 3.0),
+        entry("1.4", "https://a.test/shop/red", "Fetch", 200, 1.0, 4.0),
+    ] }] } }));
+    let count = |filter: &Filter| page(&capture, filter, 100, 1 << 20).1;
+    let users = Filter {
+        endpoint: Some("GET https://a.test/api/users/{id}".to_owned()),
+        ..Filter::default()
+    };
+    assert_eq!(count(&users), 2);
+    let shop = Filter {
+        endpoint: Some("GET https://a.test/shop/{slug}".to_owned()),
+        templates: crate::template::templates(&["/shop/{slug}".to_owned()]),
+        ..Filter::default()
+    };
+    assert_eq!(count(&shop), 1);
 }
 
 #[test]

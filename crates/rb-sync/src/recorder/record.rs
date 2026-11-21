@@ -25,7 +25,7 @@ use serde::Serialize;
 use super::autofill::{AutofillView, Echoes, MAX_FIELDS, action_of};
 use super::cleanup::{Builder, Capture, Trail};
 use super::keys::shown;
-use super::model::{Action, RECORDING_VERSION, RecordedBreakpoint, Recording};
+use super::model::{Action, MAX_PATH_POINTS, RECORDING_VERSION, RecordedBreakpoint, Recording};
 use super::secrets::mask_url;
 use crate::event::SyncEvent;
 use crate::message::EventMessage;
@@ -76,8 +76,9 @@ impl Default for RecorderOptions {
 /// `automation.recorder.recordHover` (RB-090-81): which hovers the recorder keeps.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum HoverCapture {
-    /// Only the agent's hover on a menu entry (`HoverData::menu`), sent at a press into its
-    /// submenu: the pointer's way across a page is never a step.
+    /// Only the agent's marked hovers (`HoverData::menu`): a rest on a menu's entry, the
+    /// trigger's hover at a press into its submenu; the pointer's way across a page is never a
+    /// step.
     #[default]
     Menu,
     /// Also a hover the clean-up guesses revealed what the next click hits.
@@ -87,7 +88,7 @@ pub enum HoverCapture {
 }
 
 impl HoverCapture {
-    /// Whether a hover - the agent's menu hover when `menu` - waits for the next click.
+    /// Whether a hover counts - only the agent's marked one when `menu`.
     pub fn keeps(self, menu: bool) -> bool {
         match self {
             Self::Menu => menu,
@@ -259,25 +260,7 @@ impl Recorder {
     /// stops only once it is saved, so a failed save loses nothing.
     pub fn snapshot(&self) -> Result<Recording, RecorderError> {
         let mut recording = self.recording.clone().ok_or(RecorderError::NotRecording)?;
-        let all: BTreeSet<&str> = self.names.values().map(String::as_str).collect();
-        recording.steps = self
-            .steps
-            .entries
-            .iter()
-            .map(|entry| {
-                let mut step = entry.step.clone();
-                let ran: BTreeSet<&str> = entry
-                    .trail
-                    .views
-                    .iter()
-                    .filter_map(|view| self.names.get(view).map(String::as_str))
-                    .collect();
-                if ran != all {
-                    step.only_in = ran.into_iter().map(str::to_owned).collect();
-                }
-                step
-            })
-            .collect();
+        recording.steps = self.steps_from(0);
         Ok(recording)
     }
 
@@ -327,11 +310,19 @@ impl Recorder {
             message.frame.as_deref()
         };
         let at_ms = self.offset(now_ms);
+        // The way only from the top frame, whose points are the viewport's; its last points.
+        let from = if message.top {
+            message.path.len().saturating_sub(MAX_PATH_POINTS)
+        } else {
+            message.path.len()
+        };
+        let path = &message.path[from..];
         let capture = Capture {
             view: &view,
             frame,
             views,
             at_ms,
+            path,
             record_hover: self.options.record_hover,
             record_scroll: self.options.record_scroll,
             secret_fields: &self.options.secret_fields,
@@ -457,6 +448,9 @@ impl Recorder {
         now_ms.saturating_sub(self.started_ms)
     }
 }
+
+#[path = "record_live.rs"]
+mod live;
 
 #[cfg(test)]
 #[path = "record_tests.rs"]

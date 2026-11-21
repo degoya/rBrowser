@@ -14,6 +14,8 @@ fn lists(answer: &Value) -> Vec<(String, usize)> {
         }
     };
     push("/findings".to_owned(), &answer["findings"]);
+    // The breakpoint diff's table (RB-094-02).
+    push("/rows".to_owned(), &answer["rows"]);
     if let Some(sections) = answer["sections"].as_object() {
         for (name, section) in sections {
             push(format!("/sections/{name}/rows"), &section["rows"]);

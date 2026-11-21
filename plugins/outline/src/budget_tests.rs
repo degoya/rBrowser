@@ -51,3 +51,12 @@ fn an_answer_without_lists_stays_as_it_is() {
     fit(&mut answer, 10);
     assert_eq!(answer["views"].as_str().map(str::len), Some(100));
 }
+
+#[test]
+fn the_rows_of_the_breakpoint_diff_are_cut_too() {
+    let rows: Vec<String> = (0..400).map(|n| format!("difference {n}")).collect();
+    let mut answer = json!({ "views": [], "rows": rows, "findings": [] });
+    fit(&mut answer, 2_000);
+    assert!(serde_json::to_string(&answer).expect("json").len() <= 2_000);
+    assert_eq!(answer["cut"], true);
+}

@@ -226,6 +226,31 @@ run_status "$LINT" "$fixture"
 expect_status "a choice with an earlier form still needs its names" 1
 expect_output "the option is named" "paper: missing i18n key settings.option.paper.a4 (option \"a4\")"
 
+# RB-090-29: a description or help text names an option by the name the window shows, not by
+# its id - an id other than its name that opens a sentence or a clause, stands before "(the
+# default)", or is an id no word looks like (camelCase, a hyphen, a digit) anywhere.
+DOCK_KEY='doc["properties"]["dock"] = {"type": "string", "enum": ["floating", "left", "perReport", "hidden"], "default": "left", "x-category": "project", "x-section": "start-url", "x-order": 2, "x-scope": ["project", "local"]}'
+DOCK_NAMES='doc["settings"]["option"] = {"dock": {"floating": "Own window", "left": "Left (docked)", "perReport": "A window per report", "hidden": "Hidden"}}'
+fixture="$(settings_fixture "$SCRATCH/option-ids")"
+edit_json "$fixture/schema/config.v1.json" "$DOCK_KEY"
+edit_json "$fixture/locales/en.json" "$DOCK_NAMES"'
+doc["settings"]["key"]["dock"] = {"label": "Dock", "description": "Where they open: floating in a window, or docked.", "help": "Docked. floating (the default) opens a window; perReport opens one per report."}'
+run_status "$LINT" "$fixture"
+expect_status "a text naming option ids fails" 1
+expect_output "an id opening a clause is named" \
+    'dock: settings.key.dock.description names the option id "floating" - name it "Own window"'
+expect_output "an id before (the default) is named" \
+    'dock: settings.key.dock.help names the option id "floating" - name it "Own window"'
+expect_output "a coded id anywhere is named" \
+    'dock: settings.key.dock.help names the option id "perReport" - name it "A window per report"'
+
+fixture="$(settings_fixture "$SCRATCH/option-names")"
+edit_json "$fixture/schema/config.v1.json" "$DOCK_KEY"
+edit_json "$fixture/locales/en.json" "$DOCK_NAMES"'
+doc["settings"]["key"]["dock"] = {"label": "Dock", "description": "Where they open: own window, a floating one, or Left.", "help": "Left (the default) docks them; hidden hides them; A window per report opens one per report. Not that: own window."}'
+run_status "$LINT" "$fixture"
+expect_status "a text naming the options by their names passes" 0
+
 # RB-090-85: every settings target of a notice and every openSettings key opens a place in the
 # settings window - a key, a category, a section or a key prefix; a constant is read where it
 # is defined, the nearest definition first.
@@ -274,5 +299,68 @@ expect_output "a constant that does not read is named" \
     "crates/rbrowser/src/a/mod.rs:4: settings target: the constant MISSING_KEY does not read"
 expect_output "a page's target is named" \
     "ui/src/x/page.ts:1: settings target \`sync.nothing\` is no key"
+
+# RB-094-21: a text that names a settings path ("Settings > ...", "Settings › ...") is a link -
+# its key is in crates/rbrowser/data/settings-links.json, mapped to a place that opens, or listed
+# as unlinked with why; the settings window's own texts and MCP tool descriptions need none. A
+# panel's `openSettings('<key>')` and a page's `setting-key="<key>"` are settings targets too.
+MENTIONS='doc["sync"] = {"notice": {"off": "Scrolling is off. Switch it on in Settings > Sync > Scroll."}}
+doc["phone"] = {"hint": "Turn off the phone'"'"'s blocker (Settings › Security)."}
+doc["settings"]["key"]["sync"]["scroll"]["help"] = "Off by default; see Settings > Sync."'
+PLUGIN_MENTION='doc["plugin"]["seo"]["panel"] = {"off": "Titles are not checked (Settings > Checks > SEO)."}
+doc["plugin"]["seo"]["tools"] = {"check": "Checks titles (default: Settings > Checks > SEO)."}'
+LINKS_TABLE='{"links": {"sync.notice.off": "sync.scroll", "plugin.seo.panel.off": "seo.titleLength"},
+ "unlinked": {"phone.hint": "the phone'"'"'s own Settings app"}}'
+
+fixture="$(settings_fixture "$SCRATCH/mentions-missing")"
+edit_json "$fixture/locales/en.json" "$MENTIONS"
+edit_json "$fixture/plugins/seo/locales/en.json" "$PLUGIN_MENTION"
+run_status "$LINT" "$fixture"
+expect_status "a settings mention without a link fails" 1
+expect_output "the core text is named" \
+    "locales/en.json: \`sync.notice.off\` names a settings path but links nowhere"
+expect_output "the other arrow counts too" \
+    "locales/en.json: \`phone.hint\` names a settings path but links nowhere"
+expect_output "the plugin's text is named" \
+    "plugins/seo/locales/en.json: \`plugin.seo.panel.off\` names a settings path but links nowhere"
+expect_true "the settings window's help needs no link" '[[ "$output" != *"sync.scroll.help"* ]]'
+expect_true "an MCP tool description needs no link" '[[ "$output" != *"plugin.seo.tools.check"* ]]'
+
+fixture="$(settings_fixture "$SCRATCH/mentions-linked")"
+edit_json "$fixture/locales/en.json" "$MENTIONS"
+edit_json "$fixture/plugins/seo/locales/en.json" "$PLUGIN_MENTION"
+mkdir -p "$fixture/crates/rbrowser/data" "$fixture/plugins/seo/web/src/panel" "$fixture/ui/src/x"
+printf '%s\n' "$LINKS_TABLE" > "$fixture/crates/rbrowser/data/settings-links.json"
+printf "panel.openSettings('seo.titleLength');\n" > "$fixture/plugins/seo/web/src/panel/off.ts"
+printf '<SettingLink setting-key="sync.scroll" @open="send" />\n<SettingLink :setting-key="AREA" />\n' \
+    > "$fixture/ui/src/x/Off.vue"
+printf "const line = { tone: 'error', text, setting: { key: 'seo', label } };\n" \
+    > "$fixture/plugins/seo/web/src/panel/line.ts"
+run_status "$LINT" "$fixture"
+expect_status "every mention linked or unlinked with a reason passes" 0
+expect_output "the mentions are counted" "3 settings mentions"
+expect_output "a panel's, its status line's and a page's link are targets" "3 notice targets"
+
+fixture="$(settings_fixture "$SCRATCH/mentions-bad")"
+edit_json "$fixture/locales/en.json" "$MENTIONS"
+mkdir -p "$fixture/crates/rbrowser/data" "$fixture/plugins/seo/web/src/panel"
+printf '%s\n' '{"links": {"sync.notice.off": "sync.nothing", "sync.gone": "sync.scroll"},
+ "unlinked": {"phone.hint": " "}}' > "$fixture/crates/rbrowser/data/settings-links.json"
+printf "panel.openSettings('seo.nothing');\n" > "$fixture/plugins/seo/web/src/panel/off.ts"
+run_status "$LINT" "$fixture"
+expect_status "a link that opens nothing, a stale row and an unlinked text without why fail" 1
+expect_output "the target is named" \
+    "settings-links.json: \`sync.notice.off\` links to \`sync.nothing\`, which is no key, category, section or key prefix"
+expect_output "a row whose text names no settings path is named" \
+    "settings-links.json: \`sync.gone\` is no text that names a settings path"
+expect_output "an unlinked text needs its reason" \
+    "settings-links.json: unlinked \`phone.hint\` says not why"
+expect_output "a panel's target is checked" \
+    "plugins/seo/web/src/panel/off.ts:1: settings target \`seo.nothing\` is no key"
+
+printf '{ "links": ' > "$fixture/crates/rbrowser/data/settings-links.json"
+run_status "$LINT" "$fixture"
+expect_status "a table that is not JSON fails" 1
+expect_output "the table is named" "crates/rbrowser/data/settings-links.json: not JSON"
 
 finish_tests settings-lint

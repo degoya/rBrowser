@@ -9,7 +9,8 @@
 //! capability.
 //!
 //! The crate builds for `wasm32-unknown-unknown` as well: a plugin's guest half translates the
-//! generated WIT bindings into the traits here and nothing else.
+//! generated WIT bindings into the traits here and nothing else - its host and conversions are
+//! one macro, [`guest_host!`] (RB-094-11).
 
 #![warn(unreachable_pub)]
 
@@ -17,6 +18,7 @@ pub mod analyzer;
 pub mod check;
 pub mod export;
 pub mod feature;
+mod guest;
 mod host;
 
 /// The in-memory host a plugin's native tests run against; never part of a component or the host.

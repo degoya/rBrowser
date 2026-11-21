@@ -54,3 +54,19 @@ fn weighted_audits_are_errors_the_others_warnings() {
     assert_eq!(image_alt.severity, Severity::Error);
     assert_eq!(image_alt.shared_id, None);
 }
+
+#[test]
+fn the_shared_audits_name_their_ids() {
+    let rules = describe();
+    for (audit, shared) in SHARED_IDS {
+        let rule = rules
+            .iter()
+            .find(|rule| rule.id == *audit)
+            .unwrap_or_else(|| panic!("{audit} is an audit of the table"));
+        assert_eq!(rule.shared_id.as_deref(), Some(*shared), "{audit}");
+    }
+    assert_eq!(
+        rules.iter().filter(|rule| rule.shared_id.is_some()).count(),
+        SHARED_IDS.len()
+    );
+}

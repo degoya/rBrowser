@@ -1,0 +1,24 @@
+{
+  "name": "rbrowser-plugin-container-queries-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The page script and the analysis of rBrowser's container-queries plugin (RB-094-01), bundled by esbuild into ../page and ../assets, and its panel on Nuxt UI, built by Vite into ../panel/dist.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs && vite build",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.4",
+    "playwright-core": "1.65.1",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}

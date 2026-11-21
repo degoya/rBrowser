@@ -36,7 +36,7 @@ async fn a_held_answer_keeps_the_events_it_scripted() {
     assert_eq!(answer["frameId"], json!("V1"));
     let mut methods = Vec::new();
     while let Ok(event) = events.try_recv() {
-        methods.push(event.method);
+        methods.push(event.method.clone());
     }
     assert_eq!(
         methods,

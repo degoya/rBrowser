@@ -37,7 +37,8 @@ fn state(known: &[&str], view_entries: ViewEntries) -> MenuState {
     }
 }
 
-/// The items of the submenu labelled `key` among `items`, if there is one.
+/// The items of the submenu labelled `key` at any depth, if there is one: Sessions hangs under
+/// Environments (RB-090-92).
 fn submenu<'a>(items: &'a [Item], key: &str) -> Option<&'a [Item]> {
     items.iter().find_map(|item| match item {
         Item::Menu {
@@ -45,6 +46,7 @@ fn submenu<'a>(items: &'a [Item], key: &str) -> Option<&'a [Item]> {
             items,
             ..
         } if *label == key => Some(items.as_slice()),
+        Item::Menu { items, .. } => submenu(items, key),
         _ => None,
     })
 }
@@ -111,6 +113,50 @@ fn sync_checks_this_view_and_its_navigation_and_turns_them_the_other_way() {
     );
 }
 
+// RB-092-03: Sync › opens the address field of a view with its own navigation; for a view that
+// follows the active view the entry is disabled and its label says why; off, it is not there.
+#[test]
+fn sync_opens_the_address_field_of_a_decoupled_view_and_says_why_not_otherwise() {
+    let with = |coupled: bool, editable: bool| {
+        build(&state(
+            &[],
+            ViewEntries {
+                navigation_coupled: Some(coupled),
+                address_editable: editable,
+                ..ViewEntries::default()
+            },
+        ))
+    };
+    let items = with(false, true);
+    let sync = submenu(&items, SYNC_MENU).expect("the Sync submenu");
+    let edit = entry(sync, &Label::Key(EDIT_ADDRESS));
+    assert!(edit.enabled);
+    assert_eq!(edit.mark, Mark::None);
+    assert_eq!(
+        edit.action,
+        run(
+            crate::cell_info::address::EDIT_ADDRESS,
+            json!({ "view": 2 })
+        )
+    );
+    let items = with(true, true);
+    let sync = submenu(&items, SYNC_MENU).expect("the Sync submenu");
+    let edit = entry(sync, &Label::Key(EDIT_ADDRESS_COUPLED));
+    assert!(!edit.enabled, "the view follows the active view");
+    for coupled in [false, true] {
+        let items = with(coupled, false);
+        let sync = submenu(&items, SYNC_MENU).expect("the Sync submenu");
+        assert!(
+            entries(sync).iter().all(|entry| ![
+                Label::Key(EDIT_ADDRESS),
+                Label::Key(EDIT_ADDRESS_COUPLED)
+            ]
+            .contains(&entry.label)),
+            "off: no entry"
+        );
+    }
+}
+
 #[test]
 fn sync_shows_only_the_switch_whose_state_is_known() {
     let view_entries = ViewEntries {
@@ -134,6 +180,18 @@ fn session_lists_the_sessions_marks_the_views_and_moves_it() {
         ..ViewEntries::default()
     };
     let items = build(&state(&[], view_entries));
+    let environments =
+        submenu(&items, crate::context_menu::model::KEY_ENVIRONMENTS).expect("Environments");
+    assert!(
+        matches!(
+            environments,
+            [Item::Menu {
+                label: Label::Key(SESSION_MENU),
+                ..
+            }]
+        ),
+        "Sessions is Environments' only entry"
+    );
     let session = submenu(&items, SESSION_MENU).expect("the Session submenu");
     let default = entry(session, &Label::Key("contextmenu.session.default"));
     assert_eq!(default.mark, Mark::Radio(false));
@@ -170,6 +228,10 @@ fn only_the_default_session_offers_no_session_submenu() {
     };
     let items = build(&state(&[], view_entries));
     assert!(submenu(&items, SESSION_MENU).is_none());
+    assert!(
+        submenu(&items, crate::context_menu::model::KEY_ENVIRONMENTS).is_none(),
+        "an empty Environments submenu is left out"
+    );
 }
 
 #[test]

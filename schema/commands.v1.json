@@ -197,6 +197,17 @@
       }
     },
     {
+      "id": "ios.devices",
+      "titleKey": "commands.ios.devices",
+      "group": "breakpoints",
+      "defaultBindings": [
+        "Ctrl+Shift+Space B I"
+      ],
+      "mcp": {
+        "covered": "ios_devices"
+      }
+    },
+    {
       "id": "view.next_breakpoint",
       "titleKey": "commands.view.next_breakpoint",
       "group": "breakpoints",
@@ -582,6 +593,17 @@
       }
     },
     {
+      "id": "emulation.clock",
+      "titleKey": "commands.emulation.clock",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S T"
+      ],
+      "mcp": {
+        "covered": "clock_set"
+      }
+    },
+    {
       "id": "page_api.toggle",
       "titleKey": "commands.page_api.toggle",
       "group": "sync",
@@ -623,6 +645,39 @@
       ],
       "mcp": {
         "covered": "portal_disconnect"
+      }
+    },
+    {
+      "id": "portal.present.new_link",
+      "titleKey": "commands.portal.present.new_link",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S K"
+      ],
+      "mcp": {
+        "omitted": "protected: a viewer link is a person's to hand out; it never reaches MCP"
+      }
+    },
+    {
+      "id": "portal.present.start",
+      "titleKey": "commands.portal.present.start",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S W"
+      ],
+      "mcp": {
+        "omitted": "human-only: shares the site on the internet"
+      }
+    },
+    {
+      "id": "portal.present.stop",
+      "titleKey": "commands.portal.present.stop",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S E"
+      ],
+      "mcp": {
+        "covered": "portal_present_stop"
       }
     },
     {
@@ -725,6 +780,17 @@
       }
     },
     {
+      "id": "view.edit_address",
+      "titleKey": "commands.view.edit_address",
+      "group": "sync",
+      "defaultBindings": [
+        "Ctrl+Shift+Space S L"
+      ],
+      "mcp": {
+        "covered": "navigate"
+      }
+    },
+    {
       "id": "cookies.copy",
       "titleKey": "commands.cookies.copy",
       "group": "environments",
@@ -777,6 +843,17 @@
       ],
       "mcp": {
         "covered": "env_compare"
+      }
+    },
+    {
+      "id": "environment.auth",
+      "titleKey": "commands.environment.auth",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E A"
+      ],
+      "mcp": {
+        "omitted": "secrets: Basic auth credentials and login state are a person's, never read or set over MCP"
       }
     },
     {
@@ -912,6 +989,39 @@
       }
     },
     {
+      "id": "session.state_export",
+      "titleKey": "commands.session.state_export",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E W"
+      ],
+      "mcp": {
+        "omitted": "secrets: Basic auth credentials and login state are a person's, never read or set over MCP"
+      }
+    },
+    {
+      "id": "session.state_import",
+      "titleKey": "commands.session.state_import",
+      "group": "environments",
+      "defaultBindings": [
+        "Ctrl+Shift+Space E I"
+      ],
+      "mcp": {
+        "omitted": "secrets: Basic auth credentials and login state are a person's, never read or set over MCP"
+      }
+    },
+    {
+      "id": "debug.perf_counters",
+      "titleKey": "commands.debug.perf_counters",
+      "group": "devtools",
+      "defaultBindings": [
+        "Ctrl+Shift+Space D B"
+      ],
+      "mcp": {
+        "covered": "app_perf"
+      }
+    },
+    {
       "id": "debug.resources",
       "titleKey": "commands.debug.resources",
       "group": "devtools",
@@ -997,6 +1107,28 @@
       ],
       "mcp": {
         "covered": "views_force_state"
+      }
+    },
+    {
+      "id": "overlays.animations",
+      "titleKey": "commands.overlays.animations",
+      "group": "overlays",
+      "defaultBindings": [
+        "Ctrl+Shift+Space O J"
+      ],
+      "mcp": {
+        "covered": "animations_set"
+      }
+    },
+    {
+      "id": "overlays.pseudo_locale",
+      "titleKey": "commands.overlays.pseudo_locale",
+      "group": "overlays",
+      "defaultBindings": [
+        "Ctrl+Shift+Space O Y"
+      ],
+      "mcp": {
+        "covered": "pseudo_locale"
       }
     },
     {
@@ -1132,6 +1264,17 @@
       }
     },
     {
+      "id": "capture.video.pause",
+      "titleKey": "commands.capture.video.pause",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C Z"
+      ],
+      "mcp": {
+        "covered": "record_video"
+      }
+    },
+    {
       "id": "capture.video.toggle",
       "titleKey": "commands.capture.video.toggle",
       "group": "capture",
@@ -1162,6 +1305,39 @@
       ],
       "mcp": {
         "covered": "screenshot"
+      }
+    },
+    {
+      "id": "compare.engines",
+      "titleKey": "commands.compare.engines",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C Q"
+      ],
+      "mcp": {
+        "covered": "compare_engines"
+      }
+    },
+    {
+      "id": "report.create",
+      "titleKey": "commands.report.create",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C U"
+      ],
+      "mcp": {
+        "covered": "bug_report"
+      }
+    },
+    {
+      "id": "report.open_folder",
+      "titleKey": "commands.report.open_folder",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C Y"
+      ],
+      "mcp": {
+        "omitted": "opens the file manager; bug_report answers the report's path"
       }
     },
     {
@@ -1242,6 +1418,17 @@
       }
     },
     {
+      "id": "checks.export",
+      "titleKey": "commands.checks.export",
+      "group": "checks",
+      "defaultBindings": [
+        "Ctrl+Shift+Space K B"
+      ],
+      "mcp": {
+        "covered": "checks_export"
+      }
+    },
+    {
       "id": "checks.run_all",
       "titleKey": "commands.checks.run_all",
       "group": "checks",
@@ -1316,6 +1503,17 @@
       ],
       "mcp": {
         "omitted": "internal process; it restarts by itself"
+      }
+    },
+    {
+      "id": "views.restore_last",
+      "titleKey": "commands.views.restore_last",
+      "group": "reload",
+      "defaultBindings": [
+        "Ctrl+Shift+Space R L"
+      ],
+      "mcp": {
+        "covered": "views_restore_last"
       }
     },
     {
@@ -1517,6 +1715,17 @@
       }
     },
     {
+      "id": "flows.delete",
+      "titleKey": "commands.flows.delete",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F D"
+      ],
+      "mcp": {
+        "omitted": "protected: deleting project files is the person's; an agent never deletes a flow"
+      }
+    },
+    {
       "id": "flows.open_results",
       "titleKey": "commands.flows.open_results",
       "group": "flows",
@@ -1594,6 +1803,28 @@
       }
     },
     {
+      "id": "recorder.continue_from",
+      "titleKey": "commands.recorder.continue_from",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F U"
+      ],
+      "mcp": {
+        "covered": "recorder_start"
+      }
+    },
+    {
+      "id": "recorder.delete",
+      "titleKey": "commands.recorder.delete",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F M"
+      ],
+      "mcp": {
+        "omitted": "protected: deleting project files is the person's; an agent never deletes a recording"
+      }
+    },
+    {
       "id": "recorder.export_flow",
       "titleKey": "commands.recorder.export_flow",
       "group": "flows",
@@ -1627,11 +1858,33 @@
       }
     },
     {
+      "id": "recorder.pick_element",
+      "titleKey": "commands.recorder.pick_element",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F I"
+      ],
+      "mcp": {
+        "omitted": "ui-only: the person clicks the element; recorder_step_add takes a point (x, y) and names the element there"
+      }
+    },
+    {
       "id": "recorder.play",
       "titleKey": "commands.recorder.play",
       "group": "flows",
       "defaultBindings": [
         "Ctrl+Shift+Space F Y"
+      ],
+      "mcp": {
+        "covered": "recorder_play"
+      }
+    },
+    {
+      "id": "recorder.play_from",
+      "titleKey": "commands.recorder.play_from",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F H"
       ],
       "mcp": {
         "covered": "recorder_play"
@@ -1646,6 +1899,39 @@
       ],
       "mcp": {
         "covered": "recorder_start"
+      }
+    },
+    {
+      "id": "recorder.step_add",
+      "titleKey": "commands.recorder.step_add",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F N"
+      ],
+      "mcp": {
+        "covered": "recorder_step_add"
+      }
+    },
+    {
+      "id": "recorder.step_toggle",
+      "titleKey": "commands.recorder.step_toggle",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F B"
+      ],
+      "mcp": {
+        "covered": "recorder_step_toggle"
+      }
+    },
+    {
+      "id": "recorder.step_try",
+      "titleKey": "commands.recorder.step_try",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F J"
+      ],
+      "mcp": {
+        "covered": "recorder_step_try"
       }
     },
     {
@@ -1698,6 +1984,17 @@
       "group": "view",
       "defaultBindings": [
         "Ctrl+Shift+Space V C"
+      ],
+      "mcp": {
+        "covered": "emulation_set"
+      }
+    },
+    {
+      "id": "emulation.toggle_dir",
+      "titleKey": "commands.emulation.toggle_dir",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V ."
       ],
       "mcp": {
         "covered": "emulation_set"
@@ -1778,6 +2075,17 @@
       ],
       "mcp": {
         "covered": "view_add"
+      }
+    },
+    {
+      "id": "view.add_android",
+      "titleKey": "commands.view.add_android",
+      "group": "view",
+      "defaultBindings": [
+        "Ctrl+Shift+Space V ;"
+      ],
+      "mcp": {
+        "covered": "view_add_android"
       }
     },
     {
@@ -2331,6 +2639,17 @@
       }
     },
     {
+      "id": "tools.adb.install",
+      "titleKey": "commands.tools.adb.install",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X S"
+      ],
+      "mcp": {
+        "omitted": "protected: downloads a program; only the person, after the consent notice"
+      }
+    },
+    {
       "id": "tools.ffmpeg.install",
       "titleKey": "commands.tools.ffmpeg.install",
       "group": "plugins",
@@ -2438,6 +2757,17 @@
       ],
       "mcp": {
         "omitted": "ui-only: a line for the person's agent configuration"
+      }
+    },
+    {
+      "id": "mcp.setup",
+      "titleKey": "commands.mcp.setup",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , N"
+      ],
+      "mcp": {
+        "omitted": "ui-only: a person connects an AI client and confirms every file it writes"
       }
     },
     {

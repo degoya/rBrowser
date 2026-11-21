@@ -9,9 +9,23 @@ use crate::tools::page::ALLOW_EVALUATE;
 /// settings window makes key by key.
 pub const WITHOUT_COMMAND: &[(&str, &str)] = &[
     (
+        "recorder_step_update",
+        "changes one step of a stored recording's file; in the Recorder panel a person edits the \
+         draft and saves it, no command changes a step (RB-092-01)",
+    ),
+    (
+        "recorder_step_remove",
+        "takes one step out of a stored recording's file; in the Recorder panel a person removes \
+         it from the draft, no command does (RB-092-01)",
+    ),
+    (
         "portal_stop",
         "stops the portal; portal.toggle starts it too, which no tool may (a LAN listener is a \
          human's decision)",
+    ),
+    (
+        "portal_present_status",
+        "a read: the presentation's phase and viewers, never its link (RB-096-05)",
     ),
     (
         "breakpoint_remove",
@@ -110,6 +124,10 @@ pub const WITHOUT_COMMAND: &[(&str, &str)] = &[
         "a read: the recorded videos; capture.video.panel shows them to the person",
     ),
     (
+        "android_devices",
+        "a read: the USB devices adb sees; view.add_android adds one (RB-095-02)",
+    ),
+    (
         "update_status",
         "a read: the self-update's state; update.check and update.install are the commands",
     ),
@@ -117,7 +135,12 @@ pub const WITHOUT_COMMAND: &[(&str, &str)] = &[
 
 /// The tools that act on no view and so take no `target`, with what they act on instead.
 pub const UNTARGETED: &[(&str, &str)] = &[
+    (
+        "clock_set",
+        "the clock of every view: one for all, as the sync keeps them",
+    ),
     ("app_info", "the app"),
+    ("app_perf", "the app's timing counters"),
     ("breakpoint_add", "the project config"),
     ("breakpoint_remove", "the project config"),
     ("breakpoint_update", "the project config"),
@@ -133,6 +156,7 @@ pub const UNTARGETED: &[(&str, &str)] = &[
     ("extension_install", "the Chrome extensions of the instance"),
     ("extension_list", "the Chrome extensions of the instance"),
     ("extension_remove", "the Chrome extensions of the instance"),
+    ("ios_devices", "the iOS simulators and devices of the Mac"),
     ("flow_list", "the project's flows"),
     ("layout_save_preset", "the project config"),
     ("layout_set", "the grid"),
@@ -160,10 +184,21 @@ pub const UNTARGETED: &[(&str, &str)] = &[
     ("plugins_list", "the plugins"),
     ("portal_devices", "the portal's paired devices"),
     ("portal_disconnect", "the portal's paired devices"),
+    (
+        "portal_present_status",
+        "the portal's presentation over the internet",
+    ),
+    (
+        "portal_present_stop",
+        "the portal's presentation over the internet",
+    ),
     ("portal_stop", "the portal's LAN listener"),
     ("project_info", "the project"),
     ("project_open", "the recent projects"),
     ("recorder_export", "the stored recordings"),
+    ("recorder_step_remove", "a stored recording's file"),
+    ("recorder_step_toggle", "a stored recording's file"),
+    ("recorder_step_update", "a stored recording's file"),
     ("recorder_stop", "the window's recorder"),
     ("session_clear", "a session's cookies and storage"),
     ("settings_get", "the settings"),
@@ -178,6 +213,11 @@ pub const UNTARGETED: &[(&str, &str)] = &[
     ("status_messages", "the window's message history"),
     ("view_add", "the hidden selection of the views"),
     (
+        "view_add_android",
+        "an Android device: a breakpoint of its own in the project config",
+    ),
+    ("android_devices", "the USB devices adb sees"),
+    (
         "view_add_size",
         "the project config and the hidden selection of the views",
     ),
@@ -187,6 +227,10 @@ pub const UNTARGETED: &[(&str, &str)] = &[
     ("bookmarks_make_relative", "the project config"),
     ("panels_dock", "the window's plugin panels"),
     ("checks_cancel", "the check run in progress"),
+    (
+        "checks_export",
+        "the last check run, written to a file below .rbrowser/out/ or the export folder",
+    ),
     ("canvas_zoom", "the canvas camera"),
     ("video_list", "the project's recorded videos"),
     ("update_check", "the app"),
@@ -199,10 +243,13 @@ pub const UNTARGETED: &[(&str, &str)] = &[
 pub const SINGLE_VIEW: &[&str] = &[
     "canvas_place",
     "cdp_endpoint",
+    "compare_engines",
     "devtools_inspect_at",
     "devtools_open",
     "env_compare_live",
     "recorder_start",
+    "recorder_step_add",
+    "recorder_step_try",
     "view_pop_in",
     "view_pop_out",
     "view_remove",
@@ -235,11 +282,25 @@ pub const GUARDS: &[Guard] = &[
                config_key_protected.",
     },
     Guard {
+        tool: "bug_report",
+        setting: None,
+        note: "Writes only a new folder below the project's .rbrowser/out/reports/ (a link on \
+               the way is refused) and answers its paths, never the content; every text is \
+               masked and request headers and bodies are never read.",
+    },
+    Guard {
         tool: "cdp_endpoint",
         setting: Some("cdp.enabled"),
         note: "Off until a person switches on the setting cdp.enabled (code cdp.disabled) and \
                mcp.allowEvaluate (code evaluate_disabled): the endpoint is full control of the \
                page.",
+    },
+    Guard {
+        tool: "checks_export",
+        setting: None,
+        note: "Writes only below the project's .rbrowser/out/ or the folder the protected \
+               setting checks.export.dir names; a path that goes up (..), lies elsewhere, names \
+               a drive, share or device, or runs through a link is refused.",
     },
     Guard {
         tool: "config_set",
@@ -295,6 +356,12 @@ pub const GUARDS: &[Guard] = &[
         tool: "recorder_play",
         setting: None,
         note: "As flow_run: the recording plays as a flow, only in a workspace a person \
+               trusted, otherwise it answers code flows.untrusted; no tool grants trust.",
+    },
+    Guard {
+        tool: "recorder_step_try",
+        setting: None,
+        note: "As recorder_play: the step plays as a flow, only in a workspace a person \
                trusted, otherwise it answers code flows.untrusted; no tool grants trust.",
     },
     Guard {

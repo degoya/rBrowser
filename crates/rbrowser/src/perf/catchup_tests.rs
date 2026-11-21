@@ -20,6 +20,7 @@ fn message(top: bool, data: ScrollData) -> EventMessage {
         frame: None,
         seq: 1,
         time: 0,
+        path: Vec::new(),
         event: SyncEvent::Scroll(data),
     }
 }

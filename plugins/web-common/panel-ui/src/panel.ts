@@ -32,6 +32,9 @@ export interface Panel {
   call(target: CallTarget, args?: unknown): Promise<unknown>;
   /** Posts a message to the panels window as it is (a host action such as `open_link`). */
   post(message: Record<string, unknown>): void;
+  /** Opens the settings window at `key` - a key, a section or a category, the core's too - on a
+   * user's click (the host's `open_settings`, RB-096-11). */
+  openSettings(key: string): void;
   /** Calls `listener` on every `settings` message, `first` the first time. */
   onSettings(listener: (first: boolean) => void): void;
 }
@@ -126,6 +129,7 @@ export function createPanel(options: PanelOptions): Panel & { start(): () => voi
     error,
     call,
     post: (message) => win.parent.postMessage(message, '*'),
+    openSettings: (key) => win.parent.postMessage({ target: 'host', action: 'open_settings', key }, '*'),
     onSettings: (listener) => {
       listeners.push(listener);
     },

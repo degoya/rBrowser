@@ -30,13 +30,17 @@ pub enum ExternalEngine {
     Firefox,
     /// WebKit through Playwright in the sidecar.
     Webkit,
+    /// Safari over safaridriver, macOS only (RB-095-03).
+    Safari,
+    /// iOS on the Simulator or a device over safaridriver, macOS only (RB-095-04).
+    Ios,
 }
 
 /// `engine_restart`.
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineRestartParams {
-    /// `firefox` or `webkit`.
+    /// `firefox`, `webkit`, `safari` or `ios` (both macOS only).
     pub engine: ExternalEngine,
     /// `"all"` (every view of the engine, the default), a view id or a breakpoint id.
     #[serde(default)]
@@ -46,7 +50,7 @@ pub struct EngineRestartParams {
 #[tool_router(router = engines_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Restart an external engine's views (engine: \"firefox\" or \"webkit\"): every view of that engine, or those of `target` (\"all\" (default), a view id or a breakpoint id). Each view opens again with its last URL. Fails with a readable message when no view of that engine is open or the engine is not available. Answers the restarted view ids."
+        description = "Restart an external engine's views (engine: \"firefox\", \"webkit\", \"safari\" or \"ios\" - Safari and iOS on macOS only): every view of that engine, or those of `target` (\"all\" (default), a view id or a breakpoint id). Each view opens again with its last URL. Fails with a readable message when no view of that engine is open or the engine is not available. Answers the restarted view ids."
     )]
     pub(crate) async fn engine_restart(
         &self,

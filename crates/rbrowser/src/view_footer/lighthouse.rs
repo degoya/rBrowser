@@ -238,16 +238,20 @@ pub fn latest<'a>(runs: &'a [Measured], document: &str, breakpoint: &str) -> Opt
 
 /// `secs` after the Unix epoch in the zone `offset` seconds east of UTC: `2026-11-17 14:32`.
 pub fn run_time(secs: u64, offset: i32) -> String {
-    let zone = chrono::FixedOffset::east_opt(offset)
-        .or_else(|| chrono::FixedOffset::east_opt(0))
-        .expect("an offset of 0 is valid");
+    let zone = time::UtcOffset::from_whole_seconds(offset).unwrap_or(time::UtcOffset::UTC);
     i64::try_from(secs)
         .ok()
-        .and_then(|secs| chrono::DateTime::from_timestamp(secs, 0))
+        .and_then(|secs| time::OffsetDateTime::from_unix_timestamp(secs).ok())
+        .and_then(|instant| instant.checked_to_offset(zone))
         .map(|time| {
-            time.with_timezone(&zone)
-                .format("%Y-%m-%d %H:%M")
-                .to_string()
+            format!(
+                "{:04}-{:02}-{:02} {:02}:{:02}",
+                time.year(),
+                u8::from(time.month()),
+                time.day(),
+                time.hour(),
+                time.minute()
+            )
         })
         .unwrap_or_default()
 }

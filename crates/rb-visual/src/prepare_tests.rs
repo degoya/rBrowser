@@ -197,6 +197,7 @@ fn the_selectors_go_into_the_script_as_data() {
         hide: true,
         selectors: vec!["a\"); alert(1); (\"".to_owned()],
         freeze: false,
+        mask: false,
         settle_ms: 0,
     };
     let expression = plan.prepare_expression();
@@ -208,7 +209,12 @@ fn the_selectors_go_into_the_script_as_data() {
         serde_json::from_str(call.strip_suffix(')').expect("closed")).expect("JSON data");
     assert_eq!(
         options,
-        json!({ "hide": true, "selectors": ["a\"); alert(1); (\""], "freeze": false })
+        json!({
+            "hide": true,
+            "selectors": ["a\"); alert(1); (\""],
+            "freeze": false,
+            "mask": false
+        })
     );
     assert!(undo_expression(7).ends_with("globalThis.__rbCaptureClean.undo(7)"));
 }
@@ -236,4 +242,84 @@ fn reduced_motion_joins_the_views_media() {
         reduced_motion_media(&json!({})),
         json!({ "media": "", "features": [{ "name": "prefers-reduced-motion", "value": "reduce" }] })
     );
+}
+
+/// RB-093-04: a bug report's capture blacks out the password fields; the mask alone is work for
+/// the page (no no-op), it settles like the rest and reaches the script as data.
+#[test]
+fn the_password_mask_alone_prepares_the_page() {
+    let off = CleanOverrides {
+        hide_banners: Some(false),
+        freeze_animations: Some(false),
+    };
+    let mut plan = CleanSettings::default().plan(&[], off);
+    assert!(!plan.mask, "no capture masks unless asked");
+    assert!(plan.is_noop());
+    plan.mask = true;
+    assert!(!plan.is_noop());
+    assert_eq!(
+        plan.settle(),
+        Duration::from_millis(u64::from(DEFAULT_SETTLE_MS))
+    );
+    let expression = plan.prepare_expression();
+    let (_, call) = expression
+        .rsplit_once("\nglobalThis.__rbCaptureClean.prepare(")
+        .expect("the call last");
+    let options: serde_json::Value =
+        serde_json::from_str(call.strip_suffix(')').expect("closed")).expect("JSON data");
+    assert_eq!(options["mask"], json!(true));
+}
+
+#[test]
+fn the_mask_rule_covers_password_fields_shown_or_hidden() {
+    let script = CLEAN_JS;
+    assert!(script.contains("MASK_RULE"));
+    for selector in [
+        "input[type=\"password\" i]",
+        "input[autocomplete~=\"current-password\" i]",
+        "input[autocomplete~=\"new-password\" i]",
+    ] {
+        assert!(script.contains(selector), "{selector} is masked");
+    }
+}
+
+/// Security review w27: a field a show-password toggle turned into `type=text` without an
+/// autocomplete hint is masked too - an input once seen as a password is marked for the rest of
+/// the document, and one whose name, id, autocomplete, label or placeholder says password,
+/// secret, token or PIN is masked at each capture.
+#[test]
+fn the_mask_also_covers_a_shown_password_and_secret_named_fields() {
+    let script = CLEAN_JS;
+    for selector in [
+        "input[data-rbrowser-was-password]",
+        "input[data-rbrowser-mask]",
+    ] {
+        assert!(script.contains(selector), "{selector} is masked");
+    }
+    // Marked on first sight: every password field at a capture, and from then on each one whose
+    // type the page changes away from password.
+    assert!(script.contains("attributeFilter: ['type']"));
+    assert!(script.contains("attributeOldValue: true"));
+    for attribute in [
+        "'name'",
+        "'id'",
+        "'autocomplete'",
+        "'aria-label'",
+        "'placeholder'",
+    ] {
+        assert!(script.contains(attribute), "{attribute} is read for a hint");
+    }
+    // The hint pattern: password, passwd, passcode, passphrase, pwd, secret, token, pin, otp.
+    for hint in [
+        "pass(word|wd|code|phrase)",
+        "pwd",
+        "secret",
+        "token",
+        "pin(code)",
+        "otp",
+    ] {
+        assert!(script.contains(hint), "{hint} is a hint");
+    }
+    // The capture's own mark goes with the undo; the memory of a password field stays.
+    assert!(script.contains("removeAttribute(MASK_ATTR)"));
 }

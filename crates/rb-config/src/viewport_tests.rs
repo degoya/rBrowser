@@ -172,3 +172,24 @@ fn an_explicit_size_still_serializes_and_an_absent_one_stays_absent() {
         (json!(393), json!(852))
     );
 }
+
+/// A full-page capture grows a view by the breakpoint's size, so a size is bounded (security
+/// review w23).
+#[test]
+fn a_breakpoint_wider_or_taller_than_ten_thousand_px_is_a_validation_error() {
+    let value = json!({
+        "version": 1,
+        "breakpoints": [{ "id": "huge", "width": 10_001, "height": 10_000 }]
+    });
+    let Err(ConfigError::Invalid(issues)) = validate(value) else {
+        panic!("expected issues");
+    };
+    let at: Vec<(&str, &str)> = issues
+        .iter()
+        .map(|issue| (issue.path.as_str(), issue.key.as_str()))
+        .collect();
+    assert_eq!(
+        at,
+        vec![("/breakpoints/0/width", "config.error.size_too_large")]
+    );
+}

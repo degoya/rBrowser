@@ -107,6 +107,18 @@ describe('the shell store', () => {
     expect(shell.state.value?.views).toBe(views);
   });
 
+  it('puts pushed plugin progress into the state it holds (RB-094-10)', async () => {
+    const { shell, mock } = setup();
+    await shell.start();
+    const views = shell.state.value?.views;
+    const sweep = { plugin: 'width-sweep', name: 'Width sweep', done: 3, total: 160 };
+    mock.emit({ type: 'pluginProgress', progress: [sweep] });
+    expect(shell.state.value?.pluginProgress).toEqual([sweep]);
+    expect(shell.state.value?.views).toBe(views);
+    mock.emit({ type: 'pluginProgress', progress: [] });
+    expect(shell.state.value?.pluginProgress).toBeUndefined();
+  });
+
   it("draws the page at Windows' text size and follows a change (RB-090-26)", async () => {
     const { shell, root, mock } = setup('system', false, 150);
     await shell.start();
@@ -136,5 +148,21 @@ describe('the shell store', () => {
     expect(shell.focusAddressBarRequest.value).toBe(before + 1);
     mock.emit({ type: 'uiCommand', id: 'app.command_palette' });
     expect(shell.focusAddressBarRequest.value).toBe(before + 1);
+  });
+
+  // RB-092-03: the core opens the address field of a decoupled view's label on the canvas board.
+  it('opens the address field the core names and closes it', async () => {
+    const { shell, mock } = setup();
+    await shell.start();
+    expect(shell.addressEdit.value).toBeNull();
+    mock.emit({ type: 'uiCommand', id: 'view.edit_address', args: { view: 2, url: 'http://localhost:5173/a' } });
+    expect(shell.addressEdit.value).toEqual({ view: 2, url: 'http://localhost:5173/a' });
+    mock.emit({ type: 'uiCommand', id: 'view.edit_address', args: { view: 'two' } });
+    expect(shell.addressEdit.value, 'arguments that name no view change nothing').toEqual({
+      view: 2,
+      url: 'http://localhost:5173/a',
+    });
+    shell.closeAddressEdit();
+    expect(shell.addressEdit.value).toBeNull();
   });
 });

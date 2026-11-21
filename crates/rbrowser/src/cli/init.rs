@@ -1,16 +1,22 @@
 //! `rbrowser init [--url URL] [--yes]`: writes `.rbrowser/config.json` and
 //! `.rbrowser/.gitignore` into the project folder (`--project`, else the working folder). The
 //! breakpoints are the analyser's proposal (`analyzer::init_config`, RB-010-13) or, without
-//! one, a mobile and a desktop view. Needs no running instance; an existing config is never
-//! written over.
+//! one, a mobile and a desktop view - and stderr says why the analyser had none (RB-091-08,
+//! [`NoProposal`]; the setup wizard names the same reason). Needs no running instance; an
+//! existing config is never written over.
 
 use std::io::{BufRead, IsTerminal as _, Write};
 use std::path::{Path, PathBuf};
 
-use rb_config::{ConfigFile, ProjectConfig};
+use rb_config::ConfigFile;
 use serde_json::{Map, Value, json};
 
 use super::exit;
+
+#[path = "init_reason.rs"]
+mod reason;
+
+pub use reason::{Analysed, Analysis, NoProposal, Reason};
 
 /// Why `init` wrote nothing.
 #[derive(Debug, thiserror::Error)]
@@ -67,6 +73,15 @@ pub enum Source {
     Default,
 }
 
+/// What `init` proposes: where the views come from, how many stylesheets the analyser read, and
+/// why it had no proposal when the views are the fallback.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Proposed {
+    pub source: Source,
+    pub sheets: usize,
+    pub fallback: Option<NoProposal>,
+}
+
 impl Source {
     /// The word in the list `init` shows.
     fn word(self) -> &'static str {
@@ -79,12 +94,12 @@ impl Source {
 
 /// Writes the config of the project at `root`: `analyser`'s proposal for `url`, or the
 /// [`minimal_config`] when it has none or fails; nothing unless `confirm` agrees to the text
-/// and its [`Source`].
+/// and what was [`Proposed`] - which names why the analyser had none.
 pub fn init(
     root: &Path,
     url: Option<&str>,
-    analyser: impl FnOnce(&Path, Option<&str>) -> Result<Option<ProjectConfig>, String>,
-    confirm: impl FnOnce(&Value, Source) -> bool,
+    analyser: impl FnOnce(&Path, Option<&str>) -> Analysis,
+    confirm: impl FnOnce(&Value, &Proposed) -> bool,
 ) -> Result<PathBuf, InitError> {
     let path = ConfigFile::Project.path(root);
     if path.exists() {
@@ -97,27 +112,45 @@ pub fn init(
     // The config is shared with the team: its `startUrl` is `http`/`https` only
     // (`rb_config::check`), a `file:` URL opens with `rbrowser open` instead.
     if let Some(url) = url.as_deref()
-        && !rb_config::bookmarks::is_web_url(url)
+        && !rb_util::url::is_web_url(url)
     {
         return Err(InitError::Url(format!(
             "{url}: a project's start URL must be an http or https URL; open a file with \
              `rbrowser open` instead"
         )));
     }
-    let proposal = analyser(root, url.as_deref()).unwrap_or_else(|error| {
-        tracing::warn!(%error, "the analyser had no proposal; writing the minimal config");
-        eprintln!("rbrowser init: the analyser had no proposal ({error}); writing a mobile and a desktop view");
-        None
+    let analysed = analyser(root, url.as_deref()).and_then(|analysed| {
+        serde_json::to_value(&analysed.config)
+            .map(|value| (value, analysed.sheets))
+            .map_err(|error| NoProposal::new(Reason::Invalid, error.to_string()))
     });
-    let (config, source) = match proposal.map(|config| serde_json::to_value(&config)) {
-        Some(Ok(value)) => (value, Source::Analyser),
-        Some(Err(error)) => {
-            tracing::warn!(%error, "the analyser's proposal cannot be written; writing the minimal config");
-            (minimal_config(url.as_deref()), Source::Default)
+    let (config, proposed) = match analysed {
+        Ok((value, sheets)) => (
+            value,
+            Proposed {
+                source: Source::Analyser,
+                sheets,
+                fallback: None,
+            },
+        ),
+        Err(why) => {
+            // The CLI prints it, the wizard shows it; the log keeps it for a later look.
+            tracing::info!(
+                reason = ?why.reason,
+                detail = why.detail.as_str(),
+                "the analyser had no proposal; the minimal config is proposed"
+            );
+            (
+                minimal_config(url.as_deref()),
+                Proposed {
+                    source: Source::Default,
+                    sheets: 0,
+                    fallback: Some(why),
+                },
+            )
         }
-        None => (minimal_config(url.as_deref()), Source::Default),
     };
-    if !confirm(&config, source) {
+    if !confirm(&config, &proposed) {
         return Err(InitError::NotConfirmed);
     }
     rb_config::write_config_file(root, ConfigFile::Project, &config)?;
@@ -200,7 +233,11 @@ pub fn run(root: &Path, url: Option<&str>, yes: bool) -> i32 {
         }
     };
     let _entered = runtime.enter();
-    let confirm = |config: &Value, source: Source| {
+    let confirm = |config: &Value, proposed: &Proposed| {
+        // The fallback stays, but never silent (RB-091-08).
+        if let Some(why) = &proposed.fallback {
+            eprintln!("{}", why.sentence());
+        }
         if yes {
             return true;
         }
@@ -212,7 +249,7 @@ pub fn run(root: &Path, url: Option<&str>, yes: bool) -> i32 {
         }
         ask(
             config,
-            source,
+            proposed.source,
             &mut std::io::stdin().lock(),
             &mut std::io::stdout(),
         )

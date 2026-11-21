@@ -2,7 +2,7 @@
 name = "network-panel-plugin"
 description = "rBrowser's first-party network panel: the requests of every view with their differences, mocks, blocking and rewrites applied by the host, HAR export and import (RB-070-02)"
 # The plugin's own version (manifest.toml, CHANGES.md), not the workspace's.
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.99"
 license = "GPL-3.0-or-later"

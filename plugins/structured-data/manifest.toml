@@ -1,0 +1,77 @@
+# The structured data panel (RB-090-96, docs/plugins.md): the schema.org data of the page a view
+# shows - JSON-LD, Microdata and RDFa - as a tree, held to the schema.org vocabulary of a pinned
+# release and to the needs of the common rich results. A check for `checks_run` and the findings
+# panel, and a feature for the MCP tool `structureddata_inspect`, the panel and its commands.
+manifest_version = 1
+id = "structured-data"
+name = "Structured data"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "structureddata"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Shows the schema.org data of the page (JSON-LD, Microdata, RDFa) as a tree and checks it against the schema.org vocabulary and the rich-result needs."
+# Checks > Structured data in the page's context menu: the check, as its shortcut runs it.
+context_menu = ["check"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the view a call looks at; evaluate: the collector src/collect.js in the plugin's isolated
+# world, which only reads (the page's URL and its rendered document); findings: the command
+# `check`. No network: the vocabulary and the rich-result table are compiled in.
+[capabilities]
+views = true
+evaluate = true
+findings = true
+
+# A rendered document of up to 3.5 MB parsed once, a tree of up to 500 nodes.
+[limits]
+memory_bytes = 268435456
+fuel = 20000000000
+timeout_milliseconds = 60000
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `structureddata_inspect`: the tree, the JSON-LD blocks and the findings of the page the
+# target view shows (the active view without one); `budget` holds the answer to that many bytes
+# of JSON (the panel asks for its message limit).
+[[tools]]
+name = "inspect"
+description = "plugin.structured-data.tools.inspect"
+input = { type = "object", properties = { budget = { type = "integer", minimum = 4096, maximum = 4194304 } } }
+
+# `plugin.structured-data.check`, Ctrl+Shift+Space K T (T for types): the page of the view
+# `target` names (the context menu's clicked view; the active view without one) checked, the
+# findings into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.structured-data.commands.check"
+shortcut = "Ctrl+Shift+Space K T"
+group = "checks"
+tool = "inspect"
+
+# `plugin.structured-data.panel`, Ctrl+Shift+Space P U: shows the structured data panel.
+[[commands]]
+id = "panel"
+title = "plugin.structured-data.commands.panel"
+shortcut = "Ctrl+Shift+Space P U"
+group = "panels"
+mcp_omitted = "ui-only: opens the structured data panel"
+
+# The structured data panel, on Nuxt UI: panel/dist built from web/src.
+[[panels]]
+id = "structured-data"
+title = "plugin.structured-data.panels.structured-data"
+entry = "panel/index.html"
+icon = "code"
+placement = "sidebar"

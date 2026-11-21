@@ -11,6 +11,7 @@ fn request(target_view: u32) -> ReplayRequest {
         top: true,
         frame: None,
         event: SyncEvent::Click(MouseData {
+            control: None,
             button: MouseButton::Left,
             detail: 1,
             modifiers: 0,

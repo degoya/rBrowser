@@ -29,6 +29,7 @@ pub fn sample_spec(engine: EngineKind, view: u32) -> ViewSpec {
         height: Some(844),
         device: None,
         engine,
+        ios_device: None,
         session: None,
         sync_navigation: true,
         shortcut: None,

@@ -125,7 +125,9 @@ pub fn write_flow(
     drop(file);
     tracing::info!(bytes = source.len(), "flow saved from the recorder");
     let trust_kept = match (before, target.store) {
-        (Some(before), Some(store)) => keep_trust(target, store, &before, &shown),
+        (Some(before), Some(store)) => keep_trust(target, store, &before, |after| {
+            only_this_changed(&before, after, &shown)
+        }),
         _ => false,
     };
     Ok(SavedFlow {
@@ -137,7 +139,7 @@ pub fn write_flow(
 /// [`FlowFileError::Linked`] when anything between `root` and `path` - `.rbrowser`, the flows
 /// folder, a subfolder or the file - is a link (a symlink or, on Windows, a junction); the root
 /// itself may be one.
-fn refuse_links(root: &Path, path: &Path) -> Result<(), FlowFileError> {
+pub(crate) fn refuse_links(root: &Path, path: &Path) -> Result<(), FlowFileError> {
     let below = path
         .strip_prefix(root)
         .map_err(|_| FlowFileError::Linked(path.display().to_string()))?;
@@ -152,22 +154,28 @@ fn refuse_links(root: &Path, path: &Path) -> Result<(), FlowFileError> {
 }
 
 /// The project's trust state when it is trusted now.
-fn trusted_state(target: &Target<'_>) -> Option<TrustState> {
+pub(crate) fn trusted_state(target: &Target<'_>) -> Option<TrustState> {
     let store = load_trust_store(target.store?).ok()?;
     trust_state(target.root, &store)
         .ok()
         .filter(|state| state.trusted)
 }
 
-/// Moves the decision of `before` to the hash after the write of `written`, when nothing else
-/// changed; `false` leaves the prompt to the existing check.
-fn keep_trust(target: &Target<'_>, store: &Path, before: &TrustState, written: &str) -> bool {
+/// Moves the decision of `before` to the hash after the person's change - a flow saved, or
+/// deleted (RB-090-91) - when `only_that` holds for the protected parts now (nothing else
+/// changed); `false` leaves the prompt to the existing check.
+pub(crate) fn keep_trust(
+    target: &Target<'_>,
+    store: &Path,
+    before: &TrustState,
+    only_that: impl FnOnce(&TrustState) -> bool,
+) -> bool {
     let Ok(after) = load_trust_store(store).and_then(|loaded| trust_state(target.root, &loaded))
     else {
         return false;
     };
-    if !only_this_changed(before, &after, written) {
-        tracing::info!("other protected parts changed beside the saved flow; trust asks again");
+    if !only_that(&after) {
+        tracing::info!("other protected parts changed beside the flow; trust asks again");
         return false;
     }
     let mut moved = false;
@@ -181,7 +189,7 @@ fn keep_trust(target: &Target<'_>, store: &Path, before: &TrustState, written: &
         }
     });
     if let Err(error) = updated {
-        tracing::warn!(%error, "the trust store could not be updated for the saved flow");
+        tracing::warn!(%error, "the trust store could not be updated for the flow");
         return false;
     }
     moved
@@ -202,6 +210,14 @@ pub fn only_this_changed(before: &TrustState, after: &TrustState, written: &str)
     let mut expected = entries(before);
     expected.insert((ProtectedKind::Flows, top_level_entry(written)));
     after.unpinned.is_empty() && entries(after) == expected
+}
+
+/// Whether the protected parts `after` are those of `before` without the entry of the file
+/// `removed` (relative to the root) - the same entries when its subfolder stays - with no link
+/// the hash cannot pin: the mirror of [`only_this_changed`] for a deleted flow (RB-090-91).
+#[must_use]
+pub fn only_this_removed(before: &TrustState, after: &TrustState, removed: &str) -> bool {
+    after.unpinned.is_empty() && only_this_changed(after, before, removed)
 }
 
 /// The entry of the flows folder that holds `written`: the file itself, or the subfolder of

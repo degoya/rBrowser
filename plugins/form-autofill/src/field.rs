@@ -134,6 +134,14 @@ pub struct Field {
     /// The form it belongs to, by its position in [`Collected::forms`]; none outside a form.
     #[serde(deserialize_with = "position")]
     pub form: Option<u32>,
+    /// It holds a value already - a text, a checked box or radio, an option chosen - so a later
+    /// pass of a fill leaves it alone (RB-094-22).
+    #[serde(deserialize_with = "flag")]
+    pub filled: bool,
+    /// The element's identity in this view, the same in every read of its document (the page
+    /// script keeps it in the isolated world); 0 for none. The passes tell fields apart by it.
+    #[serde(deserialize_with = "index")]
+    pub uid: u32,
 }
 
 /// One view's fields.
@@ -153,6 +161,10 @@ pub struct Collected {
     pub error: String,
     #[serde(deserialize_with = "flag")]
     pub truncated: bool,
+    /// Which controls the fill runs for (RB-090-86): `selector` (the selector's element) or
+    /// `page` (the page's but its navigation and, outside a form, its disclosure toggles).
+    #[serde(deserialize_with = "text")]
+    pub scope: String,
 }
 
 impl Collected {

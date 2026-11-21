@@ -84,8 +84,10 @@ function resume(): void {
   }
 }
 
+// Any run has a gallery: the app's window reads its run.json while it runs (RB-090-88); the
+// core says so when the system browser's index.html comes only at the end.
 function gallery(): void {
-  if (status.value?.gallery !== undefined && status.value?.gallery !== null) {
+  if (status.value !== null) {
     void shell.send(galleryMessage(status.value.runId));
     close();
   }
@@ -124,7 +126,7 @@ function gallery(): void {
       </UButton>
     </template>
     <UButton
-      v-if="status?.gallery !== undefined && status?.gallery !== null"
+      v-if="status !== null"
       size="sm"
       color="neutral"
       variant="outline"

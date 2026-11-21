@@ -3,12 +3,14 @@
 # and import, the session's cache switch and "clear site data". The host captures the requests
 # (`$console`, capability console-logs) and executes the rules (capability network-rules): it asks
 # the component for them (`@rules`) and applies them through CDP Fetch - no WASM per request.
+# The endpoint analysis (RB-096-06) groups the same capture by endpoint and checks it: a
+# `check-plugin` for `checks_run` and the findings panel besides the feature.
 manifest_version = 1
 id = "network-panel"
 name = "Network"
-version = "0.2.0"
+version = "0.3.0"
 api_version = "0.1.0"
-kinds = ["feature-plugin"]
+kinds = ["check-plugin", "feature-plugin"]
 # `network` is an area of the core's own tools (`network_requests`), so the plugin's tools take a
 # prefix of their own, as `console` (`sharedconsole`) and `sitemap-capture` (`sitemapcapture`) do.
 mcp_prefix = "networkpanel"
@@ -16,7 +18,7 @@ mcp_prefix = "networkpanel"
 # crates/rb-plugin-host/src/sign/roots.rs.
 key_id = "rbrowser-plugin-v1"
 public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
-description = "The requests of every view in one list with their differences, mocks, blocking and rewrites, HAR export and import; an HTTP debugger with breakpoints, compose and repeat, map local and remote, sessions."
+description = "The requests of every view in one list with their differences, mocks, blocking and rewrites, HAR export and import; an HTTP debugger with breakpoints, compose and repeat, map local and remote, sessions; the endpoints with their timings, sizes, caching and compression, and findings on duplicate, N+1, uncompressed, uncached and slow calls."
 
 [metadata]
 author = "Alexander Herling / DEGOYA.digital"
@@ -28,7 +30,8 @@ en = "locales/en.json"
 # views: the views' labels and engines; cdp (Network only): response bodies for the HAR and the
 # body preview (Network.getResponseBody); project-read: the mock files below `.rbrowser/` (no
 # globs) and HAR files to import; out-write: HAR exports, the plugin's own mocks and its state
-# below .rbrowser/out/network-panel/.
+# below .rbrowser/out/network-panel/; findings: the command `endpoints_check` (RB-096-06);
+# api-client: requests taken into the API client (RB-096-08).
 [capabilities]
 views = true
 cdp = { domains = ["Network"] }
@@ -38,6 +41,11 @@ out-write = true
 console-logs = true
 # The host applies the plugin's rules; the plugin never sees a request in flight.
 network-rules = true
+findings = true
+# RB-096-08: a captured request opened in the API client or saved as one. The plugin names the
+# request (view, id); the core reads its headers and post data, makes every secret a variable
+# and writes .rbrowser/api/ - this component never sees a header's value.
+api-client = true
 
 [limits]
 # A HAR export reads up to 200 response bodies per view.
@@ -169,6 +177,34 @@ name = "sessions_list"
 description = "plugin.network-panel.tools.sessions_list"
 input = { type = "object" }
 
+# The endpoint analysis (RB-096-06): the capture grouped by method and path with ids as
+# placeholders, per endpoint the calls, median and p95 of duration and waiting time, sizes,
+# statuses, caching and compression, per view; `currentPage` only what each view loaded since its
+# last new document. Read only, masked: nothing is sent.
+[[tools]]
+name = "endpoints"
+description = "plugin.network-panel.tools.endpoints"
+input = { type = "object", properties = { types = { type = "array", items = { type = "string", enum = ["Document", "XHR", "Fetch", "EventSource", "WebSocket", "Script", "Stylesheet", "Image", "Font", "Media", "Other"] }, maxItems = 11 }, search = { type = "string", maxLength = 200 }, sort = { type = "string", enum = ["p95", "calls", "size", "ttfb"] }, currentPage = { type = "boolean" }, limit = { type = "integer", minimum = 1, maximum = 500 } } }
+
+[[tools]]
+name = "endpoints_check"
+description = "plugin.network-panel.tools.endpoints_check"
+input = { type = "object" }
+
+# Into the API client (RB-096-08): one captured request opened as the API client's unsaved draft
+# (from the panel; over MCP only answered as the API client would take it), or captured requests
+# saved below .rbrowser/api/<host>/, one per method and path. Secrets become variables; over MCP
+# no value is ever kept.
+[[tools]]
+name = "api_open"
+description = "plugin.network-panel.tools.api_open"
+input = { type = "object", required = ["view", "id"], properties = { view = { type = "integer", minimum = 0 }, id = { type = "string", minLength = 1, maxLength = 200 } } }
+
+[[tools]]
+name = "api_save"
+description = "plugin.network-panel.tools.api_save"
+input = { type = "object", required = ["requests"], properties = { requests = { type = "array", minItems = 1, maxItems = 200, items = { type = "object", required = ["view", "id"], properties = { view = { type = "integer", minimum = 0 }, id = { type = "string", minLength = 1, maxLength = 200 } } } } } }
+
 [[commands]]
 id = "panel"
 title = "plugin.network-panel.commands.panel"
@@ -197,6 +233,41 @@ title = "plugin.network-panel.commands.breakpoints_toggle"
 shortcut = "Ctrl+Shift+Space P R"
 group = "panels"
 tool = "breakpoints_toggle"
+
+# `Ctrl+Shift+Space P 7`: the network panel on its tab Endpoints (RB-096-06; the letters of P
+# are taken).
+[[commands]]
+id = "endpoints"
+title = "plugin.network-panel.commands.endpoints"
+shortcut = "Ctrl+Shift+Space P 7"
+group = "panels"
+mcp_omitted = "ui-only: shows the network panel's Endpoints tab; MCP reads them with networkpanel_endpoints"
+
+# `Ctrl+Shift+Space K 7`: the endpoint rules over every view's current page into the findings
+# panel (RB-096-06).
+[[commands]]
+id = "endpoints_check"
+title = "plugin.network-panel.commands.endpoints_check"
+shortcut = "Ctrl+Shift+Space K 7"
+group = "checks"
+tool = "endpoints_check"
+
+# `Ctrl+Shift+Space D G` ("get" into the API client) and `D K` ("keep" as requests): the panel
+# opens its selected request in the API client, or saves every request its filters show
+# (RB-096-08).
+[[commands]]
+id = "api_open"
+title = "plugin.network-panel.commands.api_open"
+shortcut = "Ctrl+Shift+Space D G"
+group = "devtools"
+mcp_omitted = "ui-only: opens the network panel's selected request in the API client; MCP uses networkpanel_api_open"
+
+[[commands]]
+id = "api_save"
+title = "plugin.network-panel.commands.api_save"
+shortcut = "Ctrl+Shift+Space D K"
+group = "devtools"
+mcp_omitted = "ui-only: saves the requests the network panel's filters show; MCP uses networkpanel_api_save"
 
 [[commands]]
 id = "cache_toggle"

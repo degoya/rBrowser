@@ -317,3 +317,28 @@ async fn a_plugin_not_granted_network_rules_takes_no_rules_request() {
     let refused = plugin.network_rules("{}").await.expect_err("not granted");
     assert_eq!(refused.code(), Some(codes::UNKNOWN_CONTRIBUTION));
 }
+
+/// RB-090-32: every call is counted - its wait for a slot (`plugin.wait`) and its run
+/// (`plugin.call`).
+#[tokio::test]
+async fn a_call_is_counted_with_its_wait_and_its_run() {
+    use rb_util::perf::{global, names};
+    let count = |name: &str| {
+        global()
+            .snapshot()
+            .iter()
+            .find(|series| series.name == name)
+            .map_or(0, |series| series.count)
+    };
+    let builder = with_command(ManifestBuilder::default());
+    let plugin = LoadedPlugin::load(
+        &verified(&builder, &Bed::feature()),
+        PluginOptions::default(),
+    )
+    .expect("loads");
+    plugin.activate().await.expect("activates");
+    let (waits, calls) = (count(names::PLUGIN_WAIT), count(names::PLUGIN_CALL));
+    plugin.call_tool("run", "{}").await.expect("calls");
+    assert!(count(names::PLUGIN_WAIT) > waits);
+    assert!(count(names::PLUGIN_CALL) > calls);
+}

@@ -40,14 +40,17 @@ fn text(label: &Label) -> String {
     }
 }
 
+/// The submenu labelled `key` at any depth: Force state hangs under Tools (RB-090-92).
+fn find_menu<'a>(items: &'a [Item], key: &str) -> Option<&'a [Item]> {
+    items.iter().find_map(|item| match item {
+        Item::Menu { label, items, .. } if text(label) == key => Some(items.as_slice()),
+        Item::Menu { items, .. } => find_menu(items, key),
+        _ => None,
+    })
+}
+
 fn submenu<'a>(items: &'a [Item], key: &str) -> &'a [Item] {
-    items
-        .iter()
-        .find_map(|item| match item {
-            Item::Menu { label, items, .. } if text(label) == key => Some(items.as_slice()),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("no submenu {key}"))
+    find_menu(items, key).unwrap_or_else(|| panic!("no submenu {key}"))
 }
 
 fn entries(items: &[Item]) -> Vec<&Entry> {
@@ -173,9 +176,19 @@ fn the_submenu_waits_for_its_command() {
     let mut state = with_force_state(ForcedMarks::default());
     state.known.remove(SET);
     let items = build(&state);
+    assert!(find_menu(&items, KEY_MENU).is_none());
+}
+
+/// Force state is the first entry of Tools, as the main menu's Tools hold the tools (RB-090-92).
+#[test]
+fn force_state_hangs_under_tools() {
+    let items = build(&with_force_state(ForcedMarks::default()));
+    let tools = submenu(&items, crate::context_menu::model::KEY_TOOLS);
+    assert_eq!(lines(tools), [format!("{KEY_MENU}>")]);
     assert!(
         items
             .iter()
-            .all(|item| !matches!(item, Item::Menu { label, .. } if text(label) == KEY_MENU))
+            .all(|item| !matches!(item, Item::Menu { label, .. } if text(label) == KEY_MENU)),
+        "not on the top level"
     );
 }

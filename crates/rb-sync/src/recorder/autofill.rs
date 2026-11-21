@@ -127,11 +127,15 @@ impl Builder {
             .iter()
             .rposition(|entry| !entry.trail.autofill)
             .map_or(0, |at| at + 1);
-        if let Some(entry) = self.entries[tail..]
-            .iter_mut()
-            .find(|entry| entry.step.action == action && !entry.trail.views.contains(&view))
+        if let Some(at) = self.entries[tail..]
+            .iter()
+            .position(|entry| entry.step.action == action && !entry.trail.views.contains(&view))
+            .map(|at| tail + at)
         {
-            entry.trail.views.insert(view);
+            self.touch(at);
+            if let Some(entry) = self.entries.get_mut(at) {
+                entry.trail.views.insert(view);
+            }
             return true;
         }
         echoes.before(self, &action, at_ms);
@@ -171,6 +175,7 @@ impl Echoes {
                 break;
             }
             if same_toggle(&entry.step.action, action) {
+                steps.touch(at);
                 steps.entries.remove(at);
                 return;
             }

@@ -1,7 +1,8 @@
 //! Playwright locators from the recorder's selector candidates: `data-testid` as
-//! `getByTestId`, role and name as `getByRole(role, { name, exact: true })`, text as
-//! `getByText(text, { exact: true })`, the CSS path as `locator(css)`; `.nth(n)` for a later
-//! test id match. Frames (`frameLocator`) and open shadow hosts (Playwright's locators pierce
+//! `getByTestId`, role and name as `getByRole(role, { name, exact: true })`, text as the
+//! elements of its recorded tag whose whole text it is (`locator(tag).filter({ hasText:
+//! /^\s*text\s*$/ })`, RB-090-93), the CSS path as `locator(css)`; `.nth(n)` for a later test id
+//! match. Frames (`frameLocator`) and open shadow hosts (Playwright's locators pierce
 //! open shadow roots) come first.
 //!
 //! A role or text locator of the element counts the matches a view shows (RB-090-81,
@@ -18,7 +19,7 @@
 //! The candidate is the first of the preferred kind, else the first one - the recorder ranks
 //! them. A role Playwright's `getByRole` does not accept is skipped, so the code type-checks.
 
-use crate::js::string;
+use crate::js::{string, whole_text};
 use crate::model::{Locator, LocatorPreference, Selector};
 
 /// The roles `page.getByRole` accepts (Playwright's `AriaRole`).
@@ -208,11 +209,29 @@ fn method(selector: &Selector) -> (String, u32) {
             ),
             *nth,
         ),
-        Selector::Text { text, nth, .. } => (
-            format!("getByText({}, {{ exact: true }})", string(text)),
-            *nth,
-        ),
+        Selector::Text { tag, text, nth, .. } => (text_call(tag, text), *nth),
         Selector::Css { path } => (format!("locator({})", string(path)), 0),
+    }
+}
+
+/// The elements of the recorded `tag` whose whole text is `text` (RB-090-93) - the agent's own
+/// matches (`matchAll` in `agent/src/selector.ts`), so `nth` and `visibleNth` count the same
+/// elements. `getByText` finds the innermost element with the text - a visually hidden span in
+/// a burger label, which the label covers - and climbing from it to the tag would also take a
+/// `p` that only contains a matching `span`, or the inner one of two nested `div`s. A tag that is
+/// no plain lower-case name stays out of the code: the text alone, `getByText` as before.
+fn text_call(tag: &str, text: &str) -> String {
+    let mut chars = tag.chars();
+    let plain = chars.next().is_some_and(|first| first.is_ascii_lowercase())
+        && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+    if plain {
+        format!(
+            "locator({}).filter({{ hasText: {} }})",
+            string(tag),
+            whole_text(text)
+        )
+    } else {
+        format!("getByText({}, {{ exact: true }})", string(text))
     }
 }
 

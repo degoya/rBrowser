@@ -3,8 +3,9 @@
 //! one a click picks (neither), or a CSS selector's first match in each view (`selector`) - in
 //! the views of `target` (the active view without one), the same element in each found by the
 //! sync agent's selectors; `view.force_state.reset` takes every state of `target` (all views
-//! without one) back. The status bar says while states are forced, and names the views without
-//! the element.
+//! without one) back. The activity bar shows what stays forced, with Reset (RB-094-16); the
+//! status bar names the views without the element, the failures, and once that the last state
+//! went.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -25,9 +26,7 @@ use crate::devtools::inspect::{Point, node_at};
 /// The longest selector taken, in characters.
 pub const MAX_SELECTOR_CHARS: usize = 512;
 
-/// The status bar while states are forced; `{views}` names them.
-pub const FORCED_KEY: &str = "devtools.force_state.notice.forced";
-/// The status bar after the last forced state went.
+/// The status bar once the last forced state went.
 pub const CLEARED_KEY: &str = "devtools.force_state.notice.cleared";
 /// Views without the element; `{views}`.
 pub const MISSING_KEY: &str = "devtools.force_state.notice.missing";
@@ -252,10 +251,10 @@ fn reset_views(core: &Core, views: &[ViewId]) -> Result<Value, CommandError> {
         apply::reset(&cdp, super::registry(), &views).await
     })
     .map_err(|error| CommandError::Failed(error.to_string()))?;
-    let forced = lock(super::registry()).forced_views();
     if !reset.is_empty() {
-        core.notify(status(core, &forced));
+        announce(core);
     }
+    let forced = lock(super::registry()).forced_views();
     Ok(json!({ "reset": reset, "forced": forced }))
 }
 
@@ -318,21 +317,22 @@ fn report(core: &Core, outcomes: &[(ViewId, Outcome)]) {
             ],
         ));
     }
-    let forced = lock(super::registry()).forced_views();
-    core.notify(status(core, &forced));
+    announce(core);
 }
 
-/// What the status bar says about `forced`, the views with forced states.
-pub(super) fn status(core: &Core, forced: &[ViewId]) -> CoreToShell {
-    if forced.is_empty() {
-        notice(NotificationLevel::Info, CLEARED_KEY, &[])
-    } else {
-        notice(
-            NotificationLevel::Warning,
-            FORCED_KEY,
-            &[("views", names_of(core, forced))],
-        )
+/// Hands the activity bar what stays forced (RB-094-16); when the entry it had is gone, the
+/// status bar says so once.
+pub(super) fn announce(core: &Core) {
+    let (had, forced) = super::publish(core.host());
+    if let (true, Some(notification)) = (had, status_of(forced)) {
+        core.notify(CoreToShell::Notification(notification));
     }
+}
+
+/// What the status bar says about what is `forced`: nothing while the activity bar shows it
+/// (RB-094-16), the cleared notice once nothing is.
+pub(super) fn status_of(forced: bool) -> Option<Notification> {
+    (!forced).then(|| notification(NotificationLevel::Info, CLEARED_KEY, &[]))
 }
 
 /// The views' labels, comma-separated (the id for a view that is gone).
@@ -349,7 +349,11 @@ pub(super) fn names_of(core: &Core, views: &[ViewId]) -> String {
 }
 
 pub(super) fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> CoreToShell {
-    CoreToShell::Notification(Notification {
+    CoreToShell::Notification(notification(level, key, args))
+}
+
+fn notification(level: NotificationLevel, key: &str, args: &[(&str, String)]) -> Notification {
+    Notification {
         level,
         message_key: key.to_owned(),
         args: args
@@ -357,7 +361,7 @@ pub(super) fn notice(level: NotificationLevel, key: &str, args: &[(&str, String)
             .map(|(name, value)| ((*name).to_owned(), value.clone()))
             .collect(),
         settings_key: None,
-    })
+    }
 }
 
 fn failed(error: EngineError) -> CommandError {

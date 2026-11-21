@@ -56,6 +56,7 @@ fn sink(core: Arc<Core>) -> Arc<PanelSink> {
         Some(4000),
         Default::default(),
         Arc::new(Cancel::default()),
+        None,
     )
 }
 
@@ -213,4 +214,132 @@ async fn a_send_after_the_end_never_undoes_the_finished_progress() {
         true,
         "nothing after the end"
     );
+}
+
+/// A plugin's own run after a full one (RB-094-14): its rows follow, the panel hears of them.
+#[tokio::test]
+async fn a_plugins_own_run_updates_its_rows_of_the_finished_progress() {
+    let (ui, core) = setup();
+    let panel = sink(Arc::clone(&core));
+    panel.finish(&RunOutcome {
+        file: empty_file(),
+        jobs: vec![
+            job("seo", 1, JobState::Done { findings: 3 }),
+            job("a11y", 1, JobState::Done { findings: 1 }),
+        ],
+        cancelled: false,
+    });
+    let mut file = empty_file();
+    file.views = vec![rb_plugin_types::CheckedView {
+        id: 1,
+        breakpoint: Some("mobile".to_owned()),
+    }];
+    follow_reported(&core, &file, "seo", true);
+    let shown = last_progress().expect("kept");
+    assert_eq!(shown.run_id, "run-0000000000001", "still the full run");
+    assert_eq!(shown.jobs.len(), 2);
+    assert_eq!(shown.jobs[0].plugin, "seo");
+    assert_eq!(shown.jobs[0].findings, Some(0), "the new count");
+    assert_eq!(shown.jobs[1].findings, Some(1), "the other plugin's kept");
+    let sent = events(&ui, "checksProgress");
+    assert_eq!(sent.last().expect("sent")["jobs"][0]["findings"], 0);
+
+    follow_reported(&core, &file, "seo", false);
+    let replaced = last_progress().expect("kept");
+    assert_eq!(replaced.jobs.len(), 1, "a replaced run's rows alone");
+    assert!(replaced.finished);
+}
+
+#[tokio::test]
+async fn a_plugins_own_run_leaves_the_progress_of_a_run_going_alone() {
+    let (ui, core) = setup();
+    let shared = Shared(sink(Arc::clone(&core)));
+    shared.update(&[job("seo", 1, JobState::Running)], None);
+    let before = events(&ui, "checksProgress").len();
+    follow_reported(&core, &empty_file(), "seo", true);
+    assert_eq!(events(&ui, "checksProgress").len(), before);
+    assert_eq!(
+        last_progress().map(|progress| progress.finished),
+        Some(false)
+    );
+}
+
+/// A run of chosen checks (RB-094-17): the panel keeps the other checks' findings while it goes
+/// and their rows at its end.
+#[tokio::test]
+async fn a_run_of_chosen_checks_keeps_the_other_checks_findings_and_rows() {
+    let (ui, core) = setup();
+    let mut last = empty_file();
+    last.plugins = vec!["seo".to_owned(), "a11y".to_owned()];
+    last.findings = vec![
+        serde_json::from_value(json!({
+            "id": "alt", "ruleId": "a11y.alt", "plugins": ["a11y"], "severity": "error",
+            "message": { "key": "plugin.a11y.findings.alt" }, "views": [], "breakpoints": []
+        }))
+        .expect("a finding"),
+    ];
+    let request = rb_plugin_host::RunRequest {
+        run_id: "run-0000000000002".to_owned(),
+        started_at: 2,
+        target: rb_plugin_types::CheckTarget::All,
+        views: Vec::new(),
+        url: None,
+        plugins: Some(vec!["seo".to_owned()]),
+        args: "{}".to_owned(),
+    };
+    let before = ChecksProgress {
+        run_id: "run-0000000000001".to_owned(),
+        elapsed_ms: 100,
+        estimate_ms: None,
+        jobs: ipc_jobs(
+            &[
+                job("seo", 1, JobState::Done { findings: 3 }),
+                job("a11y", 1, JobState::Done { findings: 1 }),
+            ],
+            &BTreeMap::new(),
+        ),
+        finished: true,
+        cancelled: false,
+    };
+    let base = super::super::selection::Base::of(
+        Some((last, BTreeMap::new())),
+        Some(&before),
+        &request,
+        &["seo".to_owned()],
+    )
+    .expect("the same views");
+    let panel = PanelSink::start(
+        Arc::clone(&core),
+        request.run_id.clone(),
+        BTreeMap::new(),
+        None,
+        Default::default(),
+        Arc::new(Cancel::default()),
+        Some(Arc::new(base)),
+    );
+    Shared(Arc::clone(&panel)).update(
+        &[job("seo", 1, JobState::Done { findings: 0 })],
+        Some(&empty_file()),
+    );
+    let findings = events(&ui, "findings");
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0]["partial"], true);
+    assert_eq!(
+        findings[0]["run"]["findings"][0]["id"], "alt",
+        "a11y's stay"
+    );
+    panel.finish(&RunOutcome {
+        file: empty_file(),
+        jobs: vec![job("seo", 1, JobState::Done { findings: 0 })],
+        cancelled: false,
+    });
+    let shown = last_progress().expect("kept");
+    let rows: Vec<(&str, Option<u32>)> = shown
+        .jobs
+        .iter()
+        .map(|job| (job.plugin.as_str(), job.findings))
+        .collect();
+    assert_eq!(rows, vec![("seo", Some(0)), ("a11y", Some(1))]);
+    assert_eq!(shown.run_id, "run-0000000000002", "the new run's progress");
+    assert!(shown.finished);
 }

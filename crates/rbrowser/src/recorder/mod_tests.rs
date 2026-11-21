@@ -170,6 +170,36 @@ async fn a_bad_name_or_folder_is_refused_before_recording() {
     assert!(setup.core.host().shell_state().recorder.is_none());
 }
 
+/// RB-090-91: `recorder.delete` checks the id, keeps the recording being recorded and deletes
+/// a stored one off the calling thread.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stored_recording_is_deleted_but_never_the_one_being_recorded() {
+    let (setup, _root, _replay) = project().await;
+    let store = glue::store_of(setup.core.host()).expect("a store");
+    let old = rb_sync::recorder::from_json(
+        r#"{ "version": 1, "name": "old", "breakpoints": [], "startedAtMs": 1, "appVersion": "0.9.0", "steps": [] }"#,
+    )
+    .expect("a recording");
+    store.save(&old).expect("saved");
+    for bad in [
+        json!({ "recordingId": "../old" }),
+        json!({ "recordingId": "a/b" }),
+        json!({ "recordingId": 3 }),
+    ] {
+        let error = run(&setup, DELETE, bad.clone()).expect_err("refused");
+        assert!(
+            matches!(error, CommandError::InvalidArgs(_)),
+            "{bad}: {error}"
+        );
+    }
+    run(&setup, START, json!({ "name": "login" })).expect("starts");
+    let error = run(&setup, DELETE, json!({ "recordingId": "login" })).expect_err("being recorded");
+    assert!(error.to_string().contains("being recorded"), "{error}");
+    run(&setup, DELETE, json!({ "recordingId": "old" })).expect("asked");
+    let file = store.path_of("old").expect("a path");
+    until(|| !file.exists()).await;
+}
+
 /// RB-050-01 review: `target` switches the active view only once the checks passed.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_refused_start_leaves_the_active_view_alone() {
@@ -224,4 +254,27 @@ async fn a_failed_save_keeps_the_recording() {
     assert_eq!(stopped["path"], ".rbrowser/out/recordings/kept.json");
     let text = std::fs::read_to_string(folder.join("kept.json")).expect("written");
     assert!(text.contains("#kept"), "{text}");
+}
+
+/// RB-090-87: only the recorded view's agent gets the recording's wishes, and only while the
+/// recording takes steps.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_recorded_views_agent_has_the_wishes_while_steps_are_taken() {
+    let (setup, _root, _replay) = project().await;
+    let host = setup.core.host();
+    let sync = crate::sync_hub::for_host(host).expect("sync runs");
+    let config = host.config().sync;
+    let wishes = |view: u32| sync.agent_config(&config, ViewId(view)).record;
+    assert_eq!(agent_record::agent_record(host), None);
+    run(&setup, START, json!({ "name": "menus" })).expect("starts");
+    let expected = agent_record::wishes(&host.config().automation.recorder);
+    assert_eq!(agent_record::agent_record(host), Some(expected));
+    assert_eq!(wishes(1), Some(expected));
+    assert_eq!(wishes(2), None, "a view that does not capture");
+    run(&setup, PAUSE, Value::Null).expect("pauses");
+    assert_eq!(wishes(1), None);
+    run(&setup, PAUSE, Value::Null).expect("resumes");
+    assert_eq!(wishes(1), Some(expected));
+    run(&setup, STOP, Value::Null).expect("stops");
+    assert_eq!(wishes(1), None);
 }

@@ -8,18 +8,25 @@
 //! Tree: [`ProcessJob`] ties a child's whole process tree to its owner on Windows (RB-080-67).
 //!
 //! Files: [`create_private_dir`] makes a folder only the current user can open, for what a
-//! process of another account must not read or plant (RB-090-21).
+//! process of another account must not read or plant (RB-090-21), and [`current_user_sid`] reads
+//! the token's user SID such a folder and the instance pipe grant (RB-090-29).
+//!
+//! Output: [`output_capped`] reads a child's output with a cap ([`MAX_OUTPUT`], RB-095-05).
 //!
 //! Priority: [`low_priority_command`] starts a background program (a video encoder, RB-090-52)
 //! below the app's priority, so it never takes the CPU from the browser views.
 
 pub mod background;
+pub mod capped;
 pub mod job;
 pub mod private_dir;
+pub mod user_sid;
 
 pub use background::{BELOW_NORMAL_PRIORITY_CLASS, NICE_INCREMENT};
+pub use capped::{MAX_OUTPUT, output_capped};
 pub use job::{ProcessJob, adopted_pids, spawn_in_job, untied_spawns};
 pub use private_dir::create_private_dir;
+pub use user_sid::current_user_sid;
 
 /// `CREATE_NO_WINDOW`: a console program started with it gets a console of its own that is
 /// never shown, and the console programs it starts in turn share that hidden console.

@@ -14,7 +14,8 @@
 //!    error names the expected and the received hash.
 //! 2. **Unpack** the manifest's members, flattened to their file names (no member path can
 //!    leave the staging folder), at most [`MAX_UNPACKED`] bytes together; the executable must
-//!    be among them.
+//!    be among them. A bare program ([`Archive::Exe`], RB-096-05) is moved to its executable's
+//!    name instead.
 //! 3. **Activate**: the unpacked folder is renamed to `<root>/<tool>/<version>/` - a folder of
 //!    that name left over is renamed aside first, never deleted before - and the pointer replaced
 //!    atomically (written beside, then renamed). The pointer before stays until then, so a
@@ -28,17 +29,18 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use rb_util::hex;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use super::ToolError;
 use super::fetch::Fetcher;
-use super::manifest::{ToolEntry, valid_name};
+use super::manifest::{Archive, ToolEntry, valid_name};
+use crate::versioned_dir::{activate, prune, read_pointer};
 
 /// The staging folder below the root.
 pub const STAGING: &str = ".staging";
 /// The pointer file in a tool's folder.
-pub const POINTER: &str = "current.json";
+pub use crate::versioned_dir::POINTER;
 /// The most bytes one archive may unpack to (a decompression bomb stops here).
 pub const MAX_UNPACKED: u64 = 1024 * 1024 * 1024;
 /// The downloaded archive in the staging folder.
@@ -58,12 +60,6 @@ pub struct Installed {
     pub dir: PathBuf,
     /// The program.
     pub executable: PathBuf,
-}
-
-/// The pointer file.
-#[derive(Debug, Deserialize, Serialize)]
-struct Pointer {
-    version: String,
 }
 
 /// The folder of the managed tools.
@@ -109,17 +105,16 @@ impl ToolStore {
     /// holds the executable; any version, not only the manifest's.
     pub fn installed(&self, entry: &ToolEntry) -> Option<Installed> {
         let tool = self.tool_dir(&entry.name);
-        let text = fs::read_to_string(tool.join(POINTER)).ok()?;
-        let pointer: Pointer = serde_json::from_str(&text).ok()?;
-        if !valid_name(&pointer.version) {
+        let version = read_pointer(&tool)?;
+        if !valid_name(&version) {
             tracing::warn!("the pointer of {} names no plain version", entry.name);
             return None;
         }
-        let dir = tool.join(&pointer.version);
+        let dir = tool.join(&version);
         let executable = dir.join(&entry.executable);
         executable.is_file().then(|| Installed {
             name: entry.name.clone(),
-            version: pointer.version,
+            version,
             dir,
             executable,
         })
@@ -182,36 +177,21 @@ impl ToolStore {
         fs::create_dir_all(&unpacked).map_err(io)?;
         let archive = staging.join(ARCHIVE_FILE);
         download_verified(fetcher, entry, &archive)?;
-        unpack(entry, &archive, &unpacked)?;
-        fs::remove_file(&archive).map_err(io)?;
+        match entry.archive {
+            Archive::Zip => {
+                unpack(entry, &archive, &unpacked)?;
+                fs::remove_file(&archive).map_err(io)?;
+            }
+            // The checked download is the program: validated names keep it in the folder.
+            Archive::Exe => fs::rename(&archive, unpacked.join(&entry.executable)).map_err(io)?,
+        }
 
         let tool = self.tool_dir(&entry.name);
         fs::create_dir_all(&tool).map_err(io)?;
-        let target = tool.join(&entry.version);
         // A folder of this version that is not active (the pointer names another or none) goes
-        // aside by rename, so nothing is deleted before the new folder is in place.
-        let aside = tool.join(format!(".retired-{}-{}", entry.version, std::process::id()));
-        let retired = if target.exists() {
-            fs::rename(&target, &aside).map_err(io)?;
-            true
-        } else {
-            false
-        };
-        let restore = || {
-            if retired {
-                let _ = fs::rename(&aside, &target);
-            }
-        };
-        if let Err(error) = fs::rename(&unpacked, &target) {
-            restore();
-            return Err(io(error));
-        }
-        if let Err(error) = write_pointer(&tool, &entry.version) {
-            // The pointer before still names the version before: undo the new folder.
-            let _ = fs::remove_dir_all(&target);
-            restore();
-            return Err(error);
-        }
+        // aside first and comes back on a failure (`versioned_dir`).
+        let tag = std::process::id().to_string();
+        let target = activate(&tool, &entry.version, &unpacked, &tag).map_err(io)?;
         prune(&tool, &entry.version);
         let executable = target.join(&entry.executable);
         Ok(Installed {
@@ -345,21 +325,6 @@ fn unpack(entry: &ToolEntry, archive: &Path, dir: &Path) -> Result<(), ToolError
     Ok(())
 }
 
-/// Points `tool` at `version`: written beside, then renamed over the pointer.
-fn write_pointer(tool: &Path, version: &str) -> Result<(), ToolError> {
-    let text = serde_json::to_string(&Pointer {
-        version: version.to_owned(),
-    })
-    .map_err(|error| ToolError::Io(error.to_string()))?;
-    let temporary = tool.join(format!("{POINTER}.new"));
-    fs::write(&temporary, text).map_err(io)?;
-    if let Err(error) = fs::rename(&temporary, tool.join(POINTER)) {
-        let _ = fs::remove_file(&temporary);
-        return Err(io(error));
-    }
-    Ok(())
-}
-
 /// Removes what a crashed install of `name` left in `staging`: its folder of an older layout
 /// (`<name>`) and of any process (`<name>-<pid>`). Called under the tool's lock, so none of them
 /// belongs to an install that still runs.
@@ -380,22 +345,6 @@ fn clean_staging(staging: &Path, name: &str) {
             && let Err(error) = fs::remove_dir_all(entry.path())
         {
             tracing::warn!(%error, "a stale staging folder stays: {}", entry.path().display());
-        }
-    }
-}
-
-/// Removes every folder in `tool` but `keep`; what cannot go (a running program) stays.
-fn prune(tool: &Path, keep: &str) {
-    let Ok(entries) = fs::read_dir(tool) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir()
-            && entry.file_name() != keep
-            && let Err(error) = fs::remove_dir_all(&path)
-        {
-            tracing::warn!(%error, "an old tool version stays: {}", path.display());
         }
     }
 }

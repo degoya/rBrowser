@@ -9,6 +9,7 @@ import {
   keyNeedsConfirmation,
   parseCatalog,
   parseReview,
+  restartAsked,
   rowsOf,
 } from './catalog';
 import { SAMPLE_CATALOG, SAMPLE_REVIEW } from './catalogSample';
@@ -90,5 +91,15 @@ describe('the plugin catalogue', () => {
     expect(failureKey('plugins.error.signature_invalid')).toBe('plugins.error.signature_invalid');
     expect(failureKey('plugins.bundle.error.offline')).toBe('plugins.bundle.error.offline');
     expect(failureKey('the window is closed')).toBeNull();
+  });
+
+  it('says "at the next start" only when the core could not load the change live (RB-092-06)', () => {
+    expect(restartAsked({ value: { id: 'seo', version: '1.0.0', restart: false } })).toBe(false);
+    expect(restartAsked({ value: { id: 'seo', restart: true } })).toBe(true);
+    expect(restartAsked({ value: { results: [], restart: true } })).toBe(true);
+    // An answer without the flag is no reason to ask for a restart.
+    expect(restartAsked({ value: { id: 'seo' } })).toBe(false);
+    expect(restartAsked(null)).toBe(false);
+    expect(restartAsked({ value: 'restart' })).toBe(false);
   });
 });

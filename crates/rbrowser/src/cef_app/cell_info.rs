@@ -6,7 +6,9 @@
 //! pieces after a change ([`set`]); a strip redraws only the pieces that changed, and a strip
 //! built anew (the grid rebuilt) takes the last ones at once. A click on the engine's piece
 //! restarts a stopped engine or brings its window to the front; a click on the address makes
-//! the view active, as a click on its strip. UI thread only.
+//! the view active, as a click on its strip - or, for a view with its own navigation, opens the
+//! address field that takes the address's place in the strip (RB-092-03, `address_field.rs`).
+//! UI thread only.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -88,15 +90,16 @@ pub fn with_info(strip: View, view: ViewId, height: u32) -> View {
         let mut delegate = PieceDelegate::new(view, kind, height);
         label_button_create(Some(&mut delegate), Some(&CefString::from("")))
     };
-    let (Some(panel), Some(address), Some(engine)) = (
+    let (Some(panel), Some(address), Some(engine), Some(field)) = (
         panel_create(None),
         button(Kind::Address),
         button(Kind::Engine),
+        super::address_field::create(view, height),
     ) else {
         return strip;
     };
     let buttons = Buttons { address, engine };
-    LAST.with(|last| show_all(&buttons, last.borrow().get(&view)));
+    LAST.with(|last| show_all(view, &buttons, last.borrow().get(&view)));
     let layout = panel.set_to_box_layout(Some(&BoxLayoutSettings {
         horizontal: 1,
         cross_axis_alignment: AxisAlignment::STRETCH,
@@ -106,6 +109,7 @@ pub fn with_info(strip: View, view: ViewId, height: u32) -> View {
     panel.add_child_view(Some(&mut strip));
     let mut children = [
         (View::from(&buttons.address), 1),
+        (View::from(&field), 1),
         (View::from(&buttons.engine), 0),
     ];
     for (child, _) in &mut children {
@@ -123,12 +127,13 @@ pub fn with_info(strip: View, view: ViewId, height: u32) -> View {
     View::from(&panel)
 }
 
-/// Every piece of `info` on its button; all hidden without one. The engine's state in the
-/// engine badge hides its own button.
-fn show_all(buttons: &Buttons, info: Option<&CellInfo>) {
+/// Every piece of `info` on `view`'s buttons; all hidden without one. The engine's state in the
+/// engine badge hides its own button; the open address field hides the address.
+fn show_all(view: ViewId, buttons: &Buttons, info: Option<&CellInfo>) {
     show(
         &buttons.address,
-        info.and_then(|info| info.address.as_ref()),
+        info.and_then(|info| info.address.as_ref())
+            .filter(|_| !super::address_field::is_open(view)),
     );
     let engine = info
         .filter(|info| !info.engine_in_badge)
@@ -179,7 +184,7 @@ pub fn set(infos: Vec<CellInfo>) {
         let all = all.borrow();
         for info in &changed {
             if let Some(buttons) = all.get(&info.view) {
-                show_all(buttons, Some(info));
+                show_all(info.view, buttons, Some(info));
             }
         }
     });
@@ -189,9 +194,22 @@ pub fn set(infos: Vec<CellInfo>) {
     }
 }
 
-/// Lets the buttons go: the grid is built anew, its strips with it (the pieces stay).
+/// The pieces of `view`'s strip drawn again from the last ones: its address field opened or
+/// closed.
+pub fn redraw(view: ViewId) {
+    let info = LAST.with(|last| last.borrow().get(&view).cloned());
+    BUTTONS.with(|all| {
+        if let Some(buttons) = all.borrow().get(&view) {
+            show_all(view, buttons, info.as_ref());
+        }
+    });
+}
+
+/// Lets the buttons and the address fields go: the grid is built anew, its strips with it (the
+/// pieces stay).
 pub fn clear() {
     BUTTONS.with(|all| all.borrow_mut().clear());
+    super::address_field::clear();
 }
 
 /// Lets the buttons and the pieces go (the main window was destroyed, RB-080-91).

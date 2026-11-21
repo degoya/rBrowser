@@ -104,10 +104,10 @@ fn the_block_has_the_job_files_order_with_ids_from_the_user_range() {
             "contextmenu.inspect",
             "contextmenu.devtools",
             "-",
-            "contextmenu.screenshot.menu>",
-            "contextmenu.video.menu>",
-            "contextmenu.checks.menu>",
-            "contextmenu.panels.menu>",
+            "shell.menu.layout>",
+            "shell.menu.capture>",
+            "shell.menu.checks>",
+            "shell.menu.panels>",
             "-",
             "sync.menu.skipNextClick",
             "popout.menu.out",
@@ -259,21 +259,23 @@ fn every_entry_runs_the_registrys_command_for_the_clicked_view() {
             args: json!({ "view": 2 })
         }
     );
-    // The checks submenu keeps the job file's order: run all, the plugins, then the core's.
-    let checks = flat(&items)
+    // The checks submenu keeps the job file's order: run all, then the plugins; the analyzer
+    // is under Layout as in the main menu (RB-090-92).
+    let checks = items
+        .iter()
+        .find_map(|item| match item {
+            Item::Menu {
+                label: Label::Key(KEY_CHECKS),
+                items,
+                ..
+            } => Some(flat(items)),
+            _ => None,
+        })
+        .expect("the Checks submenu")
         .into_iter()
         .map(|(_, label, ..)| label)
-        .filter(|label| label.starts_with("contextmenu.checks.") || label.starts_with('\''))
-        .filter(|label| label != "'Network'")
         .collect::<Vec<_>>();
-    assert_eq!(
-        checks,
-        [
-            "contextmenu.checks.run_all",
-            "'SEO check'",
-            "contextmenu.checks.analyze",
-        ]
-    );
+    assert_eq!(checks, ["contextmenu.checks.run_all", "'SEO check'"]);
 }
 
 #[test]
@@ -447,7 +449,11 @@ fn menu_ids(items: &[Item], out: &mut Vec<i32>) {
 fn submenus_take_ids_of_their_own_from_their_range() {
     let mut ids = Vec::new();
     menu_ids(&build(&state()), &mut ids);
-    assert_eq!(ids.len(), 4, "screenshot, video, checks, panels");
+    assert_eq!(
+        ids.len(),
+        6,
+        "layout, capture with screenshot and video, checks, panels"
+    );
     let unique: BTreeSet<i32> = ids.iter().copied().collect();
     assert_eq!(unique.len(), ids.len(), "{ids:?}");
     assert!(

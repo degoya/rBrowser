@@ -19,6 +19,12 @@ use super::result::{ViewResult, ViewStatus};
 pub const FIREFOX_REASON: &str = "Firefox views are not driven by flows: Playwright does not control the installed Firefox reliably over BiDi";
 /// Why a WebKit view is skipped.
 pub const WEBKIT_REASON: &str = "flows do not reach WebKit views in this build";
+/// Why an Android view is skipped (RB-095-02).
+pub const ANDROID_REASON: &str = "flows do not reach Android views in this build";
+/// Why a Safari view is skipped: Safari speaks no CDP, which flows drive (RB-095-03).
+pub const SAFARI_REASON: &str = "flows do not reach Safari views: Safari speaks no CDP";
+/// Why an iOS view is skipped (RB-095-04).
+pub const IOS_REASON: &str = "flows do not reach iOS views: iOS speaks no CDP";
 /// Why a Chromium view without a page is skipped.
 pub const NO_PAGE_REASON: &str = "the view has no page yet";
 /// Why a view the layout hides is skipped (`automation.flows.hiddenViews`, RB-090-84).
@@ -48,6 +54,9 @@ pub fn engine_name(engine: EngineKind) -> &'static str {
         EngineKind::Chromium => "chromium",
         EngineKind::Firefox => "firefox",
         EngineKind::Webkit => "webkit",
+        EngineKind::Android => "android",
+        EngineKind::Safari => "safari",
+        EngineKind::Ios => "ios",
     }
 }
 
@@ -100,6 +109,9 @@ pub fn plan(
             (EngineKind::Chromium, None) => NO_PAGE_REASON,
             (EngineKind::Firefox, _) => FIREFOX_REASON,
             (EngineKind::Webkit, _) => WEBKIT_REASON,
+            (EngineKind::Android, _) => ANDROID_REASON,
+            (EngineKind::Safari, _) => SAFARI_REASON,
+            (EngineKind::Ios, _) => IOS_REASON,
         };
         planned.skipped.push(skipped(view, reason));
     }
@@ -190,7 +202,7 @@ pub fn resolve_views(views: &[ViewInfo], value: &Value) -> Result<Option<Vec<Vie
 }
 
 /// Whether `name` (from `// @views`) names `view`: its breakpoint, its cell's or its label.
-fn names(view: &ViewInfo, name: &str) -> bool {
+pub(super) fn names(view: &ViewInfo, name: &str) -> bool {
     let same = |text: &str| text.eq_ignore_ascii_case(name);
     view.breakpoint.as_deref().is_some_and(same)
         || view.cell_breakpoint.as_deref().is_some_and(same)

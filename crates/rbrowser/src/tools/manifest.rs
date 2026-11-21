@@ -1,17 +1,22 @@
 //! The built-in manifest of the managed tools (`tools.json`, compiled in): per tool and
 //! platform the pinned version, the download address, its SHA-256 and size, the archive members
-//! taken, the licence and the address of its source code (the LGPL's offer). Phase 1 names only
-//! `ffmpeg` for `x86_64-pc-windows-msvc`.
+//! taken, the licence and the address of its source code (the LGPL's offer). It names `ffmpeg`
+//! and `adb` (the Android Platform Tools, RB-095-02) and `cloudflared` (RB-096-05, the release's
+//! bare program) for `x86_64-pc-windows-msvc`.
 //!
 //! The manifest is held to its rules on every read, so a malformed pin can never reach the
 //! network: https only, a real SHA-256 (64 lowercase hex digits, never [`PLACEHOLDER_SHA256`]),
-//! a size up to [`MAX_SIZE`], an LGPL licence, and names that are plain folder and file names.
+//! a size up to [`MAX_SIZE`], an LGPL or Apache-2.0 licence ([`LICENSES`]; for `adb` the Android
+//! SDK licence its binaries come under, [`ANDROID_SDK_LICENSE`]), and names that are plain folder
+//! and file names; a bare program ([`Archive::Exe`]) has its executable as its only member.
 //!
 //! The addresses: BtbN keeps a daily build for two weeks but the last build of each month for
 //! two years, so `url` names a month-end `autobuild-<YYYY-MM-DD>-…` release (as rDownloader
 //! does, RD-1101-13; a test holds it) and `source_url` the matching FFmpeg commit on GitHub.
 //! `upstream_url` and `upstream_source_url` are for a mirror, should one be needed again.
-//! `scripts/tools-manifest-check.sh` asks every address.
+//! `adb` is Google's versioned `platform-tools_r<version>-win.zip`, which stays served after
+//! newer releases; `source_url` is adb's source (Apache-2.0). `scripts/tools-manifest-check.sh`
+//! asks every address.
 
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +35,14 @@ pub const MAX_SIZE: u64 = 512 * 1024 * 1024;
 pub const WINDOWS_X64: &str = "x86_64-pc-windows-msvc";
 /// The video encoder.
 pub const FFMPEG: &str = "ffmpeg";
+/// The Android Debug Bridge of the Platform Tools (RB-095-02).
+pub const ADB: &str = "adb";
+/// The licence of Google's Platform Tools binaries (no SPDX id): taken for [`ADB`] only.
+pub const ANDROID_SDK_LICENSE: &str = "LicenseRef-Android-SDK-License";
+/// The tunnel of the portal's presentation over the internet (RB-096-05).
+pub const CLOUDFLARED: &str = "cloudflared";
+/// The licences besides an LGPL (`LGPL-*`) a managed tool may have; never a GPL.
+pub const LICENSES: &[&str] = &["Apache-2.0"];
 /// The longest version or file name taken.
 const MAX_NAME: usize = 64;
 
@@ -39,6 +52,8 @@ const MAX_NAME: usize = 64;
 pub enum Archive {
     /// A ZIP file.
     Zip,
+    /// The program itself (cloudflared's release asset): it becomes the executable.
+    Exe,
 }
 
 /// One tool on one platform.
@@ -155,6 +170,9 @@ impl ToolEntry {
         if !self.members.contains(&self.executable) {
             return Err(format!("{} is not among the members", self.executable));
         }
+        if self.archive == Archive::Exe && self.members.len() != 1 {
+            return Err("a bare program has its executable as its only member".to_owned());
+        }
         for (field, value) in [("url", &self.url), ("source_url", &self.source_url)] {
             if !value.starts_with("https://") || value.len() <= "https://".len() {
                 return Err(format!("{field} {value} is not https"));
@@ -169,8 +187,15 @@ impl ToolEntry {
         if self.size == 0 || self.size > MAX_SIZE {
             return Err(format!("size {} is not from 1 to {MAX_SIZE}", self.size));
         }
-        if !self.license.starts_with("LGPL-") {
-            return Err(format!("licence {:?} is not an LGPL", self.license));
+        let sdk_adb = self.name == ADB && self.license == ANDROID_SDK_LICENSE;
+        if !self.license.starts_with("LGPL-")
+            && !LICENSES.contains(&self.license.as_str())
+            && !sdk_adb
+        {
+            return Err(format!(
+                "licence {:?} is neither an LGPL nor one of {LICENSES:?}",
+                self.license
+            ));
         }
         Ok(())
     }

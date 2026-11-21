@@ -1,6 +1,7 @@
 {
   "url": "http://localhost:8080/outline/index.html",
   "lang": "en",
+  "dir": "ltr",
   "headings": [
     {
       "selector": "html > body > main > h1",
@@ -13,6 +14,7 @@
         0,
         0
       ],
+      "order": 13,
       "level": 1,
       "text": "Outline fixture",
       "name": "Outline fixture",
@@ -30,6 +32,7 @@
         0,
         0
       ],
+      "order": 15,
       "level": 2,
       "text": "Introduction",
       "name": "Introduction",
@@ -47,6 +50,7 @@
         0,
         0
       ],
+      "order": 19,
       "level": 4,
       "text": "Details",
       "name": "Details",
@@ -64,6 +68,7 @@
         0,
         0
       ],
+      "order": 27,
       "level": 2,
       "text": "Contact",
       "name": "Contact",
@@ -81,6 +86,7 @@
         0,
         0
       ],
+      "order": 35,
       "level": 2,
       "text": "Promotion",
       "name": "Promotion",
@@ -485,6 +491,7 @@
         0,
         0
       ],
+      "order": 5,
       "tag": "a",
       "role": "link",
       "name": "Outline fixture",
@@ -502,6 +509,7 @@
         0,
         0
       ],
+      "order": 7,
       "tag": "a",
       "role": "link",
       "name": "Docs",
@@ -519,6 +527,7 @@
         0,
         0
       ],
+      "order": 8,
       "tag": "a",
       "role": "link",
       "name": "Pricing",
@@ -536,6 +545,7 @@
         0,
         0
       ],
+      "order": 17,
       "tag": "a",
       "role": "link",
       "name": "Old page",
@@ -553,6 +563,7 @@
         0,
         0
       ],
+      "order": 18,
       "tag": "a",
       "role": "link",
       "name": "external link",
@@ -570,6 +581,7 @@
         0,
         0
       ],
+      "order": 24,
       "tag": "a",
       "role": "link",
       "name": "",
@@ -587,6 +599,7 @@
         0,
         0
       ],
+      "order": 30,
       "tag": "input",
       "role": "textbox",
       "name": "Email",
@@ -604,6 +617,7 @@
         0,
         0
       ],
+      "order": 31,
       "tag": "input",
       "role": "textbox",
       "name": "",
@@ -621,6 +635,7 @@
         0,
         0
       ],
+      "order": 32,
       "tag": "input",
       "role": "textbox",
       "name": "Phone",
@@ -638,6 +653,7 @@
         0,
         0
       ],
+      "order": 33,
       "tag": "button",
       "role": "button",
       "name": "Send",

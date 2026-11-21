@@ -5,57 +5,38 @@
 //! and a script's events are not trusted, so nothing arrives twice. The page script never submits.
 //! For the same reason a recording would lack the fill: each view's set fields go to the recorder
 //! as `host` posts beside the answer (`src/record.rs`, RB-090-78).
+//! A view is filled in passes (`src/passes.rs`, RB-094-22): control fields first, a wait for the
+//! page to settle after each one changed, then the fields that appeared or became enabled; a fill
+//! takes at most `fillBudgetSeconds` in all, then stops its passes and views and says so.
 //! Firefox and WebKit views have no `evaluate` yet and are reported `unsupported`.
 
 use rb_plugin_api::{Failure, FailureKind, PluginHost, ViewInfo, codes};
-use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::args::{Args, Mode, Target, bad};
 use crate::field::{Collected, cut};
 use crate::key;
+use crate::passes::{Applied, AppliedField, Outcome, Pacing, actions, todo};
 use crate::plan::{Options, Planned, plan};
 use crate::settings::Settings;
 
-/// The page script: one function expression called with the request and `targetOf`.
+/// The page script: one function expression called with the request, `targetOf` and `settled`.
 const PAGE_JS: &str = include_str!("page.js");
 /// The sync agent's selector, a function expression that answers `targetOf` (RB-090-78).
 const TARGET_JS: &str = include_str!("target.js");
+/// The settle runner, a function expression that answers `settled` (RB-094-22).
+const SETTLE_JS: &str = include_str!("settle.js");
 /// The longest value an answer shows, in characters.
 const MAX_SHOWN: usize = 200;
 /// The largest answer posted to the panel (a post may be 64 KiB).
 const MAX_POST: usize = 60_000;
 
-/// The expression that runs the page script with `request` and the agent's `targetOf`.
+/// The expression that runs the page script with `request`, the agent's `targetOf` and the
+/// settle runner.
 #[must_use]
 pub fn script(request: &Value) -> String {
     // The request is JSON text: data, never code, inside the expression.
-    format!("(\n{PAGE_JS}\n)({request}, (\n{TARGET_JS}\n)())")
-}
-
-/// What `apply` says about one field.
-#[derive(Debug, Default, Deserialize)]
-#[serde(default)]
-struct AppliedField {
-    index: u32,
-    status: Value,
-    value: Value,
-    valid: Value,
-    errors: Value,
-    /// What the recorder takes of the field (`src/record.rs`).
-    record: Value,
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-struct Applied {
-    fields: Vec<AppliedField>,
-    form_valid: Value,
-    blocked_submits: Value,
-}
-
-fn applied(answer: &str) -> Applied {
-    serde_json::from_str(answer).unwrap_or_default()
+    format!("(\n{PAGE_JS}\n)({request}, (\n{TARGET_JS}\n)(), (\n{SETTLE_JS}\n)())")
 }
 
 fn errors(value: &Value) -> Value {
@@ -98,21 +79,33 @@ fn view_head(view: &ViewInfo, status: &str) -> Value {
             "engine": view.engine, "status": status, "fields": [] })
 }
 
+/// The view's fields as the page script reads them.
+fn collect(
+    host: &mut dyn PluginHost,
+    view: &ViewInfo,
+    request: &Value,
+) -> Result<Collected, Failure> {
+    let mut collect = request.clone();
+    collect["op"] = json!("collect");
+    host.evaluate(view.id, &script(&collect))
+        .and_then(|answer| Collected::parse(&answer))
+}
+
 fn fill_view(
     host: &mut dyn PluginHost,
     view: &ViewInfo,
     request: &Value,
     options: &Options,
+    pacing: Pacing,
+    deadline: u64,
 ) -> Value {
     if view.engine != "chromium" {
         return view_head(view, "unsupported");
     }
-    let mut collect = request.clone();
-    collect["op"] = json!("collect");
-    let page = match host
-        .evaluate(view.id, &script(&collect))
-        .and_then(|answer| Collected::parse(&answer))
-    {
+    if host.now_unix_seconds() >= deadline {
+        return view_head(view, "timeout");
+    }
+    let mut page = match collect(host, view, request) {
         Ok(page) => page,
         Err(failure) => {
             let mut head = view_head(view, "failed");
@@ -131,43 +124,60 @@ fn fill_view(
     head["locale"] = json!(page.locale);
     head["url"] = json!(cut(&page.url, 2048));
     head["forms"] = json!(page.forms);
+    head["scope"] = json!(page.scope);
     if !page.error.is_empty() {
         return head;
     }
-    let planned = plan(&page, options);
-    let actions: Vec<Value> = planned.iter().filter_map(Planned::action).collect();
+    head["truncated"] = json!(page.truncated);
+    let mut outcome = Outcome::default();
     let mut apply = request.clone();
     apply["op"] = json!("apply");
-    apply["actions"] = json!(actions);
-    let done = match host.evaluate(view.id, &script(&apply)) {
-        Ok(answer) => applied(&answer),
-        Err(failure) => {
-            head["status"] = json!("failed");
-            head["error"] = json!(failure.code);
-            Applied::default()
+    if let Some(settle) = pacing.settle() {
+        apply["settle"] = settle;
+    }
+    loop {
+        let first = outcome.passes == 0;
+        let planned = plan(&page, options);
+        outcome.note(&planned, first);
+        let list = todo(&planned, &outcome.done, first);
+        if list.is_empty() && !first {
+            break;
         }
-    };
-    if planned.is_empty() {
+        apply["actions"] = json!(actions(&list));
+        let done = match host.evaluate(view.id, &script(&apply)) {
+            Ok(answer) => Applied::parse(&answer),
+            Err(failure) => {
+                head["status"] = json!("failed");
+                head["error"] = json!(failure.code);
+                break;
+            }
+        };
+        let changed = outcome.absorb(&list, done);
+        if !changed || outcome.passes >= pacing.max_passes {
+            break;
+        }
+        if host.now_unix_seconds() >= deadline {
+            head["stopped"] = json!("deadline");
+            break;
+        }
+        // The page settled in `apply`; what it shows now is read again (a later pass).
+        match collect(host, view, request) {
+            Ok(next) if next.error.is_empty() => page = next,
+            _ => break,
+        }
+    }
+    if outcome.is_empty() {
         head["status"] = json!("empty");
     }
-    head["truncated"] = json!(page.truncated);
-    head["formValid"] = json!(done.form_valid.as_bool());
-    head["blockedSubmits"] = json!(done.blocked_submits.as_u64().unwrap_or(0));
-    head["fields"] = planned
-        .iter()
-        .map(|entry| {
-            let found = done.fields.iter().find(|field| field.index == entry.index);
-            field_result(entry, found.filter(|_| entry.fill.is_some()))
-        })
+    head["passes"] = json!(outcome.passes);
+    head["formValid"] = json!(outcome.form_valid.as_bool());
+    head["blockedSubmits"] = json!(outcome.blocked);
+    head["fields"] = outcome
+        .entries()
+        .map(|(entry, found)| field_result(entry, found.filter(|_| entry.fill.is_some())))
         .collect();
-    let record: Vec<Value> = done
-        .fields
-        .iter()
-        .filter(|field| field.status == "done" && field.record.is_object())
-        .map(|field| field.record.clone())
-        .collect();
-    if !record.is_empty() {
-        head["record"] = json!(record);
+    if !outcome.record.is_empty() {
+        head["record"] = json!(outcome.record);
     }
     head
 }
@@ -225,21 +235,33 @@ pub fn fill(host: &mut dyn PluginHost, args: &Args, mode: Option<Mode>) -> Resul
         strategy,
         seed,
         profile: profile.clone(),
+        tick_consent: settings.tick_consent,
     };
     let request = json!({ "selector": args.selector, "skipHidden": settings.skip_hidden,
                           "hiddenInputs": settings.hidden_inputs });
+    let pacing = Pacing {
+        settle_ms: settings.settle_ms,
+        max_passes: settings.max_passes,
+    };
     let total = u32::try_from(views.len()).unwrap_or(u32::MAX);
+    let deadline = host
+        .now_unix_seconds()
+        .saturating_add(u64::from(settings.fill_budget_seconds));
     let mut results = Vec::new();
     for (done, view) in views.iter().enumerate() {
-        results.push(fill_view(host, view, &request, &options));
+        results.push(fill_view(host, view, &request, &options, pacing, deadline));
         host.report_progress(u32::try_from(done + 1).unwrap_or(total), total);
     }
+    let out_of_time = results
+        .iter()
+        .any(|view| view["status"] == "timeout" || view["stopped"] == "deadline");
     Ok(json!({
         "mode": mode.id(),
         "seed": seed,
         "strategy": (mode == Mode::Invalid).then(|| strategy.id()),
         "profile": profile.map(|profile| profile.name),
         "selector": args.selector,
+        "outOfTime": out_of_time,
         "views": results,
     }))
 }

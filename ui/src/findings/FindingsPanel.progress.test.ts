@@ -156,6 +156,20 @@ describe('FindingsPanel while checks run', () => {
     expect(failure).not.toContain('TypeError');
     wrapper.unmount();
   });
+
+  it("says a plugin's own failure with its reason", async () => {
+    const { core, wrapper } = mountPanel();
+    const run = sampleRun();
+    run.failures = [
+      { plugin: 'seo', view: 1, code: 'plugin.seo.errors.no_source', params: { view: '1', reason: 'the page is a data: URL' } },
+    ];
+    const messages = { ...sampleMessages, 'plugin.seo.errors.no_source': 'View {view} has no served source: {reason}' };
+    core.emit({ type: 'findings', run, messages });
+    await settle();
+    const failure = wrapper.get('[data-testid="failure"]').text();
+    expect(failure).toContain('View 1 has no served source: the page is a data: URL');
+    wrapper.unmount();
+  });
 });
 
 describe('FindingsPanel help links', () => {

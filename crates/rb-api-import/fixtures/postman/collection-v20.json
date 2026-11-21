@@ -1,0 +1,25 @@
+{
+  "info": {
+    "name": "Old API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Ping",
+      "request": {
+        "auth": { "type": "basic", "basic": { "username": "u", "password": "p", "saveHelperData": true } },
+        "url": "https://old.example/ping",
+        "method": "GET",
+        "header": "Accept: text/plain\nX-Trace: 1\n"
+      }
+    },
+    {
+      "name": "Key",
+      "request": {
+        "auth": { "type": "apikey", "apikey": { "key": "X-Key", "value": "{{key}}", "in": "header" } },
+        "url": "https://old.example/key",
+        "method": "GET"
+      }
+    }
+  ]
+}

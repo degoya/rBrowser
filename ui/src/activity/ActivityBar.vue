@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// The activity bar (RB-090-67): a strip of the shell, 28 px high, there only while something
-// runs - one entry per running activity, side by side, each with its state and its controls, all
+// The activity bar (RB-090-67): a strip of the shell, 28 px high - always, empty while nothing
+// runs, with `ui.activityBar.mode` `always` (the default, RB-094-13: the views never jump), else
+// only while something runs - one entry per running activity, side by side, each with its state and its controls, all
 // commands of the registry (`entries.ts`). The toolbar's page draws it below the toolbar
 // (`place="top"`), the status bar's page above the status bar (`place="bottom"`), and each only
 // once the core made room in its view (`activityBar.place`), so it never draws over a view and
@@ -8,7 +9,7 @@
 // counter, the full state its tooltip and accessible name. An entry's close button folds it into
 // its toolbar indicator until its activity ends. Every control is a native, Tab-reachable button;
 // a tooltip names the command's shortcut.
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
 import UIcon from '@nuxt/ui/components/Icon.vue';
@@ -32,6 +33,25 @@ const views = computed(() =>
     .filter((view): view is EntryView => view !== null),
 );
 
+// What a screen reader hears without acting (RB-090-08): the names of the activities drawn here,
+// once when one starts or ends - never their ticking state, which the entries carry. Only the
+// page the bar is granted to speaks (`null` elsewhere), and it says idle only after something ran.
+const names = computed(() =>
+  store.granted.value === props.place
+    ? views.value.map((view) => t(`shell.activity.name.${view.activity}`)).join(', ')
+    : null,
+);
+const announcement = ref('');
+watch(names, (now, before) => {
+  if (now === null) {
+    announcement.value = '';
+  } else if (now !== '') {
+    announcement.value = t('shell.activity.announce.running', { names: now });
+  } else {
+    announcement.value = before ? t('shell.activity.announce.idle') : '';
+  }
+});
+
 const TONE: Record<EntryView['color'], string> = {
   error: 'text-error',
   primary: 'text-primary',
@@ -45,6 +65,11 @@ function title(action: EntryAction): string {
 }
 
 function run(view: EntryView, action: EntryAction): void {
+  if (action.copy !== undefined) {
+    // The presentation's link (RB-096-05): the clipboard, never a message to the core.
+    void navigator.clipboard.writeText(action.copy).catch(() => undefined);
+    return;
+  }
   void shell.send(action.message);
   if (action.closes === true) {
     store.collapse(view.activity, true);
@@ -53,8 +78,9 @@ function run(view: EntryView, action: EntryAction): void {
 </script>
 
 <template>
+  <span class="sr-only" role="status" aria-live="polite" data-testid="activity-announce">{{ announcement }}</span>
   <div
-    v-if="views.length > 0"
+    v-if="views.length > 0 || (store.settings.value.mode === 'always' && store.granted.value === place)"
     role="toolbar"
     :aria-label="t('shell.activity.label')"
     class="flex h-7 items-center gap-1.5 overflow-x-auto bg-elevated px-2 text-xs text-default"

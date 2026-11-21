@@ -5,6 +5,7 @@
 // repository, id and version of its row. An update is offered from the repository the plugin
 // was installed from only. Every text is shown as text, never as HTML.
 
+import { isObject } from '../../../../plugins/web-common/src/is-object';
 import type { PluginGrantDetails } from '../../ipc/protocol';
 import { BUNDLE_ORIGIN, type BundledPlugin, parseBundled } from './bundledRows';
 
@@ -394,4 +395,13 @@ export function capabilityKey(capability: string): string {
 /** A failure's text: the core answers a catalogue failure with its i18n key. */
 export function failureKey(message: string): string | null {
   return /^plugins\.(catalog\.|bundle\.)?error\.[a-z_]+$/.test(message) ? message : null;
+}
+
+/** Whether the core's answer to an install, update or removal says the change takes effect at
+ * the next start: it loads live (RB-092-06) unless the core could not load the plugins now. */
+export function restartAsked(answer: unknown): boolean {
+  if (!isObject(answer) || !isObject(answer.value)) {
+    return false;
+  }
+  return answer.value.restart === true;
 }

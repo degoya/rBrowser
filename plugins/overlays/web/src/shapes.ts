@@ -1,16 +1,20 @@
 // The shapes of the overlay layer beside its boxes (RB-070-12): a numbered marker (a circle with a
 // number, a white ring with a dark edge so it shows on light and dark pages) and a line between
-// two points (a bar turned from its start, with a light edge). The styles are complete, so an
-// element drawn as one kind before is drawn as the other without leftovers.
+// two points (a bar turned from its start, with a light edge; dashed for the reading order,
+// RB-094-02) and an arrowhead (a triangle with its tip on its point). The styles are complete, so
+// an element drawn as one kind before is drawn as another without leftovers.
 
 /** The diameter of a marker, px. */
 export const MARKER_SIZE = 22;
 /** The thickness of a line, px. */
 export const LINE_WIDTH = 3;
+/** The length of an arrowhead, px; it is as wide. */
+export const HEAD_SIZE = 10;
 
 export type Shape =
   | { kind: 'marker'; x: number; y: number; text: string; color: string }
-  | { kind: 'line'; x1: number; y1: number; x2: number; y2: number; color: string };
+  | { kind: 'line'; x1: number; y1: number; x2: number; y2: number; color: string; dashed?: boolean }
+  | { kind: 'head'; x: number; y: number; angle: number; color: string };
 
 const RESET: Record<string, string> = {
   position: 'absolute',
@@ -44,6 +48,28 @@ export function shapeStyle(shape: Shape): Record<string, string> {
       'transform-origin': '50% 50%',
     };
   }
+  if (shape.kind === 'head') {
+    return {
+      ...RESET,
+      left: `${shape.x - HEAD_SIZE}px`,
+      top: `${shape.y - HEAD_SIZE / 2}px`,
+      width: '0',
+      'min-width': '0',
+      height: '0',
+      border: `${HEAD_SIZE / 2}px solid transparent`,
+      'border-left': `${HEAD_SIZE}px solid ${shape.color}`,
+      'border-right': '0',
+      'border-radius': '0',
+      background: 'transparent',
+      'box-shadow': 'none',
+      color: 'transparent',
+      font: '0/0 sans-serif',
+      'text-align': 'left',
+      'white-space': 'nowrap',
+      transform: `rotate(${shape.angle}rad)`,
+      'transform-origin': '100% 50%',
+    };
+  }
   const length = Math.hypot(shape.x2 - shape.x1, shape.y2 - shape.y1);
   return {
     ...RESET,
@@ -54,7 +80,7 @@ export function shapeStyle(shape: Shape): Record<string, string> {
     height: `${LINE_WIDTH}px`,
     border: '0',
     'border-radius': `${LINE_WIDTH / 2}px`,
-    background: shape.color,
+    background: shape.dashed ? `repeating-linear-gradient(90deg, ${shape.color} 0 6px, transparent 6px 10px)` : shape.color,
     'box-shadow': '0 0 0 1px rgba(255,255,255,0.85)',
     color: 'transparent',
     font: '0/0 sans-serif',

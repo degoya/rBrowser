@@ -46,10 +46,12 @@ fn a_readable_id_is_required_and_reverse_dns_is_refused() {
 fn the_cores_out_folders_are_reserved_ids() {
     for id in [
         "checks",
+        "engine-compare",
         "env-compare",
         "exports",
         "flows",
         "recordings",
+        "reports",
         "screenshots",
         "video",
     ] {

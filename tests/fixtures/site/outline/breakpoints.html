@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser outline breakpoint fixture</title>
+<style>
+  /* RB-094-02: the acceptance page of the outline's breakpoint diff and reading order.
+     - The menu link "Pricing" shows only from 1024 px on: outline.interactive-differs, one finding
+       naming the narrower breakpoints it is missing in.
+     - The first row of three buttons puts its second first (`order: -1`): outline.reading-order
+       (WCAG 1.3.2) with both buttons, A and B. The second row keeps the source order: no finding.
+     Served by any static server from tests/fixtures/site/ (/outline/breakpoints.html). */
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  header, main { padding: 12px 16px; }
+  nav { display: flex; gap: 16px; }
+  .wide-only { display: none; }
+  @media (min-width: 1024px) {
+    .wide-only { display: inline; }
+  }
+  .row { display: flex; gap: 16px; margin-block: 16px; }
+  .row.moved button:nth-child(2) { order: -1; }
+</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Main">
+    <a href="/outline/index.html">Home</a>
+    <a href="/outline/docs.html">Docs</a>
+    <a class="wide-only" href="/outline/pricing.html">Pricing</a>
+  </nav>
+</header>
+<main>
+  <h1>Breakpoint fixture</h1>
+  <div class="row moved" aria-label="Reordered">
+    <button type="button">A</button>
+    <button type="button">B</button>
+    <button type="button">C</button>
+  </div>
+  <div class="row" aria-label="In order">
+    <button type="button">D</button>
+    <button type="button">E</button>
+    <button type="button">F</button>
+  </div>
+</main>
+</body>
+</html>

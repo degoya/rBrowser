@@ -1,0 +1,51 @@
+[package]
+name = "responsive-images"
+description = "rBrowser's first-party responsive images check: the file each view took from srcset or picture against its rendered size times the view's pixel density, sizes and the LCP image (RB-093-02)"
+# The plugin's own version (manifest.toml, CHANGES.md), not the workspace's.
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A crate of its own, outside the app's workspace, like the SDK templates: scripts/build-plugins.sh
+# builds it in this folder for wasm32 and `cargo test` here runs its logic natively.
+[workspace]
+
+# The native side of the contract (`Check`, `Feature`, `PluginHost`); it builds for wasm32 too.
+# The guest binding (src/guest.rs) needs wit-bindgen on wasm32 only, against
+# `crates/rb-plugin-api/wit`, so the native build neither builds nor links it.
+[dependencies]
+rb-plugin-api = { path = "../../crates/rb-plugin-api" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+# The rules' levels and the CDP mark, shared with plugins/outline (RB-094-11).
+plugin-util = { path = "../plugin-util" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = "0.63.0"
+
+[dev-dependencies]
+# `MemoryHost`: the native trait run against the host's rules, without WebAssembly.
+rb-plugin-api = { path = "../../crates/rb-plugin-api", features = ["test-support"] }
+
+[lib]
+# `cdylib` is the core module `wasm-tools component new` turns into the component; `rlib` lets
+# `cargo test` build the logic natively.
+crate-type = ["cdylib", "rlib"]
+
+# The app's workspace lints, repeated: this crate is no member of that workspace.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+allow_attributes_without_reason = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "warn"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

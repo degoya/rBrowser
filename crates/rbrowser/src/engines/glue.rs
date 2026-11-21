@@ -60,7 +60,7 @@ impl HostEngines {
                     }
                 }),
             );
-            for kind in [EngineKind::Firefox, EngineKind::Webkit] {
+            for kind in [EngineKind::Firefox, EngineKind::Webkit, EngineKind::Android] {
                 windows.set_engine(Arc::new(UnsupportedEngine::not_yet(kind)));
             }
             for engine in plugged {
@@ -225,6 +225,7 @@ fn stand_in(info: &ViewInfo) -> Breakpoint {
         height: Some(info.height),
         device: None,
         engine: info.engine,
+        ios_device: None,
         session: Some(info.session.clone()),
         sync_navigation: true,
         shortcut: None,

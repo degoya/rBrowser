@@ -64,8 +64,8 @@ wrap_scheme_handler_factory! {
             let url = CefString::from(&request?.url()).to_string();
             let file = panels::resource(&url)?;
             // The files live as long as the process (`panels::resource`): CEF reads in place.
-            let stream =
-                stream_reader_create_for_data(file.bytes.as_ptr().cast_mut(), file.bytes.len())?;
+            let bytes = file.bytes();
+            let stream = stream_reader_create_for_data(bytes.as_ptr().cast_mut(), bytes.len())?;
             let mut headers = string_multimap_alloc()?;
             string_multimap_append(
                 Some(&mut headers),
@@ -108,4 +108,6 @@ pub fn register(ui_dir: PathBuf) {
     super::video_scheme::register();
     // The report window's reports (RB-091-02).
     super::report_scheme::register();
+    // The sitemap gallery window's shots (RB-090-86).
+    super::sitemap_scheme::register();
 }

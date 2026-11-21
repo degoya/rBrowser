@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Live CSS plugin settings",
+  "type": "object",
+  "properties": {
+    "applyOnNavigate": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "devtools",
+      "x-section": "live-css",
+      "x-order": 1,
+      "x-scope": ["user", "project"]
+    }
+  }
+}

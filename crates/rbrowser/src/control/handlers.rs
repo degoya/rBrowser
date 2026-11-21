@@ -41,10 +41,21 @@ pub fn register_all(
     refused.extend(commands::register(registry, core.host()));
     refused.extend(crate::breakpoint_keys::register(registry, core));
     refused.extend(crate::engines::set_engine::register(registry, core));
+    refused.extend(crate::engines::android::commands::register(registry, core));
+    // RB-095-04: the iOS simulators and devices of the Mac.
+    refused.extend(crate::engines::ios::commands::register(registry, core));
     refused.extend(crate::emulation::extras::register(registry, core));
+    // The page's text direction and pseudo-localisation (RB-092-02).
+    refused.extend(crate::emulation::page_locale::register(registry, core));
+    // The page clock and the animation rates (RB-094-07).
+    refused.extend(crate::time_control::register(registry, core));
     refused.extend(crate::sidecar::register(registry, core));
     refused.extend(crate::sessions::register(registry, core));
+    refused.extend(crate::basic_auth::register(registry, core));
+    refused.extend(crate::session_state::register(registry, core));
     refused.extend(crate::bookmarks::register(registry, core));
+    refused.extend(crate::restore_last::register(registry, core));
+    refused.extend(crate::cell_info::edit::register(registry, core));
     refused.extend(crate::layout::defs::register(registry, core));
     refused.extend(crate::layout::view_edit::register(registry, core));
     refused.extend(crate::pop_out::register(registry, core));
@@ -52,6 +63,7 @@ pub fn register_all(
     refused.extend(crate::first_run::register(registry, core));
     refused.extend(crate::sitemap::register(registry, core));
     refused.extend(crate::compare::register(registry, core));
+    refused.extend(crate::engine_compare::register(registry, core));
     refused.extend(crate::video::register(registry, core));
     refused.extend(crate::capture::clean_defs::register(registry, core));
     refused.extend(crate::extensions::register(registry, core));
@@ -69,11 +81,17 @@ pub fn register_all(
     // rBrowser's own theme (RB-080-95).
     refused.extend(crate::app_theme::register(registry, core));
     refused.extend(crate::checks::cancel::register(registry, core));
+    // The findings export (RB-092-05).
+    refused.extend(crate::checks::export::command::register(registry, core));
+    // The bug report bundle (RB-093-04).
+    refused.extend(crate::bug_report::command::register(registry, core));
     refused.extend(crate::open_link::register(registry, core));
     // The page zoom inside a view (RB-090-20).
     refused.extend(crate::page_zoom::register(registry, core));
     // Forced pseudo-class states (RB-090-53).
     refused.extend(crate::force_state::register(registry, core));
+    // The timing counters (RB-090-32).
+    refused.extend(crate::perf::counters::register(registry, core));
     match rb_diag::command_def() {
         Ok(def) => refused.extend(
             registry
@@ -239,6 +257,8 @@ pub fn bundle_input(
         },
         config_effective: config.and_then(|config| serde_json::to_value(config).ok()),
         plugins: json!([]),
+        // The timing counters of this process (RB-090-32); empty for `rbrowser diagnostics`.
+        perf: crate::perf::counters::report(),
         max_crash_dumps,
     }
 }
@@ -281,7 +301,7 @@ fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
                 return open_plugin_list(&core);
             }
             let loaded = crate::analyzer::plugins::bundled();
-            let rows = crate::plugins::list::rows(loaded, crate::plugins::list::trusted());
+            let rows = crate::plugins::list::rows(&loaded, crate::plugins::list::trusted());
             // An agent gets no text of a package that did not verify.
             let mut answer =
                 crate::plugins::list::answer(Some(crate::plugins::list::for_mcp(rows)));
@@ -365,6 +385,11 @@ fn plugins_handler(def: &CommandDef, core: Weak<Core>) -> Handler {
         | "plugins.trust_key" => Arc::new(move |args: Value| {
             if shows(&args) {
                 return open_plugin_list(&core);
+            }
+            // The notice of the bundled plugins new in this version (RB-094-13): its button
+            // installs them, live. MCP never reaches `plugins.install` (protected).
+            if let Some(ids) = args.get("bundled") {
+                return crate::plugins::bundle_install::install_new(&core, ids);
             }
             Err(CommandError::NotImplemented)
         }),

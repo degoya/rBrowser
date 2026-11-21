@@ -22,7 +22,8 @@
 //!   "limits": Limits, "selection": Selection, "rewrite": { "from"?, "to" } }` answers
 //!   `{ "site", "pages": [Page], "counts": Counts, "sitemaps": [SitemapReport], "skipped",
 //!   "foreign", "truncated" }`.
-//! - `gallery`: `{ "run": run.json, "labels": { name: text } }` answers `{ "html" }`.
+//! - `gallery`: `{ "run": run.json, "labels": { name: text } }` answers `{ "html" }`; the
+//!   thumbnails are as wide as the setting `thumbnailWidth` says.
 //!
 //! The logic is tested natively against `rb_plugin_api::test_support::MemoryHost`; `guest.rs`
 //! translates it into the WIT vocabulary and exists on `wasm32` alone.
@@ -36,6 +37,7 @@ pub mod gzip;
 pub mod robots;
 pub mod select;
 pub mod sitemap;
+pub mod thumbnail;
 pub mod url;
 
 use std::collections::BTreeMap;
@@ -161,14 +163,18 @@ pub fn run_discover(host: &mut dyn PluginHost, args: &str) -> Result<Value, Fail
     }))
 }
 
-/// `gallery`: the HTML of a run.
+/// The plugin's setting of the thumbnail width.
+pub const THUMBNAIL_WIDTH_SETTING: &str = "thumbnailWidth";
+
+/// `gallery`: the HTML of a run, its thumbnails as wide as the setting says.
 ///
 /// # Errors
 ///
 /// Unreadable arguments.
-pub fn run_gallery(args: &str) -> Result<Value, Failure> {
+pub fn run_gallery(host: &mut dyn PluginHost, args: &str) -> Result<Value, Failure> {
     let args: GalleryArgs = parse(args)?;
-    Ok(json!({ "html": gallery::render(&args.run, &args.labels) }))
+    let width = gallery::thumbnail_width(host.setting(THUMBNAIL_WIDTH_SETTING).as_deref());
+    Ok(json!({ "html": gallery::render_sized(&args.run, &args.labels, width) }))
 }
 
 /// The plugin.
@@ -200,7 +206,7 @@ impl Feature for SitemapCapture {
     ) -> Result<String, Failure> {
         match tool {
             DISCOVER => answer(run_discover(host, args)),
-            GALLERY => answer(run_gallery(args)),
+            GALLERY => answer(run_gallery(host, args)),
             other => Err(unknown(other)),
         }
     }

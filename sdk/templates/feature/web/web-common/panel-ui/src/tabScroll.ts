@@ -1,7 +1,8 @@
-// The arithmetic of a panel's tab row (`PanelTabs.vue`, RB-090-48), after the shell's
-// `ui/src/settings/tabScroll.ts` (RB-080-81): which sides hold more tabs, whether the tabs fit
-// without the scroll buttons, where the row scrolls to bring the chosen tab into sight, and how
-// far a scroll button pages. Pure, so the narrow and the wide panel are tested without a layout.
+// The arithmetic of a tab row that scrolls - a panel's (`PanelTabs.vue`, RB-090-48) and the
+// shell's pages window (`ui/src/settings/TabStrip.vue`, RB-080-81, one copy since RB-094-10):
+// which sides hold more tabs, whether the tabs fit without the scroll buttons, where the row
+// scrolls to bring the chosen tab into sight, and how far a scroll button pages. Pure, so the
+// narrow and the wide row are tested without a layout.
 
 /** The sides of the row with tabs beyond them. */
 export interface Edges {

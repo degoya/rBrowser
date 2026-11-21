@@ -1,0 +1,1 @@
+curl -sS -F 'title=Report' -F 'file=@/home/ada/report.pdf;type=application/pdf' https://files.example/upload --proxy http://proxy:3128

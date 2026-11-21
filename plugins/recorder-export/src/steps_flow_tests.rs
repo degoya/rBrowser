@@ -36,6 +36,9 @@ fn step(id: u32, action: Action, only_in: &[&str]) -> Step {
         view: "desktop".to_owned(),
         only_in: only_in.iter().map(|id| (*id).to_owned()).collect(),
         at_ms: 0,
+        path: Vec::new(),
+        disabled: false,
+        pause_ms: None,
     }
 }
 

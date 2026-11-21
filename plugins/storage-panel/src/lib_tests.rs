@@ -216,3 +216,53 @@ fn unknown_contributions_and_broken_arguments_are_refused() {
     );
     assert_eq!(parse(" ").expect("empty is {}"), json!({}));
 }
+
+/// The grants of `src/guest.rs`'s `guest_host!` call: the interfaces the real component reaches.
+fn guest_grants(guest: &str) -> Vec<String> {
+    let start = guest.find("grants [").expect("a guest_host! call") + "grants [".len();
+    let end = start + guest[start..].find(']').expect("the grants closed");
+    guest[start..end]
+        .split(',')
+        .map(|grant| grant.trim().to_owned())
+        .filter(|grant| !grant.is_empty())
+        .collect()
+}
+
+/// The `MemoryHost` and the browser fixture answer every host function, the real component only
+/// those its `guest_host!` grants (RB-094-15: `project_list` was refused there, so the trust probe
+/// failed and the pins never loaded). Every host function the plugin's sources call needs one of
+/// the grants that wire it.
+#[test]
+fn the_guest_grants_every_host_function_the_plugin_calls() {
+    const WIRED_BY: &[(&str, &[&str])] = &[
+        ("views", &["views"]),
+        ("active_view", &["views"]),
+        ("evaluate", &["evaluate"]),
+        ("cdp_send", &["cdp"]),
+        ("fetch", &["http"]),
+        ("project_read", &["project", "project_read"]),
+        ("project_list", &["project"]),
+        ("project_write", &["project_write"]),
+        ("out_write", &["out"]),
+        ("report_findings", &["findings"]),
+        ("sidecar_call", &["sidecar"]),
+    ];
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let grants = guest_grants(&std::fs::read_to_string(src.join("guest.rs")).expect("guest.rs"));
+    let mut missing = Vec::new();
+    for entry in std::fs::read_dir(&src).expect("src") {
+        let path = entry.expect("an entry").path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !name.ends_with(".rs") || name.ends_with("_tests.rs") || name == "guest.rs" {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("a source");
+        for (function, wired_by) in WIRED_BY {
+            let called = text.contains(&format!("host.{function}("));
+            if called && !wired_by.iter().any(|g| grants.iter().any(|have| have == g)) {
+                missing.push(format!("{name}: {function} needs one of {wired_by:?}"));
+            }
+        }
+    }
+    assert!(missing.is_empty(), "grants {grants:?} refuse {missing:?}");
+}

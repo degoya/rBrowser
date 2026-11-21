@@ -20,6 +20,7 @@
 //! | The LAN address; the QR code | [`interface`], [`qr`] |
 //! | Start, stop, the panel's state, the glue to the grid | [`app`] |
 //! | The MCP tools `portal_*` | [`mcp`] |
+//! | The presentation over the internet through a Cloudflare tunnel (RB-096-05) | [`present`] |
 //!
 //! **Security.** Off by default: `portal.enabled` is a person's setting, protected from MCP,
 //! and even then the portal listens only once a person started it (`Leader S P`, `Leader S Q`;
@@ -49,6 +50,7 @@ pub mod offer;
 pub mod origin_map;
 pub mod origins;
 pub mod pairing;
+pub mod present;
 pub mod proxy;
 pub mod qr;
 pub mod relay;
@@ -149,12 +151,16 @@ pub fn register(registry: &mut CommandRegistry, core: &Arc<Core>) -> Vec<Command
         Ok(defs) => defs,
         Err(error) => return vec![error],
     };
-    defs.into_iter()
+    let mut refused: Vec<CommandError> = defs
+        .into_iter()
         .filter_map(|def| {
             let handler = handler(def.id.as_str(), Arc::downgrade(core));
             registry.register(def, handler).err()
         })
-        .collect()
+        .collect();
+    // The presentation over the internet (RB-096-05).
+    refused.extend(present::register(registry, core));
+    refused
 }
 
 fn handler(id: &str, core: Weak<Core>) -> Handler {

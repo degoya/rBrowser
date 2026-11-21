@@ -1,5 +1,7 @@
 //! What MCP's `navigate` may load (batch-3 security review, finding 3): `http:` and `https:`,
-//! and a `file:` URL of a file inside the open project. The address bar and the CLI keep the
+//! and a `file:` URL of a file inside the open project. The same holds for the pages MCP hands
+//! the check plugins (`checks_run`) and the breakpoint analyser (`breakpoints_detect`,
+//! RB-094-10) and the page `compare_engines` renders. The address bar and the CLI keep the
 //! wider list of `host::nav` (`file:` anywhere, `about:`, `data:`, `chrome:`, `view-source:`):
 //! a person chose those; an agent would read local files or Chromium's internal pages with them.
 //!
@@ -19,8 +21,18 @@ use serde_json::Value;
 /// The command MCP's `navigate` runs per target.
 pub const NAVIGATE: &str = "view.navigate";
 
-/// Refuses the command `id` an MCP client runs when it is [`NAVIGATE`] with a URL [`check`]
-/// refuses; every other command passes.
+/// The command MCP's `checks_run` runs per target: its `url` is the page the check plugins read.
+pub const CHECKS_RUN: &str = "checks.run_all";
+
+/// The command MCP's `breakpoints_detect` runs: its `urls` are the pages the analyser loads in a
+/// hidden view and whose style sheets it reads.
+pub const ANALYZE: &str = "breakpoints.analyze";
+
+/// Refuses the command `id` an MCP client runs when one of its URLs is one [`check`] refuses:
+/// [`NAVIGATE`]'s `url` (required), [`CHECKS_RUN`]'s `url` and [`ANALYZE`]'s `urls` (both
+/// optional; the views' own pages or the project's start URL without them, RB-094-10). Every
+/// other command passes. Only the MCP backend calls this: the person's commands (palette,
+/// shortcut, the analyser's wizard, the findings panel) keep the address bar's wider list.
 ///
 /// # Errors
 ///
@@ -30,16 +42,38 @@ pub fn check_command(
     args: &Value,
     project_root: Option<&Path>,
 ) -> Result<(), CommandError> {
-    if id != NAVIGATE {
-        return Ok(());
+    let invalid = CommandError::InvalidArgs;
+    let urls: Vec<&str> = match id {
+        NAVIGATE => vec![
+            args.get("url")
+                .and_then(Value::as_str)
+                .ok_or_else(|| invalid("`url` is missing".to_owned()))?,
+        ],
+        CHECKS_RUN => match args.get("url") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(url) => vec![
+                url.as_str()
+                    .ok_or_else(|| invalid("`url` is no string".to_owned()))?,
+            ],
+        },
+        ANALYZE => match args.get("urls") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(urls) => urls
+                .as_array()
+                .ok_or_else(|| invalid("`urls` is no list".to_owned()))?
+                .iter()
+                .map(|url| {
+                    url.as_str()
+                        .ok_or_else(|| invalid("`urls` holds a value that is no string".to_owned()))
+                })
+                .collect::<Result<_, _>>()?,
+        },
+        _ => return Ok(()),
+    };
+    for url in urls {
+        check(url, project_root).map_err(invalid)?;
     }
-    let url = args
-        .get("url")
-        .and_then(Value::as_str)
-        .ok_or_else(|| CommandError::InvalidArgs("`url` is missing".to_owned()))?;
-    check(url, project_root)
-        .map(|_| ())
-        .map_err(CommandError::InvalidArgs)
+    Ok(())
 }
 
 /// `url` completed as the address bar completes it, when MCP may load it; else why not.
@@ -94,3 +128,7 @@ fn check_file(url: &str, project_root: Option<&Path>) -> Result<(), String> {
 #[cfg(test)]
 #[path = "url_policy_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "url_inputs_tests.rs"]
+mod url_inputs;

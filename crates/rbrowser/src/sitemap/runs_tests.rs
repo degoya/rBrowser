@@ -161,10 +161,12 @@ struct Follow {
     root: std::path::PathBuf,
     stop_at: AtomicUsize,
     ended: mpsc::UnboundedSender<Ended>,
+    seen: Mutex<Vec<(String, Progress)>>,
 }
 
 impl RunEvents for Follow {
-    fn progress(&self, _run_id: &str, progress: Progress) {
+    fn progress(&self, run_id: &str, progress: Progress) {
+        lock(&self.seen).push((run_id.to_owned(), progress));
         if progress.done >= self.stop_at.load(Ordering::SeqCst)
             && let Some(runs) = lock(&self.runs).upgrade()
         {
@@ -226,6 +228,7 @@ fn harness(pages: Vec<String>) -> Harness {
         root: root.path().to_path_buf(),
         stop_at: AtomicUsize::new(usize::MAX),
         ended: sender,
+        seen: Mutex::new(Vec::new()),
     });
     Harness {
         runs,
@@ -410,6 +413,13 @@ async fn one_run_at_a_time_and_other_schemes_never_load() {
         started.pending, 4,
         "the javascript: page is refused, not queued"
     );
+    // The window learns of the run at its start, before any shot (RB-090-90): its menu and
+    // bar act on this run, not on the one before.
+    let first = lock(&harness.follow.seen).first().cloned();
+    let (run_id, progress) = first.expect("the start is told before the first shot");
+    assert_eq!(run_id, started.run_id);
+    assert_eq!((progress.total, progress.pending), (8, 4));
+    assert!(lock(&harness.views.loaded).is_empty(), "no page loaded yet");
     let second = harness
         .runs
         .start(harness.setup(), new_run(), harness.services())

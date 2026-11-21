@@ -1,0 +1,12 @@
+live-css - rBrowser's Live CSS plugin
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+The plugin's panel (panel/dist/panel.js, panel/dist/panel.css) is built with Vite from web/src
+and bundles third-party code unchanged: Vue, Nuxt UI and the packages they use (reka-ui,
+Floating UI, VueUse, tailwind-variants, unhead and others), the compiled styles of Tailwind CSS,
+and a selection of Lucide icons (from @iconify-json/lucide). Each is under the MIT License,
+Lucide under the ISC License (and the MIT License for the icons derived from Feather). The
+name, version and full licence text of every bundled package is in
+panel/dist/THIRD-PARTY-LICENSES.txt, which the build writes beside the panel.

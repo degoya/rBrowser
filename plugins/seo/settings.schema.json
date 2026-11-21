@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Settings of the SEO check (RB-060-08, RB-060-09, RB-080-11): Settings > Checks > SEO",
+  "title": "Settings of the SEO check (RB-060-08, RB-060-09, RB-080-11, RB-090-95): Settings > Checks > SEO",
   "type": "object",
   "properties": {
     "maxPages": {
@@ -449,6 +449,25 @@
           ]
         }
       }
+    },
+    "serpPreview": {
+      "type": "string",
+      "enum": [
+        "both",
+        "desktop",
+        "mobile",
+        "off"
+      ],
+      "default": "both",
+      "description": "The search result previews the SEO panel shows: both, desktop, mobile or off.",
+      "x-category": "checks",
+      "x-section": "seo",
+      "x-order": 24,
+      "x-scope": [
+        "project",
+        "local",
+        "user"
+      ]
     }
   }
 }

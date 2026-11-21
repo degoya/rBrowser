@@ -29,6 +29,7 @@
     "vitest.config.ts",
     "../src/page.js",
     "../src/target.js",
+    "../src/settle.js",
     "../../web-common/panel-ui/src/env.d.ts"
   ]
 }

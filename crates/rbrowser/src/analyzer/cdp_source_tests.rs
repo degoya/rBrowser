@@ -145,10 +145,12 @@ async fn without_hidden_targets_a_background_target_is_used() {
 #[tokio::test(start_paused = true)]
 async fn events_of_other_sessions_do_not_hold_the_settle_timer() {
     let (sender, mut events) = tokio::sync::broadcast::channel(64);
-    let event = |method: &str, session: &str| CdpEvent {
-        method: method.to_owned(),
-        params: json!({}),
-        session_id: Some(session.to_owned()),
+    let event = |method: &str, session: &str| {
+        Arc::new(CdpEvent {
+            method: method.to_owned(),
+            params: json!({}),
+            session_id: Some(session.to_owned()),
+        })
     };
     sender
         .send(event("Page.loadEventFired", "S1"))

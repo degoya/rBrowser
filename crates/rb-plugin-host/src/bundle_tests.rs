@@ -53,6 +53,63 @@ fn a_later_start_adds_nothing_and_brings_nothing_back() {
     assert_eq!(start, BundleStart::InstalledOnly);
 }
 
+/// RB-094-13 (owner): a plugin new in the bundle of an update is named once - neither a chosen
+/// one nor one offered before nor one the person took out comes up again.
+#[test]
+fn a_plugin_new_in_the_bundle_is_named_once() {
+    let mut earlier = BundleState::with(ids(&["axe", "console"]));
+    earlier.offered = ids(&["fonts"]);
+    earlier.unchoose("console");
+    let mut shipped = bundle();
+    shipped.insert("new-one".to_owned());
+    let (mut state, how) = start(Some(earlier), &shipped, &shipped, flags(true, false, false));
+    assert_eq!(how, BundleStart::InstalledOnly);
+    let new = state.new_in(&shipped);
+    assert_eq!(new, ids(&["new-one", "todo"]));
+    state.offered.extend(new);
+    assert!(state.new_in(&shipped).is_empty(), "named once");
+    let dir = tempfile::tempdir().expect("tempdir");
+    state.save(dir.path()).expect("save");
+    let read = BundleState::load(dir.path()).expect("read");
+    assert!(read.new_in(&shipped).is_empty(), "kept across starts");
+}
+
+/// The first-run wizard's pending choice is written with the bundle it offers: after its answer
+/// the plugins left unticked are not named as new (review of RB-094-13).
+#[test]
+fn a_wizard_answer_names_nothing_new() {
+    let mut pending = BundleState::pending();
+    pending.offered = bundle();
+    pending.choose("axe");
+    let (state, how) = start(
+        Some(pending),
+        &bundle(),
+        &bundle(),
+        flags(false, false, true),
+    );
+    assert_eq!(how, BundleStart::InstalledOnly);
+    assert!(state.new_in(&bundle()).is_empty());
+}
+
+/// A choice made at a start - the first one, the wizard's pending one, the whole bundle - saw
+/// every bundled plugin: nothing in it is new afterwards. A pending choice names nothing.
+#[test]
+fn a_choice_made_at_a_start_has_nothing_new() {
+    for (earlier, flags) in [
+        (None, flags(false, false, false)),
+        (None, flags(true, false, false)),
+        (Some(BundleState::pending()), flags(true, false, true)),
+        (
+            Some(BundleState::with(ids(&["axe"]))),
+            flags(true, true, false),
+        ),
+    ] {
+        let (state, _) = start(earlier, &bundle(), &ids(&["axe"]), flags);
+        assert!(state.new_in(&bundle()).is_empty(), "{state:?}");
+    }
+    assert!(BundleState::pending().new_in(&bundle()).is_empty());
+}
+
 /// `--install-all-bundled-plugins` chooses the whole bundle, at any start.
 #[test]
 fn install_all_chooses_the_whole_bundle() {

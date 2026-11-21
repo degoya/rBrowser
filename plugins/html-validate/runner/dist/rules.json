@@ -1,0 +1,254 @@
+{
+  "htmlValidateVersion": "11.18.0",
+  "preset": "html-validate:standard",
+  "rules": [
+    {
+      "id": "area-alt",
+      "severity": "error",
+      "config": [
+        "error",
+        {
+          "accessible": false
+        }
+      ],
+      "url": "https://html-validate.org/rules/area-alt.html"
+    },
+    {
+      "id": "aria-label-misuse",
+      "severity": "error",
+      "config": [
+        "error",
+        {
+          "allowAnyNamable": true
+        }
+      ],
+      "url": "https://html-validate.org/rules/aria-label-misuse.html"
+    },
+    {
+      "id": "attr-spacing",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/attr-spacing.html"
+    },
+    {
+      "id": "attribute-allowed-values",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/attribute-allowed-values.html"
+    },
+    {
+      "id": "attribute-misuse",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/attribute-misuse.html"
+    },
+    {
+      "id": "close-attr",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/close-attr.html"
+    },
+    {
+      "id": "close-order",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/close-order.html"
+    },
+    {
+      "id": "deprecated",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/deprecated.html"
+    },
+    {
+      "id": "doctype-html",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/doctype-html.html"
+    },
+    {
+      "id": "element-name",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-name.html"
+    },
+    {
+      "id": "element-permitted-content",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-permitted-content.html"
+    },
+    {
+      "id": "element-permitted-occurrences",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-permitted-occurrences.html"
+    },
+    {
+      "id": "element-permitted-order",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-permitted-order.html"
+    },
+    {
+      "id": "element-permitted-parent",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-permitted-parent.html"
+    },
+    {
+      "id": "element-required-ancestor",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-required-ancestor.html"
+    },
+    {
+      "id": "element-required-attributes",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-required-attributes.html"
+    },
+    {
+      "id": "element-required-content",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/element-required-content.html"
+    },
+    {
+      "id": "map-dup-name",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/map-dup-name.html"
+    },
+    {
+      "id": "map-id-name",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/map-id-name.html"
+    },
+    {
+      "id": "missing-doctype",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/missing-doctype.html"
+    },
+    {
+      "id": "multiple-labeled-controls",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/multiple-labeled-controls.html"
+    },
+    {
+      "id": "no-abstract-role",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-abstract-role.html"
+    },
+    {
+      "id": "no-deprecated-attr",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-deprecated-attr.html"
+    },
+    {
+      "id": "no-dup-attr",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-dup-attr.html"
+    },
+    {
+      "id": "no-dup-id",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-dup-id.html"
+    },
+    {
+      "id": "no-missing-references",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-missing-references.html"
+    },
+    {
+      "id": "no-multiple-main",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/no-multiple-main.html"
+    },
+    {
+      "id": "no-raw-characters",
+      "severity": "error",
+      "config": [
+        "error",
+        {
+          "relaxed": true
+        }
+      ],
+      "url": "https://html-validate.org/rules/no-raw-characters.html"
+    },
+    {
+      "id": "no-unknown-attributes",
+      "severity": "error",
+      "config": "off",
+      "url": "https://html-validate.org/rules/no-unknown-attributes.html"
+    },
+    {
+      "id": "script-element",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/script-element.html"
+    },
+    {
+      "id": "unrecognized-char-ref",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/unrecognized-char-ref.html"
+    },
+    {
+      "id": "valid-autocomplete",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/valid-autocomplete.html"
+    },
+    {
+      "id": "valid-for",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/valid-for.html"
+    },
+    {
+      "id": "valid-id",
+      "severity": "error",
+      "config": [
+        "error",
+        {
+          "relaxed": true
+        }
+      ],
+      "url": "https://html-validate.org/rules/valid-id.html"
+    },
+    {
+      "id": "void-content",
+      "severity": "error",
+      "config": "error",
+      "url": "https://html-validate.org/rules/void-content.html"
+    },
+    {
+      "id": "nu-error",
+      "severity": "error",
+      "config": null,
+      "url": ""
+    },
+    {
+      "id": "nu-warning",
+      "severity": "warning",
+      "config": null,
+      "url": ""
+    },
+    {
+      "id": "nu-info",
+      "severity": "info",
+      "config": null,
+      "url": ""
+    }
+  ]
+}

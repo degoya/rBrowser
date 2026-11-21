@@ -2,15 +2,17 @@
 //! its analyser and its mobile + desktop fallback ([`crate::cli::init::init`]) - or one view per
 //! chosen device preset, shown before anything is written; then exactly the shown config written
 //! the way `init` writes it (`.rbrowser/config.json` and `.gitignore`, never over a config).
+//! RB-091-08: the analyser template's proposal says how many stylesheets the analyser read, or
+//! why it had none ([`SetupReason`]).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use rb_config::{ConfigFile, ProjectConfig};
-use rb_ipc::{SetupSource, SetupTemplate};
+use rb_config::ConfigFile;
+use rb_ipc::{SetupReason, SetupSource, SetupTemplate};
 use serde_json::{Value, json};
 
-use crate::cli::init::{InitError, Source};
+use crate::cli::init::{Analysis, InitError, NoProposal, Proposed, Reason, Source};
 
 /// The folder does not exist.
 pub const NOT_FOLDER_KEY: &str = "firstrun.project.error.not_folder";
@@ -54,6 +56,16 @@ pub struct Preview<'a> {
     pub devices: &'a [String],
 }
 
+/// What the step proposes: the config, where its views came from, and - for the analyser
+/// template - the stylesheets it read or why it had no proposal.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Proposal {
+    pub config: Value,
+    pub source: SetupSource,
+    pub sheets: Option<u32>,
+    pub reason: Option<SetupReason>,
+}
+
 /// The config the step proposes and where its views came from; nothing is written. `analyser`
 /// is `rbrowser init`'s (`crate::analyzer::init_config`), asked only for the analyser template.
 ///
@@ -63,8 +75,8 @@ pub struct Preview<'a> {
 /// address, a device is unknown or none is chosen, or the result fails the config's checks.
 pub fn propose(
     preview: &Preview<'_>,
-    analyser: impl FnOnce(&Path, Option<&str>) -> Result<Option<ProjectConfig>, String>,
-) -> Result<(Value, SetupSource), StepFailure> {
+    analyser: impl FnOnce(&Path, Option<&str>) -> Analysis,
+) -> Result<Proposal, StepFailure> {
     let root = preview.root;
     if !root.is_dir() {
         return Err(failure(
@@ -80,19 +92,17 @@ pub fn propose(
         return Err(failure(NEEDS_URL_KEY, &[]));
     }
     let mut proposed = None;
-    let confirm = |config: &Value, source: Source| {
-        proposed = Some((config.clone(), source));
+    let confirm = |config: &Value, how: &Proposed| {
+        proposed = Some((config.clone(), how.clone()));
         false
     };
     let outcome = if preview.template == SetupTemplate::Analyzer {
         crate::cli::init::init(root, preview.url, analyser, confirm)
     } else {
-        crate::cli::init::init(
-            root,
-            preview.url,
-            |_: &Path, _: Option<&str>| Ok(None),
-            confirm,
-        )
+        // Not asked: the template is the person's.
+        let not_asked =
+            |_: &Path, _: Option<&str>| Err(NoProposal::new(Reason::NoPage, "not asked"));
+        crate::cli::init::init(root, preview.url, not_asked, confirm)
     };
     match outcome {
         Err(InitError::NotConfirmed) => {}
@@ -110,19 +120,36 @@ pub fn propose(
             ));
         }
     }
-    let (mut config, source) = proposed.ok_or_else(|| failure(NO_PROPOSAL_KEY, &[]))?;
-    let source = match (devices, source) {
+    let (mut config, how) = proposed.ok_or_else(|| failure(NO_PROPOSAL_KEY, &[]))?;
+    let analyser = preview.template == SetupTemplate::Analyzer;
+    let (source, sheets, reason) = match (devices, how.source) {
         (Some(views), _) => {
             if let Some(object) = config.as_object_mut() {
                 object.insert("breakpoints".to_owned(), Value::Array(views));
             }
-            SetupSource::Devices
+            (SetupSource::Devices, None, None)
         }
-        (None, Source::Analyser) => SetupSource::Analyzer,
-        (None, Source::Default) => SetupSource::Default,
+        (None, Source::Analyser) => (
+            SetupSource::Analyzer,
+            Some(u32::try_from(how.sheets).unwrap_or(u32::MAX)),
+            None,
+        ),
+        (None, Source::Default) => (
+            SetupSource::Default,
+            None,
+            how.fallback.filter(|_| analyser).map(|why| SetupReason {
+                code: why.reason,
+                params: why.params,
+            }),
+        ),
     };
     check(&config)?;
-    Ok((config, source))
+    Ok(Proposal {
+        config,
+        source,
+        sheets,
+        reason,
+    })
 }
 
 /// One breakpoint per chosen device preset: its id, its name, the preset that sizes it.

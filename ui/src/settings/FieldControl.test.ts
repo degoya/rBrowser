@@ -131,7 +131,7 @@ describe('the field controls (RB-080-20)', () => {
 
   it('suggests the values of x-options while the text stays free', async () => {
     const wrapper = await control({ type: ['string', 'null'], 'x-options': ['Win32', 'MacIntel'] }, null);
-    const menu = wrapper.findComponent(UInputMenu);
+    const menu = wrapper.findComponent(UInputMenu) as unknown as VueWrapper;
     const items = (menu.props() as Record<string, unknown>).items as { value: string }[];
     expect(items.map((item) => item.value)).toEqual(['Win32', 'MacIntel']);
     expect(wrapper.get('#f').attributes('aria-label')).toBe('Profile folder');

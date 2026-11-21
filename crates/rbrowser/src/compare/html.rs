@@ -1,7 +1,7 @@
 //! `report.html` of a comparison: one page without any network request - its images are the
 //! run's own files beside it - with, per path, the matrix environment pair x breakpoint and the
-//! share of differing pixels, and per cell the two shots side by side, a slider over both and
-//! the diff image. Each shot links to its page, so opened in a view a click loads the page
+//! share of differing pixels, and per cell the two shots side by side, a slider over both, the
+//! diff image and the differing areas (RB-094-03). Each shot links to its page, so opened in a view a click loads the page
 //! there. Every text comes through `text` (the core catalogue, `envcompare.report.*`); every
 //! value from the run is escaped.
 
@@ -12,7 +12,7 @@ use rb_plugin_types::html::escape;
 use super::report::{EnvRun, PairDiff, PairStatus};
 
 /// The texts the page uses, by key below `envcompare.report.`.
-pub const TEXT_KEYS: [&str; 12] = [
+pub const TEXT_KEYS: [&str; 13] = [
     "title",
     "path",
     "breakpoint",
@@ -25,6 +25,7 @@ pub const TEXT_KEYS: [&str; 12] = [
     "slider",
     "difference",
     "open_live",
+    "regions",
 ];
 
 const STYLE: &str = "body{font:14px system-ui,sans-serif;margin:16px;color:#222;background:#fff}\
@@ -204,6 +205,17 @@ fn details(page: &mut String, run: &EnvRun, diff: &PairDiff, say: &dyn Fn(&str) 
             say("difference"),
             escape(image)
         );
+    }
+    if !diff.regions.is_empty() {
+        let _ = write!(page, "<h3>{}</h3><ul>", say("regions"));
+        for area in &diff.regions {
+            let _ = write!(
+                page,
+                "<li>x {} y {}: {} &times; {} px</li>",
+                area.x, area.y, area.width, area.height
+            );
+        }
+        page.push_str("</ul>");
     }
     page.push_str("</details>");
 }

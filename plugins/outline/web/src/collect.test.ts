@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import breakpoints from '../../../../tests/fixtures/site/outline/breakpoints.html?raw';
 import fixture from '../../../../tests/fixtures/site/outline/index.html?raw';
 import { collect, MAX_ENTRIES, MAX_OUTSIDE } from './collect';
 import { run } from './collect-entry';
@@ -191,5 +192,43 @@ describe('the analysis facts (RB-091-03)', () => {
       ['#fixed', true],
       ['#plain', false],
     ]);
+  });
+
+  it('gives headings and focusable elements their place in the document, and the writing direction (RB-094-02)', () => {
+    document.body.innerHTML =
+      '<h1 id="t">Title</h1><p><a href="/a" id="a" tabindex="2">A</a></p><h2 id="s">Sub</h2><button id="b">B</button>';
+    const outline = collect({ sections: ['headings', 'focus'] }, flat);
+    const order = [...outline.headings, ...outline.focus].sort((x, y) => x.order - y.order).map((one) => one.selector);
+    expect(order).toEqual(['#t', '#a', '#s', '#b']);
+    expect(outline.focus.map((f) => f.selector)).toEqual(['#a', '#b']);
+    expect(outline.dir).toBe('ltr');
+    document.documentElement.setAttribute('dir', 'rtl');
+    try {
+      expect(collect({ sections: ['focus'] }, flat).dir).toBe('rtl');
+    } finally {
+      document.documentElement.removeAttribute('dir');
+    }
+  });
+});
+
+describe('the breakpoint acceptance page (RB-094-02)', () => {
+  afterEach(() => {
+    document.head.innerHTML = '';
+    document.body.innerHTML = '';
+  });
+
+  it('shows the menu link "Pricing" only from 1024 px on', () => {
+    load(breakpoints, 1280);
+    expect(collect({ sections: ['focus'] }, flat).focus.map((f) => f.name)).toContain('Pricing');
+    load(breakpoints, 768);
+    expect(collect({ sections: ['focus'] }, flat).focus.map((f) => f.name)).not.toContain('Pricing');
+  });
+
+  it('keeps the buttons in source order, whatever CSS order shows', () => {
+    load(breakpoints, 1280);
+    const buttons = collect({ sections: ['focus'] }, flat).focus.filter((f) => f.role === 'button');
+    expect(buttons.map((b) => b.name)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    const orders = buttons.map((b) => b.order);
+    expect([...orders].sort((a, b) => a - b)).toEqual(orders);
   });
 });

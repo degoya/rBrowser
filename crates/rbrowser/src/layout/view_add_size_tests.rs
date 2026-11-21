@@ -310,3 +310,50 @@ async fn an_existing_breakpoint_is_described_as_it_is_and_another_size_under_its
     assert_eq!(again["changed"], json!(true));
     assert_eq!(notices(&setup), 1);
 }
+
+/// RB-095-02: an Android device is a breakpoint of its own engine at the device's size, with
+/// its label; adding it again opens the same one whatever size the device reports now.
+#[tokio::test]
+async fn an_engine_view_is_a_breakpoint_of_that_engine_at_its_size() {
+    let (dir, setup) = project();
+    let core = &setup.core;
+    let size = FreeSize::new(412, 915, Some(2.625)).expect("a size");
+    let answer = add_engine_view(
+        core,
+        "android-R58N123",
+        size,
+        rb_config::EngineKind::Android,
+        "Pixel 8 (device size)",
+    )
+    .expect("added");
+    assert_eq!(answer["breakpoint"], json!("android-R58N123"));
+    assert_eq!(answer["added"], json!(true));
+    assert_eq!(
+        local(&dir)["breakpoints"][0],
+        json!({
+            "id": "android-R58N123",
+            "label": "Pixel 8 (device size)",
+            "width": 412,
+            "height": 915,
+            "emulation": { "dpr": 2.625 },
+            "engine": "android",
+        })
+    );
+    // Its view is the Android engine's, which this test core does not run: the breakpoint is
+    // shown (not hidden), and the engine opens it.
+    assert!(
+        !local(&dir)["layout"]["hidden"]
+            .as_array()
+            .is_some_and(|hidden| hidden.contains(&json!("android-R58N123")))
+    );
+    let rotated = FreeSize::new(915, 412, Some(2.625)).expect("a size");
+    let again = add_engine_view(
+        core,
+        "android-R58N123",
+        rotated,
+        rb_config::EngineKind::Android,
+        "Pixel 8 (device size)",
+    )
+    .expect("the same breakpoint");
+    assert_eq!(again["added"], json!(false));
+}

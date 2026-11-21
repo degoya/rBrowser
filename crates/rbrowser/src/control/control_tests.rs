@@ -7,6 +7,7 @@ use serde_json::json;
 use rb_ipc::IpcErrorCode;
 
 use super::KeyDown;
+use super::test_support::free_chord;
 use super::*;
 use crate::cdp::fake::FakeBrowser;
 use crate::host::state::default_config;
@@ -160,14 +161,12 @@ async fn the_editor_sets_checks_and_resets_a_binding_and_saves_it() {
             conflict: Some("reload.all".to_owned()),
         })
     );
-    core.set_bindings("view.back", &["Ctrl+Shift+Space V J".to_owned()])
+    let chord = free_chord(&core, "view.back");
+    core.set_bindings("view.back", std::slice::from_ref(&chord))
         .expect("set");
     let saved: Value =
         serde_json::from_str(&std::fs::read_to_string(&path).expect("written")).expect("json");
-    assert_eq!(
-        saved["shortcuts"]["bindings"]["view.back"],
-        json!(["Ctrl+Shift+Space V J"])
-    );
+    assert_eq!(saved["shortcuts"]["bindings"]["view.back"], json!([chord]));
     let exported = core.export_bindings();
     let CoreToShell::BindingsExport { json: file } = exported else {
         panic!("export");
@@ -251,7 +250,11 @@ fn blocking_command(
         id: id.clone(),
         title_key: "commands.view.test_block".to_owned(),
         group: Group::View,
-        default_bindings: vec!["Ctrl+Shift+Space V .".parse().expect("binding")],
+        default_bindings: vec![
+            free_chord(core, "view.test_block")
+                .parse()
+                .expect("binding"),
+        ],
         mcp: McpCoverage::Omitted("test".to_owned()),
     };
     let handler: rb_commands::Handler = Arc::new(move |_| {
@@ -320,7 +323,8 @@ async fn the_editor_keeps_the_entries_the_registry_did_not_take() {
         user_path: Some(path.clone()),
         ..CoreSetup::default()
     });
-    core.set_bindings("view.forward", &["Ctrl+Shift+Space V J".to_owned()])
+    let chord = free_chord(&core, "view.forward");
+    core.set_bindings("view.forward", std::slice::from_ref(&chord))
         .expect("set");
     let saved = |key: &str| {
         let file: Value =
@@ -333,7 +337,7 @@ async fn the_editor_keeps_the_entries_the_registry_did_not_take() {
         json!(["Ctrl+W"]),
         "refused, but the user's"
     );
-    assert_eq!(saved("view.forward"), json!(["Ctrl+Shift+Space V J"]));
+    assert_eq!(saved("view.forward"), json!([chord]));
     core.reset_binding(Some("view.back")).expect("reset");
     assert_eq!(saved("view.back"), Value::Null, "a reset drops it");
     core.reset_binding(None).expect("reset all");
@@ -355,7 +359,8 @@ async fn nothing_is_written_over_a_settings_file_that_did_not_load() {
         ..CoreSetup::default()
     });
     core.shell_ready();
-    core.set_bindings("view.back", &["Ctrl+Shift+Space V J".to_owned()])
+    let chord = free_chord(&core, "view.back");
+    core.set_bindings("view.back", &[chord])
         .expect("applies for this session");
     assert_eq!(std::fs::read_to_string(&path).expect("read"), "{ broken");
     assert!(
@@ -423,7 +428,8 @@ fn the_palette_and_the_findings_panel_open_their_windows_outside_the_runtime() {
 #[tokio::test]
 async fn an_edited_binding_is_sent_to_the_shell() {
     let (ui, core) = core();
-    core.set_bindings("view.back", &["Ctrl+Shift+Space V J".to_owned()])
+    let chord = free_chord(&core, "view.back");
+    core.set_bindings("view.back", std::slice::from_ref(&chord))
         .expect("set");
     let commands = sent(&ui)
         .into_iter()
@@ -433,7 +439,7 @@ async fn an_edited_binding_is_sent_to_the_shell() {
         .as_array()
         .and_then(|all| all.iter().find(|command| command["id"] == "view.back"))
         .expect("view.back");
-    assert_eq!(back["bindings"], json!(["Ctrl+Shift+Space V J"]));
+    assert_eq!(back["bindings"], json!([chord]));
 }
 
 /// RB-090-82: the plugin commands of ≡ › Plugins open Settings > Plugins, where the list is and a

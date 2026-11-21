@@ -5,7 +5,8 @@
 // texts arrived, on Refresh, and when the command `social_preview` (K G) posts the page it
 // previewed (`{ type: 'event', message: { type: 'preview', url } }`). The share images come as
 // `data:` URIs in the answer: the frame has no network. The answer may be as large as the panels
-// window's message limit (RB-090-44): the panel asks for that `budget`.
+// window's message limit (RB-090-44): the panel asks for that `budget`. Above the cards the
+// page's search result for desktop and mobile (RB-090-95), as the setting `seo.serpPreview` says.
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { onPanelEvent } from '../../../../web-common/panel-ui/src/events';
 import { answerBudget } from '../../../../web-common/panel-ui/src/limit';
@@ -14,7 +15,9 @@ import type { StatusLine } from '../../../../web-common/panel-ui/src/status';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
 import PlatformCard from './PlatformCard.vue';
+import SerpPreview from './SerpPreview.vue';
 import { isPreview, type Preview } from './model';
+import { devicesShown, isSerp } from './serp';
 
 const panel = usePanel();
 const t = panel.t;
@@ -22,6 +25,11 @@ const t = panel.t;
 const preview = ref<Preview | null>(null);
 const loading = ref(false);
 const failure = ref<unknown>(null);
+const serp = computed(() => {
+  const value = preview.value?.serp;
+  return isSerp(value) ? value : null;
+});
+const devices = computed(() => devicesShown(panel.settings.value['seo.serpPreview']));
 
 const line = computed<StatusLine | null>(() => {
   void panel.strings.value;
@@ -82,6 +90,8 @@ panel.onSettings((first) => {
         <span class="min-w-0 break-all">{{ t('panel.page', { url: preview.finalUrl }) }}</span>
         <UBadge data-count color="neutral" variant="subtle" :label="t('panel.count', { count: preview.cards.length })" />
       </p>
+
+      <SerpPreview v-if="serp && devices.length > 0" :serp="serp" :devices="devices" />
 
       <UEmpty
         v-if="!loading && preview && preview.cards.length === 0"

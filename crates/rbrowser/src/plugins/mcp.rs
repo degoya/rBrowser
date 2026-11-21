@@ -23,6 +23,22 @@ pub fn tools(core: &Core) -> Vec<PluginToolInfo> {
         .collect()
 }
 
+/// Plugin tools only their own panel calls, as (plugin id, tool): never listed nor run over MCP
+/// (RB-096-01: the API client's panel sends free requests and saves; MCP runs saved ones;
+/// RB-096-07: the load test's panel starts runs; MCP reads their reports).
+pub const PANEL_ONLY: &[(&str, &str)] = &[
+    (crate::api_client::PLUGIN_ID, "panel"),
+    (crate::load_test::PLUGIN_ID, "panel"),
+];
+
+/// Whether `tool` is one of [`PANEL_ONLY`].
+#[must_use]
+pub fn panel_only(tool: &PluginTool) -> bool {
+    PANEL_ONLY
+        .iter()
+        .any(|(plugin, name)| *plugin == tool.plugin_id && *name == tool.tool)
+}
+
 fn served(core: &Core) -> Vec<PluginTool> {
     let Some(runtime) = for_host(core.host()) else {
         return Vec::new();
@@ -32,6 +48,7 @@ fn served(core: &Core) -> Vec<PluginTool> {
         .tools()
         // A project plugin's tools only while the workspace is trusted (review M2, Charge 6).
         .filter(|tool| runtime.serves(&tool.plugin_id))
+        .filter(|tool| !panel_only(tool))
         .cloned()
         .collect()
 }

@@ -7,16 +7,17 @@
 //! of its session) and says when it exists ([`RenderViews::open`]); the backend
 //! (`super::backend`) then finds its CDP target among `Target.getTargets` by that URL
 //! ([`target_showing`]), hides it at once and attaches. A render view closes through its
-//! browser's host ([`RenderViews::close`]). [`backend_for`] gives the host's window these
-//! browsers; the sitemap capture and the environment comparison both take it. A marker
+//! browser's host ([`RenderViews::close`]); a full-page shot grows it to the page's height and
+//! back ([`RenderViews::resize`], `super::render_surface`). [`backend_for`] gives the host's
+//! window these browsers; the sitemap capture and the environment comparison both take it. A marker
 //! ([`next_marker`]) is a number of one counter of the process and 128 random bits, so two runs
 //! at once never share one and no page can guess one: a grid page that opens a window at a
 //! marker it made up opens one no render view looks for. And a target with an opener (a popup)
 //! or in another browser context than its session's is never taken for a render view
 //! (security review, wave 090-w21).
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use rb_config::EngineKind;
@@ -35,7 +36,7 @@ pub const FIND_POLL: Duration = Duration::from_millis(50);
 pub const CLOSE_WAIT: Duration = Duration::from_secs(2);
 
 /// A windowless browser for the window to make.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RenderView {
     /// The URL it starts with (`super::backend::MARKER_PREFIX` and its number): how its CDP
     /// target is found.
@@ -45,17 +46,34 @@ pub struct RenderView {
     /// Its size in DIP, the breakpoint's viewport; never 0.
     pub width: u32,
     pub height: u32,
+    /// The device scale factor its render handler reports (RB-090-90): the breakpoint's pixel
+    /// ratio, at least 1 and at most [`MAX_SCALE`]. The emulation asks the compositor for that
+    /// ratio; a windowless browser at 1 painted a surface too small for it, which the shot
+    /// repeated (the iPad mini at 2: the page twice side by side).
+    pub scale: f32,
 }
 
+/// The highest device scale factor of a render view: the highest pixel ratio a breakpoint has.
+pub const MAX_SCALE: f32 = 10.0;
+
 impl RenderView {
-    /// A render view at `marker` in `session`, `width` x `height` (a side of 0 becomes 1).
+    /// A render view at `marker` in `session`, `width` x `height` (a side of 0 becomes 1) at
+    /// pixel ratio `dpr` (none, `0`, or below 1: a scale of 1; a smaller ratio needs no smaller
+    /// surface).
     #[must_use]
-    pub fn new(marker: &str, session: &str, width: u32, height: u32) -> Self {
+    pub fn new(marker: &str, session: &str, width: u32, height: u32, dpr: f64) -> Self {
+        // In [1, MAX_SCALE] already, so the narrowing loses nothing a scale factor needs.
+        let scale = if dpr.is_finite() {
+            dpr.clamp(1.0, f64::from(MAX_SCALE)) as f32
+        } else {
+            1.0
+        };
         Self {
             marker: marker.to_owned(),
             session: session.to_owned(),
             width: width.max(1),
             height: height.max(1),
+            scale,
         }
     }
 }
@@ -63,10 +81,104 @@ impl RenderView {
 /// What [`RenderViews::open`] calls once: `Ok` when the browser exists, else why not.
 pub type RenderViewMade = Box<dyn FnOnce(Result<(), String>) + Send>;
 
+/// The size in DIP a resize waits for.
+#[derive(Clone, Copy)]
+struct Wanted {
+    width: u32,
+    height: u32,
+}
+
+impl Wanted {
+    /// Whether a frame of `width_px` x `height_px` device pixels is at least this tall. The
+    /// frame's height in DIP is its pixels scaled by its width (a resize keeps the width), so a
+    /// frame of the old size never counts at any scale factor; the slack covers both sides
+    /// rounded to whole pixels (code review, wave 090-w23).
+    fn reached_by(self, width_px: u32, height_px: u32) -> bool {
+        if width_px == 0 {
+            return false;
+        }
+        let (width, height) = (u64::from(self.width), u64::from(self.height));
+        let (width_px, height_px) = (u64::from(width_px), u64::from(height_px));
+        height_px * width + height + width_px >= height * width_px
+    }
+}
+
+/// A render view's size, which its window's render handler reports (`cef_app/render_views.rs`),
+/// and the wait of a resize for the first frame painted that tall (RB-090-88).
+pub struct ViewSize {
+    width: AtomicU32,
+    height: AtomicU32,
+    /// The size in DIP a frame must reach, and whom to tell.
+    waiting: Mutex<Option<(Wanted, RenderViewMade)>>,
+}
+
+impl ViewSize {
+    /// A view of `width` x `height` DIP (a side of 0 becomes 1).
+    #[must_use]
+    pub fn new(width: u32, height: u32) -> Self {
+        Self {
+            width: AtomicU32::new(width.max(1)),
+            height: AtomicU32::new(height.max(1)),
+            waiting: Mutex::new(None),
+        }
+    }
+
+    /// The width and the height in DIP.
+    #[must_use]
+    pub fn get(&self) -> (u32, u32) {
+        (
+            self.width.load(Ordering::Acquire),
+            self.height.load(Ordering::Acquire),
+        )
+    }
+
+    /// Takes `width` x `height` DIP; `painted` is answered by the first frame at least that tall
+    /// ([`ViewSize::painted`]). A resize still waiting is answered with an error first.
+    pub fn resize(&self, width: u32, height: u32, painted: RenderViewMade) {
+        let wanted = Wanted {
+            width: width.max(1),
+            height: height.max(1),
+        };
+        self.width.store(wanted.width, Ordering::Release);
+        self.height.store(wanted.height, Ordering::Release);
+        let earlier = crate::cdp::lock(&self.waiting).replace((wanted, painted));
+        if let Some((_, earlier)) = earlier {
+            earlier(Err("the render view was resized again".to_owned()));
+        }
+    }
+
+    /// A frame of `width` x `height` device pixels was painted (at a scale factor above 1 more
+    /// than DIP); answers the waiting resize when it is as tall in DIP.
+    pub fn painted(&self, width: u32, height: u32) {
+        let done = {
+            let mut waiting = crate::cdp::lock(&self.waiting);
+            match waiting.as_ref() {
+                Some((wanted, _)) if wanted.reached_by(width, height) => waiting.take(),
+                _ => None,
+            }
+        };
+        if let Some((_, painted)) = done {
+            painted(Ok(()));
+        }
+    }
+
+    /// The view closed: a resize still waiting gets no frame.
+    pub fn closed(&self) {
+        let waiting = crate::cdp::lock(&self.waiting).take();
+        if let Some((_, painted)) = waiting {
+            painted(Err("the render view is closed".to_owned()));
+        }
+    }
+}
+
 /// The window's side of the render views.
 pub trait RenderViews: Send + Sync {
     /// Makes the browser `view` asks for and calls `made`; returns at once.
     fn open(&self, view: RenderView, made: RenderViewMade);
+    /// Gives the browser that started at `marker` the size `width` x `height` DIP and calls
+    /// `painted` once it painted a frame at least that tall (RB-090-88, a full-page shot); a
+    /// browser that is gone answers why.
+    fn resize(&self, marker: String, width: u32, height: u32, painted: RenderViewMade);
     /// Closes the browser that started at `marker`; one that is gone already is no error.
     fn close(&self, marker: String);
 }
@@ -177,6 +289,13 @@ impl RenderViews for HostViews {
         match self.0.upgrade() {
             Some(host) => host.ui().open_render_view(view, made),
             None => made(Err("the window is closed".to_owned())),
+        }
+    }
+
+    fn resize(&self, marker: String, width: u32, height: u32, painted: RenderViewMade) {
+        match self.0.upgrade() {
+            Some(host) => host.ui().resize_render_view(marker, width, height, painted),
+            None => painted(Err("the window is closed".to_owned())),
         }
     }
 

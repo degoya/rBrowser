@@ -15,16 +15,33 @@ pub const MAX_PER_ADDRESS: usize = 16;
 pub struct Limits {
     total: usize,
     per_address: HashMap<IpAddr, usize>,
+    /// Every connection comes from one address (the presentation's tunnel, RB-096-05): the
+    /// limit per address is the limit in all.
+    shared_address: bool,
 }
 
 impl Limits {
+    /// The limits of a listener whose connections all come from one address.
+    #[must_use]
+    pub fn shared_address() -> Self {
+        Self {
+            shared_address: true,
+            ..Self::default()
+        }
+    }
+
     /// Takes a slot for a connection from `ip`; `false` when it must be closed.
     pub fn acquire(&mut self, ip: IpAddr) -> bool {
         if self.total >= MAX_CONNECTIONS {
             return false;
         }
+        let cap = if self.shared_address {
+            MAX_CONNECTIONS
+        } else {
+            MAX_PER_ADDRESS
+        };
         let open = self.per_address.entry(ip).or_default();
-        if *open >= MAX_PER_ADDRESS {
+        if *open >= cap {
             return false;
         }
         *open += 1;

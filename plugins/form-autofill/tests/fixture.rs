@@ -43,6 +43,7 @@ fn planned(locale: &str, mode: Mode, profile: Option<Profile>) -> Vec<Planned> {
         strategy: Strategy::Mixed,
         seed: SEED,
         profile,
+        tick_consent: true,
     };
     plan(&collected(locale), &options)
 }

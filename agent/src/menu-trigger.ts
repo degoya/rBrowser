@@ -13,6 +13,13 @@
 // same list, outside every list or in a link tree outside a menu (a footer sitemap, a comment
 // thread) has no trigger. One level only: a submenu inside a submenu gets the hover of the
 // outermost entry.
+//
+// RB-090-87: while a recording runs, a hover where the pointer rests is a step when it is on a
+// menu's entry (`isMenuEntry`): one inside a submenu of a menu entry (`menuTrigger` names its
+// trigger), one inside a `[role=menu]` or `[role=menubar]`, or one whose hover shows a submenu
+// (`opensSubmenu`): its menu entry's nested list or menu is shown, it is `aria-expanded`, or what
+// its `aria-controls` names is shown. `hasSubmenu` says whether one could still open (a menu
+// with a hover delay).
 
 import { actionable } from './selector';
 
@@ -51,6 +58,57 @@ export function menuTrigger(clicked: Element): Element | null {
 /** Whether `item` is a menu's entry, not a list item of a link tree. */
 function inMenu(item: Element): boolean {
   return item.closest(MENU) !== null || item.matches(POPUP) || item.querySelector(POPUP) !== null;
+}
+
+/** Whether `element` is an entry of a menu: in a submenu, in an ARIA menu, or showing one. */
+export function isMenuEntry(element: Element): boolean {
+  const subject = actionable(element);
+  return (
+    subject.closest(ARIA_MENU) !== null || menuTrigger(subject) !== null || opensSubmenu(subject)
+  );
+}
+
+/** Whether the hover on `element` shows a submenu now. */
+export function opensSubmenu(element: Element): boolean {
+  const subject = actionable(element);
+  if (subject.getAttribute('aria-expanded') === 'true') return true;
+  const controls = subject.getAttribute('aria-controls');
+  const controlled = controls ? subject.ownerDocument.getElementById(controls) : null;
+  if (controlled && shown(controlled)) return true;
+  return submenusOf(subject).some(shown);
+}
+
+/** Whether `element` has a submenu, shown or not: a hover with a delay may still open it. */
+export function hasSubmenu(element: Element): boolean {
+  const subject = actionable(element);
+  return (
+    subject.hasAttribute('aria-expanded') ||
+    subject.hasAttribute('aria-controls') ||
+    submenusOf(subject).length > 0
+  );
+}
+
+/** The ARIA menus, whose every entry counts. */
+const ARIA_MENU = '[role="menu"], [role="menubar"]';
+
+/** The nested lists or menus of the menu entry whose own link or button `subject` is. */
+function submenusOf(subject: Element): Element[] {
+  const item = subject.matches(ITEM) ? subject : subject.closest(ITEM);
+  if (!item || !inMenu(item)) return [];
+  return [...item.querySelectorAll(LIST)].filter((list) => !list.contains(subject));
+}
+
+/** Whether `element` is shown: no `display: none` above it, not hidden, not transparent. The
+ *  style alone, so a submenu that is still unfolding counts. */
+function shown(element: Element): boolean {
+  const view = element.ownerDocument.defaultView;
+  if (!view || !element.isConnected) return false;
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const style = view.getComputedStyle(node);
+    if (style.display === 'none' || style.opacity === '0') return false;
+  }
+  const visibility = view.getComputedStyle(element).visibility;
+  return visibility !== 'hidden' && visibility !== 'collapse';
 }
 
 /** `item`'s own link or button outside the submenu that holds `subject`. */

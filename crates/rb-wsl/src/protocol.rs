@@ -188,7 +188,7 @@ pub fn new_nonce() -> String {
     use rand::Rng as _;
     let mut bytes = [0u8; NONCE_LEN / 2];
     rand::rng().fill_bytes(&mut bytes);
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    rb_util::hex(&bytes)
 }
 
 /// Whether `nonce` has the form [`new_nonce`] writes.

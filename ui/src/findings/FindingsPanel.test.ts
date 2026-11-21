@@ -24,6 +24,11 @@ function filterSelect(wrapper: VueWrapper, which: 'plugin' | 'view') {
   return selects[which === 'plugin' ? 0 : 1]!;
 }
 
+/** The value a filter select shows. */
+function selected(wrapper: VueWrapper, which: 'plugin' | 'view'): unknown {
+  return (filterSelect(wrapper, which).props() as { modelValue: unknown }).modelValue;
+}
+
 async function choose(wrapper: VueWrapper, which: 'plugin' | 'view', value: unknown): Promise<void> {
   filterSelect(wrapper, which).vm.$emit('update:modelValue', value);
   await settle();
@@ -111,6 +116,31 @@ describe('FindingsPanel', () => {
     await choose(wrapper, 'plugin', '*');
     await choose(wrapper, 'view', 2);
     expect(wrapper.findAll('[data-finding]').map((b) => b.attributes('data-testid'))).toEqual(['finding-a']);
+    wrapper.unmount();
+  });
+
+  it('falls back to all plugins and views when the next run no longer has the choice (RB-094-14)', async () => {
+    const { core, wrapper } = await withRun();
+    await choose(wrapper, 'plugin', 'a11y-axe');
+    await choose(wrapper, 'view', 3);
+    const next = sampleRun();
+    next.plugins = ['seo'];
+    next.findings = next.findings.filter((finding) => !finding.plugins.includes('a11y-axe'));
+    next.views = next.views.filter((checked) => checked.id !== 3);
+    core.emit({ type: 'findings', run: next, messages: sampleMessages });
+    await settle();
+    expect(selected(wrapper, 'plugin')).toBe('*');
+    expect(selected(wrapper, 'view')).toBe('*');
+    expect(wrapper.findAll('[data-finding]')).toHaveLength(next.findings.length);
+    wrapper.unmount();
+  });
+
+  it('keeps a filter the next run still offers', async () => {
+    const { core, wrapper } = await withRun();
+    await choose(wrapper, 'plugin', 'seo');
+    core.emit({ type: 'findings', run: sampleRun(), messages: sampleMessages });
+    await settle();
+    expect(selected(wrapper, 'plugin')).toBe('seo');
     wrapper.unmount();
   });
 

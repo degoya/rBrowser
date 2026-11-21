@@ -6,9 +6,9 @@
 //! touch `x-protected` (names: `rb-settings`). A root property that is no key is a **group**
 //! (`sync`, `network`): it stays unannotated and each of its properties is a key
 //! (`sync.scroll`). The root's `$schema` and `version` are file structure, neither. The tables
-//! below are the keys in display order; `x-order` numbers them per section in that order,
-//! counted across the project and the user schema together (a key may fix its number), and
-//! `annotate_tests` holds it unique per section.
+//! (`project_keys.rs`, `user_keys.rs`) are the keys in display order; `x-order` numbers them per
+//! section in that order, counted across the project and the user schema together (a key may
+//! fix its number), and `annotate_tests` holds it unique per section.
 
 use std::collections::BTreeMap;
 
@@ -20,9 +20,11 @@ use serde_json::{Map, Value};
 use crate::LOCAL_ONLY_KEYS;
 
 mod inputs;
+mod project_keys;
 mod user_keys;
 
 pub use inputs::{InputDef, PROJECT_INPUTS, USER_INPUTS, annotate_inputs};
+pub use project_keys::PROJECT_KEYS;
 pub use user_keys::USER_KEYS;
 
 /// One settings key and where the window shows it.
@@ -96,259 +98,6 @@ const fn protected(key: &'static str, category: Category, section: &'static str)
         shared: false,
     }
 }
-
-/// The keys of the project config (`config.json`, `config.local.json`).
-pub const PROJECT_KEYS: &[KeyDef] = &[
-    key("startUrl", Category::Project, "start-url"),
-    key("environments", Category::Project, "environments"),
-    key("sessions", Category::Project, "sessions"),
-    key("sessionColors", Category::Project, "sessions"),
-    key("bookmarks", Category::Project, "bookmarks"),
-    // Breakpoints carry request headers: MCP edits them with the breakpoint tools, which refuse
-    // headers, never whole.
-    key("breakpoints", Category::Breakpoints, "breakpoints").protect(),
-    key("layouts", Category::Layout, "presets"),
-    key("layout", Category::Layout, "grid"),
-    // Emulation defaults (RB-010-05): one key per field, by the section the job names.
-    key("emulation.dpr", Category::Emulation, "defaults"),
-    key("emulation.mobile", Category::Emulation, "defaults"),
-    key("emulation.touch", Category::Emulation, "defaults"),
-    key("emulation.userAgent", Category::Emulation, "defaults"),
-    key("emulation.platform", Category::Emulation, "defaults"),
-    key("emulation.locale", Category::Emulation, "defaults"),
-    key("emulation.orientation", Category::Emulation, "defaults"),
-    key("emulation.safeAreas", Category::Emulation, "defaults"),
-    key("emulation.textScale", Category::Emulation, "defaults"),
-    key(
-        "emulation.colorScheme",
-        Category::Emulation,
-        "media-features",
-    ),
-    key(
-        "emulation.reducedMotion",
-        Category::Emulation,
-        "media-features",
-    ),
-    key("emulation.media", Category::Emulation, "media-features"),
-    key("emulation.network", Category::Emulation, "throttling"),
-    // The emulation extras (RB-080-10): offline beside the throttling, the paper beside the
-    // print media type, position, time zone and CPU in their own section.
-    key("emulation.offline", Category::Emulation, "throttling"),
-    key("emulation.paper", Category::Emulation, "media-features"),
-    key("emulation.geolocation", Category::Emulation, "geo-time-cpu"),
-    key("emulation.timezone", Category::Emulation, "geo-time-cpu"),
-    key(
-        "emulation.cpuThrottling",
-        Category::Emulation,
-        "geo-time-cpu",
-    ),
-    // Project headers apply only in a trusted workspace (RB-010-09).
-    key("emulation.headers", Category::Network, "headers").protect(),
-    key("sync.navigation", Category::Sync, "navigation"),
-    key("sync.navigationSettleMs", Category::Sync, "navigation"),
-    key("sync.navigationIncludeHash", Category::Sync, "navigation"),
-    key("sync.detectBrowsersync", Category::Sync, "navigation"),
-    key("sync.scroll", Category::Sync, "scroll"),
-    key("sync.scrollMode", Category::Sync, "scroll"),
-    key("sync.scrollDebounceMs", Category::Sync, "scroll"),
-    key("sync.click", Category::Sync, "interaction"),
-    key("sync.input", Category::Sync, "interaction"),
-    key("sync.keyboard", Category::Sync, "interaction"),
-    key("sync.hover", Category::Sync, "interaction"),
-    key("sync.hoverThrottleMs", Category::Sync, "interaction"),
-    key("sync.desyncTimeoutMs", Category::Sync, "interaction"),
-    key("sync.contextMenu", Category::Sync, "interaction"),
-    key("sync.forms", Category::Sync, "interaction"),
-    key("sync.focus", Category::Sync, "interaction"),
-    key("sync.leaderOnlySubmit", Category::Sync, "leader-submit"),
-    key("sync.leaderPerSession", Category::Sync, "leader-submit"),
-    key("sync.activateOnFocus", Category::Sync, "leader-submit"),
-    // The page API and its message bus (RB-020-08).
-    key("bus.enabled", Category::Sync, "message-bus"),
-    key("bus.maxPayloadBytes", Category::Sync, "message-bus"),
-    key("bus.maxPerSecond", Category::Sync, "message-bus"),
-    key("pageApi.enabled", Category::Sync, "page-api"),
-    key("pageApi.uaSuffix", Category::Sync, "page-api"),
-    key("reload.watch", Category::Reload, "watch"),
-    key("reload.debounceMs", Category::Reload, "watch"),
-    key("reload.mode", Category::Reload, "watch"),
-    // Hot reload (RB-030-05).
-    key("reload.respectHmr", Category::Reload, "watch"),
-    key("reload.intervalSec", Category::Reload, "interval"),
-    key("reload.ignore", Category::Reload, "ignore"),
-    // Guarded by workspace trust (RB-010-09): never over MCP.
-    key(
-        "network.hostResolverRules",
-        Category::Network,
-        "host-resolver",
-    )
-    .protect(),
-    key("network.proxy", Category::Network, "proxy").protect(),
-    key(
-        "network.ignoreCertificateErrors",
-        Category::Network,
-        "certificates",
-    )
-    .protect(),
-    // Capture > Visual regression (RB-050-04).
-    key("visual.threshold", Category::Capture, "visual-regression"),
-    key("visual.fullPage", Category::Capture, "visual-regression"),
-    key(
-        "visual.slugStrategy",
-        Category::Capture,
-        "visual-regression",
-    ),
-    key("visual.lfsCheck", Category::Capture, "visual-regression"),
-    key(
-        "visual.failOnMetaMismatch",
-        Category::Capture,
-        "visual-regression",
-    ),
-    // Capture > Screenshots (RB-050-03), the user settings may set them too.
-    // Where files are written is the person's choice, never MCP's.
-    shared("capture.dir", Category::Capture, "screenshots").protect(),
-    shared("capture.pathPattern", Category::Capture, "screenshots"),
-    shared("capture.elementPadding", Category::Capture, "screenshots"),
-    shared("capture.defaultDelay", Category::Capture, "screenshots"),
-    shared("capture.overviewLabels", Category::Capture, "screenshots"),
-    // Capture > Cookie banners & animations (RB-080-12), the user settings may set them too.
-    shared("capture.hideBanners", Category::Capture, "cookie-banners"),
-    shared("capture.hideSelectors", Category::Capture, "cookie-banners"),
-    shared(
-        "capture.useBuiltinList",
-        Category::Capture,
-        "cookie-banners",
-    ),
-    shared(
-        "capture.freezeAnimations",
-        Category::Capture,
-        "cookie-banners",
-    ),
-    shared("capture.settleMs", Category::Capture, "cookie-banners"),
-    // Capture > Video (RB-080-02), the user settings may set them too.
-    shared("capture.video.fps", Category::Capture, "video"),
-    shared("capture.video.maxDurationSec", Category::Capture, "video"),
-    shared("capture.video.quality", Category::Capture, "video"),
-    // The Videos panel (RB-110-12).
-    shared("capture.video.keepRecordings", Category::Capture, "video"),
-    shared("capture.video.keepDays", Category::Capture, "video"),
-    shared("capture.video.autoplay", Category::Capture, "video"),
-    // Capture > Sitemap (RB-050-05).
-    key("sitemap.parallel", Category::Capture, "sitemap"),
-    key("sitemap.waitNetworkIdle", Category::Capture, "sitemap"),
-    key("sitemap.waitSelector", Category::Capture, "sitemap"),
-    key("sitemap.delayMs", Category::Capture, "sitemap"),
-    key("sitemap.timeoutSec", Category::Capture, "sitemap"),
-    // RB-090-83: a shot's own deadline.
-    key("sitemap.shotTimeoutSec", Category::Capture, "sitemap"),
-    key("sitemap.fullPage", Category::Capture, "sitemap"),
-    key("sitemap.autoScroll", Category::Capture, "sitemap"),
-    key("sitemap.include", Category::Capture, "sitemap"),
-    key("sitemap.exclude", Category::Capture, "sitemap"),
-    key("sitemap.maxPages", Category::Capture, "sitemap"),
-    key("sitemap.hostIntervalMs", Category::Capture, "sitemap"),
-    key("sitemap.respectRobots", Category::Capture, "sitemap"),
-    key("sitemap.hideSelectors", Category::Capture, "sitemap"),
-    key("sitemap.retries", Category::Capture, "sitemap"),
-    key("sitemap.maxDepth", Category::Capture, "sitemap"),
-    key("sitemap.maxSitemapMib", Category::Capture, "sitemap"),
-    key("sitemap.maxUrls", Category::Capture, "sitemap"),
-    // Capture > Environment compare (RB-080-03).
-    key("envCompare.environments", Category::Capture, "env-compare"),
-    key("envCompare.breakpoints", Category::Capture, "env-compare"),
-    key("envCompare.threshold", Category::Capture, "env-compare"),
-    key(
-        "envCompare.maxDiffPercent",
-        Category::Capture,
-        "env-compare",
-    ),
-    key("envCompare.fullPage", Category::Capture, "env-compare"),
-    key("envCompare.waitMs", Category::Capture, "env-compare"),
-    key("envCompare.parallel", Category::Capture, "env-compare"),
-    key("checks.lighthouse", Category::Checks, "lighthouse"),
-    // Checks > Findings (RB-060-01), the user settings may set them too.
-    shared("checks.parallel", Category::Checks, "findings"),
-    shared("checks.keepRuns", Category::Checks, "findings"),
-    shared("checks.rules", Category::Checks, "findings"),
-    shared("checks.ignore", Category::Checks, "findings"),
-    key("seo", Category::Checks, "seo"),
-    // The breakpoint analyser (RB-010-13).
-    key("analyzer.mode", Category::Breakpoints, "analyzer"),
-    key("analyzer.urls", Category::Breakpoints, "analyzer"),
-    key("analyzer.edgeViews", Category::Breakpoints, "analyzer"),
-    key(
-        "analyzer.mergeTolerancePx",
-        Category::Breakpoints,
-        "analyzer",
-    ),
-    key("analyzer.static", Category::Breakpoints, "analyzer"),
-    key("analyzer.checkOnOpen", Category::Breakpoints, "analyzer"),
-    // The static source's files (RB-030-07).
-    key("analyzer.staticGlobs", Category::Breakpoints, "analyzer"),
-    // The recorder (RB-050-01).
-    key(
-        "automation.recorder.recordScroll",
-        Category::Automation,
-        "recorder",
-    ),
-    key(
-        "automation.recorder.recordHover",
-        Category::Automation,
-        "recorder",
-    ),
-    // The form autofill's fills in a recording (RB-090-78).
-    key(
-        "automation.recorder.recordAutofill",
-        Category::Automation,
-        "recorder",
-    ),
-    // How a recording plays back and its export waits (RB-090-66).
-    key(
-        "automation.recorder.playbackPace",
-        Category::Automation,
-        "recorder",
-    ),
-    // The Recorder panel follows a played recording's steps (RB-090-84).
-    key(
-        "automation.recorder.followPlayback",
-        Category::Automation,
-        "recorder",
-    ),
-    // The least pause before each step at the pace `recorded` (RB-090-84).
-    key(
-        "automation.recorder.minPauseMs",
-        Category::Automation,
-        "recorder",
-    ),
-    // The fields whose values a recording masks: MCP may not empty the list and record
-    // passwords.
-    key(
-        "automation.recorder.secretFields",
-        Category::Automation,
-        "recorder",
-    )
-    .protect(),
-    // Where files are written is the person's choice, never MCP's (as `capture.dir`).
-    key("automation.recorder.dir", Category::Automation, "recorder").protect(),
-    // The recorder's export (RB-050-02).
-    key(
-        "automation.recorderExport.locatorPreference",
-        Category::Automation,
-        "recorder",
-    ),
-    key(
-        "automation.recorderExport.dir",
-        Category::Automation,
-        "recorder",
-    )
-    .protect(),
-    key(
-        "automation.recorderExport.includeConfig",
-        Category::Automation,
-        "recorder",
-    ),
-    key("extensions", Category::Engines, "chromium").protect(),
-];
 
 /// The root properties that are file structure, neither key nor group.
 #[cfg(test)]

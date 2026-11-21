@@ -352,3 +352,80 @@ async fn a_zoomed_out_view_is_captured_at_the_size_its_page_fills() {
     assert_eq!(starts[0]["params"]["maxHeight"], 3376);
     let _ = recording.stop().await;
 }
+
+/// A clock the test moves.
+fn moving_clock(fps: u32, max_duration: Duration, now: &Arc<Mutex<f64>>) -> RecorderOptions {
+    let clock = Arc::clone(now);
+    RecorderOptions {
+        clock: Arc::new(move || *lock(&clock)),
+        ..options(fps, max_duration, 0.0)
+    }
+}
+
+/// RB-090-68: a pause from 101 to 104 is not in the file - 5 s of wall clock, 2 s of video, and
+/// the frame painted during the pause is the one the file goes on with.
+#[tokio::test]
+async fn a_pause_is_left_out_of_the_file() {
+    let (fake, router) = FakeBrowser::connect();
+    let sink = MemorySink::default();
+    let now = Arc::new(Mutex::new(100.0));
+    let recording = Recording::start(
+        router,
+        vec![(plan(1, "S1"), Box::new(sink.clone()) as Box<dyn FrameSink>)],
+        moving_clock(10, MINUTE, &now),
+    )
+    .await;
+    let pauser = recording.pauser();
+    frame(&fake, "S1", 1, 100.0, b"a");
+    frame(&fake, "S1", 2, 100.5, b"b");
+    sent(&fake, "Page.screencastFrameAck", 2).await;
+    *lock(&now) = 101.0;
+    assert!(pauser.pause());
+    frame(&fake, "S1", 3, 102.0, b"c");
+    sent(&fake, "Page.screencastFrameAck", 3).await;
+    *lock(&now) = 104.0;
+    assert!(pauser.resume());
+    frame(&fake, "S1", 4, 104.5, b"d");
+    sent(&fake, "Page.screencastFrameAck", 4).await;
+    *lock(&now) = 105.0;
+    let finished = recording.stop().await;
+    let written = lock(&sink.frames).clone();
+    let count = |bytes: &[u8]| written.iter().filter(|f| f.as_slice() == bytes).count();
+    assert_eq!(written.len(), 20, "2 s at 10 fps");
+    assert_eq!(
+        (count(b"a"), count(b"b"), count(b"c"), count(b"d")),
+        (5, 5, 5, 5)
+    );
+    assert_eq!(finished[0].frames, 20);
+    assert!((finished[0].seconds - 2.0).abs() < 1e-9);
+}
+
+/// While paused the maximum duration waits: a recording paused at once does not stop by
+/// itself, and stops after its resume.
+#[tokio::test]
+async fn a_pause_holds_the_maximum_duration() {
+    let (fake, router) = FakeBrowser::connect();
+    let sink = MemorySink::default();
+    let now = Arc::new(Mutex::new(1000.0));
+    let mut recording = Recording::start(
+        router,
+        vec![(plan(1, "S1"), Box::new(sink.clone()) as Box<dyn FrameSink>)],
+        moving_clock(10, Duration::from_millis(500), &now),
+    )
+    .await;
+    let pauser = recording.pauser();
+    assert!(pauser.pause());
+    frame(&fake, "S1", 1, 1000.0, b"a");
+    let early = tokio::time::timeout(Duration::from_millis(1200), recording.finished()).await;
+    assert!(
+        early.is_err(),
+        "paused, the maximum duration did not stop it"
+    );
+    assert!(fake.sent("Page.stopScreencast").is_empty());
+    assert!(pauser.resume());
+    let finished = tokio::time::timeout(Duration::from_secs(10), recording.finished())
+        .await
+        .expect("after the resume the maximum duration stops it");
+    assert_eq!(fake.sent("Page.stopScreencast").len(), 1);
+    assert_eq!(finished.len(), 1);
+}

@@ -1,6 +1,7 @@
 //! `performance` of the user settings (RB-020-09): the throttling of views out of sight and of
-//! visible views that are not active (Layout > Grid), and the memory warning (Advanced >
-//! Experimental flags). Read by `crates/rbrowser/src/perf`.
+//! visible views that are not active (Layout > Grid), the memory warning (Advanced >
+//! Experimental flags) and the timing counters (Advanced > Diagnostics, RB-090-32). Read by
+//! `crates/rbrowser/src/perf`.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,10 @@ pub struct PerformanceSettings {
     /// this many MiB; 0 turns the warning off.
     #[schemars(range(max = 65_536))]
     pub memory_warning_mb: u32,
+    /// The timing counters of the sync hub, the plugin calls and the shell IPC record (RB-090-32):
+    /// the MCP tool `app_perf` and the diagnostics ZIP (`perf.json`) read them. Off, nothing is
+    /// recorded; what was recorded stays readable.
+    pub counters: bool,
 }
 
 impl Default for PerformanceSettings {
@@ -37,6 +42,7 @@ impl Default for PerformanceSettings {
             inactive_fps: 0,
             // The K3 budget: eight views below 3 GB.
             memory_warning_mb: 3072,
+            counters: true,
         }
     }
 }

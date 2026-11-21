@@ -15,6 +15,12 @@
 //                                             gesture, one per plugin per LINK_INTERVAL_MS; opened
 //                                             through the core's `app.open_link`, answered with
 //                                             `result` ({ opened }) when it carries an id
+//                  { target: 'host', action: 'open_settings', key, id? }   a settings link the
+//                                             person clicked (RB-096-11): the settings window at
+//                                             `key` (a key, section or category, any plugin's or
+//                                             the core's; navigation only), within a user
+//                                             gesture, one per plugin per LINK_INTERVAL_MS,
+//                                             answered like a link
 //   host -> panel: { type: 'result', id, ok: true, value }
 //                  { type: 'result', id, ok: false, error, params? }  the code and its parameters
 //                                             (`reason`, ...): the panel says it as a sentence
@@ -66,12 +72,15 @@ export type FromPanel =
   | { type: 'settings' }
   | { type: 'dirty'; dirty: boolean }
   | { type: 'keep' }
-  | { type: 'openLink'; url: string; id?: number };
+  | { type: 'openLink'; url: string; id?: number }
+  | { type: 'openSettings'; key: string; id?: number };
 
 /** How the window opens a panel's link, and whether the person just acted. */
 export interface PanelLinks {
   /** Opens `url` (a checked web address) through the core; `false` when it did not. */
   open(url: string): Promise<boolean>;
+  /** Opens the settings window at `key` (RB-096-11); `false` when it did not. */
+  settings(key: string): Promise<boolean>;
   /** Whether the window has a user gesture now: a click in a panel's frame counts for the
    * window too (user activation reaches every ancestor frame). */
   gesture(): boolean;
@@ -82,6 +91,7 @@ export interface PanelLinks {
 /** No way to open a link: the window gave none. */
 const NO_LINKS: PanelLinks = {
   open: async () => false,
+  settings: async () => false,
   gesture: () =>
     (globalThis.navigator as (Navigator & { userActivation?: { isActive: boolean } }) | undefined)?.userActivation
       ?.isActive ?? false,
@@ -118,6 +128,9 @@ export interface IncomingMessage {
 }
 
 const NAME = /^[a-z][a-z0-9_]{0,39}$/;
+/** A settings key, section or category as a settings link names it: `api-client.secrets`,
+ * `network`. The settings window opens at its start for one it does not know. */
+const SETTINGS_KEY = /^[a-z][A-Za-z0-9_.-]{0,119}$/;
 
 /** The message limit `settings` name, held to its range; `undefined` when they name none. */
 export function messageLimitOf(settings: Record<string, unknown>): number | undefined {
@@ -151,6 +164,13 @@ export function parseFromPanel(data: unknown): FromPanel | null {
     }
     const link: FromPanel = { type: 'openLink', url: message.url };
     return Number.isSafeInteger(message.id) ? { ...link, id: message.id as number } : link;
+  }
+  if (message.target === 'host' && message.action === 'open_settings') {
+    if (typeof message.key !== 'string' || !SETTINGS_KEY.test(message.key)) {
+      return null;
+    }
+    const open: FromPanel = { type: 'openSettings', key: message.key };
+    return Number.isSafeInteger(message.id) ? { ...open, id: message.id as number } : open;
   }
   if (message.type === 'settings') {
     return { type: 'settings' };
@@ -213,6 +233,8 @@ export class PanelBridge {
   private readonly logged = new Map<string, number>();
   /** When each plugin's panels opened a link last. */
   private readonly linked = new Map<string, number>();
+  /** When each plugin's panels opened the settings last. */
+  private readonly settled = new Map<string, number>();
   private readonly links: PanelLinks;
   private limit = DEFAULT_MESSAGE_BYTES;
   private textScale = parseTextScale(undefined);
@@ -264,6 +286,8 @@ export class PanelBridge {
       this.onKeep(frame.target);
     } else if (message.type === 'openLink') {
       await this.openLink(frame.plugin, frame.target, message);
+    } else if (message.type === 'openSettings') {
+      await this.openSettings(frame.plugin, frame.target, message);
     } else {
       await this.call(frame.plugin, frame.target, message);
     }
@@ -364,6 +388,31 @@ export class PanelBridge {
     this.linked.set(plugin, now);
     try {
       answer({ ok: true, value: { opened: await this.links.open(message.url) } });
+    } catch (error) {
+      answer({ ok: false, error: codeOf(error) });
+    }
+  }
+
+  /** A panel's settings link: within a gesture, not too soon after the last one. */
+  private async openSettings(plugin: string, target: PanelTarget, message: Extract<FromPanel, { type: 'openSettings' }>) {
+    const answer = (result: { ok: true; value: unknown } | { ok: false; error: string }) => {
+      if (message.id !== undefined) {
+        this.post(target, { type: 'result', id: message.id, ...result });
+      }
+    };
+    if (!this.links.gesture()) {
+      answer({ ok: false, error: 'links.error.gesture' });
+      return;
+    }
+    const now = this.links.now();
+    const last = this.settled.get(plugin);
+    if (last !== undefined && now - last < LINK_INTERVAL_MS) {
+      answer({ ok: false, error: 'links.error.busy' });
+      return;
+    }
+    this.settled.set(plugin, now);
+    try {
+      answer({ ok: true, value: { opened: await this.links.settings(message.key) } });
     } catch (error) {
       answer({ ok: false, error: codeOf(error) });
     }

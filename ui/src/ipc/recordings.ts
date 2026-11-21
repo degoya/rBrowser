@@ -2,9 +2,10 @@
 // beside `protocol.ts`, which re-exports it. `getRecordings` and `saveRecording` are answered
 // with `recordings`, `getRecording` with `recording`, `exportRecording` with `recordingExport`
 // (a preview when `write` is false) and `getFlowRun` with `flowRun`; `recordingsChanged` and
-// `flowRunChanged` tell the panels to ask again; `flowStep` pushes each step of a run (RB-090-84).
+// `flowRunChanged` tell the panels to ask again; `flowStep` pushes each step of a run (RB-090-84);
+// `recordingSteps` the steps of the recording that runs (RB-090-89).
 
-import type { Recording } from '../recorder/recording';
+import type { Locator, Recording, Step } from '../recorder/recording';
 
 /** One stored recording. */
 export interface RecordingEntry {
@@ -53,6 +54,15 @@ export interface RecordingExport {
 export interface FlowViewStatus {
   view: number;
   status: string;
+  /** The step it is at (RB-090-68); absent before its first. */
+  step?: FlowStepAt;
+}
+
+/** The step a view of a run going on is at (RB-090-68). */
+export interface FlowStepAt {
+  /** The steps the view started so far, this one included: the n of "step n/m". */
+  number: number;
+  name: string;
 }
 
 /** A run going on. */
@@ -65,6 +75,8 @@ export interface FlowRunning {
   startedAtMs: number;
   /** The flows of "Run all" still waiting after this one. */
   queued?: string[];
+  /** The `step(` calls of the flow's text (RB-090-68): the m of "step n/m". */
+  totalSteps?: number;
 }
 
 /** A view's outcome in `result.json` (`crates/rbrowser/src/flows/result.rs`). */
@@ -131,6 +143,40 @@ export interface FlowStep {
   state: 'running' | 'passed' | 'failed';
   /** Why a failed step failed: its error's first line, masked. */
   message?: string;
+  /** A step that starts: the steps its view started so far, this one included (RB-090-68). */
+  number?: number;
+  /** The `step(` calls of the flow's text, as `FlowRunning.totalSteps`. */
+  total?: number;
+}
+
+/** Whether the live list goes on: it records, it was saved, or `showLiveSteps` went off. */
+export type LiveState = 'recording' | 'ended' | 'hidden';
+
+/**
+ * The steps of the recording that runs (RB-090-89): pushed while it records, with
+ * `automation.recorder.showLiveSteps` - only what changed, the steps from `from` on - and all of
+ * them after `resendRecordingSteps`. `state` says when the list ends and why.
+ */
+export interface RecordingSteps {
+  name: string;
+  from: number;
+  steps: Step[];
+  state: LiveState;
+  /** While a recording continues from one of its steps (RB-092-01): the new steps land after it. */
+  continueAfter?: number;
+}
+
+/**
+ * The element "Pick in view" picked for the Recorder panel's editor (RB-092-01): its locator,
+ * its visible text (never a field's value), the breakpoints whose views have it (empty: all) and
+ * a `<select>`'s options.
+ */
+export interface PickedElement {
+  view: number;
+  locator: Locator;
+  text: string;
+  onlyIn: string[];
+  options?: { value: string; label: string }[];
 }
 
 /** The run going on and the last one's result. */
@@ -156,7 +202,9 @@ export type RecordingRequest =
       /** Replace a flow of the same name: the person said so in the dialog. */
       overwrite?: boolean;
     }
-  | { type: 'getFlowRun' };
+  | { type: 'getFlowRun' }
+  /** Push every step of the recording that runs again (a panel catching up); answers `ack`. */
+  | { type: 'resendRecordingSteps' };
 
 /** The answers and events. */
 export type RecordingEvent =
@@ -166,4 +214,8 @@ export type RecordingEvent =
   | { type: 'recordingsChanged' }
   | ({ type: 'flowRun' } & FlowRunState)
   | { type: 'flowRunChanged' }
-  | ({ type: 'flowStep' } & FlowStep);
+  | ({ type: 'flowStep' } & FlowStep)
+  | ({ type: 'recordingSteps' } & RecordingSteps)
+  | ({ type: 'recorderElementPicked' } & PickedElement)
+  /** A recording editor's command without its step (RB-092-01): run it on the step in focus. */
+  | { type: 'recorderStepCommand'; command: string };

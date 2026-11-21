@@ -142,4 +142,27 @@ describe('the portal client', () => {
     }
     expect(open).toHaveBeenCalledTimes(MAX_FAILURES);
   });
+
+  it('flashes the presenter\'s clicks on a viewer that was told so (RB-096-05)', () => {
+    document.body.innerHTML = '<button id="buy">Buy</button>';
+    const button = document.getElementById('buy')!;
+    button.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 80, bottom: 20, width: 80, height: 20, toJSON: () => ({}) });
+    const click = {
+      kind: 'event' as const,
+      event: { type: 'click' as const, button: 'left' as const, detail: 1, modifiers: 0, target: { element: { kind: 'css' as const, path: '#buy' }, offset: { x: 0.5, y: 0.5 } } },
+    };
+    expect(isToDevice({ kind: 'present', pointer: true })).toBe(true);
+    expect(isToDevice({ kind: 'present', pointer: 'yes' })).toBe(false);
+    const viewer = win();
+    expect(handle(click, viewer)).toEqual({ kind: 'replayed', status: 'done' });
+    expect(document.querySelector('[data-rbrowser-flash]')).toBeNull();
+    expect(handle({ kind: 'present', pointer: true }, viewer)).toBeNull();
+    expect(handle(click, viewer)).toEqual({ kind: 'replayed', status: 'done' });
+    expect(document.querySelector('[data-rbrowser-flash]')).not.toBeNull();
+    document.querySelectorAll('[data-rbrowser-flash]').forEach((ring) => ring.remove());
+    handle({ kind: 'present', pointer: false }, viewer);
+    handle(click, viewer);
+    expect(document.querySelector('[data-rbrowser-flash]')).toBeNull();
+    document.body.replaceChildren();
+  });
 });

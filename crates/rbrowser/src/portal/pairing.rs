@@ -33,7 +33,7 @@ pub const MAX_NAME_CHARS: usize = 120;
 pub struct Secret(String);
 
 impl Secret {
-    fn generate(bytes: usize) -> std::io::Result<Self> {
+    pub(crate) fn generate(bytes: usize) -> std::io::Result<Self> {
         random_hex(bytes).map(Self)
     }
 
@@ -260,6 +260,37 @@ impl Pairings {
         }
         let session = Secret::generate(SESSION_BYTES).map_err(|_| PairError::Invalid)?;
         self.pairing = None;
+        Ok(self.pair(ip, user_agent, session, now, wall))
+    }
+
+    /// Pairs the viewer from `ip` with `user_agent` that a presentation's link admitted
+    /// (RB-096-05, `portal::present::link`): no pairing token, the device limit as for a device.
+    ///
+    /// # Errors
+    ///
+    /// [`PairError::Full`] at the limit; [`PairError::Invalid`] without randomness.
+    pub fn admit(
+        &mut self,
+        ip: IpAddr,
+        user_agent: &str,
+        now: Instant,
+        wall: SystemTime,
+    ) -> Result<(DeviceId, Secret), PairError> {
+        if self.devices.len() >= self.limit {
+            return Err(PairError::Full);
+        }
+        let session = Secret::generate(SESSION_BYTES).map_err(|_| PairError::Invalid)?;
+        Ok(self.pair(ip, user_agent, session, now, wall))
+    }
+
+    fn pair(
+        &mut self,
+        ip: IpAddr,
+        user_agent: &str,
+        session: Secret,
+        now: Instant,
+        wall: SystemTime,
+    ) -> (DeviceId, Secret) {
         let id = self.next_id;
         self.next_id = self.next_id.wrapping_add(1).max(1);
         self.devices.push(Device {
@@ -272,7 +303,7 @@ impl Pairings {
             last_seen: wall,
             contacted: false,
         });
-        Ok((id, session))
+        (id, session)
     }
 
     /// Drops every device that never came back with its cookie within the token time; their

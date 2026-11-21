@@ -33,6 +33,12 @@ pub enum ToDevice {
         /// The leader's event (boxed: far larger than a path).
         event: Box<SyncEvent>,
     },
+    /// The device is a viewer of the presentation (RB-096-05); `pointer`: flash where the
+    /// presenter clicks (`portal.presentation.pointer`).
+    Present {
+        /// The flash is on.
+        pointer: bool,
+    },
 }
 
 /// Why an event was not sent to the devices.

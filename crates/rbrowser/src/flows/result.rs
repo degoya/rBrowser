@@ -197,9 +197,7 @@ pub fn write(dir: &Path, result: &RunResult) -> Result<PathBuf, FlowError> {
     let text =
         serde_json::to_string_pretty(result).map_err(|error| FlowError::Io(error.to_string()))?;
     let path = dir.join(RESULT_FILE);
-    let partial = dir.join(format!("{RESULT_FILE}.partial"));
-    std::fs::write(&partial, format!("{text}\n")).map_err(io)?;
-    std::fs::rename(&partial, &path).map_err(io)?;
+    rb_util::fs::write_atomic(&path, format!("{text}\n").as_bytes()).map_err(io)?;
     Ok(path)
 }
 

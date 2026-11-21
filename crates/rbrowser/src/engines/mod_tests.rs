@@ -15,9 +15,10 @@ use crate::host::nav::marker_url;
 use crate::host::state::default_config;
 use crate::host::ui::recording::RecordingUi;
 
-/// Lets the spawned tasks run until `done` holds (or fails the test after two seconds).
+/// Lets the spawned tasks run until `done` holds (or fails the test after about ten seconds - a
+/// give-up deadline, generous for a loaded machine running every test at once).
 pub(crate) async fn until(mut done: impl FnMut() -> bool) {
-    for _ in 0..400 {
+    for _ in 0..2000 {
         if done() {
             return;
         }
@@ -197,4 +198,35 @@ fn start_and_shutdown_run_outside_the_runtime() {
     }));
     shutdown(&runtime);
     assert!(for_host(core.host()).is_none());
+}
+
+/// RB-096-09 (`diag34`): `engines.android.enabled` switched on in Settings is on at once -
+/// `view.add_android` said `android.disabled` until a restart, because a change of the user
+/// settings never reached the engines.
+#[tokio::test(flavor = "multi_thread")]
+async fn android_switched_on_in_the_user_settings_is_on_without_a_restart() {
+    let core = setup_with(EngineKind::Chromium);
+    start_with(&core, None);
+    let android = android::for_host(core.host()).expect("started");
+    assert!(!android.is_enabled(), "off by default");
+    let mut user = core.user_settings();
+    user.engines.android.enabled = true;
+    core.replace_user_settings(user);
+    assert!(android.is_enabled());
+    let mut user = core.user_settings();
+    user.engines.android.enabled = false;
+    core.replace_user_settings(user);
+    assert!(!android.is_enabled());
+}
+
+/// RB-096-09: `engines.external` follows the user settings too - the tiles go at once.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_external_settings_follow_the_user_settings_at_once() {
+    let core = setup_with_firefox();
+    start_with(&core, None);
+    until(|| externals(&core) == [(ViewId(3), ExternalStatus::Unavailable)]).await;
+    let mut user = core.user_settings();
+    user.engines.external.show_tiles = false;
+    core.replace_user_settings(user);
+    until(|| externals(&core).is_empty()).await;
 }

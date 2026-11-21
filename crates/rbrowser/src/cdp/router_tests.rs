@@ -108,3 +108,96 @@ async fn a_tap_gets_its_methods_events_on_its_own_channel_and_counts_what_it_dro
     router.on_message(json!({ "method": "Fetch.requestPaused", "params": {} }));
     assert!(lock(&router.taps).is_empty(), "a dropped tap is let go");
 }
+
+fn frame() -> Value {
+    json!({ "method": "Page.screencastFrame", "sessionId": "S1",
+            "params": { "data": "AAAA", "sessionId": 1 } })
+}
+
+#[tokio::test]
+async fn a_burst_of_screencast_frames_crowds_out_neither_a_tap_nor_the_broadcast() {
+    let router = CdpRouter::new(Arc::new(Silent));
+    let mut tap = router.tap_methods(
+        &["Runtime.executionContextCreated", "Runtime.bindingCalled"],
+        4,
+    );
+    let mut all = router.subscribe();
+    router.on_message(
+        json!({ "method": "Runtime.executionContextCreated", "sessionId": "S1",
+                              "params": { "context": { "id": 7 } } }),
+    );
+    for _ in 0..(EVENT_BUFFER * 3) {
+        router.on_message(frame());
+    }
+    router.on_message(
+        json!({ "method": "Runtime.bindingCalled", "sessionId": "S1",
+                              "params": { "name": "__rbEmit" } }),
+    );
+    let first = tap.recv_shared().await.expect("an event");
+    assert_eq!(first.method, "Runtime.executionContextCreated");
+    let second = tap.recv_shared().await.expect("an event");
+    assert_eq!(
+        second.method, "Runtime.bindingCalled",
+        "the order of its methods holds"
+    );
+    assert_eq!(tap.take_dropped(), 0);
+    let event = all
+        .recv()
+        .await
+        .expect("no lag: the frames are not in the broadcast");
+    assert!(Arc::ptr_eq(&event, &first), "one event, shared, not copied");
+    assert_eq!(
+        all.recv().await.expect("an event").method,
+        "Runtime.bindingCalled"
+    );
+}
+
+#[tokio::test]
+async fn screencast_frames_reach_taps_and_the_raw_broadcast_only() {
+    let router = CdpRouter::new(Arc::new(Silent));
+    let mut tap = router.tap("Page.screencastFrame", 2);
+    let mut raw = router.subscribe_raw();
+    let mut all = router.subscribe();
+    router.on_message(frame());
+    router.on_message(json!({ "method": "Page.loadEventFired", "params": {} }));
+    let owned = tap.recv().await.expect("the tap gets the frame");
+    assert_eq!(owned.params["data"], "AAAA");
+    assert_eq!(
+        raw.recv().await.expect("raw").method,
+        "Page.screencastFrame"
+    );
+    assert_eq!(raw.recv().await.expect("raw").method, "Page.loadEventFired");
+    assert_eq!(
+        all.recv().await.expect("an event").method,
+        "Page.loadEventFired"
+    );
+    assert!(all.try_recv().is_err(), "no frame in the shared broadcast");
+}
+
+/// RB-090-34: one event, n receivers, one allocation - every subscriber, the raw broadcast and a
+/// tap hold the same `Arc`, counted by its strong count.
+#[tokio::test]
+async fn one_event_reaches_n_receivers_as_one_allocation() {
+    const RECEIVERS: usize = 6;
+    let router = CdpRouter::new(Arc::new(Silent));
+    let mut subscribers: Vec<_> = (0..RECEIVERS).map(|_| router.subscribe()).collect();
+    let mut raw = router.subscribe_raw();
+    let mut tap = router.tap("Page.loadEventFired", 1);
+    router.on_message(json!({ "method": "Page.loadEventFired", "sessionId": "S1",
+                              "params": { "timestamp": 1.5 } }));
+    let first = tap.recv_shared().await.expect("the tap gets it");
+    let mut held = vec![raw.recv().await.expect("the raw broadcast gets it")];
+    for subscriber in &mut subscribers {
+        held.push(subscriber.recv().await.expect("every subscriber gets it"));
+    }
+    assert!(
+        held.iter().all(|event| Arc::ptr_eq(event, &first)),
+        "the same allocation everywhere"
+    );
+    // Beside the receivers' handles only the two broadcasts' slots may still hold it (tokio
+    // lets a slot go when its last receiver read it or when it is overwritten): no copy.
+    let receivers = held.len() + 1;
+    assert!((receivers..=receivers + 2).contains(&Arc::strong_count(&first)));
+    drop(held);
+    assert!((1..=3).contains(&Arc::strong_count(&first)));
+}

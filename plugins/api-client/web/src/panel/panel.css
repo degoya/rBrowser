@@ -1,0 +1,12 @@
+/* The API client panel's styles: panel-ui's (Tailwind and Nuxt UI), its code view and the
+   classes named here. */
+@import '../../../../web-common/panel-ui/src/style.css';
+
+@source '.';
+@source '../../../../web-common/panel-ui/src/code';
+
+/* The highlighter's editor wraps the textarea; inside Nuxt UI's field it takes the full width. */
+.hl-editor {
+  flex: 1 1 auto;
+  width: 100%;
+}

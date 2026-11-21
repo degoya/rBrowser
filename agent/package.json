@@ -1,7 +1,7 @@
 {
   "name": "rbrowser-sync-agent",
   "private": true,
-  "version": "0.9.0-beta.2",
+  "version": "0.9.6",
   "description": "The rBrowser sync agent: injected into every view's isolated world, captures input and resolves selectors (RB-020-01).",
   "license": "GPL-3.0-or-later",
   "type": "module",
@@ -12,7 +12,8 @@
     "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
     "test": "vitest run",
     "test:e2e": "node scripts/vitals-e2e.mjs",
-    "test:capture-clean": "node scripts/capture-clean-e2e.mjs"
+    "test:capture-clean": "node scripts/capture-clean-e2e.mjs",
+    "test:clock": "node scripts/clock-e2e.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

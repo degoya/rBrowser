@@ -9,9 +9,11 @@
 //! ([`init`]), `diagnostics` the diagnostics ZIP (RB-010-10), `screenshot` captures the views
 //! of the running instance ([`screenshot`], RB-050-03), `capture sitemap` a site's pages in
 //! every breakpoint ([`capture`], RB-050-05), `engines firefox --list` the installed Firefox
-//! editions ([`engines`], RB-080-32).
+//! editions ([`engines`], RB-080-32), `check` the check plugins in the running instance with the
+//! findings exported and an exit code from them ([`check`], RB-092-05).
 
 pub mod capture;
+pub mod check;
 pub mod console;
 pub mod engines;
 pub mod init;
@@ -66,7 +68,11 @@ Exit codes:
   4  the project folder does not exist, or no project was found
   5  init: the project has a config already
   6  the running rBrowser refused the call or did not answer
-  7  init: not confirmed";
+  7  init: not confirmed
+
+check has its own: 0 no finding at or above --fail-on, 1 one or more, 2 the run could not be
+judged (a plugin failed, the run was cancelled, no rBrowser runs for the project, the call
+failed or the command line is wrong).";
 
 /// rBrowser, a development browser that shows every breakpoint of a site at once.
 #[derive(Debug, Parser)]
@@ -139,6 +145,10 @@ pub enum Command {
     /// order rBrowser searches them, and the configured path; no running rBrowser needed
     /// (RB-080-32).
     Engines(engines::EnginesCliArgs),
+    /// Run the check plugins in the project's running rBrowser over every view and write the
+    /// findings as SARIF, JUnit, HTML or JSON; prints the file. Exit code 0 without a finding at
+    /// or above --fail-on, 1 with one, 2 when a plugin failed or no rBrowser runs (RB-092-05).
+    Check(check::CheckCliArgs),
 }
 
 /// `rbrowser cdp-tunnel`.

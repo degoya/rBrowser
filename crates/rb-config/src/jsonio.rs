@@ -5,7 +5,6 @@
 //! save byte for byte. Writes go to a temporary file beside the target and are renamed over it.
 
 use std::fs;
-use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -69,23 +68,8 @@ pub fn to_json_string(value: &Value) -> String {
 /// Writes `value` to `path` in the canonical form, through a temporary file renamed over the
 /// target so a reader never sees half a file.
 pub fn write_json(path: &Path, value: &Value) -> Result<(), ConfigError> {
-    let file_name = path
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let temp = path.with_file_name(format!(".{file_name}.tmp-{}", std::process::id()));
-    let written = fs::File::create(&temp).and_then(|mut file| {
-        file.write_all(to_json_string(value).as_bytes())?;
-        file.sync_all()
-    });
-    if let Err(source) = written {
-        let _ = fs::remove_file(&temp);
-        return Err(io_error(&temp, source));
-    }
-    fs::rename(&temp, path).map_err(|source| {
-        let _ = fs::remove_file(&temp);
-        io_error(path, source)
-    })
+    rb_util::fs::write_atomic(path, to_json_string(value).as_bytes())
+        .map_err(|source| io_error(path, source))
 }
 
 /// Writes one config file of the project at `root`, creating `.rbrowser/` and, the first time,

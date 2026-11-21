@@ -44,6 +44,8 @@ export const SETTINGS_ICONS = {
   project: 'i-lucide-folder-cog',
   basics: 'i-lucide-sliders-horizontal',
   done: 'i-lucide-circle-check',
+  // The wizard's AI agent step and the MCP setup (RB-091-09).
+  agent: 'i-lucide-bot',
   offline: 'i-lucide-wifi-off',
   next: 'i-lucide-arrow-right',
   previous: 'i-lucide-arrow-left',

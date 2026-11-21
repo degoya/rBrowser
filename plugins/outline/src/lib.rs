@@ -1,7 +1,8 @@
 //! rBrowser's first-party outline (RB-070-03, `docs/plugins.md`): the structure of the page in
 //! every view side by side - headings, landmarks, links, images, form fields, the focus order,
 //! the accessibility tree and the person's own selectors - with what shows only in some views
-//! marked, a broken-link check of the current page, and findings for `checks_run`.
+//! marked, a broken-link check of the current page, the differences between the breakpoints and
+//! the reading order (RB-094-02), and findings for `checks_run`.
 //!
 //! The collector (`web/src/collect.ts`, built into `src/collect.js`) reads each view's document
 //! through `evaluate` in the plugin's isolated world; the accessibility tree and the mark come
@@ -14,6 +15,7 @@ use rb_plugin_api::{CheckContext, Failure, FailureKind, Finding, PluginHost, Rul
 use serde_json::{Value, json};
 
 pub mod axtree;
+pub mod breakpoints;
 pub mod budget;
 pub mod levels;
 pub mod links;
@@ -78,6 +80,7 @@ impl Feature for Outline {
         match command {
             "panel" => answer(Ok(json!({ OPEN_KEY: { "panel": PANEL_ID } }))),
             "check" => answer(tool::check_command(host)),
+            "breakpoint_diff" | "reading_order" => answer(Ok(breakpoints::show(command))),
             _ => Err(unknown(command)),
         }
     }
@@ -93,6 +96,8 @@ impl Feature for Outline {
             "get" => answer(tool::get(host, &args)),
             "check_links" => answer(tool::check_links(host, &args)),
             "mark" => answer(tool::mark(host, &args)),
+            "breakpoint_diff" => answer(breakpoints::breakpoint_diff(host, &args)),
+            "reading_order" => answer(breakpoints::reading_order(host, &args)),
             _ => Err(unknown(tool)),
         }
     }

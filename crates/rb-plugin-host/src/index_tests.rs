@@ -1,8 +1,8 @@
 //! Each refusal of [`super::verify`] in the documented order, with its stable code (RB-091-01:
 //! a wrong signature, an expired index and an older sequence are refused).
 
-use chrono::Duration;
 use ed25519_dalek::SigningKey;
+use time::SignedDuration;
 
 use super::fixtures::{entry, index, index_of, now, pinned, roots, signed, signed_raw};
 use super::*;
@@ -26,6 +26,14 @@ fn a_signed_index_verifies_and_yields_its_plugins() {
     assert_eq!(verified, index());
     let pinned = verify(&signed(&index()), &pinned(), None, now()).expect("verify pinned");
     assert_eq!(pinned.plugins[0].id, "fixture");
+}
+
+/// RB-090-77: the index's times are RFC 3339 in UTC with `Z`, as chrono wrote them.
+#[test]
+fn an_index_writes_its_times_in_utc() {
+    let json = serde_json::to_value(index()).expect("json");
+    assert_eq!(json["issued_at"], "2026-09-21T13:13:20Z");
+    assert_eq!(json["expires_at"], "2026-10-21T14:13:20Z");
 }
 
 #[test]
@@ -59,8 +67,8 @@ fn another_key_is_refused_whether_or_not_it_claims_the_trusted_id() {
 #[test]
 fn an_expired_index_is_refused_even_on_a_first_contact() {
     let mut old = index();
-    old.issued_at = now() - Duration::days(40);
-    old.expires_at = now() - Duration::days(1);
+    old.issued_at = now() - SignedDuration::days(40);
+    old.expires_at = now() - SignedDuration::days(1);
     let error = refused(&signed(&old), None);
     assert_eq!(error.code(), "plugins.catalog.error.expired");
 }
@@ -82,8 +90,8 @@ fn an_older_or_the_same_sequence_is_a_replay() {
 #[test]
 fn an_index_from_next_week_is_refused() {
     let mut ahead = index();
-    ahead.issued_at = now() + Duration::days(7);
-    ahead.expires_at = now() + Duration::days(30);
+    ahead.issued_at = now() + SignedDuration::days(7);
+    ahead.expires_at = now() + SignedDuration::days(30);
     assert_eq!(
         refused(&signed(&ahead), None).code(),
         "plugins.catalog.error.from_the_future"
@@ -129,8 +137,8 @@ fn an_unknown_field_is_ignored() {
 #[test]
 fn the_signature_alone_reads_an_expired_index() {
     let mut old = index();
-    old.issued_at = now() - Duration::days(400);
-    old.expires_at = now() - Duration::days(300);
+    old.issued_at = now() - SignedDuration::days(400);
+    old.expires_at = now() - SignedDuration::days(300);
     let bytes = signed_raw(&serde_json::to_value(&old).expect("encode"));
     assert_eq!(
         verify(&bytes, &roots(), None, now())
@@ -156,7 +164,7 @@ fn content_rules_refuse_the_whole_index() {
         (
             "window too long",
             Box::new(|p: &mut serde_json::Value| {
-                p["expires_at"] = (now() + Duration::days(400)).to_rfc3339().into();
+                p["expires_at"] = crate::utc::rfc3339(now() + SignedDuration::days(400)).into();
             }),
         ),
         (

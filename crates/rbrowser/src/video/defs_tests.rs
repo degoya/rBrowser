@@ -56,6 +56,7 @@ fn video_commands_have_their_chords_and_mcp_entries() {
         [
             row(TOGGLE, "C V", covered()),
             row(TOGGLE_ALL, "C W", covered()),
+            row(PAUSE, "C Z", covered()),
             row(
                 INSTALL,
                 "X F",
@@ -120,4 +121,38 @@ async fn the_panel_command_opens_a_folded_dock_at_the_videos() {
         (dock.url.as_str(), dock.collapsed),
         ("rbrowser://ui/settings.html#/panels/videos", false)
     );
+}
+
+/// RB-090-68: `capture.video.pause` toggles without arguments; `paused` asks for a state.
+#[test]
+fn the_pause_takes_a_wanted_state_or_toggles() {
+    use super::super::pause::PauseRequest;
+    assert_eq!(pause_request_of(&json!({})), Ok(PauseRequest::Toggle));
+    assert_eq!(pause_request_of(&Value::Null), Ok(PauseRequest::Toggle));
+    assert_eq!(
+        pause_request_of(&json!({ "paused": true })),
+        Ok(PauseRequest::Pause)
+    );
+    assert_eq!(
+        pause_request_of(&json!({ "paused": false })),
+        Ok(PauseRequest::Resume)
+    );
+    assert!(matches!(
+        pause_request_of(&json!({ "paused": "yes" })),
+        Err(CommandError::InvalidArgs(_))
+    ));
+}
+
+/// Without a recording the pause says so, in the command and in MCP.
+#[tokio::test]
+async fn the_pause_without_a_recording_is_refused() {
+    let setup = crate::panel_dock::tests::setup_with(rb_config::UserSettings::default());
+    assert!(matches!(
+        run(&setup.core, PAUSE, &json!({})),
+        Err(CommandError::Failed(_))
+    ));
+    let refused = host_tool(&setup.core, json!({ "action": "pause" }))
+        .await
+        .expect_err("no recording runs");
+    assert_eq!(refused.code, "video.not_recording");
 }

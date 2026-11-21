@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed (RB-094-15): pins load again in a trusted workspace - the component refused the listing
+  of `.rbrowser/flows` its trust check asks for (`project-read` wired without `list`), so no pin
+  was read, applied or saved.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

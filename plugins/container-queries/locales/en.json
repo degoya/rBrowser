@@ -1,0 +1,64 @@
+{
+  "plugin": {
+    "container-queries": {
+      "name": "Container queries",
+      "commands": {
+        "overlay": "Toggle the container query overlay",
+        "analyze": "Analyze the container queries"
+      },
+      "tools": {
+        "overlay": "Shows or hides the container query overlay in the views of the target (every view, a view id, or \"active\"): every element with container-type size or inline-size framed with its container-name, its inline and block size in px and the @container conditions that match now, and a handle on its right edge that drags its width. on true shows, false hides; without on it toggles. Answers on and target.",
+        "analyze": "Analyzes the container queries of each view of the target: conditions, every @container condition of the readable stylesheets once (name, query, bounds with axis, op, value and px, supported false for a style query or an unknown unit); containers, every size container once (path, selector, names, type, conditions as ids into the list) with per view, ordered by the view's width, its inline and block size, the next threshold below and above it, the matching condition ids and whether rBrowser resized it, and switches, the neighbouring views between which it gains or loses a condition; views with their container count, unreadable stylesheets and any error; overlay, whether the overlay shows.",
+        "resize": "Pins the width of the container at path (as containers_analyze names it) to width px (0 to 100000) in the views of the target, to test its @container rules without changing the view, or with reset true brings back the inline style the container at path - or every container rBrowser resized - had before. Answers per view resized (whether the page has that container) or reset (how many were reset)."
+      },
+      "panels": {
+        "main": "Container queries"
+      },
+      "panel": {
+        "analyze": "Analyze",
+        "analyzing": "Analyzing the container queries of every view.",
+        "summary": "{conditions, plural, one {# condition} other {# conditions}}, {containers, plural, one {# container} other {# containers}} in {views, plural, one {# view} other {# views}}.",
+        "overlay": "Show the containers in every view",
+        "overlay_hint": "Frames every container with its name, size and matching conditions; drag the handle on its right edge to try another width, double-click it to reset.",
+        "reset_all": "Reset every width rBrowser set",
+        "reset": "Reset this width",
+        "resized": "Resized",
+        "retry": "Retry",
+        "empty": "This page has no container queries and no size containers.",
+        "unsupported": "Not evaluated",
+        "unreadable": "{n, plural, one {# stylesheet} other {# stylesheets}} from another origin could not be read; their @container rules are missing here.",
+        "view_failed": "{view}: {reason}",
+        "conditions": "{n, plural, one {# condition} other {# conditions}}",
+        "containers": "{n, plural, one {# container} other {# containers}}",
+        "block": "Block",
+        "switch": "Switches between {from} and {to}:",
+        "gains": "gains {conditions}.",
+        "loses": "loses {conditions}.",
+        "columns": {
+          "condition": "Condition",
+          "bounds": "Bounds",
+          "view": "View",
+          "size": "Size (px)",
+          "next": "Next bound",
+          "matching": "Matching",
+          "width": "Try a width"
+        },
+        "width": "Width to try in {view} (px); Enter applies it"
+      },
+      "settings": {
+        "overlay": {
+          "labels": {
+            "label": "Container labels",
+            "description": "Shows each container's name, size and matching conditions beside its frame.",
+            "help": "Shows each container's name, its inline and block size and the @container conditions that match now beside its frame. Off leaves only the frames and the drag handles."
+          },
+          "color": {
+            "label": "Container frame colour",
+            "description": "The colour of the container frames, labels and drag handles.",
+            "help": "The colour of the container frames, their labels and the drag handles of the container query overlay; pick one that stands out on the pages you test."
+          }
+        }
+      }
+    }
+  }
+}

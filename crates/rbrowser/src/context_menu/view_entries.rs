@@ -1,9 +1,9 @@
 //! The page menu's entries for what hangs on the clicked view (RB-090-63, the menu audit):
-//! Sync › this view and this view's navigation (check items), Session › the sessions the view
-//! can be in (radio) and "Clear session data...", and Tools › Peek, the raw view of a JSON or
-//! XML document and Fill forms › (with "Take form as preset", RB-090-70) of the first-party
-//! plugins, each once its command is
-//! registered. No logic of its own: every entry runs the registry's command, as its shortcut
+//! Sync › this view and this view's navigation (check items) and the view's own address field
+//! (RB-092-03; disabled, its label saying why, while the view follows the active view), Sessions › the sessions the view
+//! can be in (radio) and "Clear session data..." (under Environments, RB-090-92), and the Tools
+//! entries Peek, the raw view of a JSON or XML document and Fill forms › (with "Take form as
+//! preset", RB-090-70) of the first-party plugins, each once its command is registered. No logic of its own: every entry runs the registry's command, as its shortcut
 //! does. CPU throttling is in the Emulation submenu ([`super::emulation`]), SEO, Fonts and
 //! Outline under Checks through their manifests' `context_menu`.
 
@@ -12,14 +12,18 @@ use serde_json::{Value, json};
 
 use super::model::{Action, Builder, Item, Label, Mark};
 
-/// The Sync submenu's label.
-pub const SYNC_MENU: &str = "contextmenu.sync.menu";
-/// The Session submenu's label.
-pub const SESSION_MENU: &str = "contextmenu.session.menu";
-/// The Tools submenu's label.
-pub const TOOLS_MENU: &str = "contextmenu.tools.menu";
+/// The Sync submenu's label, the main menu's (RB-090-92).
+pub const SYNC_MENU: &str = super::model::KEY_SYNC;
+/// The Sessions submenu's label, under Environments as in the main menu.
+pub const SESSION_MENU: &str = super::model::KEY_SESSIONS;
+/// The Tools submenu's label, the main menu's; [`super::model::groups`] builds it.
+pub const TOOLS_MENU: &str = super::model::KEY_TOOLS;
 /// The Fill forms submenu's label, inside Tools.
 pub const FILL_MENU: &str = "contextmenu.tools.fill_menu";
+/// Sync › the clicked view's address field (RB-092-03).
+pub const EDIT_ADDRESS: &str = "contextmenu.sync.edit_address";
+/// The same entry, disabled, for a view that follows the active view: the label says why.
+pub const EDIT_ADDRESS_COUPLED: &str = "contextmenu.sync.edit_address_coupled";
 
 /// Peek's hover inspector on or off (every view).
 pub const PEEK: &str = "plugin.peek.toggle";
@@ -44,6 +48,8 @@ pub struct ViewEntries {
     /// The view's navigation leads and follows (`sync.toggle_view_navigation`); `None` before
     /// navigation sync runs.
     pub navigation_coupled: Option<bool>,
+    /// `ui.cellLabel.addressEditable`: Sync › offers the view's address field (RB-092-03).
+    pub address_editable: bool,
     /// The sessions a view can be in, `default` first; with one only there is no submenu.
     pub sessions: Vec<String>,
     /// The session the view lives in.
@@ -58,21 +64,14 @@ fn run(command: &str, args: Value) -> Action {
 }
 
 impl Builder<'_> {
-    /// Sync ›, Session › and Tools ›, each when it has an entry.
-    pub(super) fn view_entries(&mut self) -> Vec<Item> {
-        [self.sync_menu(), self.session_menu(), self.tools_menu()]
-            .into_iter()
-            .flatten()
-            .collect()
-    }
-
     /// A check item that runs `command` for the clicked view with `enabled` turned around.
     fn view_switch(&mut self, key: &'static str, on: bool, command: &str) -> Item {
         let args = json!({ "view": self.state.view, "enabled": !on });
         self.labelled(Label::Key(key), true, Mark::Check(on), run(command, args))
     }
 
-    fn sync_menu(&mut self) -> Option<Item> {
+    /// Sync ›, when it has an entry.
+    pub(super) fn sync_menu(&mut self) -> Option<Item> {
         let state = self.state;
         let entries = &state.view_entries;
         let mut items = Vec::new();
@@ -89,11 +88,22 @@ impl Builder<'_> {
                 coupled,
                 crate::nav_sync::TOGGLE_VIEW_NAVIGATION,
             ));
+            if entries.address_editable {
+                let key = if coupled {
+                    EDIT_ADDRESS_COUPLED
+                } else {
+                    EDIT_ADDRESS
+                };
+                let args = json!({ "view": state.view });
+                let command = crate::cell_info::address::EDIT_ADDRESS;
+                items.push(self.run(key, !coupled, command, args));
+            }
         }
         (!items.is_empty()).then(|| self.submenu(Label::Key(SYNC_MENU), items))
     }
 
-    fn session_menu(&mut self) -> Option<Item> {
+    /// Sessions ›, from two sessions on.
+    pub(super) fn session_menu(&mut self) -> Option<Item> {
         let state = self.state;
         let entries = &state.view_entries;
         if entries.sessions.len() < 2 {
@@ -126,7 +136,8 @@ impl Builder<'_> {
         Some(self.submenu(Label::Key(SESSION_MENU), items))
     }
 
-    fn tools_menu(&mut self) -> Option<Item> {
+    /// The plugins' entries of Tools ›, after Force state.
+    pub(super) fn tools_entries(&mut self) -> Vec<Item> {
         let state = self.state;
         let this = json!({ "target": state.view });
         let mut items = Vec::new();
@@ -169,7 +180,7 @@ impl Builder<'_> {
         if !fill.is_empty() {
             items.push(self.submenu(Label::Key(FILL_MENU), fill));
         }
-        (!items.is_empty()).then(|| self.submenu(Label::Key(TOOLS_MENU), items))
+        items
     }
 }
 

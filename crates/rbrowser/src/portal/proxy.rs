@@ -8,8 +8,10 @@
 //! images, RB-090-69 its escaped form; Vite's `server.origin`, RB-090-65), and a long poll or a
 //! large bundle is never held back; so is an HTML page too large to read whole. Every rewritten
 //! body is searched for loopback origins the map does not forward, logged once each as
-//! evidence. Every other answer streams through as it comes. A WebSocket upgrade (Vite's HMR) is passed through both ways once the
-//! upstream switched protocols. Every forwarded connection - a long poll, an event stream, an
+//! evidence. Every other answer streams through as it comes. A WebSocket upgrade (Vite's HMR)
+//! is passed through both ways once the upstream switched protocols - for a viewer of the
+//! presentation (RB-096-05) its own frames only as far as they are control frames
+//! ([`super::present::frames`]). Every forwarded connection - a long poll, an event stream, an
 //! upgrade - ends when its device is disconnected or the portal stops (Charge 10 review M1).
 
 use std::future::Future;
@@ -23,6 +25,7 @@ use tokio::task::JoinHandle;
 use super::inject::{MAX_HTML, complete, decode_chunked, inject};
 use super::origin_map::{OriginMap, log_unmapped_loopback};
 use super::origins::Upstream;
+use super::present::frames::{ControlOnly, copy_control_frames};
 use super::rewrite::{OutBody, ResponseHead, parse_response_head, request_head, response_head};
 use super::stream_body::stream_rewritten;
 
@@ -93,12 +96,30 @@ async fn relay(
     server
         .write_all(request_head(&request, upstream, map, upgrade).as_bytes())
         .await?;
-    server.write_all(&rest).await?;
+    // A viewer of the presentation watches: of its socket's frames only control frames go on.
+    let viewer = upgrade && map.is_public();
+    let mut filter = ControlOnly::default();
+    if viewer {
+        let mut first = Vec::new();
+        filter.feed(&rest, &mut first).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "a viewer's frame broke the protocol",
+            )
+        })?;
+        server.write_all(&first).await?;
+    } else {
+        server.write_all(&rest).await?;
+    }
     let (mut client_read, mut client_write) = client.into_split();
     let (mut server_read, mut server_write) = server.into_split();
     // The request body (and, after an upgrade, the device's frames) goes on as it comes.
     let upload = Upload(tokio::spawn(async move {
-        tokio::io::copy(&mut client_read, &mut server_write).await
+        if viewer {
+            copy_control_frames(filter, &mut client_read, &mut server_write).await
+        } else {
+            tokio::io::copy(&mut client_read, &mut server_write).await
+        }
     }));
     let read = tokio::time::timeout(UPSTREAM_TIMEOUT, read_response_head(&mut server_read)).await;
     let (head, mut body) = match read {
@@ -278,3 +299,7 @@ mod tests;
 #[cfg(test)]
 #[path = "proxy_stream_tests.rs"]
 mod stream_tests;
+
+#[cfg(test)]
+#[path = "proxy_viewer_tests.rs"]
+mod viewer_tests;

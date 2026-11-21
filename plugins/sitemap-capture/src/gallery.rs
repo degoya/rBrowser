@@ -6,10 +6,12 @@
 //! Everything in a sitemap is somebody else's text, so **every** URL, label and reason is
 //! escaped, a link is made only of an `http(s)` URL, and an image path only of plain names (the
 //! page's slug and the breakpoint's file name, as `rb_visual::sitemap_store` wrote them). The
-//! page runs no script at all: the filters are radio buttons and CSS, the large view is a
-//! `:target`, and the Content Security Policy allows no script, no frame and images from the
-//! run's own folder only. Every control is a link, a radio or a label, so the keyboard reaches
-//! all of it.
+//! page runs no script at all: the filters are radio buttons and CSS (`main:has(#radio:checked)
+//! .sheet ...` - the radios sit in their fieldsets, the sheet beside them in `<main>`), the large
+//! view is a `:target` a thumbnail links to, and the Content Security Policy allows no script, no
+//! frame and images from the run's own folder only. Every control is a link, a radio or a label,
+//! so the keyboard reaches all of it. The thumbnails are as wide as the plugin's setting
+//! `thumbnailWidth` says ([`thumbnail_width`], RB-090-86).
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -18,6 +20,8 @@ use rb_plugin_api::html::escape;
 use serde::Deserialize;
 
 use crate::url::Url;
+
+pub use crate::thumbnail::{SCHEMA, default_thumbnail_width, thumbnail_width};
 
 /// The texts of the page and their English defaults; `args.labels` may replace each (the core
 /// passes the catalogue's translations, keys `plugin.sitemap-capture.gallery.<name>`).
@@ -187,26 +191,42 @@ fn problems(page: &Page, texts: &Texts) -> Vec<(String, String)> {
     found
 }
 
-const STYLE: &str = "body{font:14px system-ui,sans-serif;margin:0 16px;color:#1d1d1f;background:#fff}\
-header{padding:12px 0}h1{font-size:20px;margin:0 0 4px}.filters{display:flex;flex-wrap:wrap;gap:6px 14px;\
-align-items:center;margin:8px 0}.filters input{margin:0 2px 0 8px}table{border-collapse:collapse}\
-.sheet{overflow-x:auto}.sheet th,.sheet td{border:1px solid #ddd;padding:4px;vertical-align:top;text-align:left}\
-.sheet th[scope=row]{max-width:260px;word-break:break-all;font-weight:normal}.sheet img{width:160px;height:auto;\
-display:block}.badge{display:inline-block;padding:0 4px;border-radius:3px;background:#fde2e1;color:#8a1c14}\
-.view{display:none}.view:target{display:flex;flex-direction:column;position:fixed;inset:0;background:#fff;\
-padding:12px;overflow:auto;z-index:1}.view img{max-width:100%;height:auto}.view nav{display:flex;gap:16px;margin-bottom:8px}\
-a:focus-visible,input:focus-visible+label{outline:2px solid #0a64d8;outline-offset:2px}\
-@media (prefers-color-scheme:dark){body,.view:target{background:#1c1c1e;color:#f2f2f7}.sheet th,.sheet td{border-color:#3a3a3c}\
-a{color:#6cb4ff}}";
+/// The page's look: the app's (Nuxt UI, `primary` teal and `neutral` slate, the shell's contrast
+/// steps), light and dark by the system's choice, so the export and the app's gallery page look
+/// alike (RB-090-86).
+const STYLE: &str = ":root{--bg:#fff;--elevated:#f8fafc;--text:#334155;--strong:#0f172a;--muted:#475569;\
+--border:#e2e8f0;--primary:#115e59;--error:#b91c1c;--error-bg:#fef2f2;--focus:#115e59;color-scheme:light}\
+@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--elevated:#1e293b;--text:#cbd5e1;--strong:#fff;\
+--muted:#94a3b8;--border:#1e293b;--primary:#2dd4bf;--error:#fca5a5;--error-bg:#450a0a;--focus:#2dd4bf;color-scheme:dark}}\
+body{font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;margin:0;padding:16px;color:var(--text);background:var(--bg)}\
+header{padding:0 0 8px}h1{font-size:18px;font-weight:600;color:var(--strong);margin:0 0 4px}h2{font-size:16px;font-weight:600;\
+color:var(--strong)}header p{margin:0;color:var(--muted)}a{color:var(--primary)}.filters{display:flex;flex-wrap:wrap;\
+gap:6px 14px;align-items:center;margin:8px 0;border:0;padding:0}.filters legend{font-weight:500;color:var(--strong);padding:0;\
+margin-right:8px;float:left}.filters input{accent-color:var(--primary);margin:0 4px 0 8px}table{border-collapse:collapse}\
+.sheet{overflow-x:auto;border:1px solid var(--border);border-radius:6px}.sheet table{width:100%}.sheet thead{background:var(--elevated)}\
+.sheet th,.sheet td{border-top:1px solid var(--border);padding:8px 12px;vertical-align:top;text-align:left}\
+.sheet thead th{font-weight:500;color:var(--strong);border-top:0}.sheet small{color:var(--muted)}\
+.sheet th[scope=row]{max-width:260px;word-break:break-all;font-weight:normal}.sheet img{height:auto;display:block;\
+cursor:zoom-in;border:1px solid var(--border);border-radius:2px}.badge{display:inline-block;padding:0 6px;border-radius:4px;\
+font-size:12px;background:var(--error-bg);color:var(--error)}#errors td{padding:2px 8px 2px 0}\
+.view{display:none}.view:target{display:flex;flex-direction:column;position:fixed;inset:0;background:var(--bg);\
+padding:16px;overflow:auto;z-index:1}.view img{max-width:100%;height:auto}.view nav{display:flex;gap:16px;margin-bottom:8px}\
+a:focus-visible,input:focus-visible+label{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}";
 
 /// The id of the large view of page `page` in breakpoint `index`.
 fn view_id(page: usize, index: usize) -> String {
     format!("v-{page}-{index}")
 }
 
-/// The gallery of `run`.
+/// The gallery of `run` with thumbnails of the default width.
 #[must_use]
 pub fn render(run: &Run, labels: &BTreeMap<String, String>) -> String {
+    render_sized(run, labels, default_thumbnail_width())
+}
+
+/// The gallery of `run` with thumbnails `thumbnail_width` CSS px wide.
+#[must_use]
+pub fn render_sized(run: &Run, labels: &BTreeMap<String, String>, thumbnail_width: u32) -> String {
     let texts = Texts::new(labels);
     let breakpoints: Vec<&Breakpoint> = run
         .breakpoints
@@ -219,18 +239,19 @@ pub fn render(run: &Run, labels: &BTreeMap<String, String>) -> String {
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
 <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self' file:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'\">\
 <meta name=\"referrer\" content=\"no-referrer\"><meta name=\"viewport\" content=\"width=device-width\">\
-<title>{} - {}</title><style>{STYLE}",
+<title>{} - {}</title><style>{STYLE}.sheet img{{width:{thumbnail_width}px}}",
         texts.get("title", &[]),
         sanitized(&run.run_id),
     );
+    // The radios and the sheet share `<main>`, not a parent: the rule starts there.
     for index in 0..breakpoints.len() {
         let _ = write!(
             html,
-            "#bp-{index}:checked~.sheet .cell:not(.bp-{index}){{display:none}}"
+            "main:has(#bp-{index}:checked) .sheet .cell:not(.bp-{index}){{display:none}}"
         );
     }
     html.push_str(
-        "#st-ok:checked~.sheet tr.problem,#st-problem:checked~.sheet tr.fine{display:none}</style></head><body>",
+        "main:has(#st-ok:checked) .sheet tr.problem,main:has(#st-problem:checked) .sheet tr.fine{display:none}</style></head><body>",
     );
     let pages = run.pages.len().to_string();
     let count = breakpoints.len().to_string();

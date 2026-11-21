@@ -1,8 +1,9 @@
 //! The component: `src/lib.rs` translated into the vocabulary of the contract
 //! (`crates/rb-plugin-api/wit`), world `feature-plugin`. Built only for `wasm32`; it holds no
-//! logic of its own. The host it hands the native trait reaches `host` and `http` - the one
-//! capability the manifest grants; every other one is refused here already, as the real host
-//! would refuse it, and a component that calls no other interface imports none.
+//! logic of its own. The host it hands the native trait reaches `host`, `settings` (the manifest
+//! declares a schema) and `http` - the one capability the manifest grants; every other one is
+//! refused here already, as the real host would refuse it, and a component that calls no other
+//! interface imports none.
 #![allow(
     unsafe_code,
     reason = "the canonical-ABI glue wit-bindgen generates is the only unsafe code here"
@@ -15,120 +16,13 @@ wit_bindgen::generate!({
 
 use exports::rbrowser::plugin::feature::Guest;
 use rb_plugin_api::feature::Feature;
-use rb_plugin_api::{
-    Capability, Failure, FailureKind, Finding, HttpRequest, HttpResponse, PluginHost, ViewId,
-    ViewInfo,
-};
-use rbrowser::plugin::{host, http, types};
+use rbrowser::plugin::types;
 
 use crate::SitemapCapture;
 
-/// The host as the plugin sees it: logging, the clock and `http.fetch`.
-struct GuestHost;
-
-fn from_wit(failure: types::Failure) -> Failure {
-    let kind = match failure.kind {
-        types::FailureKind::NotFound => FailureKind::NotFound,
-        types::FailureKind::AccessDenied => FailureKind::AccessDenied,
-        types::FailureKind::NotSupported => FailureKind::NotSupported,
-        types::FailureKind::BadData => FailureKind::BadData,
-        types::FailureKind::Cancelled => FailureKind::Cancelled,
-        types::FailureKind::Io => FailureKind::Io,
-        types::FailureKind::Limit => FailureKind::Limit,
-        types::FailureKind::Other => FailureKind::Other,
-    };
-    Failure {
-        kind,
-        code: failure.code,
-        params: failure.params.into_iter().collect(),
-    }
-}
-
-fn to_wit(failure: Failure) -> types::Failure {
-    let kind = match failure.kind {
-        FailureKind::NotFound => types::FailureKind::NotFound,
-        FailureKind::AccessDenied => types::FailureKind::AccessDenied,
-        FailureKind::NotSupported => types::FailureKind::NotSupported,
-        FailureKind::BadData => types::FailureKind::BadData,
-        FailureKind::Cancelled => types::FailureKind::Cancelled,
-        FailureKind::Io => types::FailureKind::Io,
-        FailureKind::Limit => types::FailureKind::Limit,
-        FailureKind::Other => types::FailureKind::Other,
-    };
-    types::Failure {
-        kind,
-        code: failure.code,
-        params: failure.params.into_iter().collect(),
-    }
-}
-
-impl PluginHost for GuestHost {
-    fn log(&mut self, level: &str, message: &str) {
-        host::log(level, message);
-    }
-
-    fn now_unix_seconds(&mut self) -> u64 {
-        host::now_unix_seconds()
-    }
-
-    fn report_progress(&mut self, done: u32, total: u32) {
-        host::report_progress(done, total);
-    }
-
-    fn setting(&mut self, _key: &str) -> Option<String> {
-        None
-    }
-
-    fn views(&mut self) -> Result<Vec<ViewInfo>, Failure> {
-        Err(Capability::Views.denied())
-    }
-
-    fn active_view(&mut self) -> Result<Option<ViewId>, Failure> {
-        Err(Capability::Views.denied())
-    }
-
-    fn evaluate(&mut self, _view: ViewId, _script: &str) -> Result<String, Failure> {
-        Err(Capability::Evaluate.denied())
-    }
-
-    fn cdp_send(&mut self, _view: ViewId, _method: &str, _params: &str) -> Result<String, Failure> {
-        Err(Capability::Cdp.denied())
-    }
-
-    fn fetch(&mut self, request: &HttpRequest) -> Result<HttpResponse, Failure> {
-        let response = http::fetch(
-            &request.method,
-            &request.url,
-            &request.headers,
-            &request.body,
-        )
-        .map_err(from_wit)?;
-        Ok(HttpResponse {
-            status: response.status,
-            headers: response.headers,
-            body: response.body,
-        })
-    }
-
-    fn project_read(&mut self, _path: &str) -> Result<Vec<u8>, Failure> {
-        Err(Capability::ProjectRead.denied())
-    }
-
-    fn project_list(&mut self, _dir: &str) -> Result<Vec<String>, Failure> {
-        Err(Capability::ProjectRead.denied())
-    }
-
-    fn out_write(&mut self, _path: &str, _bytes: &[u8]) -> Result<(), Failure> {
-        Err(Capability::OutWrite.denied())
-    }
-
-    fn report_findings(&mut self, _items: &[Finding]) -> Result<(), Failure> {
-        Err(Capability::Findings.denied())
-    }
-
-    fn sidecar_call(&mut self, _method: &str, _params: &str) -> Result<String, Failure> {
-        Err(Capability::Sidecar.denied())
-    }
+rb_plugin_api::guest_host! {
+    /// The host as the plugin sees it: logging, the clock, its own settings and `http.fetch`.
+    struct GuestHost grants [settings, http]
 }
 
 struct Component;

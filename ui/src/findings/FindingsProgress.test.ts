@@ -7,14 +7,17 @@ import { describe, expect, it } from 'vitest';
 import { createShellI18n } from '../i18n';
 import { settle } from '../test/mountShell';
 import FindingsProgress from './FindingsProgress.vue';
+import { nestMessages } from './findings';
 import { GRID_PLUGINS, GRID_VIEWS, gridProgress } from './testing';
 import type { ChecksProgress } from './types';
 
-function mountProgress(progress: ChecksProgress = gridProgress()) {
+function mountProgress(progress: ChecksProgress = gridProgress(), texts: Record<string, string> = {}) {
+  const i18n = createShellI18n();
+  i18n.global.mergeLocaleMessage('en', nestMessages(texts));
   return mount(FindingsProgress, {
     props: { progress, elapsedMs: progress.elapsedMs },
     attachTo: document.body,
-    global: { plugins: [ui, createShellI18n()] },
+    global: { plugins: [ui, i18n] },
   });
 }
 
@@ -161,6 +164,22 @@ describe('FindingsProgress over eleven plugins and nine views', () => {
     expect(mobile).toContain('The plugin a11y-axe crashed');
     expect(mobile).not.toContain('someone-else');
     expect(mobile).not.toContain('TypeError');
+    wrapper.unmount();
+  });
+
+  it("gives a plugin's own failure its reason", async () => {
+    const progress = gridProgress();
+    progress.jobs = progress.jobs.map((job) =>
+      job.plugin === 'a11y-axe' && job.breakpoint === 'mobile'
+        ? { ...job, state: 'failed', reason: 'plugin.a11y-axe.errors.no_page', reasonParams: { reason: 'blank page' } }
+        : job,
+    );
+    const wrapper = mountProgress(progress, { 'plugin.a11y-axe.errors.no_page': 'No page to check: {reason}' });
+    await settle();
+    rowOf(wrapper, 'a11y-axe').element.closest('button')?.click();
+    await settle();
+    const mobile = wrapper.get('[data-testid="views-a11y-axe"] [data-view="mobile"]').text();
+    expect(mobile).toContain('No page to check: blank page');
     wrapper.unmount();
   });
 });

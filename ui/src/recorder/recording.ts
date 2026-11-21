@@ -43,7 +43,17 @@ export type Action =
   | { type: 'scroll'; target?: Locator; x: number; y: number }
   | { type: 'waitForUrl'; url: string }
   | { type: 'waitFor'; target: Locator }
+  /** A fixed wait at every pace, at most 10 s (RB-092-01). */
+  | { type: 'wait'; ms: number }
   | { type: 'assert'; assertion: Assertion };
+
+/** A point of the pointer's way to a step (RB-090-87): CSS px of the viewport, `t` ms after the
+ *  way's first point. */
+export interface PathPoint {
+  x: number;
+  y: number;
+  t: number;
+}
 
 /** One step. */
 export interface Step {
@@ -55,6 +65,12 @@ export interface Step {
   atMs: number;
   /** The breakpoints it runs in; absent: all. */
   onlyIn?: string[];
+  /** The pointer's way to it (RB-090-87); absent: none. */
+  path?: PathPoint[];
+  /** Switched off in the editor (RB-092-01): neither played nor exported. */
+  disabled?: boolean;
+  /** The pause before it at the pace As recorded, set in the editor (RB-092-01), ms. */
+  pauseMs?: number;
 }
 
 /** A breakpoint a view showed while recording. */
@@ -87,14 +103,16 @@ export function stepKind(action: Action): string {
   return `assert${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
 }
 
-function targetOf(action: Action): Locator | undefined {
+/** The step's element; none for a step without one. */
+export function targetOf(action: Action): Locator | undefined {
   if (action.type === 'assert') {
     return action.assertion.kind === 'url' ? undefined : action.assertion.target;
   }
   return 'target' in action ? action.target : undefined;
 }
 
-function selectorText(selector: Selector): string {
+/** One selector as the panel shows it. */
+export function selectorText(selector: Selector): string {
   switch (selector.kind) {
     case 'testid':
       return `[data-testid="${selector.testid}"]`;

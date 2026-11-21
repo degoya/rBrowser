@@ -8,10 +8,9 @@
 //! the folder. A file is written beside its target and renamed over it, so a crash leaves the old
 //! baseline or the new one, never half of one.
 
-use std::fs::{File, OpenOptions};
-use std::io::{ErrorKind, Read as _, Write as _};
+use std::fs::File;
+use std::io::{ErrorKind, Read as _};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::VisualError;
 use crate::meta::{BaselineMeta, MetaFile};
@@ -187,36 +186,16 @@ fn read_meta(folder: &Path) -> Result<MetaFile, VisualError> {
 /// Writes `bytes` to `path` through a new file beside it, renamed over it. A link or a folder
 /// at `path` is refused, never replaced.
 pub(crate) fn replace(path: &Path, bytes: &[u8]) -> Result<(), VisualError> {
-    static NEXT: AtomicU32 = AtomicU32::new(0);
     match kind(path)? {
         Some(found) if !found.is_file() => {
             return Err(refused(&path.display().to_string()));
         }
         _ => {}
     }
-    let name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| refused(&path.display().to_string()))?;
-    let temporary = path.with_file_name(format!(
-        ".{name}.{}-{}.tmp",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    let written = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)
-        .and_then(|mut file| {
-            file.write_all(bytes)?;
-            file.sync_all()
-        })
-        .and_then(|()| std::fs::rename(&temporary, path));
-    if let Err(error) = written {
-        let _ = std::fs::remove_file(&temporary);
-        return Err(io(path, error));
+    if path.file_name().is_none() {
+        return Err(refused(&path.display().to_string()));
     }
-    Ok(())
+    rb_util::fs::write_atomic(path, bytes).map_err(|error| io(path, error))
 }
 
 #[cfg(test)]

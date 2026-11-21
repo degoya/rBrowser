@@ -1,7 +1,8 @@
 // The SEO panel's data (RB-080-11, on Nuxt UI since RB-080-85): the answer of the tool
 // `social_preview` (plugins/seo/src/social/tool.rs) - since RB-080-99 every card with the layout
 // its platform's rule picks, the other one to look at, whether the rule is unsure and why - and
-// what the panel says about a card's image. Pure functions, no DOM.
+// what the panel says about a card's image; since RB-090-95 the search result `serp` (serp.ts).
+// Pure functions, no DOM.
 
 /** A text of the panel below `plugin.seo.`, formatted (`usePanel().t`). */
 export type Texts = (key: string, params?: Record<string, unknown>) => string;
@@ -61,6 +62,8 @@ export interface Preview {
   dataVersion: number;
   cards: Card[];
   images: ImageInfo[];
+  /** The search result; checked on its own (`isSerp`), so an answer without one still shows. */
+  serp?: unknown;
 }
 
 const LAYOUTS: readonly string[] = ['large', 'small', 'text'];

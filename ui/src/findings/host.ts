@@ -10,14 +10,19 @@ import type { FindingsChannel, FindingsEvent, ProgressEvent } from './types';
 /** The command that shows and hides the panel (`Ctrl+Shift+Space P F`). */
 export const PANEL_COMMAND = 'panels.findings';
 
-/** A channel over `send` (`false`: refused), `subscribe` (the core's events) and `ask` (a
- * request with its answer; without it there is no last run). */
+/** A channel over `send` (`false`: refused), `subscribe` (the core's events), `ask` (a
+ * request with its answer; without it there is no last run) and `binding` (a command's shortcut
+ * for the tooltips, RB-092-05). */
 export function findingsChannel(
   send: (message: ShellToCore) => Promise<boolean>,
   subscribe: Subscribe,
   ask?: (message: ShellToCore) => Promise<CoreToShell>,
+  binding?: (command: string) => string | null,
 ): FindingsChannel {
   return {
+    binding(command) {
+      return binding?.(command) ?? null;
+    },
     async last() {
       if (ask === undefined) {
         return null;

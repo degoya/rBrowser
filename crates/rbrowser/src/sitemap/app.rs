@@ -322,8 +322,16 @@ pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
         }
         GALLERY => {
             let args = RunArgs::parse(args).map_err(CommandError::InvalidArgs)?;
-            let opened = gallery::open(core, &args, gallery::Caller::Person);
-            to_value(&opened.map_err(|error| failed(&error))?)
+            // The person's system browser before the run's `index.html` is written: a notice that
+            // it comes at the end, no error (RB-090-88). The window opens a running run.
+            match gallery::open(core, &args, gallery::Caller::Person) {
+                Ok(opened) => to_value(&opened),
+                Err(RunError::NoGallery(run_id)) => {
+                    core.notify(gallery::at_end_notice(&run_id));
+                    Ok(Value::Null)
+                }
+                Err(error) => Err(failed(&error)),
+            }
         }
         PANEL => {
             core.send(&CoreToShell::UiCommand {

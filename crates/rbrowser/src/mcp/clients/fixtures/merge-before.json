@@ -1,0 +1,11 @@
+{
+  "globalShortcut": "Ctrl+Space",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\work"],
+      "env": { "API_KEY": "kept-as-it-is" }
+    }
+  },
+  "theme": "dark"
+}

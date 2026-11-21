@@ -19,7 +19,8 @@
 //! command `engine.webkit.toggle`, `Leader V K`) and `engines.webkit.syncSource`.
 
 pub mod engine;
-mod follow;
+// Safari's windows follow their cells by the same rule (RB-095-03).
+pub(crate) mod follow;
 pub mod port;
 pub mod replay;
 pub mod rpc;

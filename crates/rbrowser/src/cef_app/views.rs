@@ -462,6 +462,22 @@ wrap_request_handler! {
             0
         }
 
+        // A Basic auth challenge of an environment with a stored credential (RB-094-08).
+        fn auth_credentials(
+            &self,
+            browser: Option<&mut Browser>,
+            origin_url: Option<&CefString>,
+            is_proxy: c_int,
+            host: Option<&CefString>,
+            port: c_int,
+            realm: Option<&CefString>,
+            scheme: Option<&CefString>,
+            callback: Option<&mut AuthCallback>,
+        ) -> c_int {
+            let asked = super::auth::Asked { origin_url, is_proxy, host, port, realm, scheme };
+            super::auth::answer(self.view, browser, &asked, callback)
+        }
+
         fn on_render_process_terminated(
             &self,
             browser: Option<&mut Browser>,

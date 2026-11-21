@@ -193,3 +193,42 @@ fn the_breakpoint_rules_switched_off_read_no_other_view() {
     check(&mut host, &ctx).expect("findings");
     assert!(host.evaluated.iter().all(|(view, _)| *view == 2));
 }
+
+#[test]
+fn the_compared_elements_follow_outline_diff_elements() {
+    let mut host = host();
+    let link = |visible: bool| {
+        let mut link = located("nav > a", visible);
+        link["tag"] = json!("a");
+        link["role"] = json!("link");
+        link["name"] = json!("Pricing");
+        link
+    };
+    host.page(1, &json!({ "url": URL, "focus": [link(true)] }))
+        .page(2, &json!({ "url": URL, "focus": [link(false)] }));
+    let interactive = |found: &[Finding]| -> Vec<Option<ViewId>> {
+        found
+            .iter()
+            .filter(|f| f.rule == rules::INTERACTIVE_DIFFERS)
+            .map(|f| f.view)
+            .collect()
+    };
+    assert_eq!(
+        interactive(&check(&mut host, &ctx(Some(2))).expect("2")),
+        [Some(2)]
+    );
+    host.settings
+        .insert("diff.elements".to_owned(), r#"["headings"]"#.to_owned());
+    assert_eq!(
+        interactive(&check(&mut host, &ctx(Some(2))).expect("2")),
+        []
+    );
+    host.settings
+        .insert("diff.elements".to_owned(), "[]".to_owned());
+    host.evaluated.clear();
+    check(&mut host, &ctx(Some(2))).expect("2");
+    assert!(
+        host.evaluated.iter().all(|(view, _)| *view == 2),
+        "nothing compared: no other view read"
+    );
+}

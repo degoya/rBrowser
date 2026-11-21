@@ -1,8 +1,10 @@
 //! The activity bar's part of the protocol (RB-090-67): the activities it has entries for, its
 //! state in the snapshot - where the core made room for it, the entries folded into their
 //! toolbar indicator, the recording just stopped - and the running video recording, the one
-//! activity that published nothing to the shell before. The other activities come from what the shell already gets:
-//! `recorder` and `sync.desynced` in the snapshot, `flowRun`, `checksProgress` and `portal`.
+//! activity that published nothing to the shell before. The other activities come from what the
+//! shell already gets: `recorder`, `sync.desynced`, `timeControl` (RB-094-07),
+//! `pluginProgress` (RB-093-01) and `forcedStates` (RB-094-16) in the snapshot, `flowRun`,
+//! `checksProgress` and `portal`.
 
 use rb_config::ActivityBarPosition;
 use rb_engine::ViewId;
@@ -24,6 +26,12 @@ pub enum Activity {
     Portal,
     /// Views out of sync.
     Desync,
+    /// The page clock stopped or set, or animations held (RB-094-07).
+    Time,
+    /// A plugin call that reports its progress (`host.report-progress`, RB-093-01).
+    Plugins,
+    /// Pseudo-class states forced on an element of a view (RB-094-16).
+    ForcedStates,
 }
 
 /// The activity bar in the snapshot.
@@ -77,8 +85,19 @@ pub struct VideoActivity {
     pub views: Vec<ViewId>,
     /// When it started, ms since the epoch: the shell counts the time from it.
     pub started_at_ms: u64,
-    /// It stops by itself after this many seconds.
+    /// It stops by itself after this many seconds (of recorded time).
     pub max_duration_sec: u64,
+    /// While paused (RB-090-68): when the pause began, ms since the epoch - the shell's time
+    /// stands still at it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paused_at_ms: Option<u64>,
+    /// The ms of the pauses that ended: the shell's time leaves them out.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub paused_ms: u64,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 #[cfg(test)]

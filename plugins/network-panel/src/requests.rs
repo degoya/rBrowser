@@ -3,6 +3,7 @@
 //! fragment), each row with what every view saw. A row is `partial` when some view with captured
 //! requests did not load it (`srcset` picking another image per breakpoint), and `differs` when
 //! the views saw different statuses, a failure in some, or sizes more than 5 % and 256 bytes apart.
+//! The list filters by text, type, status, differences and endpoint (RB-096-06).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -10,6 +11,8 @@ use rb_plugin_api::ViewId;
 use serde_json::{Value, json};
 
 use crate::context::FEED_KEY;
+use crate::endpoints::{endpoint_key, key_of};
+use crate::template::Template;
 
 /// What one view saw of a request (its newest instance).
 #[derive(Clone, Debug, PartialEq)]
@@ -151,6 +154,11 @@ pub struct Filter {
     pub status: Option<String>,
     /// Only rows that are partial or differ.
     pub differences: bool,
+    /// Only the calls of this endpoint (`GET https://a.test/api/users/{id}`, RB-096-06): the
+    /// tab Endpoints' jump to its requests.
+    pub endpoint: Option<String>,
+    /// The person's path patterns, for [`Filter::endpoint`].
+    pub templates: Vec<Template>,
 }
 
 impl Filter {
@@ -167,6 +175,13 @@ impl Filter {
         }
         if self.differences && !row.partial && !row.differs {
             return false;
+        }
+        if let Some(endpoint) = &self.endpoint {
+            let key = key_of(&row.method, &row.url, &self.templates)
+                .map(|(method, origin, path)| endpoint_key(&method, &origin, &path));
+            if key.as_ref() != Some(endpoint) {
+                return false;
+            }
         }
         let seen = || row.views.values();
         match self.status.as_deref() {

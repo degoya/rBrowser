@@ -5,6 +5,8 @@
 //! page; each skip names its reason.
 
 use rb_plugin_api::{ViewId, ViewInfo};
+/// Whether `url` is a page Lighthouse can load: the app's own check (RB-094-10).
+pub use rb_util::url::is_web_url;
 use serde_json::{Value, json};
 
 use crate::project::Project;
@@ -46,13 +48,6 @@ pub struct Selection<'a> {
     pub view: Option<ViewId>,
     /// This page instead of each view's.
     pub url: Option<&'a str>,
-}
-
-/// Whether `url` is a page Lighthouse can load.
-#[must_use]
-pub fn is_web_url(url: &str) -> bool {
-    let lower = url.trim().to_ascii_lowercase();
-    lower.starts_with("http://") || lower.starts_with("https://")
 }
 
 fn name_of(view: &ViewInfo) -> String {

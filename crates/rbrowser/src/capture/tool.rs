@@ -185,6 +185,7 @@ impl ScreenshotArgs {
                 freeze_animations: self.freeze_animations,
             },
             at: self.at,
+            mask_passwords: false,
         })
     }
 }
@@ -215,6 +216,9 @@ pub struct ScreenshotRequest {
     /// The element at this point of the one view (mode element without a selector): named by
     /// the context menu, so nobody picks (RB-080-43).
     pub at: Option<PointArg>,
+    /// Black out the password fields (a bug report, RB-093-04); never from the tool's
+    /// arguments.
+    pub mask_passwords: bool,
 }
 
 /// One image of the answer.

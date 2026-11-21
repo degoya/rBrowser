@@ -1,0 +1,79 @@
+# Container queries made visible (RB-094-01, docs/plugins.md): every element with a size
+# container-type framed in every view with its name, its size and the @container conditions that
+# match now; the analysis of all @container conditions of the page with their bounds, per
+# container the next bound above and below and the breakpoints that switch it; and one
+# container's width dragged inline to test its rules without changing the view. The page script
+# draws in a closed shadow root of its layer; the component keeps whether the overlay shows per
+# project (.rbrowser/out/container-queries/state.json), answers the MCP tools and evaluates the
+# analysis (assets/analyze.js, built from web/src).
+manifest_version = 1
+id = "container-queries"
+name = "Container queries"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["feature-plugin"]
+mcp_prefix = "containers"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs.
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Container queries in every view: each container framed with its name, size and matching @container conditions, every condition with its bounds, the breakpoints that switch a container, and a container's width dragged to test its rules."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the views of an MCP call with target "all" and their widths; evaluate: the analysis and
+# the widths of containers_resize (assets/analyze.js); project-read and out-write: whether the
+# overlay shows, below .rbrowser/out/container-queries/ (the component lives for one call only).
+[capabilities]
+views = true
+evaluate = true
+project-read = true
+out-write = true
+
+[settings]
+schema = "settings.schema.json"
+
+[[tools]]
+name = "overlay"
+description = "plugin.container-queries.tools.overlay"
+input = { type = "object", properties = { on = { type = "boolean" } } }
+
+[[tools]]
+name = "analyze"
+description = "plugin.container-queries.tools.analyze"
+input = { type = "object" }
+
+[[tools]]
+name = "resize"
+description = "plugin.container-queries.tools.resize"
+input = { type = "object", properties = { path = { type = "string", minLength = 1, maxLength = 300 }, width = { type = "number", minimum = 0, maximum = 100000 }, reset = { type = "boolean" } } }
+
+[[commands]]
+id = "overlay"
+title = "plugin.container-queries.commands.overlay"
+shortcut = "Ctrl+Shift+Space O U"
+group = "overlays"
+tool = "overlay"
+
+[[commands]]
+id = "analyze"
+title = "plugin.container-queries.commands.analyze"
+shortcut = "Ctrl+Shift+Space B C"
+group = "breakpoints"
+tool = "analyze"
+
+[[page_scripts]]
+path = "page/containers.js"
+run_at = "document-end"
+
+[[panels]]
+id = "main"
+title = "plugin.container-queries.panels.main"
+entry = "panel/index.html"
+icon = "ruler"
+placement = "sidebar"

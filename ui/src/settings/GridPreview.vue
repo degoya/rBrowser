@@ -5,6 +5,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JsonValue } from '../ipc/protocol';
+import { isObject } from '../../../plugins/web-common/src/is-object';
 
 const props = defineProps<{
   /** The value of the `layout` key. */
@@ -17,13 +18,7 @@ const { t } = useI18n();
 /** The preview stays a sketch: at most this many tracks either way. */
 const MAX_TRACKS = 12;
 
-type JsonObject = { [key: string]: JsonValue };
-
-function isObject(value: JsonValue | undefined): value is JsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function count(value: JsonValue | undefined, fallback = 1): number {
+function count(value: unknown, fallback = 1): number {
   return typeof value === 'number' && value >= 1 ? Math.min(Math.floor(value), MAX_TRACKS) : fallback;
 }
 
@@ -31,7 +26,7 @@ const grid = computed(() => (isObject(props.layout) ? props.layout : {}));
 const columns = computed(() => count(grid.value.columns));
 const rows = computed(() => count(grid.value.rows));
 const cells = computed(() =>
-  (Array.isArray(grid.value.cells) ? grid.value.cells : []).filter(isObject).map((cell, index) => {
+  (Array.isArray(grid.value.cells) ? grid.value.cells : []).flatMap((cell) => (isObject(cell) ? [cell] : [])).map((cell, index) => {
     const id = typeof cell.breakpoint === 'string' ? cell.breakpoint : '';
     return {
       key: `${index}-${id}`,

@@ -133,7 +133,8 @@ fn closed() -> CommandError {
 impl Backend for CoreBackend {
     fn run_command(&self, id: &str, args: Value) -> Result<Value, CommandError> {
         let core = self.core().ok_or_else(closed)?;
-        // MCP's `navigate` loads http(s) and the project's own files only.
+        // MCP's `navigate`, `checks_run` and `breakpoints_detect` load http(s) and the project's
+        // own files only (RB-094-10).
         super::url_policy::check_command(id, &args, core.host().project_root().as_deref())?;
         // Adding a portal asset origin writes the project config: a person's click (RB-090-71).
         crate::portal::offer::refuse_mcp(id)?;
@@ -141,6 +142,11 @@ impl Backend for CoreBackend {
         crate::updates::refuse_mcp(id)?;
         // The setup wizard is a person's dialog (RB-091-05).
         crate::first_run::refuse_mcp(id)?;
+        // Basic auth credentials and login state are a person's (RB-094-08).
+        crate::basic_auth::refuse_mcp(id)?;
+        crate::session_state::refuse_mcp(id)?;
+        // Installing a plugin is a person's (RB-094-13).
+        crate::plugins::bundle_install::refuse_mcp(id)?;
         core.run_command(id, args)
     }
 
@@ -253,6 +259,8 @@ impl Backend for CoreBackend {
                 allow_evaluate: settings.allow_evaluate,
                 max_answer_bytes: usize::try_from(settings.max_answer_bytes)
                     .unwrap_or(rb_mcp::backend::DEFAULT_MAX_ANSWER_BYTES),
+                prompts: settings.prompts,
+                resources: settings.resources,
             }
         })
     }
@@ -386,6 +394,24 @@ impl Backend for CoreBackend {
                 "the run ended without a result (the window closed)",
             )),
         }
+    }
+
+    fn latest_findings(&self) -> Option<Value> {
+        super::latest::findings()
+    }
+
+    fn latest_screenshots(&self) -> Option<Value> {
+        let root = self.core().and_then(|core| core.host().project_root());
+        super::latest::screenshots(root.as_deref())
+    }
+
+    fn latest_screenshot_png(
+        &self,
+        index: usize,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, ToolFailure> {
+        let root = self.core().and_then(|core| core.host().project_root());
+        super::latest::screenshot_png(root.as_deref(), index, max_bytes)
     }
 }
 

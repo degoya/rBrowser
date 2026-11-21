@@ -40,9 +40,8 @@ pub mod manifest;
 pub mod offer;
 pub mod sign;
 pub mod sources;
+pub mod utc;
 
-/// The time type every check takes, so a caller needs no `chrono` of its own.
-pub use chrono::{DateTime, Utc};
 pub use download::{Progress, already_downloaded, check_space, download_verified};
 pub use error::{UPDATE_ERROR_CODES, UpdateError};
 pub use fetch::{Fetcher, HttpFetcher, MemoryFetcher};
@@ -52,3 +51,5 @@ pub use install_kind::{InstallKind, UpdateWay};
 pub use manifest::{Artifact, Channel, UpdateManifest};
 pub use offer::{Offer, Target, effective_channel, newest_offer};
 pub use sources::{CheckReport, Sources, check_channel};
+/// The time type every check takes, always in UTC, so a caller needs no `time` of its own.
+pub use time::OffsetDateTime;

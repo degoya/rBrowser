@@ -283,12 +283,12 @@ fn index(args: &[String]) -> Result<()> {
             .map_err(|error| anyhow::anyhow!("{previous}: {}: {error}", error.code()))?;
         plugins = carry_over(&old.plugins, plugins);
     }
-    let issued_at = chrono::Utc::now();
+    let issued_at = time::OffsetDateTime::now_utc();
     let index = PluginIndex {
         schema_version: PLUGIN_INDEX_SCHEMA_VERSION,
         sequence,
         issued_at,
-        expires_at: issued_at + chrono::Duration::days(days),
+        expires_at: issued_at + time::SignedDuration::days(days),
         plugins,
     };
     let bytes = sign_index(key_id, &key, &index)?;
@@ -297,7 +297,7 @@ fn index(args: &[String]) -> Result<()> {
         "{}: {} plugins, sequence {sequence}, expires {}",
         out.display(),
         index.plugins.len(),
-        index.expires_at.to_rfc3339()
+        rb_plugin_host::utc::rfc3339(index.expires_at)
     );
     Ok(())
 }

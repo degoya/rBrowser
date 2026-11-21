@@ -16,10 +16,10 @@
 //! `issued_at` further ahead than clock skew explains is refused.
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, Utc};
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
+use time::{OffsetDateTime, SignedDuration};
 
 use crate::sign::{DigestBuilder, TrustStore, sign_detached, verify_detached};
 
@@ -191,9 +191,9 @@ pub struct Freshness {
     /// The publisher's monotonic counter.
     pub sequence: u64,
     /// When the publisher says it signed this.
-    pub issued_at: DateTime<Utc>,
+    pub issued_at: OffsetDateTime,
     /// After this instant the document is stale even if nothing newer has been seen.
-    pub expires_at: DateTime<Utc>,
+    pub expires_at: OffsetDateTime,
 }
 
 /// Why a document was refused as stale.
@@ -201,10 +201,13 @@ pub struct Freshness {
 pub enum StaleError {
     #[error("index sequence {saw} is older than the {known} already accepted")]
     Replayed { saw: u64, known: u64 },
-    #[error("the index expired at {expires_at}")]
-    Expired { expires_at: DateTime<Utc> },
-    #[error("the index is issued {issued_at}, further ahead than clock skew explains")]
-    FromTheFuture { issued_at: DateTime<Utc> },
+    #[error("the index expired at {}", crate::utc::display(.expires_at))]
+    Expired { expires_at: OffsetDateTime },
+    #[error(
+        "the index is issued {}, further ahead than clock skew explains",
+        crate::utc::display(.issued_at)
+    )]
+    FromTheFuture { issued_at: OffsetDateTime },
 }
 
 /// Checks `candidate` against the highest sequence already accepted from the same repository;
@@ -219,7 +222,7 @@ pub enum StaleError {
 pub fn check_freshness(
     candidate: Freshness,
     known: Option<u64>,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<(), StaleError> {
     if let Some(known) = known
         && candidate.sequence <= known
@@ -234,7 +237,7 @@ pub fn check_freshness(
             expires_at: candidate.expires_at,
         });
     }
-    if candidate.issued_at > now + Duration::minutes(MAX_CLOCK_SKEW_MINUTES) {
+    if candidate.issued_at > now + SignedDuration::minutes(MAX_CLOCK_SKEW_MINUTES) {
         return Err(StaleError::FromTheFuture {
             issued_at: candidate.issued_at,
         });

@@ -9,8 +9,9 @@
 //!
 //! The menu bar has the standard items: the app menu (About, Settings, Hide, Quit; About and
 //! Settings run the app's commands `app.about` and `settings.open`) and Edit (undo, redo, cut,
-//! copy, paste, select all, sent down the responder chain to the focused page or field). The
-//! titles come from the catalogue. Main thread only.
+//! copy, paste, select all, sent down the responder chain to the focused page or field) and
+//! Window (Minimize, Close Window: the key window's own `performMiniaturize:` and
+//! `performClose:`). The titles come from the catalogue. Main thread only.
 
 #![allow(
     unsafe_code,
@@ -104,7 +105,7 @@ pub fn install(main_thread: MainThreadMarker) {
     app.setMainMenu(Some(&*bar));
 }
 
-/// The menu bar: the app menu, then Edit.
+/// The menu bar: the app menu, Edit, then Window.
 fn menu_bar(main_thread: MainThreadMarker) -> Retained<NSMenu> {
     let bar = NSMenu::new(main_thread);
     let app_menu = submenu(
@@ -134,7 +135,17 @@ fn menu_bar(main_thread: MainThreadMarker) -> Retained<NSMenu> {
             Some((t("macos.menu.select_all"), sel!(selectAll:), "a")),
         ],
     );
-    for menu in [app_menu, edit_menu] {
+    // Close (Cmd+W) and Minimize (Cmd+M) go to the key window (RB-090-98).
+    let window_menu = submenu(
+        main_thread,
+        &t("macos.menu.window"),
+        &[
+            Some((t("macos.menu.minimize"), sel!(performMiniaturize:), "m")),
+            None,
+            Some((t("macos.menu.close"), sel!(performClose:), "w")),
+        ],
+    );
+    for menu in [app_menu, edit_menu, window_menu] {
         let holder = item(main_thread, "", None, "");
         holder.setSubmenu(Some(&*menu));
         bar.addItem(&holder);
@@ -168,7 +179,8 @@ fn item(
     key: &str,
 ) -> Retained<NSMenuItem> {
     // SAFETY: each action is a selector that NSApplication, RbApplication or the responder
-    // chain answers (`terminate:`, `hide:`, `rbAbout:`, `undo:`, `copy:` and the like).
+    // chain answers (`terminate:`, `hide:`, `rbAbout:`, `undo:`, `copy:`, NSWindow's
+    // `performClose:` and `performMiniaturize:` and the like).
     unsafe {
         NSMenuItem::initWithTitle_action_keyEquivalent(
             NSMenuItem::alloc(main_thread),

@@ -265,6 +265,23 @@ impl Registry {
             .collect()
     }
 
+    /// The activity bar's entry (RB-094-16): each view with a forced element, in order, and
+    /// the states forced on any of its elements, in the menu's order.
+    #[must_use]
+    pub fn activity(&self) -> Vec<rb_ipc::ViewForcedStates> {
+        self.forced_views()
+            .into_iter()
+            .map(|view| rb_ipc::ViewForcedStates {
+                view,
+                states: self
+                    .forced_in(view)
+                    .into_iter()
+                    .map(|class| class.name().to_owned())
+                    .collect(),
+            })
+            .collect()
+    }
+
     /// The menu's marks for `view` among `views` (every view of the window).
     #[must_use]
     pub fn marks(&self, view: ViewId, views: &[ViewId]) -> ForcedMarks {

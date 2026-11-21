@@ -1,4 +1,5 @@
-//! The activity bar (RB-090-67): a strip of the shell, [`HEIGHT`] DIP high, that is there only
+//! The activity bar (RB-090-67): a strip of the shell, [`HEIGHT`] DIP high, that keeps its room
+//! with `ui.activityBar.mode` `always` (the default, RB-094-13) or is there only
 //! while something runs - a video, a recording, a flow run, a check run, the portal, views out of
 //! sync - with the running activity's controls, each a command of the registry. The shell pages
 //! draw it (`ui/src/activity/`); four things are the core's:
@@ -16,7 +17,8 @@
 //!   again when its activity ended.
 //! - **The recording just stopped** ([`on_recorder`]): offered for "Play last" until it is
 //!   played, closed or another recording starts.
-//! - **The running video** ([`publish_video`]), the one activity that told the shell nothing.
+//! - **The running video** ([`publish_video`]), the one activity that told the shell nothing,
+//!   and its pause ([`publish_video_pause`], RB-090-68).
 //!
 //! The bar is shell UI in the toolbar's or the status bar's view: a screenshot or a video of a
 //! view reads that view's own surface over CDP (`Page.captureScreenshot`,
@@ -206,8 +208,21 @@ pub fn publish_video(host: &Host, running: Option<(Vec<ViewId>, u64, u64)>) {
         views,
         started_at_ms,
         max_duration_sec,
+        paused_at_ms: None,
+        paused_ms: 0,
     });
     host.update_shell_state(|shell| shell.video = video);
+}
+
+/// The running video paused at `paused_at_ms` or goes on (`None`), after `paused_ms` of pauses
+/// that ended (RB-090-68, `crate::video::pause`); nothing without a running video.
+pub fn publish_video_pause(host: &Host, paused_at_ms: Option<u64>, paused_ms: u64) {
+    host.update_shell_state(|shell| {
+        if let Some(video) = shell.video.as_mut() {
+            video.paused_at_ms = paused_at_ms;
+            video.paused_ms = paused_ms;
+        }
+    });
 }
 
 #[cfg(test)]

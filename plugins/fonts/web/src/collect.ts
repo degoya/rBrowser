@@ -7,7 +7,7 @@
 
 import { cssPath } from '../../../../agent/src/selector';
 import { cut, type FaceLike, firstFamily, formatOf, MAX_URL, readFaces, weightOf } from './faces';
-import { elementPath } from './path';
+import { elementPath } from '../../../web-common/src/element-path';
 import type { Box, Candidate, Located, PageFonts, Request, Resource, Role, Sample, Usage } from './types';
 
 export { type FaceLike, firstFamily, parseSrc, weightOf } from './faces';

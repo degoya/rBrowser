@@ -5,7 +5,7 @@
 
 import { nameOf, normalize, roleOf } from '../../../../agent/src/role';
 import { cssPath } from '../../../../agent/src/selector';
-import { elementPath } from './path';
+import { elementPath } from '../../../web-common/src/element-path';
 import type {
   CustomHit,
   CustomResult,
@@ -85,7 +85,32 @@ function capped<T>(elements: Element[], name: string, truncated: string[], make:
   return elements.slice(0, MAX_ENTRIES).map(make);
 }
 
-function headings(env: Env, truncated: string[]): Heading[] {
+/** Each element's place in the document (`order`, RB-094-02): its index in document order,
+ * counted once per collect and only when asked; -1 for an element outside the document. */
+type Order = (element: Element) => number;
+
+function documentOrder(): Order {
+  let index: Map<Element, number> | null = null;
+  return (element) => {
+    if (!index) {
+      index = new Map();
+      let at = 0;
+      for (const one of Array.from(document.getElementsByTagName('*'))) index.set(one, at++);
+    }
+    return index.get(element) ?? -1;
+  };
+}
+
+/** The writing direction of the page's content, `rtl` or `ltr`: the nearest `dir` attribute,
+ * else the CSS `direction`. */
+function directionOf(): string {
+  const root = document.body ?? document.documentElement;
+  const attribute = root.closest('[dir]')?.getAttribute('dir')?.toLowerCase();
+  if (attribute === 'rtl' || attribute === 'ltr') return attribute;
+  return getComputedStyle(root).direction === 'rtl' ? 'rtl' : 'ltr';
+}
+
+function headings(env: Env, truncated: string[], order: Order): Heading[] {
   const found = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, [role="heading"]'));
   return capped(found, 'headings', truncated, (element) => {
     const tagLevel = /^h([1-6])$/.exec(element.localName)?.[1];
@@ -94,6 +119,7 @@ function headings(env: Env, truncated: string[]): Heading[] {
     const full = normalize(element.textContent);
     return {
       ...located(element, env),
+      order: order(element),
       level,
       text: cut(full),
       name: cut(headingName(element)),
@@ -271,7 +297,7 @@ function isFocusable(element: Element): boolean {
 
 /** The sequential focus order: positive tabindex first (ascending, stable), then document
  * order; hidden elements are skipped, as the browser does. */
-function focus(env: Env, truncated: string[]): Focusable[] {
+function focus(env: Env, truncated: string[], order: Order): Focusable[] {
   const candidates = Array.from(document.querySelectorAll(FOCUSABLE)).filter(isFocusable);
   const ordered = candidates
     .map((element, index) => ({ element, index, tab: tabIndexOf(element) }))
@@ -286,6 +312,7 @@ function focus(env: Env, truncated: string[]): Focusable[] {
     const role = roleOf(element) ?? '';
     return {
       ...located(element, env),
+      order: order(element),
       tag: element.localName,
       role,
       name: cut(nameOf(element, role || null)),
@@ -316,16 +343,18 @@ export function collect(request: Request = {}, env: Env = realEnv): PageOutline 
   const wanted = new Set(request.sections?.length ? request.sections : SECTIONS);
   const truncated: string[] = [];
   const pick = <T>(name: string, read: () => T[]): T[] => (wanted.has(name) ? read() : []);
+  const order = documentOrder();
   return {
     url: cut(location.href, MAX_URL),
     lang: cut(normalize(document.documentElement.getAttribute('lang')), 35),
-    headings: pick('headings', () => headings(env, truncated)),
+    dir: directionOf(),
+    headings: pick('headings', () => headings(env, truncated, order)),
     landmarks: pick('landmarks', () => landmarks(env, truncated)),
     outside: pick('landmarks', () => outside(env)),
     links: pick('links', () => links(env, truncated)),
     images: pick('images', () => images(env, truncated)),
     fields: pick('forms', () => fields(env, truncated)),
-    focus: pick('focus', () => focus(env, truncated)),
+    focus: pick('focus', () => focus(env, truncated, order)),
     custom: pick('custom', () => custom(request.custom ?? [], env)),
     truncated,
   };

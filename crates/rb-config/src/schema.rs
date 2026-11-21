@@ -5,6 +5,8 @@
 //! The checked-in files are [`schema_files`]; `tests/schema_files.rs` fails when they are stale
 //! and rewrites them with `RB_UPDATE_SCHEMA=1`.
 
+use std::sync::OnceLock;
+
 use schemars::generate::SchemaSettings;
 use schemars::{JsonSchema, Schema};
 use serde_json::Value;
@@ -21,6 +23,16 @@ pub const USER_SETTINGS_SCHEMA_FILE: &str = "schema/settings.v1.json";
 /// Both annotated schemas: (project config, user settings). They are built together because
 /// `x-order` counts across both.
 pub fn schemas() -> (Schema, Schema) {
+    cached().clone()
+}
+
+/// [`schemas`], built once per process: the types do not change while it runs.
+pub(crate) fn cached() -> &'static (Schema, Schema) {
+    static SCHEMAS: OnceLock<(Schema, Schema)> = OnceLock::new();
+    SCHEMAS.get_or_init(build)
+}
+
+fn build() -> (Schema, Schema) {
     let mut counters = OrderCounters::new();
     let project = annotated::<ProjectConfig>(SchemaKind::Project, &mut counters);
     let user = annotated::<UserSettings>(SchemaKind::User, &mut counters);

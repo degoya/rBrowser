@@ -95,3 +95,64 @@ describe('apply', () => {
     expect(answer.formValid).toBe(null);
   });
 });
+
+describe('passes (RB-094-22)', () => {
+  it('names the fields that hold a value and skips an aria-disabled one', () => {
+    document.body.innerHTML = `<input name="t" value="held"><input name="e"><input type="checkbox" name="c" checked>
+      <select name="s"><option value="a">A</option><option value="b">B</option></select>
+      <select name="p"><option value="a">A</option><option value="b" selected>B</option></select>
+      <input name="off" aria-disabled="true">`;
+    const fields = page({ op: 'collect' }).fields;
+    expect(fields.map((field: any) => field.filled)).toEqual([true, false, true, false, true, false]);
+    expect(fields.map((field: any) => field.skip)).toEqual(['', '', '', '', '', 'disabled']);
+  });
+
+  it('reports a field the page replaced while it settled as missing, never sets the old one', async () => {
+    document.body.innerHTML = '<select name="s"><option value="">-</option><option value="x">X</option></select><div id="d"><input name="t"></div>';
+    const select = document.querySelector('select') as HTMLSelectElement;
+    select.addEventListener('change', () => setTimeout(() => {
+      (document.getElementById('d') as HTMLElement).innerHTML = '<input name="t">';
+    }, 10));
+    const [s, t] = page({ op: 'collect' }).fields;
+    const answer = await page({ op: 'apply', settle: { quiet: 40, cap: 2000, budget: 5000 }, actions: [
+      { index: s.index, sig: s.sig, op: 'select', values: ['x'], goal: 'valid' },
+      { index: t.index, sig: t.sig, op: 'text', candidates: ['a'], goal: 'any' },
+    ] });
+    expect(answer.fields.map((field: any) => field.status)).toEqual(['done', 'missing']);
+    expect((document.querySelector('input[name=t]') as HTMLInputElement).value).toBe('');
+  });
+
+  it('waits no longer than its cap while the page keeps changing', async () => {
+    document.body.innerHTML = '<input type="checkbox" name="c"><p id="tick"></p>';
+    const tick = setInterval(() => {
+      (document.getElementById('tick') as HTMLElement).textContent = String(Math.random());
+    }, 5);
+    try {
+      const [c] = page({ op: 'collect' }).fields;
+      const answer = await page({ op: 'apply', settle: { quiet: 50, cap: 120, budget: 1000 }, actions: [
+        { index: c.index, sig: c.sig, op: 'check', checked: true },
+      ] });
+      expect(answer.fields[0]).toMatchObject({ status: 'done', changed: true });
+    } finally {
+      clearInterval(tick);
+    }
+  });
+
+  it('gives each field an identity that a field inserted before it does not shift', () => {
+    document.body.innerHTML = '<form><input class="a"><input class="b"></form>';
+    const [a, b] = page({ op: 'collect' }).fields;
+    expect(a.uid).not.toBe(b.uid);
+    document.querySelector('form')?.insertAdjacentHTML('afterbegin', '<input class="new">');
+    const after = page({ op: 'collect' }).fields;
+    expect(after[1].key).toBe(a.key.replace(/0$/, '1'));
+    expect(after.slice(1).map((field: any) => field.uid)).toEqual([a.uid, b.uid]);
+    expect([a.uid, b.uid]).not.toContain(after[0].uid);
+  });
+
+  it('answers at once without a settle request, as before', () => {
+    document.body.innerHTML = '<input type="checkbox" name="c">';
+    const [c] = page({ op: 'collect' }).fields;
+    const answer = page({ op: 'apply', actions: [{ index: c.index, sig: c.sig, op: 'check', checked: true }] });
+    expect(answer.fields[0].status).toBe('done');
+  });
+});

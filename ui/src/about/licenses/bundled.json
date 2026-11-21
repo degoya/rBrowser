@@ -63,6 +63,13 @@
     "status": "bundled"
   },
   {
+    "id": "html-validate",
+    "name": "html-validate (the HTML validation plugin's runner, with the packages it bundles; the plugin's NOTICE)",
+    "version": "11.18.0",
+    "license": "MIT",
+    "status": "bundled"
+  },
+  {
     "id": "noto-sans-mono",
     "name": "Noto Sans Mono (subset, screenshot-editor)",
     "version": "2.006",

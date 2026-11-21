@@ -10,7 +10,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use chrono::Utc;
+use time::OffsetDateTime;
+use time::format_description::StaticFormatDescription;
+use time::macros::format_description;
 
 use super::durable::{exists, remove_any, rename};
 
@@ -69,11 +71,17 @@ pub fn sweep(install: &Path) {
     }
 }
 
+/// The time a batch is named by, in UTC to the nanosecond: `20261121T101500.123456789Z`.
+const BATCH_NAME: StaticFormatDescription =
+    format_description!("[year][month][day]T[hour][minute][second].[subsecond digits:9]Z");
+
 /// A new, empty folder in the trash, named by the time, for one leftover.
 fn new_batch(install: &Path) -> Result<PathBuf> {
     let trash = trash_dir(install);
     fs::create_dir_all(&trash).with_context(|| format!("create {}", trash.display()))?;
-    let stamp = Utc::now().format("%Y%m%dT%H%M%S%.9fZ");
+    let stamp = OffsetDateTime::now_utc()
+        .format(BATCH_NAME)
+        .context("the time as a folder name")?;
     for attempt in 0..100_u32 {
         let batch = trash.join(format!("{stamp}-{attempt}"));
         match fs::create_dir(&batch) {

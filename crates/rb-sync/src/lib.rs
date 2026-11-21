@@ -19,6 +19,7 @@ pub mod hub;
 mod hub_types;
 pub mod leader;
 pub mod loading;
+pub mod locale;
 pub mod message;
 pub mod nav_url;
 pub mod navigation;
@@ -37,18 +38,19 @@ pub use driver::{DEFAULT_TIMEOUT, Observer, OnChange, QUEUE_DEPTH, SyncHub};
 pub use event::{
     AGENT_GLOBAL, BINDING_NAME, BOOT_GLOBAL, ChangeData, ElementSelector, ElementTarget, HoverData,
     InputData, KeyData, MOD_ALT, MOD_CTRL, MOD_META, MOD_SHIFT, MouseButton, MouseData, Offset,
-    PROTOCOL_VERSION, PointerData, PointerPhase, ScrollData, SubmitData, SyncEvent, TargetData,
-    WORLD_NAME, WheelData,
+    PROTOCOL_VERSION, PathPoint, PointerData, PointerPhase, ScrollData, SubmitData, SyncEvent,
+    TargetData, WORLD_NAME, WheelData,
 };
 pub use forms::{MASK, is_file_skip, is_sensitive, redact};
 pub use framework::{Framework, FrameworkInfo, FrameworkMessage};
 pub use hub::{Hub, HubError, HubStatus, Navigation, Route, SkipReason};
 pub use leader::{FOLLOW_WINDOW, Follow, LeaderOnly, SubmitPolicy};
 pub use loading::{LOAD_START_GRACE, LoadChange, LoadTable};
+pub use locale::{PageDir, PageLocale, PseudoLocale};
 pub use message::{
-    AgentCommand, AgentConfig, AgentMessage, AgentScrollMode, CaptureSwitches, CommandResult,
-    DEFAULT_SCROLL_DEBOUNCE_MS, Detected, DetectedTool, EventMessage, MAX_MESSAGE_BYTES,
-    ProtocolError, Ready, parse_message,
+    AgentCommand, AgentConfig, AgentMessage, AgentRecord, AgentRecordPointer, AgentScrollMode,
+    CaptureSwitches, CommandResult, DEFAULT_SCROLL_DEBOUNCE_MS, Detected, DetectedTool,
+    EventMessage, MAX_MESSAGE_BYTES, ProtocolError, Ready, parse_message,
 };
 pub use navigation::{
     DEFAULT_SETTLE, FollowMode, Follower, NavFollow, NavOptions, NavigationSync, SETTLE_ROUNDS,

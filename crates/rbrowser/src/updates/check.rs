@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use rb_ipc::NotificationLevel;
 use rb_update::auto_install::AutoMode;
-use rb_update::{Gate, HttpFetcher, Sources, Target, Utc};
+use rb_update::{Gate, HttpFetcher, OffsetDateTime, Sources, Target};
 use serde_json::{Value, json};
 
 use super::flow::{
@@ -111,7 +111,7 @@ fn run(core: &Arc<Core>, origin: Origin) -> Value {
         &Sources::official(),
         channel,
         &data,
-        Utc::now(),
+        OffsetDateTime::now_utc(),
     ) {
         Ok(report) => report,
         Err(error) => {

@@ -23,6 +23,14 @@ pub const RECORDER_CHECK_OMITTED: &str =
 pub const RECORDER_PANEL_OMITTED: &str =
     "ui-only: the Recorder panel; recorder_export and the recording files serve agents";
 
+/// Why `recorder.delete` has no MCP tool (RB-090-91).
+pub const RECORDER_DELETE_OMITTED: &str =
+    "protected: deleting project files is the person's; an agent never deletes a recording";
+
+/// Why `recorder.pick_element` has no MCP tool (RB-092-01).
+pub const RECORDER_PICK_OMITTED: &str = "ui-only: the person clicks the element; \
+     recorder_step_add takes a point (x, y) and names the element there";
+
 /// Why `layout.zoom_to_fit` has no MCP tool of its own (RB-090-63): on the canvas
 /// `canvas_zoom` `"fit"` runs it; in the other modes it only undoes a hand zoom of the window.
 pub const ZOOM_TO_FIT_OMITTED: &str = "ui-only: fits every view into the window; on the canvas \
@@ -331,6 +339,50 @@ const ROWS: &[Row] = &[
         Group::Flows,
         ['F', 'V'],
         Err(RECORDER_PANEL_OMITTED),
+    ),
+    // RB-090-91: a stored recording deleted, the person's (`F D` deletes a flow); reMove.
+    (
+        "recorder.delete",
+        Group::Flows,
+        ['F', 'M'],
+        Err(RECORDER_DELETE_OMITTED),
+    ),
+    // RB-092-01: the recording editor - New step, Just this one, from Here, continUe, Bypass, pIck.
+    (
+        "recorder.step_add",
+        Group::Flows,
+        ['F', 'N'],
+        Ok("recorder_step_add"),
+    ),
+    (
+        "recorder.step_try",
+        Group::Flows,
+        ['F', 'J'],
+        Ok("recorder_step_try"),
+    ),
+    (
+        "recorder.play_from",
+        Group::Flows,
+        ['F', 'H'],
+        Ok("recorder_play"),
+    ),
+    (
+        "recorder.continue_from",
+        Group::Flows,
+        ['F', 'U'],
+        Ok("recorder_start"),
+    ),
+    (
+        "recorder.step_toggle",
+        Group::Flows,
+        ['F', 'B'],
+        Ok("recorder_step_toggle"),
+    ),
+    (
+        "recorder.pick_element",
+        Group::Flows,
+        ['F', 'I'],
+        Err(RECORDER_PICK_OMITTED),
     ),
     // RB-050-04: visual regression; setting up Git LFS changes the Git configuration.
     (

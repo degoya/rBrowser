@@ -1,0 +1,88 @@
+# The security header check (RB-093-03, docs/plugins.md): the response headers of a page's main
+# document and the cookies it sets, held to the common rules (CSP, HSTS, frame protection,
+# X-Content-Type-Options, Referrer-Policy, Permissions-Policy, CORS, cookie attributes and
+# prefixes), and the same page compared across the project's environments. A check for
+# `checks_run` and the findings panel, and a feature for the MCP tools `headers_check` and
+# `headers_compare`, the comparison panel and its commands.
+manifest_version = 1
+id = "security-headers"
+name = "Security headers"
+version = "0.1.0"
+api_version = "0.1.0"
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "headers"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Checks the security headers and cookies of a page's document (CSP, HSTS, frame protection, nosniff, Referrer-Policy, Permissions-Policy, CORS, cookie flags) and compares them across the project's environments."
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# views: the page a call checks (the active view's); http: the page's document, HEAD (GET when
+# HEAD is refused) and its redirects, at most four requests a second - the host sends no cookie
+# and reaches public addresses and the project's own origins only; cdp (Network only): the
+# cookies a view holds for the page it shows (Network.getCookies, the view's own origin only),
+# their values dropped where they are read; project-read: the environments of
+# .rbrowser/config.json; findings: the command `check`.
+[capabilities]
+views = true
+http = { rate_limit_per_second = 4 }
+cdp = { domains = ["Network"] }
+project-read = true
+findings = true
+
+# A comparison of up to eight environments, each with up to five redirects.
+[limits]
+timeout_milliseconds = 60000
+max_response_bytes = 8388608
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `headers_check`: the page `url` (the active view's without one) - its compared headers,
+# its cookies' attributes and its findings, with the page's environment.
+[[tools]]
+name = "check"
+description = "plugin.security-headers.tools.check"
+input = { type = "object", properties = { url = { type = "string", minLength = 1, maxLength = 2048 } } }
+
+# MCP `headers_compare` (the panel calls it too): the active view's page in each of
+# `environments` (every project environment without it), header x environment, the rows that
+# differ marked.
+[[tools]]
+name = "compare"
+description = "plugin.security-headers.tools.compare"
+input = { type = "object", properties = { environments = { type = "array", minItems = 2, maxItems = 8, uniqueItems = true, items = { type = "string", minLength = 1, maxLength = 64, pattern = "^[A-Za-z0-9._-]+$" } } } }
+
+# `plugin.security-headers.check`, Ctrl+Shift+Space K U: the page of the active view checked,
+# the findings into the findings panel.
+[[commands]]
+id = "check"
+title = "plugin.security-headers.commands.check"
+shortcut = "Ctrl+Shift+Space K U"
+group = "checks"
+tool = "check"
+
+# `plugin.security-headers.compare_environments`, Ctrl+Shift+Space E H (H for headers): the
+# comparison panel, which compares the active view's page across the environments.
+[[commands]]
+id = "compare_environments"
+title = "plugin.security-headers.commands.compare_environments"
+shortcut = "Ctrl+Shift+Space E H"
+group = "environments"
+tool = "compare"
+
+# The comparison panel, on Nuxt UI: panel/dist built from web/src.
+[[panels]]
+id = "security-headers"
+title = "plugin.security-headers.panels.security-headers"
+entry = "panel/index.html"
+icon = "shield-check"
+placement = "sidebar"

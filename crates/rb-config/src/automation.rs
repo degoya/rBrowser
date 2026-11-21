@@ -22,12 +22,22 @@ pub struct RecorderConfig {
     /// Scrolls are steps, consecutive scrolls of one container as one. On by default, so a
     /// recording played back scrolls as the person did.
     pub record_scroll: bool,
-    /// Which hovers are steps (RB-090-81): `menu` only the hover that opened the submenu the
-    /// next click goes into, `all` also a hover the recorder guesses revealed what the next
-    /// click hits, `off` none.
+    /// Which hovers are steps (RB-090-81, RB-090-87): `menu` every hover on a menu's entry -
+    /// one whose hover opened a submenu, or one inside an open submenu - where the pointer
+    /// rested `hoverDwellMs`, with or without a click after it; `all` also a hover the recorder
+    /// guesses revealed what the next click hits; `off` none.
     #[serde(deserialize_with = "record_hover_or_switch")]
     #[schemars(schema_with = "record_hover_schema")]
     pub record_hover: RecordHover,
+    /// How long, in milliseconds, the pointer rests on a menu's entry before its hover is a step
+    /// (RB-090-87); passing over it quicker is no step.
+    #[schemars(range(max = 5_000))]
+    pub hover_dwell_ms: u64,
+    /// Which of the pointer's way a recording keeps (RB-090-87): `menu` the way to a menu's
+    /// hover and to a click while a menu is open, `all` the way to every hover step and click,
+    /// `off` none. Play and the export move the pointer along it before the step when the view
+    /// has the size it was recorded in.
+    pub record_pointer: RecordPointer,
     /// The form autofill's fills are steps (RB-090-78): each field it set as a `fill`, `check`,
     /// `uncheck` or `select` with the value set, a password as its placeholder.
     pub record_autofill: bool,
@@ -39,11 +49,22 @@ pub struct RecorderConfig {
     /// red with its reason, and scrolls the running step into sight (RB-090-84). Off, it marks
     /// the steps but leaves the list where it is.
     pub follow_playback: bool,
+    /// While a recording runs, the Recorder panel lists its steps as they are recorded - the
+    /// newest marked and scrolled into sight, hovers with their pause and pointer path
+    /// (RB-090-89). Off, the steps show once the recording is saved.
+    pub show_live_steps: bool,
     /// The least pause, in milliseconds, before each step but the first when a recording plays
     /// or exports at the pace `recorded` (RB-090-84), so a navigation's effect can be watched;
     /// 0 keeps the pauses as recorded.
     #[schemars(range(max = 10_000))]
     pub min_pause_ms: u64,
+    /// The pause, in milliseconds, before a step added in the Recorder panel's editor
+    /// (RB-092-01), waited at the pace `recorded`; each step's own can be changed there.
+    #[schemars(range(max = 10_000))]
+    pub inserted_step_pause_ms: u64,
+    /// "Delete" in the Recorder panel asks in the panel before the recording's file is deleted
+    /// (RB-090-91). Off, a click deletes it at once.
+    pub confirm_delete: bool,
     /// Further fields whose values are never recorded, besides password fields: a CSS path as
     /// the recorder shows it (`#otp`), `[data-testid="..."]` or a field's accessible name. An
     /// entry also names a URL query or fragment parameter whose value is recorded masked.
@@ -58,10 +79,15 @@ impl Default for RecorderConfig {
         Self {
             record_scroll: true,
             record_hover: RecordHover::Menu,
+            hover_dwell_ms: 250,
+            record_pointer: RecordPointer::Menu,
             record_autofill: true,
             playback_pace: PlaybackPace::Fast,
             follow_playback: true,
+            show_live_steps: true,
             min_pause_ms: 0,
+            inserted_step_pause_ms: 500,
+            confirm_delete: true,
             secret_fields: Vec::new(),
             dir: ".rbrowser/out/recordings".to_owned(),
         }
@@ -72,7 +98,7 @@ impl Default for RecorderConfig {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum RecordHover {
-    /// Only the hover that opened the submenu the next click goes into.
+    /// Every hover on a menu's entry where the pointer rested `hoverDwellMs`.
     #[default]
     Menu,
     /// Also a hover that seems to reveal what the next click hits.
@@ -125,6 +151,19 @@ fn record_hover_schema(generator: &mut schemars::SchemaGenerator) -> schemars::S
         }));
     }
     schema
+}
+
+/// `automation.recorder.recordPointer` (RB-090-87).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum RecordPointer {
+    /// The way to a menu's hover, and to a click while a menu is open or into one.
+    #[default]
+    Menu,
+    /// The way to every hover step and click.
+    All,
+    /// No way.
+    Off,
 }
 
 /// `automation.recorder.playbackPace` (RB-090-66).

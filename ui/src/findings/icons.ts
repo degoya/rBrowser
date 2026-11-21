@@ -9,4 +9,11 @@ export const FINDINGS_ICONS = {
   checkSkipped: 'i-lucide-circle-slash',
   /** Opens a finished run's progress per plugin (RB-080-98). */
   checkDetails: 'i-lucide-chevron-down',
+  /** The Export button and its arrow (RB-092-05). */
+  export: 'i-lucide-download',
+  exportMenu: 'i-lucide-chevron-down',
+  /** "Show at N px" of a width sweep finding (RB-093-01). */
+  showWidth: 'i-lucide-move-horizontal',
+  /** "Run <check> again" in the progress details and beside the plugin filter (RB-094-17). */
+  rerun: 'i-lucide-rotate-cw',
 } as const;

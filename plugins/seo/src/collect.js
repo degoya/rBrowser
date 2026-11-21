@@ -4,7 +4,8 @@
 // the visible text of the main content (`innerText`, which leaves out what CSS hides) for the
 // parity of the views (RB-060-09).
 // It reads only; it neither scrolls (scrolling one view would scroll every synced view) nor
-// changes the page. The paths are the ones src/path.rs builds.
+// changes the page. The paths are the ones src/path.rs builds (the shared element path of
+// tests/fixtures/element-path/cases.json; web/src/collect-path.test.ts holds this copy to it).
 (() => {
   const MAX_HTML = 3 * 1024 * 1024;
   const MAX_IMAGES = 2000;
@@ -13,20 +14,23 @@
   const MIN_BACKGROUND_AREA = 40000;
   const MAX_TEXT = 200000;
 
+  // element-path: begin
   const pathOf = (element) => {
     const steps = [];
     for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
-      const tag = node.localName;
+      const name = node.localName;
+      const tag = name.toLowerCase();
       const parent = node.parentElement;
       if (!parent) {
         steps.push(tag);
         break;
       }
-      const same = Array.prototype.filter.call(parent.children, (child) => child.localName === tag);
+      const same = Array.prototype.filter.call(parent.children, (child) => child.localName === name);
       steps.push(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(node) + 1})` : tag);
     }
     return steps.reverse().join(' > ');
   };
+  // element-path: end
 
   const root = document.documentElement;
   let html = root ? root.outerHTML : '';

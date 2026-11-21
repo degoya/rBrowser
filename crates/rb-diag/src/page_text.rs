@@ -3,30 +3,16 @@
 //! `console_logs`, `network_requests` and `errors` (review finding L1 of Charge 6).
 //!
 //! [`crate::redact::redact`] first - registered secrets, a secret's value after its name
-//! (`access_token=`, `password=`), `Bearer` values, the user info of an address - then the URL
-//! parameters that carry a credential under a name the log rules do not know: the OAuth code
-//! and verifier, signed-URL signatures and credentials, SAML messages. A parameter counts only
-//! after `?`, `&`, `;` or `#`, so `exit code=1` in prose stays. As with the log rules, text with
-//! nothing to hide comes back byte for byte and masking twice equals masking once.
+//! (`access_token=`, `password=`), `Bearer` values, the user info of an address - then every URL
+//! parameter of the one list `rb_util::mask` (RB-094-10), also those the log rules do not know:
+//! the OAuth code and verifier, signed-URL signatures and credentials, SAML messages. A
+//! parameter counts only after `?`, `&`, `;` or `#`, so `exit code=1` in prose stays. As with
+//! the log rules, text with nothing to hide comes back byte for byte and masking twice equals
+//! masking once.
+
+use rb_util::mask::sensitive_param;
 
 use crate::redact::{PLACEHOLDER, redact};
-
-/// URL parameter names (lower-case) whose value is a credential.
-const URL_SECRET_PARAMS: &[&str] = &[
-    "assertion",
-    "code",
-    "jwt",
-    "oauth_verifier",
-    "samlrequest",
-    "samlresponse",
-    "sig",
-    "signature",
-    "ticket",
-    "x-amz-credential",
-    "x-amz-signature",
-    "x-goog-credential",
-    "x-goog-signature",
-];
 
 /// `text` with every secret [`crate::redact::redact`] finds and every credential URL parameter
 /// masked.
@@ -47,10 +33,7 @@ fn mask_url_params(text: &str) -> String {
             .unwrap_or(text.len() - name_start);
         let name = &text[name_start..name_start + name_len];
         let after_name = name_start + name_len;
-        if name_len == 0
-            || !text[after_name..].starts_with('=')
-            || !URL_SECRET_PARAMS.contains(&name.to_ascii_lowercase().as_str())
-        {
+        if name_len == 0 || !text[after_name..].starts_with('=') || !sensitive_param(name) {
             continue;
         }
         let value_start = after_name + 1;

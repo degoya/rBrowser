@@ -2,6 +2,7 @@
 //! goes through the leader state machine (RB-010-17). A key that is not rBrowser's reaches the
 //! page, DevTools or the OS untouched; the which-key overlay follows the chord.
 
+use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use rb_commands::keymap::{key_from_character, modifiers_from_event_flags, shortcut_from_cef};
@@ -11,7 +12,7 @@ use rb_ipc::CoreToShell;
 use super::Core;
 use crate::cdp::lock;
 
-/// How often a pending leader is checked for its timeout.
+/// How often a pending leader is checked for its timeout, while one is pending.
 const TICK: Duration = Duration::from_millis(100);
 
 /// One key-down as CEF describes it.
@@ -77,6 +78,7 @@ impl Core {
             }
             KeyOutcome::Show(which) => {
                 self.send(&CoreToShell::WhichKey(which));
+                self.start_ticker();
                 true
             }
             KeyOutcome::Hide => {
@@ -94,8 +96,12 @@ impl Core {
         }
     }
 
-    /// Checks the leader's timeout every [`TICK`] while the core lives.
-    pub(super) fn spawn_ticker(&self) {
+    /// Checks the leader's timeout every [`TICK`] while a chord is open; between chords no
+    /// ticker runs (RB-094-10).
+    fn start_ticker(&self) {
+        if self.ticking.swap(true, Ordering::AcqRel) {
+            return;
+        }
         let me = self.me.clone();
         self.runtime.spawn(async move {
             let mut interval = tokio::time::interval(TICK);
@@ -106,6 +112,14 @@ impl Core {
                     return;
                 };
                 core.on_tick(Instant::now());
+                if lock(&core.chords).is_pending() {
+                    continue;
+                }
+                core.ticking.store(false, Ordering::Release);
+                // A chord opened since the check: its start found this ticker still on.
+                if !lock(&core.chords).is_pending() || core.ticking.swap(true, Ordering::AcqRel) {
+                    return;
+                }
             }
         });
     }

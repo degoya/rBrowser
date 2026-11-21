@@ -1,6 +1,7 @@
 //! `schema/mcp-tools.v1.json`: every tool as an agent sees it (name, description, the schema of
 //! its arguments) plus what the coverage tables say about it (area, `target`, guard, why no
-//! command runs it), and the pending tools with their jobs. A test writes it
+//! command runs it), the pending tools with their jobs, and the prompts and resources with their
+//! arguments and URIs (RB-095-01). A test writes it
 //! (`RB_UPDATE_SCHEMA=1`) and fails while it is stale; `scripts/mcp-reference.sh` renders the
 //! wiki's `reference/mcp-tools.md` from it and `schema/commands.v1.json`, compiling nothing.
 
@@ -61,6 +62,9 @@ pub fn document() -> String {
         "version": 1,
         "tools": tools,
         "pending": pending,
+        "prompts": crate::prompts::list(),
+        "resources": crate::resources::list(),
+        "resourceTemplates": crate::resources::templates(),
     });
     let mut text = serde_json::to_string_pretty(&document).expect("JSON values serialise");
     text.push('\n');

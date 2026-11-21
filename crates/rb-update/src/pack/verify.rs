@@ -7,10 +7,10 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail};
-use chrono::Utc;
 use clap::Args;
 use rb_update::sign::{self, TrustStore, UPDATE_KEY_ID};
 use rb_update::{Channel, UpdateManifest, manifest};
+use time::OffsetDateTime;
 
 #[derive(Args)]
 pub(crate) struct VerifyArgs {
@@ -31,7 +31,7 @@ pub(crate) fn run(args: &VerifyArgs) -> Result<()> {
     let channel = channel(args)?;
     let bytes = std::fs::read(&args.file)
         .with_context(|| format!("read manifest {}", args.file.display()))?;
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let verified = match &args.public_key {
         Some(given) => {
             let text = std::fs::read_to_string(given).unwrap_or_else(|_| given.clone());
@@ -55,7 +55,7 @@ pub(crate) fn run(args: &VerifyArgs) -> Result<()> {
         verified.version,
         verified.artifacts.len(),
         verified.sequence,
-        verified.not_after.to_rfc3339()
+        rb_update::utc::rfc3339(verified.not_after)
     );
     if let Some(directory) = &args.assets {
         check_assets(&verified, directory)?;

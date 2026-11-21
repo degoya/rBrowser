@@ -243,8 +243,10 @@ fn analyze(
         Ok(collected)
     })
     .map_err(|error| AnalyzerError::Plugin(error.into()))??;
-    let files = run::static_files(plugins::bundled(), &config, host.project_root().as_deref());
-    let detection = run::detect(plugins::bundled(), &config, &collected, &files, mode)?;
+    // One snapshot for the whole analysis (RB-092-06).
+    let loaded = plugins::bundled();
+    let files = run::static_files(&loaded, &config, host.project_root().as_deref());
+    let detection = run::detect(&loaded, &config, &collected, &files, mode)?;
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     *lock(&LAST) = Some(Last {
         id,
@@ -281,7 +283,7 @@ fn append(core: &Core, request: &ApplyRequest) -> Result<Vec<String>, AnalyzerEr
         (None, None) => analyze(core, &[], None)?.breakpoints,
     };
     let added = run::write(
-        plugins::bundled(),
+        &plugins::bundled(),
         &root,
         &proposed,
         &request.selected,
@@ -296,12 +298,15 @@ fn append(core: &Core, request: &ApplyRequest) -> Result<Vec<String>, AnalyzerEr
 }
 
 /// The config `rbrowser init` writes for the site at `url` in the folder `root`, proposed by
-/// the analyser; `Ok(None)` lets the CLI write its minimal mobile + desktop config (RB-010-11).
-/// Runs without a window: the page and its stylesheets are fetched (see [`fetch`]), the bundled
-/// plugin proposes.
-pub fn init_config(
-    root: &std::path::Path,
-    url: Option<&str>,
-) -> Result<Option<rb_config::ProjectConfig>, String> {
-    init::init_config_with(root, url, plugins::bundled(), &fetch::HttpFetch::default())
+/// the analyser with the stylesheets it read; without one, why (RB-091-08), and the CLI writes
+/// its minimal mobile + desktop config (RB-010-11). Runs without a window: the page and its
+/// stylesheets are fetched (see [`fetch`]), the bundled plugin proposes. While the first-run
+/// wizard's plugin choice is open the plugins are not loaded yet: the reason is
+/// `plugin_missing`, never an empty load kept for the process.
+///
+/// # Errors
+///
+/// [`crate::cli::init::NoProposal`]: why the analyser has no proposal.
+pub fn init_config(root: &std::path::Path, url: Option<&str>) -> crate::cli::init::Analysis {
+    init::init_proposal_with(root, url, &plugins::bundled(), &fetch::HttpFetch::default())
 }

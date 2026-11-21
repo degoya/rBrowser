@@ -192,3 +192,81 @@ fn runs_are_ordered_by_when_their_folder_was_made_not_by_name() {
         ]
     );
 }
+
+/// The bytes of the shot `open_shot` opens, `None` when it is not there.
+fn shot(
+    store: &RunStore,
+    slug: &str,
+    breakpoint: &str,
+    limit: u64,
+) -> Result<Option<Vec<u8>>, VisualError> {
+    use std::io::Read as _;
+    store.open_shot(slug, breakpoint, limit).map(|opened| {
+        opened.map(|mut opened| {
+            let mut bytes = Vec::new();
+            opened.file.read_to_end(&mut bytes).expect("reads");
+            assert_eq!(opened.length, bytes.len() as u64);
+            bytes
+        })
+    })
+}
+
+#[test]
+fn a_shot_is_opened_by_its_plain_names_only() {
+    let root = tempfile::tempdir().expect("temp");
+    let store = RunStore::open(root.path(), "r", true)
+        .expect("ok")
+        .expect("made");
+    store.write_shot("about", "mobile", b"png").expect("writes");
+    assert_eq!(
+        shot(&store, "about", "mobile", 1024).expect("reads"),
+        Some(b"png".to_vec())
+    );
+    assert_eq!(shot(&store, "about", "desktop", 1024).expect("reads"), None);
+    assert_eq!(
+        shot(&store, "missing", "mobile", 1024).expect("reads"),
+        None
+    );
+    assert!(
+        shot(&store, "about", "mobile", 2).is_err(),
+        "longer than the limit"
+    );
+    for (slug, breakpoint) in [
+        ("..", "mobile"),
+        ("about", ".."),
+        ("about/..", "mobile"),
+        ("about", "mobile/../../x"),
+        ("", "mobile"),
+        ("about", "mobile.png\\x"),
+    ] {
+        assert!(
+            shot(&store, slug, breakpoint, 1024).is_err(),
+            "{slug} / {breakpoint}"
+        );
+    }
+    std::fs::create_dir(store.dir().join("about/folder.png")).expect("dir");
+    assert!(
+        shot(&store, "about", "folder", 1024).is_err(),
+        "a folder is no shot"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_shot_behind_a_link_is_refused() {
+    let root = tempfile::tempdir().expect("temp");
+    let elsewhere = tempfile::tempdir().expect("temp");
+    std::fs::write(elsewhere.path().join("mobile.png"), b"secret").expect("writes");
+    let store = RunStore::open(root.path(), "r", true)
+        .expect("ok")
+        .expect("made");
+    std::os::unix::fs::symlink(elsewhere.path(), store.dir().join("about")).expect("link");
+    assert!(shot(&store, "about", "mobile", 1024).is_err());
+    std::fs::create_dir(store.dir().join("page")).expect("dir");
+    std::os::unix::fs::symlink(
+        elsewhere.path().join("mobile.png"),
+        store.dir().join("page/mobile.png"),
+    )
+    .expect("link");
+    assert!(shot(&store, "page", "mobile", 1024).is_err());
+}

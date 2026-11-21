@@ -18,8 +18,14 @@ pub const STOP_TOOL: &str = "portal_stop";
 pub const DEVICES_TOOL: &str = "portal_devices";
 /// `portal_disconnect`.
 pub const DISCONNECT_TOOL: &str = "portal_disconnect";
-/// Every tool, for the host's dispatch.
-pub const TOOLS: [&str; 3] = [STOP_TOOL, DEVICES_TOOL, DISCONNECT_TOOL];
+/// Every tool, for the host's dispatch; the presentation's too (RB-096-05).
+pub const TOOLS: [&str; 5] = [
+    STOP_TOOL,
+    DEVICES_TOOL,
+    DISCONNECT_TOOL,
+    super::present::mcp::STOP_TOOL,
+    super::present::mcp::STATUS_TOOL,
+];
 
 /// Runs the portal tool `name` with `args`.
 ///
@@ -28,6 +34,9 @@ pub const TOOLS: [&str; 3] = [STOP_TOOL, DEVICES_TOOL, DISCONNECT_TOOL];
 /// `invalid_arguments` for a device that is no id, `unknown_tool` for any other name.
 pub fn host_tool(core: &Arc<Core>, name: &str, args: &Value) -> Result<Value, ToolFailure> {
     match name {
+        present if super::present::mcp::TOOLS.contains(&present) => {
+            return super::present::mcp::host_tool(core, present);
+        }
         STOP_TOOL => {
             app::stop(core);
         }

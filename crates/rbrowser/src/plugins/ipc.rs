@@ -124,9 +124,13 @@ async fn answer(core: &Arc<Core>, request: Value) -> Result<Value, Failure> {
             blocking(move || super::bundle_install::install_chosen(&core, ids)).await
         }
         PanelRequest::RemoveChosen { ids } => {
-            blocking(move || super::bundle_install::remove_chosen(ids)).await
+            let core = core.clone();
+            blocking(move || super::bundle_install::remove_chosen(&core, ids)).await
         }
-        PanelRequest::ApplyRecommended => blocking(super::bundle_install::apply_recommended).await,
+        PanelRequest::ApplyRecommended => {
+            let core = core.clone();
+            blocking(move || super::bundle_install::apply_recommended(&core)).await
+        }
         PanelRequest::CatalogPrepare {
             repository,
             id,
@@ -150,7 +154,10 @@ async fn answer(core: &Arc<Core>, request: Value) -> Result<Value, Failure> {
             };
             blocking(move || super::catalog::install(&core, request)).await
         }
-        PanelRequest::CatalogRemove { id } => blocking(move || super::catalog::remove(&id)).await,
+        PanelRequest::CatalogRemove { id } => {
+            let core = core.clone();
+            blocking(move || super::catalog::remove(&core, &id)).await
+        }
         PanelRequest::SelectedCore { panel } => {
             crate::panel_dock::core_panels::selected(core, &panel)
                 .map_err(|reason| (IpcErrorCode::BadRequest, reason))?;
@@ -230,8 +237,10 @@ pub(crate) fn panels_offered_for(
         .iter()
         .map(|id| id.0.clone())
         .collect();
-    let loaded = &crate::analyzer::plugins::bundled().report.loaded;
-    let served = loaded
+    let plugins = crate::analyzer::plugins::bundled();
+    let served = plugins
+        .report
+        .loaded
         .iter()
         .map(|entry| entry.plugin.manifest())
         .filter(|manifest| runtime.serves(&manifest.id));

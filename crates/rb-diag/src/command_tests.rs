@@ -15,6 +15,7 @@ fn input_for(root: &Path) -> Arc<dyn Fn() -> BundleInput + Send + Sync> {
         versions: Versions::default(),
         config_effective: None,
         plugins: json!([]),
+        perf: Value::Null,
         max_crash_dumps: 0,
     })
 }

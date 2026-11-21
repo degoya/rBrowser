@@ -6,8 +6,10 @@
 use rb_config::{Breakpoint, DevicePreset, EmulationFields, EngineKind, ProjectConfig};
 use rb_ipc::DetectedBreakpoint;
 
-/// The largest width or height a view takes, in CSS px.
-pub const MAX_SIDE: u32 = 16_384;
+/// The largest width or height a view takes, in CSS px: what the config takes for a breakpoint.
+pub const MAX_SIDE: u32 = rb_config::MAX_BREAKPOINT_SIZE;
+/// The smallest device pixel ratio a free size takes (the config's limit for a breakpoint).
+pub const MIN_DPR: f64 = 0.25;
 /// The largest device pixel ratio a free size takes (the host's own limit).
 pub const MAX_DPR: f64 = 10.0;
 /// The id prefix of the breakpoint a free size stands for (`size-500x800@2`).
@@ -25,10 +27,10 @@ pub struct FreeSize {
 }
 
 impl FreeSize {
-    /// Checks the sides (1 to [`MAX_SIDE`]) and the DPR (above 0, at most [`MAX_DPR`]).
+    /// Checks the sides (1 to [`MAX_SIDE`]) and the DPR ([`MIN_DPR`] to [`MAX_DPR`]).
     pub fn new(width: u32, height: u32, dpr: Option<f64>) -> Option<Self> {
         let side = |value: u32| (1..=MAX_SIDE).contains(&value);
-        let dpr_ok = dpr.is_none_or(|dpr| dpr.is_finite() && dpr > 0.0 && dpr <= MAX_DPR);
+        let dpr_ok = dpr.is_none_or(|dpr| (MIN_DPR..=MAX_DPR).contains(&dpr));
         (side(width) && side(height) && dpr_ok).then_some(Self { width, height, dpr })
     }
 
@@ -49,6 +51,7 @@ impl FreeSize {
             height: Some(self.height),
             device: None,
             engine: EngineKind::Chromium,
+            ios_device: None,
             session: None,
             sync_navigation: true,
             shortcut: None,
@@ -91,6 +94,7 @@ pub fn device_breakpoint(device: &DevicePreset, label: String) -> Breakpoint {
         height: Some(device.viewport.height),
         device: Some(device.id.clone()),
         engine: EngineKind::Chromium,
+        ios_device: None,
         session: None,
         sync_navigation: true,
         shortcut: None,

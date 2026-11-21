@@ -64,6 +64,13 @@ fn the_head_comments_give_description_views_and_timeout() {
 }
 
 #[test]
+fn the_storage_state_comment_names_a_login_state_file() {
+    let head = parse_head("// @storageState state/admin.json\nawait page.goto(env);\n");
+    assert_eq!(head.storage_state.as_deref(), Some("state/admin.json"));
+    assert_eq!(parse_head("// @storageState\n").storage_state, None);
+}
+
+#[test]
 fn listing_takes_the_ts_files_by_name_and_an_absent_folder_has_none() {
     let dir = project(&[
         (".rbrowser/flows/login.ts", "// @description Log in\n"),

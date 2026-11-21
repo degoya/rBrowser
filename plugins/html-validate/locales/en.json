@@ -1,0 +1,113 @@
+{
+  "plugin": {
+    "html-validate": {
+      "commands": {
+        "validate": "Validate the HTML of every view"
+      },
+      "errors": {
+        "bad_answer": "The HTML validation could not read the answer of view {view}: {reason}",
+        "bad_args": "The HTML validation got arguments it cannot read: {reason}",
+        "bad_setting": "The setting html-validate.{key} is invalid: {reason}",
+        "no_source": "View {view} has no served source to validate: {reason}",
+        "not_web": "The page in view {view} is no web page to validate ({url}).",
+        "nu_address_missing": "The engine is the Nu HTML Checker, but no address is set in html-validate.nuAddress.",
+        "nu_blocked": "The page in view {view} did not let the request to the Nu HTML Checker at {address} through ({reason}): the page's Content-Security-Policy, mixed content or local network access rules can refuse it, or the checker allows no cross-origin requests. Validate this page with the built-in engine (html-validate.engine).",
+        "nu_failed": "The Nu HTML Checker at {address} failed for view {view}: {reason}",
+        "project_rules": "The project's rule file .rbrowser/htmlvalidate.json is invalid: {reason}",
+        "too_large": "The source of view {view} is {size} KiB, more than the {limit} KiB the HTML validation takes.",
+        "validate_failed": "html-validate failed in view {view}: {reason}"
+      },
+      "findings": {
+        "at": "{message} (line {line}, column {column})",
+        "document": "{message}",
+        "element": "{message} ({selector})"
+      },
+      "name": "HTML validation",
+      "rules": {
+        "area-alt": "Image map areas have alternative text",
+        "aria-label-misuse": "aria-label only where the element can be named",
+        "attr-spacing": "Attributes are separated by whitespace",
+        "attribute-allowed-values": "Attribute values are allowed for the element",
+        "attribute-misuse": "Attributes are used where they apply",
+        "close-attr": "End tags have no attributes",
+        "close-order": "Elements are closed in the right order",
+        "deprecated": "No obsolete elements",
+        "doctype-html": "The doctype is the HTML doctype",
+        "element-name": "Custom element names are valid",
+        "element-permitted-content": "Elements hold only the content they permit",
+        "element-permitted-occurrences": "Elements occur no more often than permitted",
+        "element-permitted-order": "Child elements come in the required order",
+        "element-permitted-parent": "Elements sit in a parent that permits them",
+        "element-required-ancestor": "Elements have their required ancestor",
+        "element-required-attributes": "Elements have their required attributes",
+        "element-required-content": "Elements have their required children",
+        "map-dup-name": "Image map names are unique",
+        "map-id-name": "Image map id and name match",
+        "missing-doctype": "The document has a doctype",
+        "multiple-labeled-controls": "A label names one control only",
+        "no-abstract-role": "No abstract ARIA roles",
+        "no-deprecated-attr": "No obsolete attributes",
+        "no-dup-attr": "No attribute is repeated on an element",
+        "no-dup-id": "Element ids are unique",
+        "no-missing-references": "References point to ids that exist",
+        "no-multiple-main": "At most one visible main element",
+        "no-raw-characters": "Special characters are escaped",
+        "no-unknown-attributes": "Attributes are known for their element",
+        "nu-error": "Nu HTML Checker: error",
+        "nu-info": "Nu HTML Checker: information",
+        "nu-warning": "Nu HTML Checker: warning",
+        "script-element": "Script elements have an end tag",
+        "unrecognized-char-ref": "Character references are known ones",
+        "valid-autocomplete": "autocomplete values are valid",
+        "valid-for": "label for attributes are valid ids",
+        "valid-id": "Element ids are valid",
+        "void-content": "Void elements have no content"
+      },
+      "settings": {
+        "disabledRules": {
+          "description": "Rules the validation leaves out, by their id - for example no-raw-characters, or nu-info for the Nu checker's information messages.",
+          "help": "html-validate's rules by their id, and nu-error, nu-warning and nu-info for the Nu HTML Checker's message types. A rule switched off here is never reported, whatever the findings' rule switches say.",
+          "label": "Rules off"
+        },
+        "engine": {
+          "description": "Which validator checks the page source: html-validate, offline in rBrowser, or the Nu HTML Checker (the W3C validator) at the address below.",
+          "help": "html-validate runs offline on this device with a rule set close to HTML conformance. The Nu HTML Checker gives the W3C validator's own messages, but it needs an address - a local vnu, for example in a container.",
+          "label": "Validator"
+        },
+        "minSeverity": {
+          "description": "Messages below this severity are not reported.",
+          "help": "Warning reports errors and warnings; error only errors; information also the Nu HTML Checker's information messages.",
+          "label": "Lowest severity"
+        },
+        "nuAddress": {
+          "description": "The address of a Nu HTML Checker, for example http://localhost:8888/. The page source is sent there: with an address outside this device, the source of your pages leaves the device.",
+          "help": "Used when the validator is the Nu HTML Checker. Only http and https addresses. A local vnu keeps the source on this device; https://validator.w3.org/nu/ sends the source of every validated page to the W3C. Empty by default, so nothing is sent anywhere.",
+          "label": "Nu HTML Checker address"
+        },
+        "option": {
+          "engine": {
+            "builtin": "html-validate (offline)",
+            "nu": "Nu HTML Checker"
+          },
+          "minSeverity": {
+            "error": "Error",
+            "info": "Information",
+            "warning": "Warning"
+          },
+          "source": {
+            "raw": "Source as served",
+            "rendered": "Rendered DOM"
+          }
+        },
+        "source": {
+          "description": "What is validated: the page source as the server sent it, or the DOM after rendering - what scripts built and what the browser made of the markup.",
+          "help": "Source as served is what the W3C validator checks; its findings name a line and column. Rendered DOM validates the page as it is now; its findings name the element by selector, as the lines of a serialized DOM mean nothing. A project's .rbrowser/htmlvalidate.json sets rule levels and options in a trusted workspace.",
+          "label": "Source"
+        }
+      },
+      "tools": {
+        "validate": "Validates the HTML of the page in the views - every view or the one of target - and answers the messages as findings with rule, place and the views and breakpoints each was found in. source raw (the default of html-validate.source) validates the page source as the server sent it, like the W3C validator, with line and column; rendered validates the DOM after rendering, with the element's selector. The engine is html-validate offline, or the Nu HTML Checker at html-validate.nuAddress when html-validate.engine is nu; engine and source override the settings for this call. A trusted project's .rbrowser/htmlvalidate.json sets rule levels and options; projectRules says whether it was applied."
+      }
+    }
+  }
+}

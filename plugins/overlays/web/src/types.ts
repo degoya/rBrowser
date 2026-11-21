@@ -30,7 +30,14 @@ export interface PageSettings {
   tabOrderShowLines: boolean;
   tabOrderLive: boolean;
   tabOrderIncludeIframes: boolean;
+  /** The reading order arrows (RB-094-02): off, beside the tab order lines, or instead of them. */
+  tabOrderReadingOrder: ReadingOrderMode;
+  tabOrderReadingTolerancePx: number;
 }
+
+/** The choices of `tabOrder.readingOrder`. */
+export const READING_ORDER_MODES = ['off', 'beside', 'instead'] as const;
+export type ReadingOrderMode = (typeof READING_ORDER_MODES)[number];
 
 /** A box in CSS px. */
 export interface Rect {
@@ -81,6 +88,8 @@ export const DEFAULT_SETTINGS: PageSettings = {
   tabOrderShowLines: true,
   tabOrderLive: true,
   tabOrderIncludeIframes: true,
+  tabOrderReadingOrder: 'off',
+  tabOrderReadingTolerancePx: 4,
 };
 
 /** `value` when it is a number within `min..=max` (a whole one for `whole`), else `fallback`. */
@@ -117,6 +126,8 @@ export function toSettings(value: unknown): PageSettings {
     tabOrderShowLines: flag('tabOrderShowLines'),
     tabOrderLive: flag('tabOrderLive'),
     tabOrderIncludeIframes: flag('tabOrderIncludeIframes'),
+    tabOrderReadingOrder: READING_ORDER_MODES.find((mode) => mode === raw.tabOrderReadingOrder) ?? DEFAULT_SETTINGS.tabOrderReadingOrder,
+    tabOrderReadingTolerancePx: within(raw.tabOrderReadingTolerancePx, 0, 50, DEFAULT_SETTINGS.tabOrderReadingTolerancePx),
   };
 }
 

@@ -1,8 +1,8 @@
 //! `panels` of the user settings (RB-080-57, Plugins > Installed): where the plugin panels
 //! show - in a window of their own or docked in the main window - how large the dock is on each
 //! side, whether it is open, folded to its icon rail or hidden (RB-080-93), how it starts and
-//! what its Close does, and how the panels' side bar shows (RB-080-61). Read by
-//! `crates/rbrowser/src/panel_dock` and the panels page.
+//! what its Close does, how the panels' side bar shows (RB-080-61), and how many hidden panels
+//! stay loaded (RB-090-38). Read by `crates/rbrowser/src/panel_dock` and the panels page.
 //!
 //! `panels.dockCollapsed` (RB-080-61) became `panels.dockState`: an older file is still read
 //! (`true` the rail, `false` open), the old key is never written again.
@@ -10,8 +10,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 
+/// `panels.keepFrames` when a file does not say.
+const KEEP_FRAMES: u32 = 3;
+
 /// `panels`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PanelSettings {
     /// Where the plugin panels show: docked `right` (the default), `left` or `bottom` in the
@@ -35,6 +38,24 @@ pub struct PanelSettings {
     /// window): `rail` folds them to the icon rail (the default), `hidden` hides them
     /// (RB-080-93).
     pub close_to: PanelCloseTo,
+    /// How many of the panels shown last stay loaded, hidden, beside the shown one, so
+    /// switching back to one does not load it again (RB-090-38); `0` loads each panel anew.
+    #[schemars(range(max = 10))]
+    pub keep_frames: u32,
+}
+
+impl Default for PanelSettings {
+    fn default() -> Self {
+        Self {
+            dock: PanelDock::default(),
+            dock_size: PanelDockSize::default(),
+            dock_state: PanelDockState::default(),
+            sidebar: PanelSidebar::default(),
+            dock_at_start: PanelDockAtStart::default(),
+            close_to: PanelCloseTo::default(),
+            keep_frames: KEEP_FRAMES,
+        }
+    }
 }
 
 /// What a settings file holds under `panels`, the key of RB-080-61 included.
@@ -49,6 +70,7 @@ struct PanelSettingsFile {
     sidebar: PanelSidebar,
     dock_at_start: PanelDockAtStart,
     close_to: PanelCloseTo,
+    keep_frames: Option<u32>,
 }
 
 impl<'de> Deserialize<'de> for PanelSettings {
@@ -68,6 +90,7 @@ impl<'de> Deserialize<'de> for PanelSettings {
             sidebar: file.sidebar,
             dock_at_start: file.dock_at_start,
             close_to: file.close_to,
+            keep_frames: file.keep_frames.unwrap_or(KEEP_FRAMES),
         })
     }
 }

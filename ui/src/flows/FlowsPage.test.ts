@@ -53,7 +53,13 @@ afterEach(() => {
 /** The panel's clock in the tests. */
 const NOW = Date.UTC(2026, 10, 17, 10, 16, 5);
 
-async function mounted(state: FlowRunState = LAST, flows: FlowSummary[] = FLOWS, pollMs = 1000) {
+async function mounted(
+  state: FlowRunState = LAST,
+  flows: FlowSummary[] = FLOWS,
+  pollMs = 1000,
+  /** `automation.flows.confirmDelete`; the core answers no settings when absent. */
+  confirmDelete?: boolean,
+) {
   const listeners = new Set<(message: CoreToShell) => void>();
   const subscribe = (listener: (message: CoreToShell) => void) => {
     listeners.add(listener);
@@ -61,12 +67,21 @@ async function mounted(state: FlowRunState = LAST, flows: FlowSummary[] = FLOWS,
   };
   const asked: ShellToCore[] = [];
   let answer = state;
+  let listed = flows;
   const client = new IpcClient({
     send: async (message) => {
       asked.push(message);
       switch (message.type) {
         case 'listFlows':
-          return { type: 'flows', items: flows };
+          return { type: 'flows', items: listed };
+        case 'getSettings':
+          if (confirmDelete === undefined) {
+            return { type: 'ack' };
+          }
+          return {
+            type: 'settings',
+            values: [{ key: 'automation.flows.confirmDelete', value: confirmDelete, origin: 'user' }],
+          };
         case 'getFlowRun':
           return { type: 'flowRun', ...answer };
         default:
@@ -87,6 +102,9 @@ async function mounted(state: FlowRunState = LAST, flows: FlowSummary[] = FLOWS,
     push: (message: CoreToShell) => listeners.forEach((listener) => listener(message)),
     answerNext: (next: FlowRunState) => {
       answer = next;
+    },
+    listNext: (next: FlowSummary[]) => {
+      listed = next;
     },
   };
 }
@@ -213,5 +231,68 @@ describe('the Flows panel (RB-090-60)', () => {
     current = null;
     const none = await mounted({ project: false }, []);
     expect(none.wrapper.find('[data-testid="flows-no-project"]').exists()).toBe(true);
+  });
+});
+
+describe('deleting a flow in the Flows panel (RB-090-91)', () => {
+  it('asks in the panel before it deletes, then sends flows.delete and lists again', async () => {
+    const { wrapper, asked, push, listNext } = await mounted({ project: true });
+    const cart = () => wrapper.get('[data-testid="flow-cart"]');
+    await cart().get('[data-testid="delete"]').trigger('click');
+    await settle();
+    const question = cart().get('[data-testid="delete-confirm"]');
+    expect(question.text()).toContain('Delete the flow cart?');
+    expect(question.text()).toContain('cannot be undone');
+    expect(question.attributes('role')).toBe('alertdialog');
+    expect(commands(asked)).toEqual([]);
+    // Cancel keeps it.
+    await question.get('[data-testid="delete-no"]').trigger('click');
+    await settle();
+    expect(cart().find('[data-testid="delete-confirm"]').exists()).toBe(false);
+    expect(commands(asked)).toEqual([]);
+    await cart().get('[data-testid="delete"]').trigger('click');
+    await settle();
+    await cart().get('[data-testid="delete-yes"]').trigger('click');
+    await settle();
+    expect(commands(asked)).toEqual([{ type: 'runCommand', id: 'flows.delete', args: { name: 'cart' } }]);
+    // The core deleted it and says so: the list is read again.
+    listNext([FLOWS[0]!]);
+    push({ type: 'flowRunChanged' });
+    await settle();
+    expect(wrapper.find('[data-testid="flow-cart"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="flow-login"]').exists()).toBe(true);
+  });
+
+  it('deletes at once when automation.flows.confirmDelete is off', async () => {
+    const { wrapper, asked } = await mounted({ project: true }, FLOWS, 1000, false);
+    await wrapper.get('[data-testid="flow-login"] [data-testid="delete"]').trigger('click');
+    await settle();
+    expect(wrapper.find('[data-testid="delete-confirm"]').exists()).toBe(false);
+    expect(commands(asked)).toEqual([{ type: 'runCommand', id: 'flows.delete', args: { name: 'login' } }]);
+  });
+
+  it('keeps Delete of the running flow waiting and says why', async () => {
+    const running: FlowRunState = {
+      project: true,
+      running: { runId: 'r1', flow: 'login', views: [{ view: 1, status: 'running' }], startedAtMs: NOW },
+    };
+    const { wrapper } = await mounted(running);
+    const login = wrapper.get('[data-testid="flow-login"] [data-testid="delete"]');
+    expect(login.attributes('disabled')).toBeDefined();
+    expect(login.attributes('title')).toContain('login is running');
+    const cart = wrapper.get('[data-testid="flow-cart"] [data-testid="delete"]');
+    expect(cart.attributes('disabled')).toBeUndefined();
+    expect(cart.attributes('aria-label')).toBe('Delete cart');
+  });
+
+  it('keeps Delete of a flow a Run all still waits to start waiting too', async () => {
+    const running: FlowRunState = {
+      project: true,
+      running: { runId: 'r1', flow: 'login', views: [], startedAtMs: NOW, queued: ['cart'] },
+    };
+    const { wrapper } = await mounted(running);
+    const cart = wrapper.get('[data-testid="flow-cart"] [data-testid="delete"]');
+    expect(cart.attributes('disabled')).toBeDefined();
+    expect(cart.attributes('title')).toContain('cart is running or waits to run');
   });
 });

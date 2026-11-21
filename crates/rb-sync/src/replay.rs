@@ -57,6 +57,13 @@ pub enum ReplayOutcome {
 pub trait Replay: Send + Sync {
     /// Replays `request.event` into `request.target`.
     async fn dispatch(&self, request: ReplayRequest) -> ReplayOutcome;
+
+    /// The timing counter of a replay into `view` (`rb_util::perf::names`, RB-090-32): the
+    /// engine's when the replay knows it.
+    fn counter(&self, view: ViewId) -> &'static str {
+        let _ = view;
+        rb_util::perf::names::SYNC_REPLAY
+    }
 }
 
 /// The replay until RB-020-03: every event is [`ReplayOutcome::Unsupported`], so no view is

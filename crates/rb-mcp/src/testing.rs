@@ -15,6 +15,9 @@ use serde_json::{Value, json};
 use crate::backend::{Backend, ConfigScope, McpOptions, SettingScope, ToolFailure};
 use crate::logs::LogStore;
 
+mod latest;
+pub use latest::FakeLatest;
+
 /// The keys the fake refuses, as the app refuses its `x-protected` ones.
 pub const PROTECTED: &[&str] = &["mcp.enabled", "mcp.allowEvaluate", "plugins.enabled"];
 
@@ -64,6 +67,7 @@ pub struct FakeBackend {
     flows: Mutex<Option<Value>>,
     flow_runs: Mutex<Vec<FlowRun>>,
     plugin_tools: Mutex<Vec<crate::tools::plugins::PluginToolInfo>>,
+    latest: Mutex<FakeLatest>,
 }
 
 /// The fake records a host tool `name` as the command `host:<name>` ([`FakeBackend::calls`])
@@ -96,7 +100,7 @@ impl FakeBackend {
             options: Mutex::new(McpOptions {
                 navigation_timeout: Duration::from_millis(500),
                 allow_evaluate: false,
-                max_answer_bytes: crate::backend::DEFAULT_MAX_ANSWER_BYTES,
+                ..McpOptions::default()
             }),
             cdp: Mutex::new(Vec::new()),
             cdp_answers: Mutex::new(BTreeMap::new()),
@@ -107,7 +111,13 @@ impl FakeBackend {
             flows: Mutex::new(None),
             flow_runs: Mutex::new(Vec::new()),
             plugin_tools: Mutex::new(Vec::new()),
+            latest: Mutex::new(FakeLatest::default()),
         }
+    }
+
+    /// What the resources read from now on (RB-095-01).
+    pub fn set_latest(&self, latest: FakeLatest) {
+        *lock(&self.latest) = latest;
     }
 
     /// The plugin tools the fake lists from now on (RB-060-12).
@@ -268,7 +278,8 @@ impl Backend for FakeBackend {
     }
 
     fn config(&self) -> Value {
-        json!({ "version": 1, "startUrl": "https://a.test/" })
+        let config = lock(&self.latest).config.clone();
+        config.unwrap_or_else(|| json!({ "version": 1, "startUrl": "https://a.test/" }))
     }
 
     fn settings(&self) -> Value {
@@ -375,6 +386,22 @@ impl Backend for FakeBackend {
         }
         self.set_document(scope, document.clone());
         Ok(())
+    }
+
+    fn latest_findings(&self) -> Option<Value> {
+        lock(&self.latest).findings.clone()
+    }
+
+    fn latest_screenshots(&self) -> Option<Value> {
+        lock(&self.latest).screenshots.clone()
+    }
+
+    fn latest_screenshot_png(
+        &self,
+        index: usize,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, ToolFailure> {
+        lock(&self.latest).png(index, max_bytes)
     }
 }
 

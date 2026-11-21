@@ -7,6 +7,8 @@ fn engines_have_names_for_people() {
     assert_eq!(engine_name(EngineKind::Chromium), "Chromium");
     assert_eq!(engine_name(EngineKind::Firefox), "Firefox");
     assert_eq!(engine_name(EngineKind::Webkit), "WebKit");
+    assert_eq!(engine_name(EngineKind::Safari), "Safari");
+    assert_eq!(engine_name(EngineKind::Ios), "iOS");
 }
 
 #[test]

@@ -51,7 +51,7 @@ pub struct Ended {
 
 /// Whoever follows the runs.
 pub trait RunEvents: Send + Sync {
-    /// Run `run_id` took a shot.
+    /// Run `run_id` started or took a shot.
     fn progress(&self, run_id: &str, progress: Progress);
     /// A run ended.
     fn ended(&self, ended: &Ended);
@@ -202,6 +202,10 @@ impl Runs {
         let saved = run.clone();
         let saving = store.clone();
         blocking(move || saving.save(&saved)).await??;
+        // The window follows the run from its start, not from its first shot (RB-090-90).
+        services
+            .events
+            .progress(&run_id, run.progress(setup.batch.parallel));
         let run = Arc::new(Mutex::new(run));
         if let Some(active) = lock(&self.active).as_mut() {
             active.run = Some(run.clone());

@@ -1,5 +1,17 @@
 # Changes
 
+## Unreleased
+
+- Fixed (RB-090-86): the gallery's breakpoint and status filters apply. Their rules were
+  `#bp-N:checked~.sheet ...`, but the radios sit in their fieldsets and the sheet is no sibling;
+  they start at `<main>` now (`main:has(#bp-N:checked) .sheet ...`), still without a script.
+- Changed (RB-090-86): the gallery's look follows the app's (teal and slate, light and dark by
+  the system's choice); the app's own gallery window shows a Nuxt UI page instead, and the
+  `index.html` is the export for the system browser.
+- Added (RB-090-86): the setting `thumbnailWidth` (Settings > Capture > Sitemap; 160, 240, 320,
+  480 or 640 CSS px, 320 by default) - how wide the contact sheet shows a shot; a gallery takes
+  it when its capture ends. A shot still opens its large view on a click.
+
 ## 0.1.0
 
 The first version (RB-050-05): finds a site's sitemaps (`robots.txt`, then `/sitemap.xml` and

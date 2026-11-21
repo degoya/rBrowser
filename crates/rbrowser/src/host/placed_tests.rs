@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rb_config::{ProjectConfig, StripHeight};
+use rb_config::{Layout, LayoutCell, ProjectConfig, StripHeight};
 use tokio::runtime::Handle;
 
 use super::*;
@@ -153,5 +153,45 @@ async fn without_a_mode_nothing_is_placed() {
         !ui.calls()
             .iter()
             .any(|call| matches!(call, UiCall::Place(_)))
+    );
+}
+
+/// RB-090-89 (diag29): focus mode - a grid of one cell - after a mode that placed views off
+/// screen shows the view it keeps; its off-screen mark stayed, and a played recording skipped the
+/// view the person had just recorded in. The grid shows every view.
+#[tokio::test]
+async fn leaving_a_mode_shows_the_views_it_had_placed_off_screen() {
+    let (_ui, host) = setup();
+    host.set_mode(strip(&ALL)).expect("horizontal");
+    host.on_grid_area(area(1600));
+    let tablet = host.state().order[2];
+    assert!(host.is_off_screen(tablet), "out of the strip's sight");
+
+    let focus = Layout {
+        columns: 1,
+        rows: 1,
+        gap: 8,
+        cells: vec![LayoutCell {
+            breakpoint: "tablet".to_owned(),
+            col: 1,
+            row: 1,
+            col_span: 1,
+            row_span: 1,
+            zoom: Zoom::Fit,
+        }],
+        ..Default::default()
+    };
+    let kept = host.rebuild(&focus).expect("focus mode");
+    assert_eq!(kept, [tablet], "the view lives on");
+    assert!(!host.is_off_screen(tablet), "focus mode shows it");
+
+    host.set_mode(strip(&ALL)).expect("horizontal again");
+    assert!(host.state().views.values().any(|entry| entry.off_screen));
+    let grid = crate::host::state::layout_for(&host.config());
+    host.rebuild(&grid).expect("the grid");
+    let state = host.state();
+    assert!(
+        state.order.iter().all(|id| !state.views[id].off_screen),
+        "the grid hides no view"
     );
 }

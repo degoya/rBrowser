@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the consent check (RB-094-05): Settings > Checks > Consent check",
+  "type": "object",
+  "properties": {
+    "allowHosts": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^(\\*\\.)?[A-Za-z0-9.-]+$"
+      },
+      "default": [],
+      "description": "Hosts counted as the page's own, such as your CDN: no finding. A host such as cdn.example.com, or *.example.com for a domain and its subdomains.",
+      "x-category": "checks",
+      "x-section": "consent-check",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    },
+    "rejectStep": {
+      "type": "boolean",
+      "default": true,
+      "description": "After the first capture, click the banner's \"Reject all\" in the check's own session and capture again.",
+      "x-category": "checks",
+      "x-section": "consent-check",
+      "x-order": 2,
+      "x-scope": ["project", "local", "user"]
+    },
+    "essentialCookies": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 256,
+        "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"
+      },
+      "default": [],
+      "description": "Cookies of your own that are strictly necessary: no finding. A name such as cart_id, or a prefix such as pref_*.",
+      "x-category": "checks",
+      "x-section": "consent-check",
+      "x-order": 3,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

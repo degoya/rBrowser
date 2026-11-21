@@ -196,6 +196,29 @@ impl CommandRegistry {
         Ok(notices)
     }
 
+    /// Removes every command of plugin `plugin_id` ([`plugin_command_prefix`]) with its handler and
+    /// the notices about it: the plugin was removed or replaced while the app runs (RB-092-06).
+    /// Its bindings are free again; the user's own bindings of those ids are kept, so they apply
+    /// again when the plugin comes back. Returns the ids removed, in order.
+    pub fn unregister_plugin(&mut self, plugin_id: &str) -> Vec<CommandId> {
+        if plugin_id.is_empty() {
+            return Vec::new();
+        }
+        let prefix = plugin_command_prefix(plugin_id);
+        let removed: Vec<CommandId> = self
+            .commands
+            .keys()
+            .filter(|id| id.as_str().starts_with(&prefix))
+            .cloned()
+            .collect();
+        for id in &removed {
+            self.commands.remove(id);
+        }
+        self.notices
+            .retain(|notice| !notice.command.starts_with(&prefix));
+        removed
+    }
+
     fn insert(&mut self, def: CommandDef, handler: Handler, defaults: Vec<Binding>) {
         self.commands.insert(
             def.id.clone(),
@@ -336,6 +359,14 @@ impl CommandRegistry {
     pub fn take_notices(&mut self) -> Vec<Notice> {
         std::mem::take(&mut self.notices)
     }
+}
+
+/// The start of every command id of plugin `plugin_id`: `plugin.<id>.`, a `-` of the id written
+/// `_` (contract 0.1) - the one rule `PluginManifest::command_id` and
+/// [`CommandRegistry::unregister_plugin`] share (RB-092-06).
+#[must_use]
+pub fn plugin_command_prefix(plugin_id: &str) -> String {
+    format!("plugin.{}.", plugin_id.replace('-', "_"))
 }
 
 pub(crate) fn texts(bindings: &[Binding]) -> Vec<String> {

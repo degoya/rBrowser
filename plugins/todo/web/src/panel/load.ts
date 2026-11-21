@@ -5,6 +5,7 @@
 // pages (`errors.changed`) is read again from its start. The look for changes stays cheap: the
 // heads only, and the items of the files that changed.
 import { isConflict, readFile, readListing, type Listing, type TodoFile } from './model';
+import { isObject } from '../../../../web-common/src/is-object';
 
 /** `list` with its arguments. */
 export type ListCall = (args: Record<string, unknown>) => Promise<unknown>;
@@ -16,7 +17,6 @@ export const MAX_RESTARTS = 3;
 
 const encoder = new TextEncoder();
 const jsonBytes = (value: unknown): number => encoder.encode(JSON.stringify(value)).length;
-const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 /** `paths` in groups whose JSON stays within `budget` bytes (a longer path in a group alone). */
 export function chunks(paths: string[], budget = MAX_ARGS_BYTES): string[][] {

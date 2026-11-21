@@ -2,9 +2,17 @@
 //! language from `locales/<lang>.json`, but the report the component writes and the MCP answer
 //! need their text here, and phase 1 is English only.
 
+use std::sync::OnceLock;
+
 use serde_json::Value;
 
 const EN: &str = include_str!("../locales/en.json");
+
+/// The catalogue, parsed at its first use.
+fn catalogue() -> &'static Value {
+    static CATALOGUE: OnceLock<Value> = OnceLock::new();
+    CATALOGUE.get_or_init(|| serde_json::from_str(EN).unwrap_or(Value::Null))
+}
 
 fn lookup<'a>(catalogue: &'a Value, key: &str) -> Option<&'a str> {
     key.split('.')
@@ -16,8 +24,7 @@ fn lookup<'a>(catalogue: &'a Value, key: &str) -> Option<&'a str> {
 /// catalogue has no text for it.
 #[must_use]
 pub fn text(key: &str, params: &[(String, String)]) -> String {
-    let catalogue: Value = serde_json::from_str(EN).unwrap_or(Value::Null);
-    let Some(template) = lookup(&catalogue, key) else {
+    let Some(template) = lookup(catalogue(), key) else {
         return key.to_owned();
     };
     let mut out = String::with_capacity(template.len());

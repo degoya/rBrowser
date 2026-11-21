@@ -84,8 +84,14 @@ fn a_built_manifest_verifies_under_its_key_and_lists_the_zip() {
             sign::decode_public_key(&release.public).expect("public"),
         )
         .expect("trust");
-    let read =
-        manifest::verify_with(&bytes, &trust, Channel::Stable, None, Utc::now()).expect("verifies");
+    let read = manifest::verify_with(
+        &bytes,
+        &trust,
+        Channel::Stable,
+        None,
+        OffsetDateTime::now_utc(),
+    )
+    .expect("verifies");
     assert_eq!(read.version, "1.2.0");
     assert_eq!(read.sequence, 7);
     assert_eq!(read.notes, "- Self-update.");

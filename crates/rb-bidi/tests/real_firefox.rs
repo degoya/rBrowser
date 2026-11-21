@@ -69,6 +69,7 @@ async fn the_installed_firefox_emulates_and_takes_trusted_clicks() {
                 hover_throttle_ms: 100,
                 scroll_debounce_ms: rb_sync::message::DEFAULT_SCROLL_DEBOUNCE_MS,
                 scroll_mode: rb_sync::AgentScrollMode::Anchor,
+                record: None,
             },
         },
         Handle::current(),

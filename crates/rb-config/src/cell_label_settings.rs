@@ -20,6 +20,11 @@ pub struct CellLabelSettings {
     /// view's address (a view with its own navigation, sync off, a view that could not follow),
     /// `always` for every view, `off` never.
     pub address: CellAddress,
+    /// A click on the address in the label strip of a view with its own navigation (decoupled
+    /// with `Leader S U` or `syncNavigation: false`) opens an address field there, as does
+    /// `view.edit_address` (`Leader S L`): Enter loads the address in that view only, Escape
+    /// cancels (RB-092-03). Off, the address only shows and its click makes the view active.
+    pub address_editable: bool,
 }
 
 impl Default for CellLabelSettings {
@@ -27,6 +32,7 @@ impl Default for CellLabelSettings {
         Self {
             engine_status: true,
             address: CellAddress::Differs,
+            address_editable: true,
         }
     }
 }

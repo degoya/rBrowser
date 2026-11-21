@@ -9,8 +9,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 use super::{
     InstallError, JOURNAL_FILE, PREVIOUS_DIR, REJECTED_FILE, durable, journal_check::is_name,
@@ -164,8 +164,10 @@ pub struct Journal {
     /// The same in words, for the log.
     #[serde(default)]
     pub detail: Option<String>,
-    pub started_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub started_at: OffsetDateTime,
+    #[serde(with = "crate::utc")]
+    pub updated_at: OffsetDateTime,
     /// Whether the leftovers of a finished update were removed.
     #[serde(default)]
     pub cleaned: bool,
@@ -175,7 +177,7 @@ impl Journal {
     /// A journal for `plan` in phase [`Phase::Handed`], not yet written.
     #[must_use]
     pub fn begin(plan: Plan) -> Self {
-        let now = Utc::now();
+        let now = OffsetDateTime::now_utc();
         Self {
             plan,
             phase: Phase::Handed,
@@ -226,7 +228,7 @@ impl Journal {
     ///
     /// When it cannot be written; nothing may act on a step the journal does not record.
     pub fn write(&mut self) -> Result<()> {
-        self.updated_at = Utc::now();
+        self.updated_at = OffsetDateTime::now_utc();
         let path = Self::path(&self.plan.data_dir);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| format!("create {}", parent.display()))?;

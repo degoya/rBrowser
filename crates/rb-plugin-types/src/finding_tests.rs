@@ -147,6 +147,18 @@ fn fail_on_holds_the_threshold() {
 }
 
 #[test]
+fn fail_on_info_fails_on_any_finding() {
+    let info_only = FindingsSummary::of(&[merged("a", &["seo"], Severity::Info)]);
+    assert!(FailOn::Info.fails(&info_only));
+    assert!(!FailOn::Warning.fails(&info_only));
+    assert!(!FailOn::Info.fails(&FindingsSummary::default()));
+    assert_eq!(
+        serde_json::from_value::<FailOn>(json!("info")).expect("parses"),
+        FailOn::Info
+    );
+}
+
+#[test]
 fn a_merged_finding_is_camel_case_json() {
     let mut finding = merged("a", &["seo"], Severity::Error);
     finding.shared_id = Some("img-alt-missing".to_owned());

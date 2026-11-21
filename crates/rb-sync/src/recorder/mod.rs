@@ -2,12 +2,13 @@
 //! [`Recording`] - the model ([`model`], `schema/recording.v1.json`), the recording state
 //! machine ([`record`]), the clean-up rules ([`cleanup`]), secret fields ([`secrets`]), the
 //! store ([`store`], `.rbrowser/out/recordings/<name>.json`), the boundary to the exporters
-//! of RB-050-02 ([`export`]) and the request to the `recorder-export` plugin with the folder its
+//! of RB-050-02 ([`export`]), the editor's step edits ([`edit`], RB-092-01) and the request to the `recorder-export` plugin with the folder its
 //! answers go to ([`exports`], `.rbrowser/out/exports/<name>/`). The app feeds it through
 //! [`crate::Observer`], and with the form autofill's fills ([`autofill`], RB-090-78).
 
 pub mod autofill;
 mod cleanup;
+pub mod edit;
 pub mod export;
 pub mod exports;
 mod keys;
@@ -19,20 +20,22 @@ pub mod store;
 pub(crate) mod testing;
 
 pub use autofill::{AutofillField, AutofillKind, AutofillView};
+pub use edit::{EditError, Place, StepPatch};
 pub use export::{ExportError, Exporter, JsonExporter, from_json, to_json};
 pub use exports::{
     DEFAULT_EXPORTS_DIR, ExportOptions, ExportProject, ExportRequest, Exported, ExportsDir,
     ExportsError,
 };
 pub use model::{
-    Action, Assertion, Locator, RECORDING_SCHEMA_FILE, RECORDING_VERSION, RecordedBreakpoint,
-    Recording, Selector, Step, candidates, secret_placeholder,
+    Action, Assertion, Locator, MAX_PATH_POINTS, MAX_PAUSE_MS, PathPoint, RECORDING_SCHEMA_FILE,
+    RECORDING_VERSION, RecordedBreakpoint, Recording, Selector, Step, candidates,
+    secret_placeholder,
 };
 pub use record::{
     HoverCapture, MAX_STEPS, NAVIGATION_WINDOW_MS, Recorder, RecorderError, RecorderOptions,
     RecorderState, RecordingView, StartInfo,
 };
-pub use store::{DEFAULT_DIR, RecordingStore, StoreError, check_name};
+pub use store::{DEFAULT_DIR, RecordingStore, StoreError, check_name, write_lock};
 
 /// The JSON schema of [`Recording`] as `schema/recording.v1.json` holds it.
 pub fn recording_schema() -> String {

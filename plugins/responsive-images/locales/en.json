@@ -1,0 +1,102 @@
+{
+  "plugin": {
+    "responsive-images": {
+      "commands": {
+        "check": "Check the images of every view against its pixel density",
+        "panel": "Show the responsive images panel"
+      },
+      "findings": {
+        "lcp": {
+          "lazy": "The LCP image loads lazily (loading=\"lazy\"), so it starts late. Load it eagerly with fetchpriority=\"high\".",
+          "priority": "The LCP image has no fetchpriority=\"high\", so the browser may fetch it late."
+        },
+        "oversized": "The file is {file} px, {ratio}× the {needed} px that {rendered} CSS px need at {dpr}x. Above {factor}×, the view loads more than it shows.",
+        "sizes-missing": {
+          "img": "The srcset gives widths (w) but the image has no sizes, so the browser takes the full viewport width and picks too large a file.",
+          "source": "A <source> of the picture gives widths (w) but no sizes, so the browser takes the full viewport width and picks too large a file."
+        },
+        "undersized": "The file is {file} px, only {ratio}× the {needed} px that {rendered} CSS px need at {dpr}x. Below {factor}×, it looks blurred."
+      },
+      "name": "Responsive images",
+      "panel": {
+        "cut": "The answer was shortened to the images with problems; MCP images_check gives all of it.",
+        "empty": "The page shows no images.",
+        "failed": "This view could not be checked: {reason}",
+        "flag": {
+          "high": "high priority",
+          "lazy": "lazy",
+          "lcp": "LCP"
+        },
+        "hidden": "{count, plural, one {# image} other {# images}} without problems left out.",
+        "lcpGuessed": "The page named no LCP element; the largest image of the first screen is taken for it.",
+        "loading": "Checking the images of every view...",
+        "mark": "Show {name} in every view",
+        "more": "{count, plural, one {# more image is} other {# more images are}} not listed.",
+        "noProblems": "Every image fits this view's density.",
+        "noView": "No view shows a page.",
+        "onlyProblems": "Only images with problems",
+        "origin": {
+          "source": "from a <source>",
+          "sourceMedia": "from <source media=\"{media}\">",
+          "src": "from src",
+          "srcset": "from srcset"
+        },
+        "page": "{url} at {width} × {height} CSS pixels, {dpr}x",
+        "refresh": "Check again",
+        "report": "Send to the findings panel",
+        "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
+        "severity": {
+          "error": "Error",
+          "info": "Note",
+          "warning": "Warning"
+        },
+        "summary": "{error, plural, one {# error} other {# errors}}, {warning, plural, one {# warning} other {# warnings}}, {info, plural, one {# note} other {# notes}}",
+        "tab": "{label} · {dpr}x",
+        "table": {
+          "file": "File",
+          "image": "Image",
+          "needed": "Needed",
+          "problems": "Problems",
+          "ratio": "File ÷ needed",
+          "rendered": "Drawn at"
+        },
+        "unmeasured": {
+          "hidden": "not shown",
+          "pending": "not loaded yet",
+          "tiny": "too small to measure",
+          "vector": "vector, sharp at any size"
+        }
+      },
+      "panels": {
+        "responsive-images": "Responsive images"
+      },
+      "rules": {
+        "lcp": "The LCP image loads lazily or without high priority",
+        "oversized": "An image file far larger than the view's density needs",
+        "sizes-missing": "A srcset with widths and no sizes",
+        "undersized": "An image file smaller than the view's density needs"
+      },
+      "settings": {
+        "checkLcp": {
+          "description": "Check that the page's Largest Contentful Paint image loads eagerly and with fetchpriority=\"high\".",
+          "help": "The LCP image is the element the page reports as its Largest Contentful Paint; without one, the largest image of the first screen. Off leaves the loading and fetchpriority of that image unchecked.",
+          "label": "Check the LCP image"
+        },
+        "oversizeFactor": {
+          "description": "An image file with more than this many times the pixels its rendered size needs at the view's density is too large (1.1 to 10).",
+          "help": "Needed are the CSS pixels the image is drawn at times the view's device pixel ratio. Example: 1.5 flags a 1200 px wide file drawn 300 CSS px wide at 2x (600 px needed, 2 times as many).",
+          "label": "Too large above"
+        },
+        "undersizeFactor": {
+          "description": "An image file with less than this many times the pixels its rendered size needs at the view's density is too small and looks blurred (0.1 to 1).",
+          "help": "1 flags every file with fewer pixels than the view shows (a pixel of rounding allowed); 0.75 accepts a file a quarter smaller.",
+          "label": "Too small below"
+        }
+      },
+      "tools": {
+        "check": "The images of the target views, each measured at its view's device pixel ratio: the file the browser took from srcset or picture, its own pixels against the rendered size times the density, sizes, loading, fetchpriority and the LCP image, with the problems (too large, too small, srcset widths without sizes, LCP image lazy or without high priority). Reports nothing to the findings panel.",
+        "mark": "Marks an image (by its CSS selector) in the views named and scrolls it into view, or clears every mark."
+      }
+    }
+  }
+}

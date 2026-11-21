@@ -61,6 +61,29 @@
       "view": "{label}: {width} x {height}"
     }
   },
+  "auth": {
+    "bar": {
+      "cancel": "Cancel",
+      "environment": "Environment:",
+      "hint": "Kept in the Windows Credential Manager, never in a project file.",
+      "password": "Password",
+      "problem": {
+        "environment": "Choose an environment first.",
+        "password": "Enter a password without line breaks.",
+        "passwordShort": "Enter a password of at least 4 characters.",
+        "user": "Enter a user name without a colon or line breaks."
+      },
+      "remove": "Remove",
+      "save": "Save",
+      "settings": "Environments behind Basic auth…",
+      "user": "User"
+    },
+    "notice": {
+      "notListed": "The Basic auth credentials of \"{environment}\" are stored. rBrowser answers its sign-in prompt once the environment is listed under Project > Environments > Basic auth.",
+      "removed": "The Basic auth credentials of \"{environment}\" were removed.",
+      "saved": "The Basic auth credentials of \"{environment}\" are stored; the views reload and sign in."
+    }
+  },
   "bookmarks": {
     "add": {
       "absolute": "This page belongs to no environment of the project, so the bookmark keeps its whole URL",
@@ -132,6 +155,18 @@
     }
   },
   "cells": {
+    "address": {
+      "edit": "edit the address",
+      "placeholder": "Type a URL or a path to open in this view",
+      "refused": {
+        "coupled": "{label} follows the active view: decouple its navigation first (Sync › Sync this view's navigation).",
+        "empty": "{label}: type an address to open.",
+        "invalid": "{label}: this is not an address rBrowser can open.",
+        "noBase": "{label}: a path needs an environment or a start URL to open under.",
+        "off": "{label}: the address field in the label strip is off.",
+        "scheme": "{label} does not open {scheme}: addresses from its label strip - only http, https and file."
+      }
+    },
     "info": {
       "click": "Click: {action}",
       "cpuHigh": "{shape} CPU high",
@@ -146,6 +181,43 @@
   "checks": {
     "error": {
       "busy": "A check run is already in progress."
+    },
+    "export": {
+      "error": {
+        "no_project": "Open a project or set a folder for exports under Settings > Checks > Findings first.",
+        "no_run": "There is no check run to export yet. Run the checks first.",
+        "path": "The export path is refused: {reason}",
+        "write": "The export could not be written: {reason}"
+      },
+      "notice": {
+        "written": "Findings exported to {path}"
+      },
+      "report": {
+        "all_views": "Every view",
+        "breakpoints": "Breakpoints",
+        "count": "{count, plural, one {# finding} other {# findings}}",
+        "element": "Element",
+        "engines": "Engines",
+        "failures": "Plugins that failed",
+        "findings": "Findings",
+        "help": "Help",
+        "level": {
+          "error": "Error",
+          "info": "Info",
+          "warning": "Warning"
+        },
+        "message": "Message",
+        "none": "No findings.",
+        "plugin_failed": "{plugin} failed: {reason}",
+        "plugins": "Plugins",
+        "rule": "Rule",
+        "severity": "Severity",
+        "skipped": "{plugin} skipped: {reason}",
+        "summary": "{total, plural, one {# finding} other {# findings}}: {error, plural, one {# error} other {# errors}}, {warning, plural, one {# warning} other {# warnings}}, {info, plural, one {# info} other {# infos}}",
+        "title": "rBrowser findings",
+        "url": "Page",
+        "view": "View {id}"
+      }
     },
     "notice": {
       "cancelled": "Checks cancelled after {seconds} s: {count, plural, =0 {nothing found so far} one {# finding so far} other {# findings so far}}.",
@@ -209,6 +281,7 @@
       "toggle_hide_banners": "Toggle hidden cookie banners in screenshots",
       "video": {
         "panel": "Video: show the recorded videos",
+        "pause": "Video: pause the recording (or resume it)",
         "toggle": "Video: record the active view (or stop)",
         "toggle_all": "Video: record all views (or stop)"
       },
@@ -221,12 +294,17 @@
     },
     "checks": {
       "cancel": "Cancel the check run",
+      "export": "Export the findings",
       "run_all": "Run all checks"
+    },
+    "compare": {
+      "engines": "Compare the engines at this breakpoint"
     },
     "cookies": {
       "copy": "Copy cookies to Firefox and WebKit"
     },
     "debug": {
+      "perf_counters": "Show the timing counters",
       "resources": "Show or hide CPU and memory per view",
       "vitals": "Measure the Web Vitals or stop measuring"
     },
@@ -240,9 +318,11 @@
       "create": "Create diagnostics ZIP"
     },
     "emulation": {
+      "clock": "Clock: set the time the pages read in every view, or the real time again",
       "reset_view": "Reset the view's emulation to its breakpoint",
       "set": "Set emulation",
       "toggle_color_scheme": "Switch the colour scheme (light/dark)",
+      "toggle_dir": "Switch the page's text direction (right to left)",
       "toggle_reduced_motion": "Switch reduced motion"
     },
     "engine": {
@@ -264,6 +344,9 @@
         "report": "Open the environment comparison report",
         "run": "Compare the environments pixel by pixel"
       }
+    },
+    "environment": {
+      "auth": "Set the Basic auth credentials of an environment…"
     },
     "environments": {
       "select": "Choose environment",
@@ -289,6 +372,7 @@
     },
     "flows": {
       "cancel": "Cancel the running flow",
+      "delete": "Delete a flow",
       "open_results": "Show the last flow results",
       "rerun_last": "Run the last flow again",
       "run": "Run a flow in every view",
@@ -309,6 +393,9 @@
       "settings": "Settings",
       "sync": "Sync",
       "view": "View"
+    },
+    "ios": {
+      "devices": "Choose the iOS simulator or device of the active view…"
     },
     "layout": {
       "canvas": {
@@ -349,10 +436,15 @@
     },
     "mcp": {
       "copy_config": "Show the Claude Code line for MCP",
+      "setup": "Connect an AI agent over MCP...",
       "toggle": "Switch the MCP server on or off"
     },
     "notice": {
       "failed": "{command} failed: {error}"
+    },
+    "overlays": {
+      "animations": "Animations: stopped, slower or normal in every view",
+      "pseudo_locale": "Switch the pseudo-localisation of the page"
     },
     "page_api": {
       "toggle": "Page API on/off",
@@ -391,6 +483,11 @@
       "add_asset_origin": "Add the asset origin the portal offered first to the shown environment",
       "devices": "Show the portal and its paired devices",
       "disconnect": "Disconnect the portal's devices",
+      "present": {
+        "new_link": "Create a new one-time link for the presentation over the internet",
+        "start": "Present the page over the internet with a one-time link (Cloudflare Quick Tunnel)",
+        "stop": "End the presentation over the internet and disconnect every viewer"
+      },
       "show_qr": "Show a new pairing QR code for the portal",
       "toggle": "Start or stop the portal for devices in the LAN"
     },
@@ -399,11 +496,18 @@
     },
     "recorder": {
       "check": "Add a check step for an element",
+      "continue_from": "Continue recording from the step",
+      "delete": "Delete a recording",
       "export_flow": "Export the recording as a flow",
       "export_spec": "Export the recording as a Playwright test",
       "pause": "Pause or resume recording",
+      "pick_element": "Pick the step's element in the view",
       "play": "Play the recording in every view",
+      "play_from": "Play the recording from the step",
       "start": "Start recording",
+      "step_add": "Add a step to the recording",
+      "step_toggle": "Skip or include the step",
+      "step_try": "Try the step in the active view",
       "stop": "Stop recording and save"
     },
     "reload": {
@@ -411,9 +515,15 @@
       "css_only": "Reload CSS only",
       "toggle_pause": "Pause or resume hot reload"
     },
+    "report": {
+      "create": "Create a bug report",
+      "open_folder": "Open the last bug report's folder"
+    },
     "session": {
       "assign": "Choose the session of the active view…",
-      "clear": "Clear a session's data…"
+      "clear": "Clear a session's data…",
+      "state_export": "Export the login state of the active view's session",
+      "state_import": "Import a login state into the active view's session"
     },
     "settings": {
       "open": "Open settings",
@@ -444,6 +554,9 @@
       "toggle_view_navigation": "Navigation sync on/off for the active view"
     },
     "tools": {
+      "adb": {
+        "install": "Tools: download adb (Android Platform Tools)"
+      },
       "ffmpeg": {
         "install": "Video: download ffmpeg",
         "remove": "Video: remove the downloaded ffmpeg"
@@ -480,9 +593,11 @@
     },
     "view": {
       "add": "Add a view…",
+      "add_android": "Add an Android device as a view…",
       "add_print": "Add a print view (A4 or Letter)",
       "add_size": "Add a view of a new size…",
       "back": "Back",
+      "edit_address": "Edit the address of a decoupled view",
       "emulate": {
         "cpu": "Switch CPU throttling",
         "geolocation": "Switch the emulated location",
@@ -534,6 +649,9 @@
       "zoom_in": "View scale: draw the active view larger in its cell",
       "zoom_out": "View scale: draw the active view smaller in its cell"
     },
+    "views": {
+      "restore_last": "Open the pages of the last session"
+    },
     "visual": {
       "baseline_update": "Visual regression: save the views as baselines",
       "compare": "Visual regression: compare the views with their baselines",
@@ -572,6 +690,7 @@
       "parse": "The config file is not valid JSON.",
       "session_color": "A session colour is #rrggbb; \"default\" has none.",
       "size_required": "Set a width and a height in px, or a device preset whose viewport supplies them.",
+      "size_too_large": "Width and height are at most 10000 px.",
       "size_zero": "Width and height must be at least 1 px.",
       "start_url": "The start URL must be an absolute http or https URL.",
       "unknown_breakpoint": "No breakpoint has this id.",
@@ -594,15 +713,21 @@
     }
   },
   "contextmenu": {
+    "bug_report": "Bug report of all views",
     "checks": {
       "analyze": "Analyze breakpoints",
-      "menu": "Checks",
       "run_all": "Run all checks"
     },
     "devtools": "DevTools",
     "emulation": {
       "all_views": "All views",
-      "menu": "Emulation",
+      "dir": "Text direction",
+      "dir_auto": "Auto (dir=\"auto\")",
+      "dir_ltr": "Left to right",
+      "dir_none": "The page's own",
+      "dir_rtl": "Right to left",
+      "pseudo": "Pseudo-localisation",
+      "rtl": "Right to left",
       "scheme_none": "No colour scheme override"
     },
     "flows": {
@@ -624,14 +749,12 @@
     },
     "panels": {
       "findings": "Findings",
-      "menu": "Panels",
       "sitemap": "Sitemap",
       "videos": "Videos"
     },
     "recorder": {
       "check_text": "Check: text visible",
       "check_visible": "Check: element visible",
-      "menu": "Recorder",
       "panel": "Recorder panel",
       "pause": "Pause recording",
       "play": "Play the last recording",
@@ -644,21 +767,34 @@
     "screenshot": {
       "all_full_page": "All views (full page)",
       "all_viewport": "All views (viewport)",
+      "compare_engines": "Compare in Chromium, Firefox and WebKit",
       "element": "Element under the cursor",
-      "menu": "Screenshot",
       "overview": "Overview",
       "this_full_page": "This view (full page)",
       "this_viewport": "This view (viewport)"
     },
     "session": {
       "clear": "Clear a session's data…",
-      "default": "Default session",
-      "menu": "Session"
+      "default": "Default session"
     },
     "sync": {
-      "menu": "Sync",
+      "edit_address": "Edit this view's address",
+      "edit_address_coupled": "Edit this view's address (it follows the active view)",
       "this_view": "Sync this view",
       "this_view_navigation": "Sync this view's navigation"
+    },
+    "time": {
+      "all_normal": "100 % in all views",
+      "animations": "Animations",
+      "clock": "Clock",
+      "clock_fixed": "Stopped at {start}",
+      "clock_running": "From {start} at {speed}x",
+      "freeze_now": "Stop the clock now",
+      "rate": "{percent} %",
+      "real_time": "Real time",
+      "settings_clock": "Clock from Settings",
+      "step": "Step",
+      "stopped": "Stopped"
     },
     "tools": {
       "fill_capture": "Take form as preset",
@@ -667,12 +803,10 @@
       "fill_menu": "Fill forms",
       "fill_valid": "With valid values",
       "fill_valid_all": "All views, valid values",
-      "menu": "Tools",
       "peek": "Peek: hover inspector",
       "raw_view": "Raw view of JSON or XML"
     },
     "video": {
-      "menu": "Video",
       "record": "Record this view",
       "record_all": "Record all views",
       "stop": "Stop recording",
@@ -717,7 +851,6 @@
       "notice": {
         "cleared": "No pseudo-class state is forced any more.",
         "failed": "Force state failed in {views}: {error}",
-        "forced": "Pseudo-class states are forced in {views}; they stay until you reset them (page menu: Force state, Reset states) or the page navigates.",
         "missing": "Force state: no such element in {views}."
       }
     },
@@ -749,6 +882,12 @@
     "saving": "Saving the diagnostics ZIP..."
   },
   "emulation": {
+    "clock": {
+      "notice": {
+        "failed": "The clock or the animations did not change in {views}: {error}",
+        "unsupported": "{views} keep the real time and their animations: only Chromium views have the clock and the animation rate."
+      }
+    },
     "extras": {
       "apply": "Apply",
       "cpu": "CPU throttling",
@@ -784,7 +923,59 @@
       "reset": "Reset the emulation to the breakpoint"
     }
   },
+  "enginecompare": {
+    "not_started": "{engine} is not started in this window",
+    "notice": {
+      "failed": "The engine comparison did not complete: {error}",
+      "finished": "Engine comparison done: {differing} of {pairs, plural, one {# engine pair} other {# engine pairs}} differ. Report in {folder}.",
+      "skipped": "Left out of the engine comparison: {engines}. The report names why.",
+      "started": "Engine comparison started in {engines}. The report follows when it is done."
+    },
+    "report": {
+      "breakpoint": "Breakpoint",
+      "difference": "Difference",
+      "differs": "differs",
+      "failed": "failed",
+      "open_live": "Open the page",
+      "path": "Page",
+      "pending": "pending",
+      "regions": "Differing areas",
+      "same": "same",
+      "side_by_side": "Side by side",
+      "size_mismatch": "different size",
+      "skipped": "Engines left out",
+      "slider": "Slider",
+      "title": "Engine comparison"
+    }
+  },
   "engines": {
+    "android": {
+      "adbPathNoFile": "The adb path in Settings > Engines > Android names no file: {path}",
+      "disabled": "Android views are off. Switch on Settings > Engines > Android > Android devices to add a device on USB.",
+      "exposed": "adb's forward to Chrome answers at {address}, beyond this machine (an adb server started with -a). Restart adb without -a; the view stays closed.",
+      "noAdb": "No adb was found on PATH, in ANDROID_HOME, ANDROID_SDK_ROOT or the usual SDK folders. Set the adb path in Settings > Engines > Android, or run \"Tools: download adb\" (Ctrl+Shift+Space X S).",
+      "noChrome": "Chrome on the Android device {serial} does not answer. Open Chrome on the device once, keep it unlocked, then try again.",
+      "noDevice": "No Android device is connected over USB with USB debugging on.",
+      "noDeviceDriver": "On Windows, install the phone maker's USB driver.",
+      "noDeviceSamsung": "On a Samsung phone, switch off Auto Blocker (Settings > Security and privacy).",
+      "noDeviceUsb": "Check that the cable carries data and the phone's USB mode is \"File transfer\", and that USB debugging is on in the developer options and this computer is allowed.",
+      "noPermissions": "The system does not let adb open the Android device {serial}; check its USB permissions.",
+      "notConnected": "The Android device {serial} is not connected over USB.",
+      "notice": {
+        "adb_busy": "The Android Platform Tools are being downloaded already.",
+        "adb_downloading": "Downloading the Android Platform Tools {version} ({size} MB, {license}) from {from}.",
+        "adb_failed": "The Android Platform Tools could not be downloaded: {error}",
+        "adb_installed": "adb {version} is ready in {folder}. Add the Android device again.",
+        "adb_needed": "Android views need adb: {reason} rBrowser can download the Android Platform Tools {version} ({size} MB, {license}) from {from} - run \"Tools: download adb\" (Ctrl+Shift+Space X S). Nothing is downloaded before.",
+        "add_failed": "The Android device was not added: {error}"
+      },
+      "reverseOff": "The Android device cannot reach {address}: on the device, a loopback address is the device itself. Switch on Settings > Engines > Android > Reach localhost from the device, then reload the view.",
+      "several": "Several Android devices are connected ({serials}): name the one to add.",
+      "state": "The Android device {serial} is {state}.",
+      "unauthorized": "Allow USB debugging on the Android device {serial} (the prompt on its screen), then try again.",
+      "unchecked": "rBrowser could not check that adb's forward to Chrome answers on this machine only: no network address of this machine was found to ask it at. Connect to a network and try again; the view stays closed.",
+      "viewLabel": "{model} (device size)"
+    },
     "badge": {
       "shadowed": "{breakpoint} keeps its engine: config.local.json overrides the {engine} written to {file}.",
       "tooltip": "{engine}. Click to choose the engine of this view.",
@@ -806,12 +997,14 @@
       },
       "reopen": "Open again",
       "restart": "Restart",
+      "retry": "Retry",
       "show": "Show window",
       "status": {
         "closed": "window closed",
         "embedded": "in its cell",
         "exited": "engine stopped",
         "failed": "failed to start",
+        "failedBecause": "failed: {reason}",
         "restarting": "restarting",
         "running": "external window",
         "starting": "starting",
@@ -833,13 +1026,43 @@
       "notFoundNotice": "Firefox not found. The Firefox breakpoints show in Chromium until Firefox is installed or its path is set.",
       "off": "The Firefox windows are switched off (Ctrl+Shift+Space R F starts them)"
     },
+    "ios": {
+      "bootFailed": "The simulator {simulator} did not boot: check it in Xcode > Window > Devices and Simulators",
+      "bootTimeout": "The simulator {simulator} did not boot within {seconds} s (Engines > iOS > Simulator boot timeout)",
+      "listing": "Looking for the iOS simulators and devices of this Mac…",
+      "no": {
+        "device": "No iPhone or iPad is connected over USB: connect one, unlock it and trust this Mac, or let Engines > iOS > Run iOS views on take the simulator",
+        "mode": "The breakpoint names a simulator or device that Engines > iOS > Run iOS views on ({mode}) leaves out",
+        "model": "Xcode has no simulator named {model}: choose one with Ctrl+Shift+Space B I (Choose the iOS simulator or device) or add it in Xcode",
+        "simulator": "Xcode has no iOS simulator: add an iOS runtime in Xcode > Settings > Components, or connect an iPhone or iPad",
+        "udid": "The device {udid} is not connected: connect it over USB, or choose another with Ctrl+Shift+Space B I",
+        "way": "No iOS view without Xcode or a device: install Xcode for the iOS Simulator, or connect an iPhone or iPad over USB with Settings > Safari > Advanced > Remote Automation turned on (Engines > iOS)",
+        "xcode": "The iOS Simulator needs Xcode: install it, or let Engines > iOS > Run iOS views on take a connected device"
+      },
+      "notEnabled": "Mobile Safari does not allow remote automation: turn on Settings > Safari > Advanced > Remote Automation on the iPhone, iPad or simulator, then restart the view",
+      "oneSession": "The device runs another automated Safari session: close the other iOS view on it first",
+      "onlyMacos": "iOS views run only on macOS",
+      "pick": {
+        "row": "iOS: {device}"
+      }
+    },
     "name": {
+      "android": "Android",
       "chromium": "Chromium",
       "firefox": "Firefox",
+      "ios": "iOS",
+      "safari": "Safari",
       "webkit": "WebKit (not Safari)"
     },
     "pick": {
       "unavailable": "{engine} - {reason}"
+    },
+    "safari": {
+      "disabled": "Safari is switched off (Engines > Safari)",
+      "notEnabled": "Safari does not allow remote automation: run safaridriver --enable once in Terminal (it asks for an administrator password), turn on Develop > Allow Remote Automation in Safari, then restart the view",
+      "notFound": "safaridriver was not found at {path}: install Safari Technology Preview or switch off Engines > Safari > Safari Technology Preview",
+      "oneSession": "Safari runs one automated window at a time: close the other Safari view first",
+      "onlyMacos": "Safari runs only on macOS"
     },
     "webkit": {
       "disabled": "WebKit is switched off (Engines > WebKit/Playwright)",
@@ -863,6 +1086,7 @@
       "open_live": "Open the page",
       "path": "Path",
       "pending": "pending",
+      "regions": "Differing areas",
       "same": "same",
       "side_by_side": "Side by side",
       "size_mismatch": "different size",
@@ -922,6 +1146,16 @@
     "cancel": "Cancel",
     "cancelled": "The run was cancelled; the findings of the finished checks stay.",
     "count": "{count} found",
+    "export": {
+      "format": {
+        "html": "HTML",
+        "json": "JSON",
+        "junit": "JUnit XML",
+        "sarif": "SARIF"
+      },
+      "menu": "Export as",
+      "run": "Export the findings"
+    },
     "failed": "The checks could not be started.",
     "filter": {
       "all_plugins": "All plugins",
@@ -972,6 +1206,11 @@
       "note": "{count} turned off by the project",
       "rule": "{rule} does not run"
     },
+    "rerun": {
+      "legend": "Run again:",
+      "one": "Run {plugin} again",
+      "selected": "Run selected again"
+    },
     "rules_settings": "Rule settings",
     "run": "Run checks",
     "running": "Running the checks...",
@@ -980,6 +1219,8 @@
       "info": "Info",
       "warning": "Warning"
     },
+    "show_width": "Show at {width} px",
+    "show_width_hint": "Holds the view at {width} px with this element marked, out of sync; Escape in the view or Cancel in the activity bar gives it its own width back.",
     "summary_count": "{total, plural, one {# finding} other {# findings}} from {plugins, plural, one {# plugin} other {# plugins}}",
     "title": "Findings",
     "view_id": "View {id}"
@@ -987,8 +1228,7 @@
   "firstrun": {
     "back": "Back",
     "basics": {
-      "applied": "Applied.",
-      "apply": "Apply",
+      "apply_next": "Apply & continue",
       "error": {
         "failed": "The project config could not be changed: {message}",
         "no_project": "There is no project to write the layout and sync into."
@@ -1024,9 +1264,12 @@
         "canvas": "The project starts on the canvas.",
         "grid": "The project starts in the grid."
       },
+      "mcp": "The MCP server is on: your AI agent can control rBrowser.",
+      "mcp_files": "{count, plural, one {# client file written.} other {# client files written.}}",
       "nothing": "Nothing was changed; rBrowser runs with its defaults.",
       "plugins": "{count, plural, one {# plugin installed; it loads at the next start.} other {# plugins installed; they load at the next start.}}",
       "plugins_failed": "{count, plural, one {# plugin failed to install.} other {# plugins failed to install.}}",
+      "plugins_live": "{count, plural, one {# plugin installed and loaded.} other {# plugins installed and loaded.}}",
       "plugins_removed": "{count, plural, one {# plugin removed.} other {# plugins removed.}}",
       "project": "Project config written: {path}",
       "sync_off": "Sync is off.",
@@ -1037,6 +1280,7 @@
         "system": "Theme: follows Windows."
       },
       "where": {
+        "mcp": "Automation > MCP",
         "plugins": "Plugins > Catalog",
         "project": "Project > Start URL",
         "theme": "General > Theme",
@@ -1045,12 +1289,24 @@
       "where_title": "Where to change it later"
     },
     "error": {
-      "off": "The setup wizard is switched off (Settings > General > Start)."
+      "off": "The setup wizard is switched off (Settings > General > Start).",
+      "step_failed": "This step failed unexpectedly; try again. The log has the details."
     },
     "finish": "Finish",
     "hint": {
       "action": "Set up project",
       "project": "{project} has no rBrowser config yet."
+    },
+    "mcp": {
+      "enable_failed": "The MCP server could not be switched on; switch it on in Settings > Automation > MCP.",
+      "intro": "With MCP your AI agent - Claude Code, Copilot, Cursor, Codex and others - opens pages, takes screenshots, runs the checks and changes rBrowser's settings for you.",
+      "next": "Switch on MCP & continue",
+      "next_on": "Continue",
+      "next_on_write": "{count, plural, one {Write # file & continue} other {Write # files & continue}}",
+      "next_write": "{count, plural, one {Switch on MCP, write # file & continue} other {Switch on MCP, write # files & continue}}",
+      "recommended": "Recommended",
+      "skip": "Skip",
+      "title": "Connect your AI agent"
     },
     "next": "Next",
     "off": {
@@ -1059,8 +1315,6 @@
     },
     "plugins": {
       "all": "All",
-      "apply": "Apply",
-      "cancel": "Cancel",
       "category": {
         "all": "All categories",
         "capture": "Capture",
@@ -1070,17 +1324,17 @@
         "overlays": "Overlays",
         "tools": "Tools"
       },
-      "confirm": "Install",
       "confirm_remove": "{count, plural, one {# installed plugin is removed: {names}. It does not come back at a later start.} other {# installed plugins are removed: {names}. They do not come back at a later start.}}",
       "confirm_text": "Signed with rBrowser's built-in key. Together they may use: {grants}.",
-      "confirm_title": "{count, plural, one {Install # first-party plugin?} other {Install # first-party plugins?}}",
       "done": "{count, plural, one {# plugin installed.} other {# plugins installed.}}",
       "failed": "The plugins could not be listed.",
       "failed_hint": "Try again, or skip this step and install plugins later in Settings > Plugins > Catalog.",
       "install_failed": "{name} was not installed.",
       "install_failed_unknown": "The install failed; try it again in Settings > Plugins > Catalog.",
+      "install_next": "{count, plural, one {Install # plugin & continue} other {Install # plugins & continue}}",
       "installed_badge": "Installed",
       "intro": "Choose the plugins rBrowser loads. The recommended ones are ticked; untick what you do not want, an installed one included. Everything else stays in Settings > Plugins > Catalog. Skipping this step keeps the recommended set.",
+      "live": "They are loaded now, without a restart.",
       "loading": "Loading the plugins...",
       "no_grants": "no extra rights",
       "no_match": "No plugin matches the search.",
@@ -1093,15 +1347,28 @@
       },
       "progress": "{done} of {total}: {name}",
       "recommended": "Recommended",
+      "remove_next": "{count, plural, one {Remove # plugin & continue} other {Remove # plugins & continue}}",
       "removed": "{count, plural, one {# plugin removed.} other {# plugins removed.}}",
       "restart": "They load at the next start of rBrowser.",
       "retry": "Retry",
       "search": "Search plugins",
       "size": "{mb} MB",
+      "state": {
+        "failed": "Failed",
+        "installing": "Installing..."
+      },
       "total": "{count, plural, one {# plugin to install} other {# plugins to install}}, {mb} MB.",
-      "total_remove": " {count, plural, one {# installed plugin to remove.} other {# installed plugins to remove.}}"
+      "total_remove": " {count, plural, one {# installed plugin to remove.} other {# installed plugins to remove.}}",
+      "without_next": "Continue without plugins"
     },
     "project": {
+      "analysing": "Reading the stylesheets at {url}...",
+      "analyzer": {
+        "failed_title": "The analyser has no proposal",
+        "found": "The analyser found {count, plural, one {# breakpoint} other {# breakpoints}} in {sheets, plural, one {# stylesheet} other {# stylesheets}}.",
+        "retry": "Try again",
+        "use_default": "Use mobile + desktop"
+      },
       "config_label": "The config as it will be written",
       "device_kind": {
         "desktop": "Desktop",
@@ -1120,7 +1387,6 @@
         "url": "Not a start address: {message}",
         "write": "The config could not be written: {message}"
       },
-      "fell_back": "The analyser found no breakpoints at the address; the preview has a mobile and a desktop view instead.",
       "folder": "Project folder",
       "folder_hint": "A folder on Windows or in WSL (\\\\wsl.localhost\\...).",
       "intro": "Set up a project: rBrowser writes .rbrowser/config.json into its folder, as rbrowser init does. You see the config before it is written.",
@@ -1130,11 +1396,23 @@
       "pick": "Choose folder...",
       "pick_first": "Choose a folder first.",
       "pick_title": "Choose the project folder",
-      "preview": "Preview",
+      "previewing": "Preparing the config...",
+      "reason": {
+        "bad_output": "The Breakpoint analyser plugin gave an answer that cannot be used.",
+        "invalid": "The analyser's proposal does not pass the config's checks; the log has the details.",
+        "no_css": "The page at {url} has no stylesheet the analyser could read.",
+        "no_page": "There is no web page to read at this address.",
+        "nothing_found": "The stylesheets at {url} have no media query breakpoints.",
+        "plugin_failed": "The Breakpoint analyser plugin failed; the log has the details.",
+        "plugin_missing": "The Breakpoint analyser plugin is not loaded. Tick it in the plugin step, or install it later in Settings > Plugins > Catalog.",
+        "timeout": "{url} did not answer in time.",
+        "unreachable": "{url} could not be reached. Is the dev server running?"
+      },
       "reloaded": "The open project uses the new config now.",
       "size": "{width} x {height}",
       "size_device": "sized by {device}",
       "size_unknown": "size not set",
+      "skip_next": "Continue without a project",
       "template": {
         "analyzer": "The breakpoint analyser's proposal",
         "analyzer_hint": "Reads the site's stylesheets at the address and proposes a view per breakpoint.",
@@ -1147,12 +1425,13 @@
       "url": "Dev server address",
       "url_hint": "Where your dev server runs; every view opens it first. Optional, except for the analyser's proposal.",
       "views": "{count, plural, one {# view} other {# views}}",
-      "write": "Write config",
       "write_hint": "Into {root}",
+      "write_next": "Write config & continue",
       "written": "Written: {path}"
     },
     "skip": "Skip setup",
     "step": {
+      "agent": "AI agent",
       "basics": "Basics",
       "done": "Done",
       "plugins": "Plugins",
@@ -1171,6 +1450,8 @@
     "notice": {
       "all_done": "Run all ended: {ran} of {count, plural, one {# flow} other {# flows}} ran, {passed} passed.",
       "all_failed": "Run all ended: {ran} of {count, plural, one {# flow} other {# flows}} ran, {passed} passed, {failed} failed ({flows}). Ctrl+Shift+Space F O shows the last results.",
+      "delete_failed": "Flow {flow} was not deleted: {error}",
+      "deleted": "Flow {flow} deleted.",
       "error": "Flow {flow} did not run: {error}",
       "failed": "Flow {flow}: {failed} failed ({views}), {passed} passed, {skipped} skipped. Ctrl+Shift+Space F O shows the results.",
       "hidden": "Flow {flow} did not run in {breakpoints}: the layout hides them. The setting Hidden views can show a layout for the run instead.",
@@ -1179,12 +1460,15 @@
       "passed": "Flow {flow}: {passed} passed, {skipped} skipped. Results in {dir}.",
       "pick": "Which flow? This project has {flows}. Run one from the command palette, with flow_run or rbrowser flow run <name>.",
       "queue_stopped": "Run all stopped: {flow} did not start ({error}). Not run: {flows}.",
+      "revealed": "Flow {flow}: every view it plays in was hidden in the layout, so {view} was brought into sight to play it.",
       "started": "Flow {flow} is running.",
       "untrusted": "Flows are blocked until you trust this workspace. Open Workspace trust with Ctrl+Shift+Space , T."
     },
     "panel": {
       "all_views": "All views",
       "busy": "{flow} is running. Stop it or wait for it to end before another flow runs.",
+      "delete_question": "Delete the flow {flow}? Its file goes and this cannot be undone; the other flows stay.",
+      "delete_running": "{flow} is running or waits to run. Delete it once the run has ended.",
       "elapsed": "Running for {time}",
       "empty": "No flows yet. Put them in .rbrowser/flows/<name>.ts, or export a recording as a flow in the Recorder panel.",
       "error": "That did not work: {reason}",
@@ -1280,16 +1564,19 @@
   },
   "macos": {
     "menu": {
+      "close": "Close Window",
       "copy": "Copy",
       "cut": "Cut",
       "edit": "Edit",
       "hide": "Hide rBrowser",
+      "minimize": "Minimize",
       "paste": "Paste",
       "quit": "Quit rBrowser",
       "redo": "Redo",
       "select_all": "Select All",
       "settings": "Settings…",
-      "undo": "Undo"
+      "undo": "Undo",
+      "window": "Window"
     }
   },
   "mcp": {
@@ -1300,6 +1587,103 @@
       "setting_changed": "An MCP agent changed the setting {key}.",
       "started": "The MCP server listens on 127.0.0.1:{port}. Ctrl+Shift+Space , C shows the line for Claude Code.",
       "stopped": "The MCP server stopped."
+    },
+    "prompt": {
+      "a11y_triage": {
+        "description": "Run axe in every view, order its findings by severity and propose fixes.",
+        "text": "Triage the accessibility of a page in rBrowser. {start} Check {scope}: run checks_run with plugins [\"a11y-axe\"] and that target. The findings come merged across the views; each has a severity (error for axe's critical and serious impact, warning for moderate, info for minor), its rule, its elements and the breakpoints it appears in. Order them by severity, then by how many views and elements they touch. For each rule give what fails and for whom (the WCAG criterion), the elements (selectors), the breakpoints where it occurs and a concrete fix in HTML, ARIA or CSS. Group the findings one fix solves, name the quick wins first, and list what axe cannot test (keyboard order, visible focus, screen reader wording) for a person to check by hand. The resource rbrowser://findings/latest holds the last run if you need it again; checks_export writes it as SARIF, JUnit or HTML.",
+        "title": "Accessibility triage"
+      },
+      "arg": {
+        "breakpoints": "Breakpoint ids separated by commas (mobile,desktop); every view when empty.",
+        "url": "The page to load in every view first; the page the views show now when empty."
+      },
+      "bug_repro": {
+        "description": "Reproduce a bug in every view at once and write a bug report.",
+        "text": "Reproduce a bug in rBrowser in every view at once, then write a bug report. {start} Work in {scope}. If the steps, the expected and the actual result are not given yet, ask for them first. Do the steps with click, type, press_key, hover and scroll with that target, so they run in every view; views_list shows a view that fell out of sync (desync). After each important step take a screenshot and read console_logs, errors and network_requests for failed requests. Note in which breakpoints, engines and sizes the bug appears and in which it does not, and find the fewest steps that show it. Then call bug_report with a note that gives the steps, the expected and the actual result: it writes report.md and report.zip with screenshots, console errors and failed requests, masked, below .rbrowser/out/reports/ and answers their paths. Answer with the paths, the views where the bug shows and your best guess at its cause.",
+        "title": "Bug reproduction"
+      },
+      "responsive_review": {
+        "description": "Look at a page at every breakpoint and report what breaks, per breakpoint.",
+        "text": "Review a page responsively in rBrowser, which shows every breakpoint of a site at once. {start} Look at {scope}. Call views_list for the views with their breakpoint, size and URL, then screenshot with overview true for one image of all of them side by side, and screenshot with mode fullPage where a page is longer than its view. For each breakpoint report what breaks: content cut off or scrolling sideways, overlapping or hidden elements, text too small or too long for its box, images that do not scale, navigation that does not fit, touch targets smaller than 24 CSS px, and layout jumps between neighbouring breakpoints. Where the cause is unclear, read the element with snapshot and the page's console_logs and errors. Answer with one section per breakpoint (id and width), each finding with the element, what you see and a suggested CSS fix, and name the breakpoints that are fine.",
+        "title": "Responsive review"
+      },
+      "scope": {
+        "all": "every view (target \"all\")",
+        "breakpoints": "the views of the breakpoints {breakpoints} (pass each breakpoint id as target)"
+      },
+      "start": {
+        "current": "Work on the page the views show now; views_list gives each view's URL.",
+        "url": "First load {url} with navigate (target \"all\") and wait until every view has settled."
+      }
+    },
+    "setup": {
+      "apply": "{count, plural, =0 {Write} one {Write # file} other {Write # files}}",
+      "backup": "The old file is kept as {path}",
+      "check": {
+        "button": "Check connection",
+        "connected": "{calls, plural, one {A client reached rBrowser {seconds} s ago (# request since the start).} other {A client reached rBrowser {seconds} s ago (# requests since the start).}}",
+        "off": "The MCP server is off.",
+        "starting": "The MCP server is starting...",
+        "waiting": "The MCP server listens on port {port}; no client has reached it since it started."
+      },
+      "client": {
+        "claudeCode": "Claude Code",
+        "claudeDesktop": "Claude Desktop",
+        "codex": "OpenAI Codex",
+        "cursor": "Cursor",
+        "pi": "pi",
+        "vscode": "VS Code (GitHub Copilot)"
+      },
+      "client_label": "AI client",
+      "copied": "Copied",
+      "copy": "Copy",
+      "entry_label": "The rbrowser entry of {path}",
+      "error": {
+        "nothing": "There is nothing to write for this client.",
+        "root": "This folder is neither the open project nor the one the setup wizard set up.",
+        "unreadable": "{path} cannot be read or merged; add the rbrowser entry by hand.",
+        "write": "{path} could not be written: {error}"
+      },
+      "failed": "The MCP setup failed; the log has the details.",
+      "global": {
+        "command_hint": "Run this once in a terminal:",
+        "title": "In every project",
+        "write": "Write {path}",
+        "write_hint": "Your own settings file of this client; a copy of the old file is kept beside it."
+      },
+      "how": "Every way starts rbrowser mcp over stdio: no port and no token in any file or line. Switch the MCP server on above.",
+      "loading": "Reading the clients' files...",
+      "note": {
+        "claude_desktop": "Restart Claude Desktop after the file is written.",
+        "codex": "Codex reads .codex/config.toml only in a project you trust.",
+        "cursor": "Cursor reads .cursor/mcp.json in the project and ~/.cursor/mcp.json for every project.",
+        "pi": "pi reads .pi/mcp.json only in a project you trust; run /reload in a running session.",
+        "vscode": "VS Code reads the workspace's .mcp.json, the same file Claude Code reads."
+      },
+      "project": {
+        "hint": "A file in the project without a token, so it may be checked in. The path to rBrowser is this computer's.",
+        "title": "In this project",
+        "write": "Write {path}"
+      },
+      "protected": "Protected settings - the MCP server itself, workspace trust, plugins - stay yours: MCP cannot change them.",
+      "reason": {
+        "no_project": "No project is open: set one up first, or connect the client for every project.",
+        "no_project_file": "Claude Desktop has no project configuration: connect it for every project."
+      },
+      "shell": {
+        "any": "Terminal",
+        "windows": "Windows terminal",
+        "wsl": "WSL terminal"
+      },
+      "status": {
+        "add": "{count, plural, =0 {Added to the file} one {Added beside # other server} other {Added beside # other servers}}",
+        "create": "New file",
+        "replace": "Replaces the rbrowser entry",
+        "unchanged": "Already set up",
+        "unreadable": "Cannot be merged: add the entry by hand"
+      },
+      "written": "{count, plural, =0 {Nothing to write: already set up.} one {# file written.} other {# files written.}}"
     }
   },
   "page": {
@@ -1368,6 +1752,12 @@
   },
   "panels": {
     "close": "Close",
+    "delete": {
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "label": "Delete {name}",
+      "shortcut": "{label} ({shortcut})"
+    },
     "dockbar": {
       "bottom": "Dock below",
       "close": "Close the panels",
@@ -1396,6 +1786,7 @@
     }
   },
   "perf": {
+    "countersSummary": "Timing p95: sync replay {sync} ms, shell IPC {ipc} ms, plugin calls {plugin} ms; first view loaded after {firstView} ms. The MCP tool app_perf and the diagnostics ZIP have every counter.",
     "memoryWarning": "rBrowser's processes use {usedMb} MB of memory, more than the warning threshold of {limitMb} MB. Close views, lower the pixel ratio of mobile views, or raise the threshold.",
     "processTreeUntied": "{count} helper process(es) could not be tied to rBrowser's life: processes they start may keep running after them. The log names the cause.",
     "throttleOff": "Hidden views are no longer throttled.",
@@ -1429,11 +1820,14 @@
       }
     },
     "capability": {
+      "api-client": "Have rBrowser read and write the project's API requests in .rbrowser/api and send them to the hosts you allow, without the browser's limits",
       "cdp": "Use DevTools protocol domains in the views",
+      "consent-probe": "Have rBrowser load web pages in a fresh, temporary session and report their requests, cookie names and storage keys",
       "console-logs": "Read the views' console messages, errors and network requests",
       "evaluate": "Run scripts in the views",
       "findings": "Report findings",
       "http": "Fetch web addresses (rate-limited)",
+      "load-test": "Have rBrowser put a server under load with many requests at once - only the project's own sites, this machine or hosts you confirm, and only when you start a run",
       "network-rules": "Supply network rules (mocks, blocking)",
       "out-write": "Write files into its own output folder",
       "project-read": "Read the project's .rbrowser folder and declared files",
@@ -1473,6 +1867,7 @@
       },
       "notice": {
         "auto_updated": "{count} plugin updates were installed; they load at the next start",
+        "auto_updated_live": "{count} plugin updates were installed and loaded",
         "check_failed": "The plugin catalog could not be checked. Settings > Plugins > Catalog names the repository that failed.",
         "checking": "Checking the plugin catalog for updates...",
         "no_updates": "The plugins from the catalog are up to date",
@@ -1506,6 +1901,7 @@
       "path_not_granted": "The plugin may not read {path}.",
       "path_not_writable": "The plugin may not write {path}.",
       "path_outside": "The path {path} leaves the folder the plugin may use.",
+      "probe_url_denied": "The consent probe loads only public addresses and the trusted project's own sites, not {url}. A person can allow any address in Settings > Plugins (Consent probe on any address).",
       "settings_annotation": "The plugin's setting {key} lacks {annotation}.",
       "settings_category": "The plugin's settings name the category {category}, which does not exist. Plugins cannot add categories.",
       "settings_section": "The plugin's settings name the section {section}, which does not exist.",
@@ -1518,6 +1914,7 @@
       "unknown_contribution": "The plugin offers no command or tool named {name}.",
       "unsigned": "The plugin package is not signed. Unsigned plugins load only in development mode.",
       "untrusted_workspace": "Project plugins load only after you trust this project.",
+      "view_leased": "Another plugin has view {view} at a width of its own; try again when it is done.",
       "world_missing": "The plugin does not provide what a {kind} must.",
       "write_conflict": "{path} changed on disk since the plugin read it; nothing was written."
     },
@@ -1526,6 +1923,10 @@
       "command_started": "{command}: running...",
       "missing": "This project uses plugins that are not installed: {plugins}",
       "missing_install": "Install",
+      "new_failed": "These new plugins were not installed: {plugins}. Settings > Plugins > Catalog says why.",
+      "new_in_bundle": "This version brings {count, plural, one {# new plugin} other {# new plugins}}: {plugins}",
+      "new_install": "Install all",
+      "new_installed": "{count, plural, one {# new plugin was} other {# new plugins were}} installed and loaded.",
       "none_paused": "No plugin is paused.",
       "plugin_status": "{plugin}: {text}",
       "restart_for_project_plugins": "The project is trusted now. Its plugins load at the next start of rBrowser.",
@@ -1611,6 +2012,58 @@
       "title": "Portal",
       "unfinished": "pairing not completed - open the link in the device's browser",
       "unknown_device": "Unknown device"
+    },
+    "present": {
+      "notice": {
+        "aborted": "The presentation ended: the Cloudflare tunnel closed unexpectedly. Every viewer was disconnected.",
+        "consent": "Presenting over the internet sends the page through Cloudflare. Agree in the Portal panel to start; nothing starts before.",
+        "downloading": "Downloading cloudflared {version} ({size} MB, {license}) from {from} for the presentation ...",
+        "failed": "The presentation did not start: {error}",
+        "failed_address": "The presentation did not start: cloudflared named an address that is no Quick Tunnel address.",
+        "needs_download": "Presenting over the internet needs cloudflared {version} ({size} MB, {license}) from {from}, which rBrowser does not ship. Start the download in the Portal panel; nothing is downloaded before.",
+        "off": "Presenting over the internet is off. Switch it on in Settings > Security & Privacy > Portal and pairing (Present over the internet).",
+        "started": "The presentation is live on the internet. Hand out the link from the Portal panel; each link works once and every viewer only watches.",
+        "starting": "Opening a Cloudflare tunnel for the presentation ...",
+        "stopped": "The presentation ended. Every viewer was disconnected and the tunnel is closed.",
+        "timeout": "The presentation did not start: the Cloudflare tunnel did not connect within a minute. Check the internet connection and start it again."
+      },
+      "page": {
+        "expired": "This link has expired. Ask the presenter for a new link.",
+        "failed": "The presentation could not be joined. Check the connection and open the link again.",
+        "follow": "You are watching the presentation. The page follows the presenter.",
+        "full": "The presentation already has as many viewers as allowed. Ask the presenter.",
+        "invalid": "This link is not valid. It may have been used already or replaced by a newer one. Ask the presenter for a new link.",
+        "joining": "Joining the presentation ...",
+        "noscript": "This link needs JavaScript. Allow it for this page and open the link again.",
+        "not_shown": "The presenter is on a page that this presentation does not show.",
+        "not_viewer": "This browser has not joined the presentation, or it was disconnected. Ask the presenter for a new link.",
+        "rate_limited": "Too many failed attempts. Wait a minute and ask the presenter for a new link.",
+        "starting": "The presentation is starting. Try again in a moment.",
+        "title": "rBrowser presentation"
+      },
+      "panel": {
+        "agree_start": "Agree and start",
+        "consent": "A presentation sends the page to your viewers through a Cloudflare Quick Tunnel: Cloudflare carries the traffic, and the tunnel's address is random but public. Each link works once, and viewers only watch - nothing they do reaches rBrowser.",
+        "consent_title": "The page goes through Cloudflare",
+        "copied": "Copied",
+        "copy": "Copy link",
+        "disabled": "Presenting over the internet is off. A person switches it on in Settings > Security & Privacy > Portal and pairing; MCP cannot.",
+        "download": "rBrowser first downloads cloudflared {version} ({size} MB, {license}) from {from}.",
+        "download_start": "Download cloudflared and start",
+        "downloading": "Downloading cloudflared ...",
+        "link_caption": "Valid for {time}; the link works once.",
+        "link_label": "One-time link for a viewer",
+        "live": "Live at {address}: {count} watching, at most {max, plural, one {# viewer} other {# viewers}}",
+        "new_link": "New link",
+        "no_link": "No link is open. Create a new link for the next viewer.",
+        "open_setting": "Open the setting",
+        "qr_label": "QR code of the one-time link",
+        "start": "Start presentation",
+        "starting": "Opening the Cloudflare tunnel ...",
+        "stop": "End presentation",
+        "terms": "Quick Tunnels are meant for tests and demonstrations; Cloudflare's terms of use apply. Paths in the deny list never reach your dev server.",
+        "title": "Present over the internet"
+      }
     }
   },
   "presets": {
@@ -1641,9 +2094,123 @@
       "missing": "That project has no .rbrowser/config.json any more; it was not opened.",
       "noRecent": "There is no other recent project to open.",
       "notStarted": "rBrowser could not be started for that project. See the log for details."
+    },
+    "restore_last": {
+      "none": "No pages of the last session are stored for this project yet."
     }
   },
   "recorder": {
+    "continue": {
+      "notice": {
+        "failed": "Recording \"{name}\" did not continue: a step before it failed. {error}"
+      }
+    },
+    "delete": {
+      "notice": {
+        "deleted": "Recording \"{name}\" deleted.",
+        "failed": "Recording \"{name}\" was not deleted: {error}"
+      }
+    },
+    "editor": {
+      "add": "Add step",
+      "add_after": "Add a step after step {n}",
+      "add_end": "Add step",
+      "add_first": "Add a step before the first",
+      "add_hint": "Add a step after the step in focus, at the end when none has it",
+      "add_title": "New step",
+      "button": {
+        "label": "Button",
+        "left": "Left",
+        "middle": "Middle",
+        "right": "Right"
+      },
+      "candidates": "Tried first",
+      "close": "Close the editor of step {n}",
+      "continue_from": "Continue recording from here",
+      "continue_live": "Continuing the saved recording: the new steps land after the step you continued from.",
+      "continue_recording": "Stop the recording that runs before continuing this one",
+      "continue_unsaved": "Save or revert the changes before continuing the recording",
+      "css": "CSS path",
+      "discard": "Discard and open",
+      "discard_question": "\"{name}\" has unsaved changes. Open \"{other}\" and discard them?",
+      "done": "Done",
+      "duplicate": "Duplicate",
+      "edit": "Edit step {n}",
+      "element": "Element",
+      "group": {
+        "assert": "Assert",
+        "input": "Input",
+        "interaction": "Interaction",
+        "navigation": "Navigation",
+        "wait": "Wait"
+      },
+      "include": "Include this step",
+      "keep": "Keep editing",
+      "kind": "Kind",
+      "kind_search": "Find a kind",
+      "missing": {
+        "element": "Pick the element in the view.",
+        "key": "Choose the key.",
+        "ms": "Enter the time in ms, at most 10000.",
+        "option": "Choose the option.",
+        "text": "Enter the text.",
+        "url": "Enter the URL.",
+        "value": "Enter the value."
+      },
+      "modifier": {
+        "alt": "Alt",
+        "ctrl": "Ctrl",
+        "shift": "Shift"
+      },
+      "modifiers": "Modifiers",
+      "more": "More for step {n}",
+      "name": "Name",
+      "name_label": "Name",
+      "no_element": "No element yet: pick it in the view.",
+      "off": "Off - neither played nor exported",
+      "on": "On - played and exported",
+      "on_label": "Step",
+      "pause": "Pause before (ms)",
+      "pause_hint": "Waited at the pace As recorded",
+      "pause_recorded": "As recorded",
+      "pick": "Pick in view",
+      "pick_hint": "Click the element in the active view; Esc there stops picking",
+      "picked_in": "Picked in {breakpoint}",
+      "picking": "Picking... Esc to stop",
+      "play_from": "Play from here",
+      "repick": "Pick again",
+      "role": "Role",
+      "runs_in": "Runs in",
+      "runs_in_all": "All breakpoints",
+      "runs_in_hint": "All breakpoints when none is chosen",
+      "selector": {
+        "css": "CSS path",
+        "role": "Role and name",
+        "testid": "Test id",
+        "text": "Text"
+      },
+      "skip": "Skip this step",
+      "skipped": "Skipped",
+      "skipped_hint": "Switched off: Play, Play from here and the exports pass over it",
+      "stale": "\"{name}\" was changed on disk while you edited it. Revert to read it again; Save waits until then.",
+      "stale_revert": "Revert to the file",
+      "stale_save": "The file changed on disk: revert to read it first",
+      "tag": "Tag",
+      "testid": "Test id",
+      "text": "Text",
+      "try": "Try step {n} in the active view",
+      "try_new": "Try",
+      "url_placeholder": "https://...",
+      "value": {
+        "key": "Key",
+        "ms": "Wait (ms)",
+        "option": "Option",
+        "text": "Text",
+        "url": "URL"
+      },
+      "visible": "Visible #",
+      "with_shortcut": "{text} ({shortcut})"
+    },
     "export": {
       "close": "Close",
       "copied": "Copied",
@@ -1675,6 +2242,9 @@
     },
     "panel": {
       "cancel": "Cancel",
+      "delete_playing": "\"{name}\" is playing. Delete it once the run has ended.",
+      "delete_question": "Delete the recording \"{name}\"? Its file goes and this cannot be undone; flows exported from it stay.",
+      "delete_recording": "\"{name}\" is being recorded. Stop the recording before deleting it.",
       "empty": "No recordings yet. Start one here, from the page menu or with Ctrl+Shift+Space F S.",
       "entry": "{steps, plural, one {# step} other {# steps}} · {when}",
       "error": {
@@ -1700,10 +2270,16 @@
         "scroll": "Scroll",
         "select": "Select",
         "uncheck": "Uncheck",
+        "wait": "Wait",
         "waitFor": "Wait for element",
         "waitForUrl": "Wait for URL"
       },
       "list": "Recordings",
+      "live": {
+        "badge": "Live",
+        "count": "{count, plural, one {# step} other {# steps}}",
+        "empty": "No steps yet. Use the page: each step shows here as soon as it is recorded."
+      },
       "loading": "Reading the recordings…",
       "no_project": "Open a project to record: recordings are saved in it.",
       "no_steps": "This recording has no steps.",
@@ -1731,7 +2307,10 @@
         "failed_plain": "Failed",
         "name": "Name of step {n}",
         "name_placeholder": "Name (optional)",
+        "newest": "Recorded last",
         "only_in": "Only in",
+        "path": "Pointer path ({count, plural, one {# point} other {# points}})",
+        "path_hint": "The pointer's way to this step as it was recorded. Play and the export move the pointer along it before the step when the view has the size it was recorded in.",
         "pause": "+{seconds} s",
         "pause_hint": "The pause before this step as it was recorded (at most 10 s, at least the least pause of the settings). Play waits it at the pace As recorded.",
         "remove": "Delete step {n}",
@@ -1741,6 +2320,7 @@
         "value": "Value of step {n}"
       },
       "steps": "Steps",
+      "stop": "Stop recording",
       "title": "Recorder",
       "unsaved": "Unsaved changes"
     },
@@ -1775,6 +2355,64 @@
       "watching": "Watching"
     }
   },
+  "report": {
+    "action": {
+      "copied": "Markdown copied",
+      "copy_markdown": "Copy Markdown",
+      "open_folder": "Open folder"
+    },
+    "error": {
+      "copy_failed": "The bug report's Markdown could not be copied. Open its folder and copy report.md.",
+      "copy_gone": "rBrowser no longer keeps this bug report's text. Open its folder and copy report.md.",
+      "no_project": "Open a project to save bug reports.",
+      "no_views": "There is no view to report.",
+      "none": "There is no bug report yet. Create one first.",
+      "write": "The bug report could not be written: {reason}"
+    },
+    "md": {
+      "breakpoint": "Breakpoint and size",
+      "console": "Console errors and warnings ({count})",
+      "console_none": "No console errors or warnings.",
+      "created": "Created",
+      "emulation": "Emulation",
+      "engine": "Engine",
+      "environment": "Environment",
+      "level_error": "error",
+      "level_warning": "warning",
+      "no_image": "No screenshot: {reason}",
+      "note": "Note",
+      "overview": "Overview",
+      "page": "Page",
+      "page_title": "Title",
+      "requests": "Failed requests ({count})",
+      "requests_none": "No failed requests.",
+      "title": "Bug report",
+      "version": "rBrowser",
+      "view": "View {id}",
+      "views": "Views"
+    },
+    "notice": {
+      "cancelled": "The bug report was cancelled; nothing was saved.",
+      "failed": "The bug report failed: {error}",
+      "started": "Creating a bug report...",
+      "written": "Bug report saved to {path}"
+    },
+    "preview": {
+      "annotate": "After saving, the screenshot editor opens on the report's newest image.",
+      "cancel": "Cancel",
+      "cancelled": "The bug report was dropped; nothing was saved.",
+      "failed": "The bug report could not be read from rBrowser. Create it again.",
+      "folder": "Saved to {folder}",
+      "intro": "{count, plural, one {# screenshot was taken} other {# screenshots were taken}} with the password fields blacked out. Below is the text the report saves, every address, credential and cookie value masked. Nothing is saved before you choose Save.",
+      "loading": "Reading the bug report...",
+      "markdown_label": "The report's text, report.md",
+      "none": "No bug report waits for a preview.",
+      "refused": "rBrowser did not take the answer: the report is gone. Create it again.",
+      "save": "Save",
+      "saved": "Saving the bug report...",
+      "title": "Bug report preview"
+    }
+  },
   "reports": {
     "error": {
       "io": "The report could not be read from the disk.",
@@ -1802,7 +2440,12 @@
       "confirm": "Clear every cookie of \"{session}\" and the site data of the pages its views show? Its views reload; other sessions keep theirs.",
       "label": "Clear the data of session:"
     },
-    "default": "default (shared)"
+    "default": "default (shared)",
+    "state": {
+      "exported": "The login state of session \"{session}\" ({cookies, plural, one {# cookie} other {# cookies}}) was written to .rbrowser/out/{file}. It holds session cookies: keep it out of version control, tickets and chat.",
+      "failed": "The login state was not transferred: {error}",
+      "imported": ".rbrowser/out/{file} was loaded into session \"{session}\": {cookies, plural, one {# cookie} other {# cookies}}, the storage of {origins, plural, one {# site} other {# sites}}; {skipped, plural, =0 {every site was shown} one {# site no view of the session shows was left out} other {# sites no view of the session shows were left out}}."
+    }
   },
   "settings": {
     "about": {
@@ -1988,6 +2631,11 @@
             "help": "How long one action of a flow (a click, a fill, a wait for an element) may wait, in milliseconds, before the flow fails with the element it waited for, instead of running out of the whole flow timeout. It is never longer than the flow timeout; page loads may take the flow timeout. Example: 20000 for a slow development server.",
             "label": "Action timeout"
           },
+          "confirmDelete": {
+            "description": "Delete in the Flows panel asks in the panel before the flow's file is deleted.",
+            "help": "The question names the flow and stands in place of its Delete button, with Delete and Cancel. Off, a click on Delete deletes the flow at once. The flow that runs now is never deleted.",
+            "label": "Ask before deleting a flow"
+          },
           "dir": {
             "description": "Where the flows of the project live: .rbrowser/flows or a folder inside it, which workspace trust covers.",
             "help": "Where the project's flows live, as a folder below .rbrowser/, which workspace trust covers. Example: .rbrowser/flows. Flows outside it are not run.",
@@ -1995,13 +2643,18 @@
           },
           "hiddenViews": {
             "description": "What a flow run does with the views the layout hides: skip them and name them, or show a layout for the run.",
-            "help": "Focus mode shows one breakpoint and horizontal mode scrolls views out of sight; the browser holds back hidden pages, so a flow's actions wait in vain there. Skip runs in the views shown and names the others in the result and a notice. Show a layout switches to the layout of Run layout while the run goes on and back after it.",
+            "help": "Focus mode shows one breakpoint, horizontal mode scrolls views out of sight and the canvas holds views outside its area; the browser holds back hidden pages, so a flow's actions wait in vain there. Skip runs in the views shown and names the others in the result and a notice; when every view a played recording would run in is hidden, Play brings the first one into sight instead - the canvas centres on it, the strip scrolls to it, focus mode focuses its breakpoint - and says so. Show a layout switches to the layout of Run layout while the run goes on and back after it.",
             "label": "Hidden views"
           },
           "parallel": {
             "description": "How many views run a flow at the same time; 0 runs all views at once.",
             "help": "How many views run a flow at the same time; 0 runs it in every view at once. Lower it to 1 or 2 when a flow hits a rate-limited server.",
             "label": "Views at once"
+          },
+          "revealRecording": {
+            "description": "When the layout hides every view a played recording would run in, Play brings the first one into sight instead of failing.",
+            "help": "Applies while Hidden views is Skip them and name them: the canvas centres on the view, the horizontal strip scrolls to it, focus mode switches to the first breakpoint the recording names, and a notice says so. The layout stays as Play left it. Off, Play fails like any flow run with no view shown.",
+            "label": "Bring a recording into sight"
           },
           "runLayout": {
             "description": "The layout a flow run shows when Hidden views is set to show a layout: grid, horizontal, split or canvas over the preset shown, or a preset's id.",
@@ -2025,6 +2678,11 @@
           }
         },
         "recorder": {
+          "confirmDelete": {
+            "description": "Delete in the Recorder panel asks in the panel before the recording's file is deleted.",
+            "help": "The question names the recording and stands in place of its Delete button, with Delete and Cancel. Off, a click on Delete deletes the recording at once. The recording being recorded or played is never deleted.",
+            "label": "Ask before deleting a recording"
+          },
           "dir": {
             "description": "Where recordings are saved, relative to the project root. It must lie inside .rbrowser/ and outside the folders workspace trust protects (flows, snippets, plugins, mocks, scripts). An existing recording is never overwritten.",
             "help": "Where recordings are saved, relative to the project root: inside .rbrowser/ and outside the folders workspace trust protects (flows, snippets, plugins, mocks, scripts). An existing recording is never overwritten.",
@@ -2034,6 +2692,16 @@
             "description": "While a recording plays, the Recorder panel marks the step each view runs, a failed step in red with its reason, and scrolls the running step into sight.",
             "help": "The steps are marked either way. Off, the step list stays where it is while a recording plays, so you can read or edit another part of it.",
             "label": "Follow the playback"
+          },
+          "hoverDwellMs": {
+            "description": "How long, in milliseconds, the pointer rests on a menu entry before its hover becomes a step. Passing over an entry quicker is no step.",
+            "help": "A hover on a menu entry - one whose hover opened a submenu, or one inside an open submenu - becomes a step once the pointer has rested there this long, with or without a click after it. A shorter time also keeps entries the pointer only crossed on its way; a longer one keeps only where it clearly stopped.",
+            "label": "Menu hover dwell"
+          },
+          "insertedStepPauseMs": {
+            "description": "The pause, in milliseconds, before a step added in the Recorder panel's editor, waited at the pace As recorded.",
+            "help": "A step added in the editor has no recorded time, so it waits this long before it at the pace As recorded. Each step's own pause can be changed in the editor; at most 10 seconds. 0 adds no pause.",
+            "label": "Pause of an added step"
           },
           "minPauseMs": {
             "description": "The least pause, in milliseconds, before each step but the first when a recording plays or exports at the pace As recorded. 0 keeps the pauses as recorded.",
@@ -2051,9 +2719,14 @@
             "label": "Record form autofill"
           },
           "recordHover": {
-            "description": "Which hovers become steps: only the one that opened a menu the next click goes into, every one that seems to reveal what the next click hits, or none.",
-            "help": "Only menu hovers keeps the hover on a menu entry that opened the submenu the next click goes into, so the replay opens it too; the pointer's way across the page is never a step. All also keeps a hover the recorder guesses revealed what the next click hits. Off records no hover.",
+            "description": "Which hovers become steps: every hover on a menu entry where the pointer rests, also every one that seems to reveal what the next click hits, or none.",
+            "help": "Menu hovers keeps every hover on a menu entry - one whose hover opened a submenu, or one inside an open submenu, at any level - once the pointer rests there for the menu hover dwell, with or without a click after it, so the replay opens the menus as you did. Passing over an entry quicker is no step, and the pointer's way across the rest of the page never is. All also keeps a hover the recorder guesses revealed what the next click hits. Off records no hover.",
             "label": "Record hovers"
+          },
+          "recordPointer": {
+            "description": "Which of the pointer's way a recording keeps: the way to menu hovers and to clicks in a menu, the way to every hover and click, or none.",
+            "help": "The way is sampled while you record and kept with the step it leads to, in CSS pixels of the view with its timing. Play and the export move the pointer along it before the step - at the pace As recorded with the recorded timing, at the pace Fast without waits - so a menu that closes when the pointer leaves it, or opens only after a short rest, behaves as it did. In a view of another size than the recording's the way is skipped and the step goes straight to its element. The Recorder panel shows the number of points beside the step.",
+            "label": "Record the pointer path"
           },
           "recordScroll": {
             "description": "Record scrolling as steps, consecutive scrolls of the page or an element as one.",
@@ -2064,6 +2737,11 @@
             "description": "Further fields whose values are never recorded, besides password fields: a CSS path as the recorder shows it (#otp), [data-testid=\"...\"] or the field's accessible name. Their values are recorded as a placeholder named after the field. An entry also names a URL query or fragment parameter whose value is recorded masked.",
             "help": "Fields whose values are never written into a recording, besides password fields: a CSS path (#otp), [data-testid=\"...\"] or the field's accessible name. Also a URL parameter whose value is masked. Example: #otp, token.",
             "label": "Secret fields"
+          },
+          "showLiveSteps": {
+            "description": "While a recording runs, the Recorder panel lists each step as soon as it is recorded, the newest marked and scrolled into sight.",
+            "help": "Hovers show with the pause recorded before them and their pointer path, as in the saved recording. The list is read-only; once the recording is saved it opens for editing. Off, the steps show once the recording is saved.",
+            "label": "Show the steps while recording"
           }
         },
         "recorderExport": {
@@ -2082,6 +2760,13 @@
             "help": "Which locator the exported Playwright code prefers when the element offers it: test id, role and name, text or CSS path. Auto takes the recorder's best guess per element.",
             "label": "Preferred locator"
           }
+        }
+      },
+      "basicAuth": {
+        "environments": {
+          "description": "The environments whose HTTP Basic auth prompt rBrowser answers with the credentials stored for them.",
+          "help": "rBrowser answers the Basic auth prompt of these environments in every view and session, with the user and password set by \"Set the Basic auth credentials of an environment\" (Leader E A). The credentials stay in the Windows Credential Manager, bound to this project and the environment's address; they are sent only to that exact address over https (http only on this machine), never to another site, and never through MCP.",
+          "label": "Basic auth"
         }
       },
       "bookmarks": {
@@ -2229,6 +2914,23 @@
           "description": "The axe-core rule tags to run (for example wcag22aa).",
           "label": "Accessibility check"
         },
+        "export": {
+          "defaultFormat": {
+            "description": "The format of the findings panel's Export button, of the command Export the findings and of rbrowser check without --format.",
+            "help": "Which file the findings export writes by default: SARIF 2.1.0 for code-scanning viewers such as the SARIF Viewer in VS Code, JUnit XML for test reports, one HTML file that opens offline, or the run's own JSON. The Export button's arrow offers the others.",
+            "label": "Export format"
+          },
+          "dir": {
+            "description": "The folder exports are saved to. Empty uses .rbrowser/out/exports in the project. A relative folder lies below .rbrowser/out/; only your user settings may name an absolute folder.",
+            "help": "The folder the findings export writes to. Empty uses .rbrowser/out/exports inside the project. A relative folder lies below .rbrowser/out/; your user settings may name any folder, such as D:\\reports. Agents over MCP write only there or below .rbrowser/out/ and cannot change this setting.",
+            "label": "Export folder"
+          },
+          "failOn": {
+            "description": "From which severity on a finding makes rbrowser check exit with 1, when it is called without --fail-on.",
+            "help": "From which severity on rbrowser check fails (exit code 1): errors only, warnings and errors, or every finding. --fail-on overrides it for one call. A plugin that fails, or no running rBrowser, is exit code 2.",
+            "label": "Fail on"
+          }
+        },
         "ignore": {
           "description": "Findings to leave out: each entry matches a rule id, a page URL and an element selector (globs, * for any text); every field it names has to match.",
           "help": "Findings to leave out of every report: each entry names a rule id, a page URL and an element selector as globs (* for any text), and every field it names has to match. Example: rule a11y-axe.*, url */admin/*.",
@@ -2241,7 +2943,7 @@
         },
         "lighthouse": {
           "description": "The Lighthouse categories to run.",
-          "help": "Which Lighthouse categories a run measures: performance, accessibility, best-practices and seo. Tick the ones you need; none ticked runs all four. Throttling is set under the Lighthouse plugin.",
+          "help": "Which Lighthouse categories a run measures: Performance, Accessibility, Best practices and SEO. Tick the ones you need; none ticked runs all four. Throttling is set under the Lighthouse plugin.",
           "label": "Lighthouse"
         },
         "parallel": {
@@ -2300,6 +3002,28 @@
         }
       },
       "emulation": {
+        "animationRates": {
+          "description": "The animation rates the animations shortcut steps through in every view: 0 stops them, 1 is normal.",
+          "help": "The rates Leader O J steps through, in this order, for CSS animations, transitions and Web Animations in every Chromium view: 0 stops them (Step moves them on), 0.1 is 10 %, 1 normal. 100 % is always among them, so the shortcut leads back.",
+          "label": "Animation rates of the shortcut"
+        },
+        "animationStepMs": {
+          "description": "How far one step moves stopped animations on, in milliseconds.",
+          "help": "Step (activity bar, page menu) moves stopped animations this many milliseconds on in every view; 100 is a tenth of a second, 16 about one frame.",
+          "label": "Animation step"
+        },
+        "clock": {
+          "default": {
+            "description": "The date and time the clock shortcut sets in every view; empty for the moment it is pressed.",
+            "help": "The time the pages read in every view after Leader S T: 2026-12-24T10:00 is each page's local time (its emulated time zone included), 2026-12-24T09:00:00Z or with an offset one moment for all views. Empty stops the clock at the moment you press the shortcut.",
+            "label": "Clock of the shortcut"
+          },
+          "speed": {
+            "description": "How fast the shortcut's clock runs: 0 holds it fixed, 1 is real time.",
+            "help": "0 keeps the clock at its time while the page's timers run on; 1 runs it in real time from there, 60 a minute per second.",
+            "label": "Clock speed"
+          }
+        },
         "colorScheme": {
           "description": "prefers-color-scheme: light or dark.",
           "help": "The prefers-color-scheme every breakpoint without its own reports: light or dark. Set it to dark to review the dark theme in every view at once; empty follows the system.",
@@ -2325,6 +3049,11 @@
           "help": "The IANA time zone the time zone shortcut sets on a view that has none. Example: Europe/Berlin, Asia/Tokyo.",
           "label": "Time zone of the shortcut"
         },
+        "dir": {
+          "description": "The dir every page gets on <html>: ltr, rtl or auto. Empty keeps the page's.",
+          "help": "Forces the text direction on the page's <html> in every breakpoint without its own, live and without a reload, to see a right-to-left layout before it is translated. Empty keeps the page's own.",
+          "label": "Text direction"
+        },
         "dpr": {
           "description": "The DPR every breakpoint without its own gets.",
           "help": "The device pixel ratio of breakpoints that set none, so images and media queries see a retina or a plain screen. Example: 2 for a MacBook, 3 for an iPhone. Empty leaves the engine's own.",
@@ -2344,6 +3073,11 @@
           "description": "Extra request headers for every view. Headers from config.json and config.local.json apply only in a trusted workspace; an untrusted workspace sends only headers set live.",
           "help": "Extra request headers every view sends, for example a basic-auth or a feature-flag header for staging. Applies from config files only in a trusted workspace; headers set live apply always.",
           "label": "Request headers"
+        },
+        "lang": {
+          "description": "The lang every page gets on <html> (BCP 47), such as ar or de-DE. Empty keeps the page's.",
+          "help": "Forces the language on the page's <html lang> in every breakpoint without its own, live: hyphenation, quotes and the :lang() rules of the CSS follow it. Unlike Locale, the server and Intl are not told. Example: ar, he, de-DE. Empty keeps the page's own.",
+          "label": "Page language"
         },
         "locale": {
           "description": "BCP 47 locale for Intl, navigator.language and Accept-Language.",
@@ -2376,14 +3110,31 @@
           "label": "Orientation"
         },
         "paper": {
-          "description": "The paper of a print view: A4 is 794 px wide, Letter 816 px (at 96 dpi). It sizes a breakpoint that leaves its width or height out.",
-          "help": "The paper of a print view, which sizes a breakpoint that leaves out its width or height: A4 is 794 px wide, Letter 816 px at 96 dpi. Pair it with mediaType print to review print layouts.",
+          "description": "The paper of a print view: A4 is 794 px wide, US Letter 816 px (at 96 dpi). It sizes a breakpoint that leaves its width or height out.",
+          "help": "The paper of a print view, which sizes a breakpoint that leaves out its width or height: A4 is 794 px wide, US Letter 816 px at 96 dpi. Pair it with mediaType print to review print layouts.",
           "label": "Paper"
         },
         "platform": {
           "description": "navigator.platform and the client hints platform.",
           "help": "What navigator.platform and the client hints report for breakpoints without their own, so scripts that branch on the OS see the one you test. Example: Win32, MacIntel, iPhone.",
           "label": "Platform"
+        },
+        "pseudoLocale": {
+          "accents": {
+            "description": "Pseudo-localised texts swap their letters for accented ones.",
+            "help": "Swaps the letters of a pseudo-localised text for accented ones, so a font without them and text that skipped the translation show at once.",
+            "label": "Accented letters"
+          },
+          "factor": {
+            "description": "How much longer a pseudo-localised text gets: 1.4 is 40 % longer.",
+            "help": "How much longer the pseudo-localisation makes each text, from 1 to 3. 1.4 is 40 % longer, as German or Finnish often are than English; buttons and menus that cut a text off show.",
+            "label": "Length factor"
+          },
+          "rtl": {
+            "description": "Pseudo-localised texts also run right to left.",
+            "help": "Lets each pseudo-localised text run right to left (Unicode bidi override) as in Arabic or Hebrew, beside the direction of the page itself.",
+            "label": "Right to left"
+          }
         },
         "reducedMotion": {
           "description": "prefers-reduced-motion: reduce.",
@@ -2416,7 +3167,41 @@
           "label": "User agent"
         }
       },
+      "engineCompare": {
+        "maxDiffPercent": {
+          "description": "The share of differing pixels, in percent (0 to 100), up to which two engines still count as the same.",
+          "help": "The share of differing pixels, in percent (0 to 100), up to which two engines still count as the same. 0 flags every difference that is not font smoothing. Example: 0.5 to ignore a caret or a counter.",
+          "label": "Tolerated difference"
+        },
+        "threshold": {
+          "description": "How different two pixels may be and still count as equal, from 0 to 1; empty takes the visual regression threshold.",
+          "help": "How different two pixels may be and still count as equal when engines are compared, from 0 to 1. Anti-aliased pixels (font smoothing) never count. Empty takes Capture > Visual regression > Colour tolerance.",
+          "label": "Colour threshold"
+        },
+        "waitMs": {
+          "description": "The pause after the page loaded in each engine, before its screenshot, in milliseconds (0 to 30000).",
+          "help": "How long each engine's page settles after it loaded before its screenshot, in milliseconds (0 to 30000), for web fonts and late layout. Firefox and WebKit report no quiet network, so this pause is their wait. Example: 2000 for a slow page.",
+          "label": "Settle pause"
+        }
+      },
       "engines": {
+        "android": {
+          "adbPath": {
+            "description": "The adb executable. Empty: rBrowser finds it on PATH, in ANDROID_HOME, ANDROID_SDK_ROOT or the usual SDK folders, then uses the Platform Tools it downloaded after you agreed.",
+            "help": "The adb of the Android Platform Tools, as an absolute path. Example: C:\\Users\\me\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe. Empty finds an installed adb (PATH, ANDROID_HOME, ANDROID_SDK_ROOT, the usual SDK folders) and last the Platform Tools rBrowser downloads with \"Tools: download adb\". Only your user settings can set it, never MCP.",
+            "label": "adb path"
+          },
+          "enabled": {
+            "description": "An Android device on USB can be added as a view: Chrome on the device over ADB, its DevTools port forwarded to 127.0.0.1 only. Off by default.",
+            "help": "Adds Chrome on an Android device connected over USB as a view with \"Add an Android device as a view\" (Ctrl+Shift+Space V ;): navigation, screenshots and DevTools on real hardware, at the device's own size. Needs USB debugging on the device and adb on this machine. The forwarded port listens on 127.0.0.1 only. Only you can switch it on, never MCP.",
+            "label": "Android devices"
+          },
+          "reverseLocalhost": {
+            "description": "An Android view that loads localhost, 127.0.0.1 or [::1] reaches that port of this computer while the view runs. Other apps on the device can reach that one port too while it stands.",
+            "help": "rBrowser runs \"adb reverse\" for exactly the port of the loopback address the view loads now (80 or 443 when the address names none), before the page loads, and removes it when the view moves to another address or closes, Android or this setting is switched off, or rBrowser quits. Another tool's reverse on that port is left alone; one with the same port on both sides cannot be told from rBrowser's own, and two running rBrowsers on one device share the port. While the reverse stands, any app on the device can connect to that port of this computer. After a crash the reverse may stay until the device reconnects or you remove it (adb reverse --remove tcp:<port>). Off, the device reaches only itself at a loopback address; use this computer's network address instead.",
+            "label": "Reach localhost from the device"
+          }
+        },
         "chromium": {
           "extensions": {
             "allowWebStore": {
@@ -2454,12 +3239,12 @@
         "cookies": {
           "copy": {
             "description": "When the cookies of a Chromium session are copied into its Firefox and WebKit views: by hand (Copy cookies, Ctrl+Shift+Space, E, J), into each Firefox or WebKit view as it starts, or after each page load of a Chromium view.",
-            "help": "When a Chromium session's cookies are copied into its Firefox and WebKit views: manual only on command (Ctrl+Shift+Space, E, J), on start as each external view starts, or after each page load of a Chromium view.",
+            "help": "When a Chromium session's cookies are copied into its Firefox and WebKit views: \"By hand\" only on command (Ctrl+Shift+Space, E, J), \"When a view starts\" into each external view as it starts, \"After every page load\" after each page load of a Chromium view.",
             "label": "Copy cookies to Firefox and WebKit"
           },
           "domainFilter": {
             "description": "Only the cookies of the sites the views show and of the current environment, or every cookie of the session.",
-            "help": "Which cookies are copied: environment takes only those of the sites the views show and of the current environment, all takes every cookie of the session.",
+            "help": "Which cookies are copied: \"The sites of the views and the environment\" takes only those of the sites the views show and of the current environment, \"Every cookie of the session\" takes all of them.",
             "label": "Cookies to copy"
           },
           "exclude": {
@@ -2526,6 +3311,23 @@
           "description": "The Firefox executable; found automatically when empty.",
           "label": "Firefox path"
         },
+        "ios": {
+          "bootTimeoutSec": {
+            "description": "How long a simulator may take to boot, in seconds.",
+            "help": "An iOS view on a simulator that is shut down boots it first and shows it in the Simulator app. A first boot after an Xcode update can take minutes; the view fails with the reason after this many seconds.",
+            "label": "Simulator boot timeout"
+          },
+          "defaultSimulator": {
+            "description": "The simulator model an iOS breakpoint without its own device runs on, as Xcode names it.",
+            "help": "The model (for example iPhone 16) an iOS breakpoint without iosDevice runs on in the iOS Simulator. When Xcode has no simulator of that name, the newest iPhone simulator is taken.",
+            "label": "Default simulator"
+          },
+          "mode": {
+            "description": "Where iOS views run: the iOS Simulator when Xcode is installed, else a connected iPhone or iPad; or only one of the two.",
+            "help": "Breakpoints with the iOS engine open in Mobile Safari, driven by safaridriver on macOS. With Xcode installed they run in the iOS Simulator (any model, no device needed); without Xcode on an iPhone or iPad connected over USB, with Settings > Safari > Advanced > Remote Automation turned on. iOS views follow the active view; they never lead. Their size is the device's.",
+            "label": "Run iOS views on"
+          }
+        },
         "lighthouseBrowserPath": {
           "description": "The Chromium-based browser Lighthouse runs in. Empty finds one: Playwright's Chromium, then an installed Google Chrome or Microsoft Edge.",
           "help": "The Chromium-based browser the Lighthouse check starts headless for each run, as an absolute path. Example: C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe. Empty finds one itself: Playwright's Chromium, then an installed Google Chrome, then Microsoft Edge. Applies after the Node sidecar restarts.",
@@ -2545,6 +3347,18 @@
           "description": "The folder WebKit is downloaded to. Empty: %LOCALAPPDATA%\\rBrowser\\ms-playwright.",
           "help": "The folder Playwright downloads WebKit into. Example: D:\\browsers to keep it off the system drive. Empty uses %LOCALAPPDATA%\\rBrowser\\ms-playwright.",
           "label": "Playwright browsers folder"
+        },
+        "safari": {
+          "enabled": {
+            "description": "Breakpoints on Safari open in a Safari window on macOS - the installed Safari, driven by safaridriver. Off, Chromium shows them.",
+            "help": "Breakpoints with the Safari engine open in a window of the installed Safari on macOS. Safari's windows follow the active view; they never lead, because Safari locks input in automated windows. Needs safaridriver --enable once. Off shows those breakpoints in Chromium instead.",
+            "label": "Safari windows"
+          },
+          "technologyPreview": {
+            "description": "Safari Technology Preview instead of Safari, when it is installed.",
+            "help": "Opens the Safari views in Safari Technology Preview with its own safaridriver, which needs --enable once as well. Takes effect when the Safari views start again.",
+            "label": "Safari Technology Preview"
+          }
         },
         "webkit": {
           "enabled": {
@@ -2732,6 +3546,16 @@
           "help": "Lets MCP agents run JavaScript in the pages through the evaluate tool. Keep it off unless an agent needs it: a page script runs with the page's rights.",
           "label": "Allow evaluate"
         },
+        "client": {
+          "description": "The AI client the MCP setup shows: its file in the project and its connection for every project.",
+          "help": "The AI client the MCP setup below shows - Claude Code, VS Code with Copilot, Claude Desktop, Cursor, OpenAI Codex or pi - with its file in the project and its connection for every project. Every way runs rbrowser mcp over stdio, without a port or a token.",
+          "label": "AI client"
+        },
+        "collectNetwork": {
+          "description": "Collect the views' network requests from the start. Off, rBrowser collects them from the first time an MCP agent or a plugin asks for them.",
+          "help": "Off (the default), rBrowser starts collecting the views' network requests the first time network_requests or a plugin such as the Network panel asks for them, so that first answer holds only what came since; until then the views spend nothing on it. On collects them from the start. Once collecting, it goes on until rBrowser restarts.",
+          "label": "Collect network requests from the start"
+        },
         "consoleLogLimit": {
           "description": "How many console messages rBrowser keeps per view for MCP agents (console_logs).",
           "help": "How many console messages rBrowser keeps per view for the console_logs tool; older ones drop out. Raise it for noisy pages.",
@@ -2771,6 +3595,16 @@
           "description": "A fixed port on 127.0.0.1 for the MCP server. Empty picks a free port at every start.",
           "help": "A fixed port on 127.0.0.1 for the MCP server, so a client config can name it. Example: 7420. Empty picks a free port at every start and writes it to the instance file.",
           "label": "Port"
+        },
+        "prompts": {
+          "description": "Offer MCP agents ready prompts for responsive review, accessibility triage and bug reproduction.",
+          "help": "Offers MCP agents ready prompts for rBrowser's typical workflows: a responsive review of every breakpoint, an accessibility triage of axe's findings and a bug reproduction in every view with a bug report. A prompt only gives the agent a text; the agent still works through the tools.",
+          "label": "Offer prompts"
+        },
+        "resources": {
+          "description": "Let MCP agents read the views, the latest findings and screenshots and the project config as resources.",
+          "help": "Lets MCP agents read rBrowser's state without a tool call: the views, the latest check run, the latest screenshots (an image only when asked for) and the project config with every protected key left out. Read only, with the same token and size limit as the tools.",
+          "label": "Offer resources"
         },
         "stdioAutoStart": {
           "description": "When an MCP client starts rbrowser mcp and the project's rBrowser is not running, start it in the background. The MCP server must be on.",
@@ -2826,18 +3660,18 @@
       },
       "panels": {
         "closeTo": {
-          "description": "What closing the plugin panels does: rail folds them to the narrow icon rail beside the views, hidden hides them completely.",
-          "help": "Applies to the X in the panels' header, to Close the plugin panels (Ctrl+Shift+Space, P, X) and to closing the panels' own window. rail (the default) folds them to the icon rail - a click on an icon opens that panel again; the window's panels come back docked as the rail. hidden removes them until a panel is opened again or the panels' switch in the toolbar is clicked. Hide the panels in the Dock menu hides them whatever this says.",
+          "description": "What closing the plugin panels does: Rail folds them to the narrow icon rail beside the views, Hidden hides them completely.",
+          "help": "Applies to the X in the panels' header, to Close the plugin panels (Ctrl+Shift+Space, P, X) and to closing the panels' own window. Rail (the default) folds them to the icon rail - a click on an icon opens that panel again; the window's panels come back docked as the rail. Hidden removes them until a panel is opened again or the panels' switch in the toolbar is clicked. Hide the panels in the Dock menu hides them whatever this says.",
           "label": "Closing the panels"
         },
         "dock": {
-          "description": "Where the plugin panels open: floating in a window of their own, or docked left, right or below the views, which make room.",
-          "help": "Where the plugin panels (Network, Console, Storage and the others) open. right (the default), left, bottom: docked in the main window below the toolbar; the views move together and nothing covers them; closed, the panels fold to their icon rail. floating: a window of their own. The Dock menu in the panels' header and the commands Leader P Left, P Right, P Down and P Up set it.",
+          "description": "Where the plugin panels open: in their own window, or docked left, right or below the views, which make room.",
+          "help": "Where the plugin panels (Network, Console, Storage and the others) open. Right (the default), Left, Bottom: docked in the main window below the toolbar; the views move together and nothing covers them; closed, the panels fold to their icon rail. Own window: a window of their own. The Dock menu in the panels' header and the commands Leader P Left, P Right, P Down and P Up set it.",
           "label": "Plugin panels position"
         },
         "dockAtStart": {
-          "description": "How the docked plugin panels start: rail as the narrow icon rail beside the views, hidden, or last as they were left.",
-          "help": "rail (the default) starts the docked panels folded to the icon rail - the icons of every panel, Findings first, an expand button on top - so the views have their room from the start and never jump. hidden starts without them. last starts them as they were left: open, the rail or hidden. Panels left in their own window start as the rail on the right; the window never opens by itself.",
+          "description": "How the docked plugin panels start: Rail as the narrow icon rail beside the views, Hidden, or As last left.",
+          "help": "Rail (the default) starts the docked panels folded to the icon rail - the icons of every panel, Findings first, an expand button on top - so the views have their room from the start and never jump. Hidden starts without them. As last left starts them as they were left: open, the rail or hidden. Panels left in their own window start as the rail on the right; the window never opens by itself.",
           "label": "Plugin panels at the start"
         },
         "dockSize": {
@@ -2858,17 +3692,27 @@
           }
         },
         "dockState": {
-          "description": "The docked plugin panels now: open at their size, rail folded to the narrow icon rail so the views get the room, or hidden.",
-          "help": "open shows the docked panels at their size. rail folds them to the icon rail - beside the views a column of icons, below them a row - and the views get the room; a click on an icon, the expand button, the panels' switch in the toolbar or Ctrl+Shift+Space, P, Z opens them again. A panel a command or a check opens while they are folded stays folded and is marked in the rail. hidden removes them; a panel opened by a command brings the rail back. The state survives a restart unless Plugin panels at the start says otherwise.",
+          "description": "The docked plugin panels now: Open at their size, Rail folded to the narrow icon rail so the views get the room, or Hidden.",
+          "help": "Open shows the docked panels at their size. Rail folds them to the icon rail - beside the views a column of icons, below them a row - and the views get the room; a click on an icon, the expand button, the panels' switch in the toolbar or Ctrl+Shift+Space, P, Z opens them again. A panel a command or a check opens while they are folded stays folded and is marked in the rail. Hidden removes them; a panel opened by a command brings the rail back. The state survives a restart unless Plugin panels at the start says otherwise.",
           "label": "Docked plugin panels"
         },
+        "keepFrames": {
+          "description": "How many of the plugin panels shown last stay loaded, hidden, so switching back to one is instant.",
+          "help": "Switching to another plugin panel keeps this many of the panels shown last loaded in the background, so switching back shows them at once with their state. Each kept panel holds its memory; 0 loads a panel anew at every switch. A panel with unsaved work, or one that asks to be kept, stays loaded either way.",
+          "label": "Panels kept loaded"
+        },
         "sidebar": {
-          "description": "The plugin panels' side bar: icons with titles (expanded), or icons only with the title as a tooltip.",
-          "help": "expanded (the default) lists every panel with its icon and title; icons shows only the icons, with the title as a tooltip, and leaves the panel more room. The button at the bottom of the side bar switches it. It applies to the panels' own window and to the docked panels; a narrow dock shows icons only either way.",
+          "description": "The plugin panels' side bar: Expanded with icons and titles, or Icons only with the title as a tooltip.",
+          "help": "Expanded (the default) lists every panel with its icon and title; Icons only shows just the icons, with the title as a tooltip, and leaves the panel more room. The button at the bottom of the side bar switches it. It applies to the panels' own window and to the docked panels; a narrow dock shows icons only either way.",
           "label": "Panels side bar"
         }
       },
       "performance": {
+        "counters": {
+          "description": "Record how long sync replays, plugin calls and the window's requests take. The MCP tool app_perf and the diagnostics ZIP show the figures.",
+          "help": "Keeps timing counters in every build: sync events until each view replayed them (per engine), loads sync gave until they committed, plugin calls, the window's requests and the start-up time. The MCP tool app_perf and the diagnostics ZIP (perf.json) show count, median, 95th percentile and maximum. Off, nothing more is recorded.",
+          "label": "Timing counters"
+        },
         "inactiveFps": {
           "description": "Visible views that are not the active one run their pages slowed to about this many frames per second of work (CPU throttling, 60 divided by the value). 0 or 60 leaves them at full speed. Sync still reaches them, a little later.",
           "help": "Slows the pages of visible views that are not the active one to about this many frames per second of work (CPU throttling, 60 divided by the value), to keep eight views fluid. 0 or 60 is full speed.",
@@ -2902,6 +3746,11 @@
             "help": "When the project's .rbrowser/config.json has settings of a plugin that is not installed, the status bar says which, with a button to the plugin catalog. Off, nothing is said.",
             "label": "Name missing project plugins"
           },
+          "newNotice": {
+            "description": "Name the plugins a new version of rBrowser brings, once, with a button to install them.",
+            "help": "After an update that ships plugins you were not offered before, the status bar names them once, with Install all and the catalog as its setting. They are never installed without your click. Off, nothing is said; the catalog lists them.",
+            "label": "Name new plugins after an update"
+          },
           "preferRepository": {
             "description": "Install a chosen plugin from the official catalog when it has a newer version.",
             "help": "Every plugin rBrowser ships is in the package. On, a plugin you choose comes from the official catalog when it offers a newer version than the shipped one, signed by the same key and asking for nothing more; without a network it comes from the package. Off, every chosen plugin comes from the package and nothing reaches the network.",
@@ -2917,6 +3766,11 @@
           "description": "Store compiled plugin code so the next start is faster.",
           "help": "Stores compiled plugin code on disk so the next start is faster. Off compiles every plugin at every start.",
           "label": "Keep compiled plugins"
+        },
+        "consentProbeAnyUrl": {
+          "description": "Let the consent probe load addresses that are not public, such as local or network pages.",
+          "help": "Off, the consent probe of a plugin loads only public addresses and the trusted project's own sites, so a plugin cannot run its script in a local or network page. Only you can switch it on; MCP cannot.",
+          "label": "Consent probe on any address"
         },
         "crashLimit": {
           "description": "How many failures within five minutes pause a plugin.",
@@ -3011,6 +3865,43 @@
           "description": "A fixed port for the portal; a random free port when empty. A fixed port needs only one Windows firewall rule.",
           "help": "A fixed port for the portal, so one Windows firewall rule suffices. Example: 7430. Empty picks a free port at every start.",
           "label": "Portal port"
+        },
+        "presentation": {
+          "allowPaths": {
+            "description": "The paths a viewer may load, each with everything below it. Empty: the start page of the shown environment and everything below it.",
+            "help": "The paths of the site a viewer may load; /shop allows /shop and /shop/cart, not /shopping. Leave it empty to allow the shown environment's start page and everything below it. Any other path answers 404 without reaching your dev server.",
+            "label": "Shown paths"
+          },
+          "consented": {
+            "description": "You agreed that a presentation's traffic runs through Cloudflare. Set by the consent in the Portal panel; switch it off to be asked again.",
+            "help": "Records that you agreed to send a presentation's traffic through a Cloudflare Quick Tunnel, which is meant for tests and demonstrations. The Portal panel asks before the first start; switching this off asks again.",
+            "label": "Agreed to the Cloudflare tunnel"
+          },
+          "denyPaths": {
+            "description": "Paths a viewer never loads, even below a shown one: they answer 404 and never reach the dev server.",
+            "help": "Paths a viewer never loads, matched as a prefix in any spelling: /admin also hides /admin/users and /administrator, /.env also /.env.local. They answer 404 without reaching your dev server.",
+            "label": "Hidden paths"
+          },
+          "enabled": {
+            "description": "Allows a presentation over the internet through a Cloudflare Quick Tunnel. Off by default; a person starts each presentation, MCP cannot.",
+            "help": "Allows showing the active view's page to a customer over the internet: rBrowser opens a Cloudflare Quick Tunnel (no account) and hands out one-time links. Viewers only watch. Each presentation is started by a person in the Portal panel or with its shortcut; MCP can only end it.",
+            "label": "Present over the internet"
+          },
+          "linkTtlSec": {
+            "description": "How long a viewer link stays valid, in seconds. Each link works once.",
+            "help": "How long a one-time viewer link stays valid, in seconds (60 to 3600). A spent or expired link shows a page without anything of the project; create a new link for the next viewer.",
+            "label": "Link lifetime"
+          },
+          "maxViewers": {
+            "description": "How many viewers may watch a presentation at once.",
+            "help": "How many viewers may watch at once (1 to 10). Past the limit every further link is refused until a viewer leaves or the presentation ends.",
+            "label": "Most viewers"
+          },
+          "pointer": {
+            "description": "A short flash on the viewer's page where you click.",
+            "help": "Flashes a ring on the viewer's page where you click, so the viewer sees what you pointed at.",
+            "label": "Show the presenter's clicks"
+          }
         }
       },
       "recentProjects": {
@@ -3065,6 +3956,28 @@
           "label": "Watched files"
         }
       },
+      "report": {
+        "annotate": {
+          "description": "Open the screenshot editor on the report's newest image once the report is saved.",
+          "help": "After a bug report is saved, the screenshot editor opens on its newest image so you can mark the problem. The edited copy is saved by the editor beside its other images; the report keeps the original.",
+          "label": "Open the editor after a report"
+        },
+        "folder": {
+          "description": "The folder bug reports are saved in; empty: the project's .rbrowser/out/reports/.",
+          "help": "Each bug report gets a folder of its own, named by the time it was made, inside this folder. Choose an existing folder outside the project to keep reports out of the repository. Empty keeps them in the project's .rbrowser/out/reports/. Only you can set this; MCP clients and the project config cannot.",
+          "label": "Report folder"
+        },
+        "include": {
+          "description": "The parts a bug report holds.",
+          "help": "Which parts Create a bug report saves: a screenshot of each view (password fields blacked out), the overview of all views, the console errors and warnings, the failed requests, page and environment, breakpoint and emulation, and the rBrowser version with the engines. Every text is masked: query values, credentials and cookie values never reach a report.",
+          "label": "Report parts"
+        },
+        "preview": {
+          "description": "Show a bug report's texts after masking before it is saved.",
+          "help": "Before a bug report is saved, a window shows its report.md exactly as it will be written, with every address, credential and cookie value masked, and how many screenshots were taken. Save writes the report; Cancel drops it with its screenshots. While this is on, a report an MCP client asks for waits for your Save too. Only you can switch this off; MCP clients and the project config cannot.",
+          "label": "Preview before saving"
+        }
+      },
       "resources": {
         "cpuWarnPercent": {
           "description": "A view whose main thread is busier than this share for five seconds is marked in its label and logged.",
@@ -3100,6 +4013,11 @@
           "description": "Keep session cookies (logins without an expiry date) on disk, so you stay signed in after a restart, in every session. Off, they end when rBrowser closes, as in a browser. Takes effect at the next start.",
           "help": "Keeps session cookies (logins without an expiry) on disk, so every session stays signed in after a restart. Off ends them when rBrowser closes, as a browser does. Applies at the next start.",
           "label": "Keep session cookies"
+        },
+        "stateExportAllDomains": {
+          "description": "A login state export takes the cookies and storage of every site in the session, not only the project's environments.",
+          "help": "Off, \"Export the login state\" writes only the cookies and storage of the project's environments and start URL (and their subdomains); trackers and other sites the session visited stay out of the file. On, it writes the whole session. The file holds session cookies either way.",
+          "label": "Export every domain"
         }
       },
       "settings": {
@@ -3159,7 +4077,7 @@
         },
         "galleryOpensIn": {
           "description": "Where the gallery of a sitemap capture opens: a window of rBrowser's own or your browser.",
-          "help": "window opens the gallery in a window of rBrowser's own, beside the main window, which loads only the files of the run's folder and runs no script; system opens it in the default browser of Windows. It never opens in the views of the grid, and an agent over MCP always opens the window. This setting is yours, not the project's.",
+          "help": "\"A window of rBrowser\" opens the gallery beside the main window, a page of the app that shows only that run's pictures; \"Your browser\" opens the run's index.html in the default browser of Windows, which the capture writes when it ends. It never opens in the views of the grid, and an agent over MCP always opens the window. This setting is yours, not the project's.",
           "label": "Open the gallery in"
         },
         "hideSelectors": {
@@ -3248,6 +4166,11 @@
           "description": "Started without a project, open the most recent one.",
           "help": "Started without a project, rBrowser opens the most recent one by itself. Off starts with the project chooser.",
           "label": "Open the last project"
+        },
+        "restore": {
+          "description": "What the views open when the project opens: the start URL, or the page each view showed when rBrowser last closed.",
+          "help": "Last pages reopens, per view, the page it showed when rBrowser closed, in the environment in effect now, and a view whose navigation was decoupled stays decoupled. The pages are kept only in this project's browser profile on this computer, never in the project files. A URL on the command line always wins. Open the pages of the last session (Ctrl+Shift+Space R L) does the same at any time.",
+          "label": "When the project opens"
         }
       },
       "sync": {
@@ -3267,8 +4190,8 @@
           "label": "Sync right clicks"
         },
         "desyncTimeoutMs": {
-          "description": "How long a view may take to replay a click, input or key press before it shows the desync badge, in milliseconds.",
-          "help": "How long a view may take to replay a click, input or key before its label shows the desync badge, in milliseconds. Raise it for slow pages, lower it to spot lagging views sooner.",
+          "description": "How long a view may take to replay a click, input or key press before the toolbar's Desynced (n) button counts it, in milliseconds.",
+          "help": "How long a view may take to replay a click, input or key before it counts as desynced and the Desynced (n) button in the toolbar names it, in milliseconds. Raise it for slow pages, lower it to spot lagging views sooner.",
           "label": "Desync timeout"
         },
         "detectBrowsersync": {
@@ -3348,6 +4271,11 @@
         }
       },
       "tools": {
+        "cloudflaredPath": {
+          "description": "The absolute path of a cloudflared of your own for the presentation over the internet. Empty uses the build rBrowser downloads after you agreed. Only your user settings can set it, never a project.",
+          "help": "A cloudflared of your own for the portal's presentation over the internet, as an absolute path, for example C:\\Tools\\cloudflared.exe. Empty uses the pinned build rBrowser downloads from GitHub after you agreed in the Portal panel.",
+          "label": "cloudflared program"
+        },
         "ffmpegPath": {
           "description": "The absolute path of an ffmpeg of your own. Empty uses the LGPL build rBrowser downloads on the first recording, after you ran Video: download ffmpeg. Only your user settings can set it, never a project.",
           "help": "An ffmpeg of your own for video recordings, as an absolute path. Example: C:\\Tools\\ffmpeg\\bin\\ffmpeg.exe. Empty uses the LGPL build rBrowser downloads after Video: download ffmpeg. Only your user settings can set it.",
@@ -3357,8 +4285,8 @@
       "ui": {
         "activityBar": {
           "mode": {
-            "description": "bar shows the running activities with their controls in the activity bar; indicator draws no bar and leaves each activity to its indicator in the toolbar.",
-            "help": "bar (the default) shows a strip with an entry per running activity and its controls, and the toolbar shows an activity's compact indicator only while its entry is closed or switched off. indicator never draws the strip: every running activity shows as its compact indicator in the toolbar, and the views never move.",
+            "description": "\"Activity bar, always there\" keeps the activity bar's room, empty while nothing runs; \"Activity bar while something runs\" shows it only then; \"Toolbar indicators only\" draws no bar and leaves each activity to its indicator in the toolbar.",
+            "help": "\"Activity bar, always there\" (the default) keeps the strip below the toolbar (or above the status bar), empty while nothing runs, so the views and panels never move when a check, a recording or a video starts and ends. \"Activity bar while something runs\" shows the strip only while something runs, and the views move by its height. With either, the toolbar shows an activity's compact indicator only while its entry is closed or switched off. \"Toolbar indicators only\" never draws the strip: every running activity shows as its compact indicator in the toolbar, and the views never move.",
             "label": "Activity bar"
           },
           "position": {
@@ -3382,6 +4310,16 @@
               "help": "Gives a running flow - a recording played back included - an entry in the activity bar with the views through so far, Results and Cancel. Off, the run shows only as its compact indicator in the toolbar.",
               "label": "Flow runs in the activity bar"
             },
+            "forcedStates": {
+              "description": "Pseudo-class states forced on an element have an entry in the activity bar: the states, the views and Reset. Off, its compact form in the toolbar alone shows them.",
+              "help": "Gives the states forced with Force state (the page menu, Ctrl+Shift+Space D H, MCP views_force_state) an entry in the activity bar that names them and the views, with Reset for every view. The entry ends with the last forced state: a reset, a navigation or the view closed. Off, the compact form in the toolbar alone shows them.",
+              "label": "Forced states in the activity bar"
+            },
+            "plugins": {
+              "description": "A plugin call that reports its progress has an entry in the activity bar: the plugin, how far it is and Cancel. Off, it shows only as its indicator in the toolbar.",
+              "help": "Gives a long plugin call - the width sweep, for one - an entry in the activity bar with the plugin's name, the steps done so far and Cancel when the plugin has a cancel command. The entry ends with the plugin's call. Off, the call shows only as its compact indicator in the toolbar.",
+              "label": "Plugin progress in the activity bar"
+            },
             "portal": {
               "description": "The running portal has an entry in the activity bar: its devices, a new QR code and Disconnect. Off, the portal button in the toolbar alone shows it.",
               "help": "Gives the running portal an entry in the activity bar with the number of paired devices (a click opens the Portal panel), a new pairing QR code and Disconnect, which stops the portal. Off, the portal button in the toolbar alone shows it.",
@@ -3392,6 +4330,11 @@
               "help": "Gives a running recording of steps an entry in the activity bar: its steps, Pause or Resume, Add check (the next click picks the element) and Stop. After it stops, the entry offers Play last until you play it, close it or start another recording. Off, the recording shows only as its indicator in the toolbar.",
               "label": "Recorder in the activity bar"
             },
+            "time": {
+              "description": "A changed clock or animation rate has an entry in the activity bar: the time and the rates, Step, 100 % and Real time. Off, its compact form in the toolbar alone shows it.",
+              "help": "Gives the views' clock, while it is not the real time, and animations that do not run at 100 % an entry in the activity bar with Step for stopped animations, 100 % and Real time. Off, the compact form in the toolbar alone shows it.",
+              "label": "Clock and animations in the activity bar"
+            },
             "video": {
               "description": "A running video recording has an entry in the activity bar: its time, the views recorded and Stop. Off, it shows only as its indicator in the toolbar.",
               "help": "Gives a running video recording an entry in the activity bar with its time, the views it records and a Stop button. Off, the recording shows only as its compact indicator in the toolbar - its time and a stop button.",
@@ -3401,9 +4344,14 @@
         },
         "cellLabel": {
           "address": {
-            "description": "When a view's label strip shows its address: differs while it is not the active view's address, always for every view, off never. The toolbar's address bar shows the active view's.",
-            "help": "differs shows the address in the label strip of every view that is not on the active view's page - a view with its own navigation, a view that could not follow, every view while sync is off - so you see at once which page each view shows. always shows it in every strip, off in none. The tooltip has the whole address.",
+            "description": "When a view's label strip shows its address: \"When it differs from the active view\", \"Always\" for every view, or \"Off\" for none. The toolbar's address bar shows the active view's.",
+            "help": "\"When it differs from the active view\" shows the address in the label strip of every view that is not on the active view's page - a view with its own navigation, a view that could not follow, every view while sync is off - so you see at once which page each view shows. \"Always\" shows it in every strip, \"Off\" in none. The tooltip has the whole address.",
             "label": "Address in the label strip"
+          },
+          "addressEditable": {
+            "description": "A click on the address in the label strip of a view with its own navigation opens an address field there; Enter opens the address in that view only, Escape cancels.",
+            "help": "A view whose navigation is decoupled (Sync › Sync this view's navigation, or syncNavigation: false in the project) keeps its own page. With this on, a click on its address in the label strip, Ctrl+Shift+Space S L or the page menu's Sync › Edit this view's address opens a field in the strip. It takes http, https and file addresses and a path such as /pricing, which opens under the environment in effect; the other views keep their pages. Off, the address only shows and its click makes the view active.",
+            "label": "Address field for a decoupled view"
           },
           "engineStatus": {
             "description": "The engine badge of a Firefox or WebKit view says how its engine's window stands - starting, in its cell, engine stopped, window closed - with the reason in the tooltip. The badge's menu restarts a stopped engine, opens a closed window again or brings a window of its own to the front.",
@@ -3418,7 +4366,7 @@
         },
         "fileNameTime": {
           "description": "The time in the names of new screenshot and video folders, recordings and sitemap and compare runs: your local time or UTC.",
-          "help": "local names them in the time of your system, daylight saving time included; utc in Coordinated Universal Time. Folders and recordings already made keep their names, and the lists sort them by when they were made. The times stored inside the files are always UTC.",
+          "help": "Local time names them in the time of your system, daylight saving time included; UTC in Coordinated Universal Time. Folders and recordings already made keep their names, and the lists sort them by when they were made. The times stored inside the files are always UTC.",
           "label": "Time in file names"
         },
         "firstRunWizard": {
@@ -3448,9 +4396,16 @@
             "label": "Devices in the New size list"
           }
         },
+        "notifications": {
+          "errorToast": {
+            "description": "An error of an action you started shows at the top of the window as well, with its buttons.",
+            "help": "When adding a device, starting a view, a menu row or a toolbar button fails, the error shows in the toolbar's strip as well - never over the views - with Retry, the setting it is about or a download, and goes after ten seconds. The status bar keeps every message either way. Off: the status bar alone.",
+            "label": "Show errors at the top"
+          }
+        },
         "openLinksIn": {
           "description": "Where a link from rBrowser opens - a finding's help page, a plugin panel's report or help link: your browser, the active view, or ask each time.",
-          "help": "system opens the link in the default browser of Windows, activeView loads it in the grid's active view (with navigation sync on, in every view), ask offers both on every link. Only http and https links open; anything else is refused.",
+          "help": "\"Your browser\" opens the link in the default browser of Windows; \"The active view\" loads it in the grid's active view (with navigation sync on, in every view); \"Ask each time\" offers both on every link. Only http and https links open; anything else is refused.",
           "label": "Open links in"
         },
         "pageContextMenu": {
@@ -3459,8 +4414,8 @@
           "label": "rBrowser entries in the page's context menu"
         },
         "pageContextMenuEmulation": {
-          "description": "Offer the toolbar's emulation switches for the clicked view in the page's context menu - colour scheme, reduced motion, offline, location, time zone, reset - and Analyze breakpoints beside them.",
-          "help": "Whether a page's context menu has the Emulation submenu: the colour scheme (light, dark or no override), reduced motion, offline, location and time zone presets and Reset for the clicked view, the same for all views, each with its current state marked, and Analyze breakpoints as an entry of the menu. Off, the submenu is gone and Analyze breakpoints stays under Checks. It belongs to \"Page context menu\" (ui.pageContextMenu): with that switch off the whole block is gone and this one has no effect.",
+          "description": "Offer the toolbar's emulation switches for the clicked view in the page's context menu - colour scheme, reduced motion, offline, location, time zone, reset.",
+          "help": "Whether a page's context menu has the Emulation submenu: the colour scheme (light, dark or no override), reduced motion, offline, location and time zone presets and Reset for the clicked view, the same for all views, each with its current state marked. Off, the submenu is gone. It belongs to \"Page context menu\" (ui.pageContextMenu): with that switch off the whole block is gone and this one has no effect.",
           "label": "Emulation in the page's context menu"
         },
         "statusBar": {
@@ -3495,10 +4450,22 @@
           "help": "Light or dark for rBrowser's own windows, or system to follow Windows. The pages in the views are not affected; use Emulation > Colour scheme for them.",
           "label": "Theme"
         },
+        "titleBar": {
+          "showCredit": {
+            "description": "The main window's title ends in the credit line \"made with Love by Alexander Herling/DEGOYA.digital\". Off, the title ends with the product and its version.",
+            "help": "Shows the credit line at the end of the main window's title, in the title bar and the taskbar. A change applies at once. The windows of Firefox and WebKit, the settings window and the engine comparison keep their own titles.",
+            "label": "Credit in the title bar"
+          },
+          "showVersion": {
+            "description": "The main window's title shows rBrowser's version after its name, as About shows it.",
+            "help": "Shows the version, for example \"shop - rBrowser 0.9.4\", in the title bar and the taskbar, so you see at a glance which build runs. A change applies at once. The other windows keep their own titles.",
+            "label": "Version in the title bar"
+          }
+        },
         "toolbar": {
           "overflow": {
-            "description": "What the toolbar does with what does not fit into a narrow window: menu moves it into the main menu ≡ at the right end, wrap breaks the toolbar into a second row and the views move down. The address bar and back, forward and reload always stay.",
-            "help": "What happens to the toolbar's controls when the window is too narrow for them. menu: the wide lists shrink to icons first, then the controls move into the main menu ≡ at the right end, the least used first. wrap: they go into a second row and the views start lower; what a second row does not hold either goes into the menu. The address bar keeps at least 240 px either way.",
+            "description": "What the toolbar does with what does not fit into a narrow window: Main menu moves it into the main menu ≡ at the right end, Wrap breaks the toolbar into a second row and the views move down. The address bar and back, forward and reload always stay.",
+            "help": "What happens to the toolbar's controls when the window is too narrow for them. Main menu: the wide lists shrink to icons first, then the controls move into the main menu ≡ at the right end, the least used first. Wrap: they go into a second row and the views start lower; what a second row does not hold either goes into the menu. The address bar keeps at least 240 px either way.",
             "label": "Toolbar in a narrow window"
           },
           "panelsToggle": {
@@ -3519,8 +4486,8 @@
         },
         "viewFooter": {
           "align": {
-            "description": "Where the breakpoint bar's text stands: center puts it in the middle of the strip, every line; start at the strip's left edge.",
-            "help": "center (the default) puts the breakpoint bar's text in the middle of the strip under each view, in each of its lines. start puts it at the left edge, as before.",
+            "description": "Where the breakpoint bar's text stands: Centre puts it in the middle of the strip, every line; Start at the strip's left edge.",
+            "help": "Centre (the default) puts the breakpoint bar's text in the middle of the strip under each view, in each of its lines. Start puts it at the left edge.",
             "label": "Breakpoint bar text alignment"
           },
           "analyze": {
@@ -3529,8 +4496,8 @@
             "label": "Read the page's media queries for the breakpoint bar"
           },
           "fields": {
-            "description": "What the breakpoint bar names, always in this order: breakpoint (its id), range (from which width to which the page's step holds; the breakpoint's range until the page was read), size (width, height and pixel ratio of the view), queries (the step's ends as min-width and max-width) and framework (the page's class for the width, when the analysis recognised one). Range and framework by default.",
-            "help": "Choose what the breakpoint bar under a view names. By default range and class, for example 1024-1279px | md. Once the page was read (by itself after every load with \"Read the page's media queries for the breakpoint bar\", or by Analyze Breakpoints: Ctrl+Shift+Space, B, A) the range is the page's own step: on a mobile-first page from its min-width to the next min-width minus 1. Until then it is the breakpoint's range. queries names the same step as min-width and max-width, never the same side twice; the tooltip names every query of the page that holds. A view whose chosen fields all have no value shows no breakpoint bar and keeps its height; with no field left none is shown.",
+            "description": "What the breakpoint bar names, always in this order: Breakpoint (its id), Width range (from which width to which the page's step holds; the breakpoint's range until the page was read), Size (width, height and pixel ratio of the view), Media queries (the step's ends as min-width and max-width) and Framework name (the page's class for the width, when the analysis recognised one). Width range and Framework name by default.",
+            "help": "Choose what the breakpoint bar under a view names. By default Width range and Framework name, for example 1024-1279px | md. Once the page was read (by itself after every load with \"Read the page's media queries for the breakpoint bar\", or by Analyze Breakpoints: Ctrl+Shift+Space, B, A) the range is the page's own step: on a mobile-first page from its min-width to the next min-width minus 1. Until then it is the breakpoint's range. Media queries names the same step as min-width and max-width, never the same side twice; the tooltip names every query of the page that holds. A view whose chosen fields all have no value shows no breakpoint bar and keeps its height; with no field left none is shown.",
             "label": "Breakpoint bar fields"
           },
           "lighthouse": {
@@ -3549,8 +4516,8 @@
             "label": "Vitals bar under every view"
           },
           "wrap": {
-            "description": "What the breakpoint bar does in a view too narrow for its text: auto breaks it into a second line between two fields, and the view gives the breakpoint bar the height of two lines; never keeps one line that ends in an ellipsis. What still does not fit is in the tooltip.",
-            "help": "In a narrow view, for example a 375 px phone breakpoint in a full grid, the breakpoint bar's text is wider than the view. auto (the default) breaks it between two fields into a second line, and the view gives the breakpoint bar 36 px instead of 18; the breakpoint bars of the views beside it stay at the same bottom edge. never keeps one line and cuts its end. Whatever even two lines cannot show is cut at the end; hover the breakpoint bar to read all of it in the tooltip.",
+            "description": "What the breakpoint bar does in a view too narrow for its text: Auto breaks it into a second line between two fields, and the view gives the breakpoint bar the height of two lines; Never keeps one line that ends in an ellipsis. What still does not fit is in the tooltip.",
+            "help": "In a narrow view, for example a 375 px phone breakpoint in a full grid, the breakpoint bar's text is wider than the view. Auto (the default) breaks it between two fields into a second line, and the view gives the breakpoint bar 36 px instead of 18; the breakpoint bars of the views beside it stay at the same bottom edge. Never keeps one line and cuts its end. Whatever even two lines cannot show is cut at the end; hover the breakpoint bar to read all of it in the tooltip.",
             "label": "Breakpoint bar in a narrow view"
           }
         }
@@ -3692,6 +4659,7 @@
       "unknown": "{value} (not an allowed value)"
     },
     "nav": {
+      "choose": "Category",
       "label": "Settings categories"
     },
     "notice": {
@@ -3719,7 +4687,12 @@
           },
           "recordHover": {
             "all": "All that reveal the next click",
-            "menu": "Only menu hovers",
+            "menu": "Menu hovers",
+            "off": "Off"
+          },
+          "recordPointer": {
+            "all": "Every hover and click",
+            "menu": "Menus",
             "off": "Off"
           }
         },
@@ -3744,9 +4717,17 @@
           "dark": "Dark",
           "light": "Light"
         },
+        "dir": {
+          "auto": "Auto",
+          "ltr": "Left to right",
+          "rtl": "Right to left"
+        },
         "engine": {
+          "android": "Android device",
           "chromium": "Chromium",
           "firefox": "Firefox",
+          "ios": "iOS",
+          "safari": "Safari",
           "webkit": "WebKit"
         },
         "media": {
@@ -3780,6 +4761,19 @@
         }
       },
       "checks": {
+        "export": {
+          "defaultFormat": {
+            "html": "HTML (one file, offline)",
+            "json": "JSON (findings.json)",
+            "junit": "JUnit XML",
+            "sarif": "SARIF 2.1.0"
+          },
+          "failOn": {
+            "error": "Errors",
+            "info": "Every finding",
+            "warning": "Warnings and errors"
+          }
+        },
         "lighthouse": {
           "categories": {
             "accessibility": "Accessibility",
@@ -3819,6 +4813,11 @@
         "colorScheme": {
           "dark": "Dark",
           "light": "Light"
+        },
+        "dir": {
+          "auto": "Auto",
+          "ltr": "Left to right",
+          "rtl": "Right to left"
         },
         "media": {
           "colorGamut": {
@@ -3860,6 +4859,13 @@
           "domainFilter": {
             "all": "Every cookie of the session",
             "environment": "The sites of the views and the environment"
+          }
+        },
+        "ios": {
+          "mode": {
+            "auto": "The simulator with Xcode, else the device",
+            "device": "A connected device only",
+            "simulator": "The iOS Simulator only"
           }
         }
       },
@@ -3953,6 +4959,16 @@
           "warn": "Warning"
         }
       },
+      "mcp": {
+        "client": {
+          "claudeCode": "Claude Code",
+          "claudeDesktop": "Claude Desktop",
+          "codex": "OpenAI Codex",
+          "cursor": "Cursor",
+          "pi": "pi",
+          "vscode": "VS Code (GitHub Copilot)"
+        }
+      },
       "panels": {
         "closeTo": {
           "hidden": "Hidden",
@@ -3986,10 +5002,27 @@
           "manual": "Manual (on command only)"
         }
       },
+      "report": {
+        "include": {
+          "console": "Console errors and warnings",
+          "emulation": "Breakpoint and emulation",
+          "environment": "Page and environment",
+          "network": "Failed requests",
+          "overview": "Overview image",
+          "screenshots": "Screenshot of each view",
+          "version": "rBrowser version and engines"
+        }
+      },
       "sitemap": {
         "galleryOpensIn": {
           "system": "Your browser",
           "window": "A window of rBrowser"
+        }
+      },
+      "startup": {
+        "restore": {
+          "last": "Last pages",
+          "startUrl": "Start URL"
         }
       },
       "sync": {
@@ -4001,7 +5034,8 @@
       "ui": {
         "activityBar": {
           "mode": {
-            "bar": "Activity bar",
+            "always": "Activity bar, always there",
+            "bar": "Activity bar while something runs",
             "indicator": "Toolbar indicators only"
           },
           "position": {
@@ -4290,7 +5324,9 @@
       },
       "capture": {
         "cookie-banners": "Cookie-banner hiding",
+        "engine-compare": "Engine compare",
         "env-compare": "Environment compare",
+        "report": "Bug report",
         "screenshot-editor": "Screenshot editor",
         "screenshots": "Screenshots",
         "sitemap": "Sitemap",
@@ -4299,22 +5335,30 @@
       },
       "checks": {
         "accessibility": "Accessibility",
+        "consent-check": "Consent check",
         "coverage": "Coverage",
         "error-report": "Error report",
         "findings": "Findings",
         "fonts": "Fonts",
+        "html-validation": "HTML validation",
         "lighthouse": "Lighthouse",
         "pwa": "PWA",
-        "seo": "SEO"
+        "responsive-images": "Responsive images",
+        "security-headers": "Security headers",
+        "seo": "SEO",
+        "structured-data": "Structured data",
+        "width-sweep": "Width sweep"
       },
       "devtools": {
         "color-picker": "Colour picker & measuring",
         "console": "Console",
+        "container-queries": "Container queries",
         "devtools": "DevTools mode",
         "form-autofill": "Form autofill",
         "framework-devtools": "Framework DevTools",
         "image-overlay": "Image overlay",
         "json-viewer": "JSON/XML viewer",
+        "live-css": "Live CSS",
         "outline": "Outline",
         "overlays": "Overlays",
         "peek": "Peek",
@@ -4325,16 +5369,21 @@
         "web-vitals": "Web Vitals & resources"
       },
       "emulation": {
+        "clock-animations": "Clock and animations",
         "defaults": "Defaults",
         "geo-time-cpu": "Geolocation, time zone and CPU",
         "media-features": "Media features",
+        "text-direction": "Text direction and pseudo-localisation",
         "throttling": "Network throttling"
       },
       "engines": {
+        "android": "Android devices",
         "chromium": "Chromium/CEF",
         "external": "External windows",
         "firefox": "Firefox",
+        "ios": "iOS (macOS)",
         "node": "Node runtime",
+        "safari": "Safari (macOS)",
         "webkit": "WebKit/Playwright"
       },
       "general": {
@@ -4355,11 +5404,14 @@
         "zoom": "Zoom"
       },
       "network": {
+        "api-client": "API client",
         "blocking": "Blocking",
         "cache": "Cache",
         "certificates": "Certificates (local only)",
+        "endpoints": "Endpoints",
         "headers": "Custom headers",
         "host-resolver": "Host resolver",
+        "load-test": "Load test",
         "mocks": "Mocks",
         "proxy": "Proxy"
       },
@@ -4508,6 +5560,10 @@
   },
   "shell": {
     "activity": {
+      "announce": {
+        "idle": "Nothing running",
+        "running": "Running: {names}"
+      },
       "checks": {
         "cancel": "Cancel",
         "status": "Checks: {done} of {total, plural, one {# job} other {# jobs}}"
@@ -4522,20 +5578,43 @@
         "results": "Open the results",
         "status": "Flow {flow}: {done} of {total, plural, one {# view} other {# views}}",
         "status_queued": "Flow {flow}: {done} of {total, plural, one {# view} other {# views}}, {queued, plural, one {# more flow} other {# more flows}} waiting",
-        "stop": "Stop"
+        "step": "{view} at step {number}: {name}",
+        "step_of": "{view} at step {number}/{total}: {name}",
+        "stop": "Stop",
+        "with_steps": "{status} - {steps}"
+      },
+      "forced_states": {
+        "group": "{states} in {views}",
+        "reset": "Reset",
+        "status": "Forced {groups}"
       },
       "label": "Running activities",
       "name": {
         "checks": "Check run",
         "desync": "Out of sync",
         "flows": "Flow run",
+        "forcedStates": "Forced states",
+        "plugins": "Plugin progress",
         "portal": "Portal",
         "recorder": "Recorder",
+        "time": "Clock and animations",
         "video": "Video"
+      },
+      "plugins": {
+        "cancel": "Cancel {name}",
+        "more": "{status}, {count, plural, one {# more plugin} other {# more plugins}}",
+        "status": "{name}: {done} of {total}",
+        "working": "{name}: working"
       },
       "portal": {
         "devices": "Devices ({count})",
         "disconnect": "Disconnect",
+        "present_copy": "Copy the presentation link",
+        "present_new_link": "New presentation link",
+        "present_starting": "Presentation starting",
+        "present_status": "Live: {count, plural, one {# viewer} other {# viewers}}",
+        "present_status_link": "Live: {count, plural, one {# viewer} other {# viewers}}, link {time}",
+        "present_stop": "End",
         "qr": "Show a QR code to pair",
         "status": "Portal: {count, plural, one {# device} other {# devices}}"
       },
@@ -4551,8 +5630,22 @@
         "stop": "Stop"
       },
       "shortcut": "{label} ({shortcut})",
+      "time": {
+        "animations": "animations at {groups}",
+        "both": "{clock}, {animations}",
+        "clock_fixed": "Clock stopped at {start}",
+        "clock_running": "Clock from {start} at {speed}x",
+        "normal": "Animations at 100 %",
+        "percent": "{percent} %",
+        "rate_views": "{percent} % in {views}",
+        "real_time": "Real time",
+        "step": "Step"
+      },
       "unfold": "Show {name} in the activity bar",
       "video": {
+        "pause": "Pause",
+        "paused": "Video paused at {time}: {views}",
+        "resume": "Resume",
         "status": "Recording video {time}: {views}",
         "stop": "Stop"
       }
@@ -4570,6 +5663,26 @@
     "cell": {
       "session": "Session {session}"
     },
+    "devices": {
+      "android_add": "Add Android device",
+      "android_off": "Android devices are off - switch them on in Settings…",
+      "android_row": "{name} - {state}",
+      "download_adb": "Download adb",
+      "ios": "iOS simulators and devices…",
+      "ios_mac_only": "iOS simulators and devices (macOS only)",
+      "listing": "Looking for devices…",
+      "none": "No device - how to connect…",
+      "safari": "Safari for the active view",
+      "safari_mac_only": "Safari for the active view (macOS only)",
+      "state": {
+        "noPermissions": "no USB permission",
+        "offline": "offline",
+        "other": "not ready",
+        "ready": "ready",
+        "unauthorized": "not authorized - allow USB debugging on the phone"
+      },
+      "try_again": "Try again"
+    },
     "devtools": {
       "mode": {
         "docked_bottom": "docked below",
@@ -4586,6 +5699,7 @@
     "menu": {
       "app": "App",
       "breakpoints": "Breakpoints",
+      "bug_report": "Bug report",
       "button": {
         "checks": "Run all checks",
         "checks_menu": "Checks",
@@ -4604,6 +5718,7 @@
       "checks": "Checks",
       "color_scheme": "Page colour scheme",
       "compare": "Compare environments",
+      "devices": "Devices & engines",
       "devtools": "DevTools",
       "devtools_follow": "DevTools follow the active view",
       "emulation": "Emulation",
@@ -4661,6 +5776,7 @@
         "recording": "Recording \"{name}\": {steps, plural, one {# step} other {# steps}} so far. Click to pause."
       }
     },
+    "setting_link": "Open the setting",
     "sitemap": {
       "cancel": "Cancel",
       "close": "Close",
@@ -4681,6 +5797,12 @@
     "status": {
       "open_setting": "Setting",
       "open_setting_key": "Open the setting {key}"
+    },
+    "toast": {
+      "close": "Close",
+      "download": "Download",
+      "retry": "Retry",
+      "settings": "Settings"
     },
     "toolbar": {
       "add_view": "Add view",
@@ -4727,6 +5849,8 @@
           "devices": "Devices",
           "disconnect": "Disconnect a device",
           "disconnect_all": "All devices",
+          "present": "Present over the internet ...",
+          "present_stop": "End the presentation over the internet",
           "show_qr": "Show QR code to pair"
         },
         "off": "Portal: off",
@@ -5015,11 +6139,63 @@
     "gallery": {
       "title": "Sitemap gallery - {runId}"
     },
+    "galleryPage": {
+      "column": {
+        "page": "Page"
+      },
+      "compare": "{status} {percent} %",
+      "empty": "No page matches the filters.",
+      "error": {
+        "failed": "The sitemap capture could not be read. Its folder or run.json may be damaged; the log names the reason.",
+        "not_found": "This sitemap capture was not found; it may have been deleted. Start a capture, or open another run's gallery."
+      },
+      "errors": {
+        "none": "No errors.",
+        "title": "Errors"
+      },
+      "filter": {
+        "all": "All",
+        "breakpoints": "Breakpoints",
+        "status": "Status"
+      },
+      "kind": {
+        "failed": "Failed: {detail}",
+        "http": "HTTP {status}",
+        "redirect": "Redirect to {url}"
+      },
+      "loading": "Reading the sitemap capture...",
+      "shot": {
+        "alt": "{url} at {breakpoint}",
+        "failed": "Failed: {error}",
+        "open": "Show {url} at {breakpoint} large",
+        "pending": "Not captured yet"
+      },
+      "size": "{width}×{height}",
+      "state": {
+        "cancelled": "Cancelled",
+        "finished": "Finished",
+        "running": "Running"
+      },
+      "status": {
+        "ok": "OK",
+        "problems": "Problems"
+      },
+      "summary": "{pages, plural, one {# page} other {# pages}} in {breakpoints, plural, one {# breakpoint} other {# breakpoints}}",
+      "title": "Sitemap gallery",
+      "truncated": "Showing the first {shown} of {total, plural, one {# page} other {# pages}}. The gallery file index.html in the run's folder has them all.",
+      "view": {
+        "close": "Close",
+        "next": "Next",
+        "position": "{breakpoint} - shot {at} of {total}",
+        "previous": "Previous"
+      }
+    },
     "notice": {
       "busy": "A sitemap capture is running already: its progress is in the sitemap bar.",
       "cancelled": "Sitemap capture cancelled at {done} of {total, plural, one {# shot} other {# shots}}; resume run {runId} to take the rest.",
       "failed": "The sitemap capture did not start: {error}",
       "finished": "Sitemap capture done: {done} of {total, plural, one {# shot} other {# shots}}, {failed} failed. Gallery in {folder}.",
+      "galleryAtEnd": "The gallery file index.html of sitemap capture {runId} is written when the capture ends; your browser can open it then. The gallery window of rBrowser shows the capture while it runs: choose it under Open the gallery in.",
       "started": "Sitemap capture started: {pages, plural, one {# page} other {# pages}} × {breakpoints, plural, one {# breakpoint} other {# breakpoints}}, {pending, plural, one {# shot} other {# shots}}."
     }
   },
@@ -5218,6 +6394,8 @@
       "ffmpeg_needed": "Recording video needs ffmpeg, which rBrowser does not ship. Run \"Video: download ffmpeg\" (Ctrl+Shift+Space X F) to download ffmpeg {version} ({size} MB, {license}) from {from}; its source code is at {source}. Nothing is downloaded before.",
       "ffmpeg_not_installed": "There is no downloaded ffmpeg to remove.",
       "ffmpeg_removed": "The downloaded ffmpeg was removed from {folder}.",
+      "paused": "Video paused: the files leave out the time until you resume.",
+      "resumed": "Video recording resumed.",
       "saved": "{count} video(s) saved to {folder}.",
       "started": "Recording {count} view(s); the recording stops by itself after {seconds} s.",
       "unavailable": "{view} is a {engine} view and is not recorded; video records Chromium views."

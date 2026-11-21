@@ -107,6 +107,8 @@ fn breakpoint_shortcuts_parse_the_free_size() {
         "500x800@11",
         "500x800@abc",
         "99999x800",
+        "10001x800",
+        "500x800@0.1",
         "-5x800",
         "500x800x2",
     ] {

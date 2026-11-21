@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "format": "httpie",
+    "version": "1.0.0",
+    "contentType": "collection",
+    "schema": "https://schema.httpie.io/1.0.0.json",
+    "docs": "https://httpie.io/r/help/export-from-httpie",
+    "source": "HTTPie Desktop 2025.2.0"
+  },
+  "entry": {
+    "name": "Notes",
+    "icon": { "name": "default", "color": "gray" },
+    "auth": { "type": "bearer", "credentials": { "username": "", "password": "{{token}}" }, "target": "headers" },
+    "requests": [
+      {
+        "name": "List notes",
+        "url": "{{baseUrl}}/notes",
+        "method": "GET",
+        "headers": [
+          { "name": "Accept", "value": "application/json", "enabled": true },
+          { "name": "X-Off", "value": "1", "enabled": false }
+        ],
+        "queryParams": [
+          { "name": "tag", "value": "work", "enabled": true },
+          { "name": "debug", "value": "1", "enabled": false }
+        ],
+        "pathParams": [],
+        "auth": { "type": "inherited" },
+        "body": { "type": "none", "file": { "name": "" }, "text": { "value": "", "format": "" }, "form": { "isMultipart": false, "fields": [] }, "graphql": { "query": "", "variables": "" } }
+      },
+      {
+        "name": "Get note",
+        "url": "{{baseUrl}}/notes/:id",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [{ "name": "id", "value": "7" }],
+        "auth": { "type": "none" },
+        "body": { "type": "none" }
+      },
+      {
+        "name": "Create note",
+        "url": "{{baseUrl}}/notes",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": { "type": "basic", "credentials": { "username": "writer", "password": "n0tes" }, "target": "headers" },
+        "body": { "type": "text", "text": { "value": "{\"title\": \"Hi\"}", "format": "application/json" } }
+      },
+      {
+        "name": "Attach",
+        "url": "https://notes.example/attach",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": { "type": "apiKey", "credentials": { "username": "X-Notes-Key", "password": "nk-9" }, "target": "headers" },
+        "body": { "type": "form", "form": { "isMultipart": true, "fields": [
+          { "name": "caption", "value": "pic", "enabled": true, "type": "text" },
+          { "name": "file", "value": "/Users/ada/pic.jpg", "enabled": true, "type": "file" }
+        ] } }
+      },
+      {
+        "name": "Query",
+        "url": "https://notes.example/graphql",
+        "method": "POST",
+        "auth": { "type": "digest", "credentials": { "username": "d", "password": "{{pw}}" } },
+        "body": { "type": "graphql", "graphql": { "query": "{ notes { id } }", "variables": "{\"n\": 1}" } }
+      }
+    ]
+  }
+}

@@ -17,6 +17,7 @@ publish = false
 # the native build neither builds nor links it.
 [dependencies]
 rb-plugin-api = { path = "../../crates/rb-plugin-api" }
+rb-util = { path = "../../crates/rb-util" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 

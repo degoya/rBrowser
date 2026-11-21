@@ -3,7 +3,8 @@
 // the loaded plugins offer, one entry each in the list, the chosen one in the content area - a
 // manifest's `placement = "dialog"` too, which only keeps it from opening unasked (RB-080-59). A
 // panel with unsaved work keeps its frame, hidden, while another is shown, and so does one that
-// asked to be kept (`keep`, RB-110-16: the todo panel, slow to fill). A panel runs in
+// asked to be kept (`keep`, RB-110-16: the todo panel, slow to fill), and so do the
+// `panels.keepFrames` panels shown last (RB-090-38, `recent.ts`). A panel runs in
 // `<iframe sandbox="allow-scripts">` - an opaque origin without `cefQuery`, no same-origin
 // access, forms, popups, modals, downloads or top navigation; its files carry a CSP without
 // network, and the window's own CSP lets the frame load `rbrowser://plugin` only. Its one
@@ -53,6 +54,7 @@ import {
 import PanelDockBar from './PanelDockBar.vue';
 import PanelSideBar from './PanelSideBar.vue';
 import { listFailureOf, type ListFailure } from './listFailure';
+import { present, remember } from './recent';
 import { SHELL_KEY } from '../state/shell';
 import type { PanelInfo, PanelMessage, PanelRequest } from './protocol';
 
@@ -85,12 +87,15 @@ const unsaved = ref<string[]>([]);
 /** The panels that asked to be kept (their `keep` message): their frames stay alive, hidden,
  * until the panel leaves the list (RB-110-16). */
 const keepAlive = ref<string[]>([]);
-/** The frames in the page: the shown panel's and those with unsaved work or kept, in list order
- * (a frame moved in the page would load again). */
+/** The plugin panels shown last, newest first: the shown one and `panels.keepFrames` others
+ * (RB-090-38). */
+const recent = ref<string[]>([]);
+/** The frames in the page: the shown panel's, those shown last and those with unsaved work or
+ * kept, in list order (a frame moved in the page would load again). */
 const kept = computed(() =>
   panels.value.filter((panel) => {
     const key = keyOf(panel);
-    return key === selected.value || unsaved.value.includes(key) || keepAlive.value.includes(key);
+    return key === selected.value || recent.value.includes(key) || unsaved.value.includes(key) || keepAlive.value.includes(key);
   }),
 );
 
@@ -119,7 +124,12 @@ function markKept(target: PanelTarget): void {
 
 // A panel's link opens through the core, asking first for `ui.openLinksIn: ask` (RB-080-92).
 const links = useLinkOpener();
-const bridge = new PanelBridge(ask, markUnsaved, { open: links.open }, markKept);
+// A panel's settings link opens the settings window at its key (RB-096-11).
+async function openSettingsAt(key: string): Promise<boolean> {
+  await props.client.request({ type: 'openSettings', key });
+  return true;
+}
+const bridge = new PanelBridge(ask, markUnsaved, { open: links.open, settings: openSettingsAt }, markKept);
 // The shell's text size (RB-090-26) reaches the panels' own frames with their settings
 // (RB-090-39); a page without the shell keeps them at 100 %.
 const shell = inject(SHELL_KEY, null);
@@ -191,6 +201,20 @@ watch(selected, (key) => {
 
 /** Where the panels are and how the side bar shows (`panels.*` settings). */
 const dock = ref<DockState>(DEFAULT_STATE);
+watch(selected, (key) => {
+  const shown = key !== null && !isCorePanel(key) ? key : null;
+  recent.value = remember(recent.value, shown, dock.value.keepFrames);
+});
+watch(panels, (list) => {
+  recent.value = present(recent.value, list.map(keyOf));
+});
+watch(
+  () => dock.value.keepFrames,
+  (size) => {
+    const key = selected.value;
+    recent.value = remember(recent.value, key !== null && !isCorePanel(key) ? key : null, size);
+  },
+);
 const windowWidth = ref(window.innerWidth);
 const onResize = (): void => {
   windowWidth.value = window.innerWidth;

@@ -17,14 +17,18 @@
 // After the name come the pieces a grid strip shows (RB-090-69, `BoardPieces.vue`): the address
 // and the external engine's window - the latter in the engine badge while it shows, one badge
 // naming the engine and its window's state (RB-090-71); a click asks the core to do what the
-// strip's piece does (`canvasPiece`: restart or raise the engine, activate). The Web Vitals are
-// the vitals bar's, the native strip under the view (RB-090-71).
+// strip's piece does (`canvasPiece`: restart or raise the engine, activate, or open the address
+// field of a decoupled view in its place, RB-092-03). The Web Vitals are the vitals bar's, the
+// native strip under the view (RB-090-71).
 // A zoomed page shows its level between the label and the engine badge, as the grid's strips do
 // (RB-090-28): its click, Enter or Space sets the page back to 100 % (`view.page_zoom.reset`).
 // Ctrl+wheel zooms the canvas around the pointer (`canvasZoom`, `layoutModes.wheelZoom`): the
 // core scales the views and the labels follow - the board's page itself never zooms (RB-080-50).
 // The core moves the views only once the board painted their frames: the board answers each
 // canvas it is sent (`canvasLive`) in the frame that paints it, for the newest one (RB-090-55).
+// A drag of a label or of the board is drawn the same way: the board sends the newest delta and
+// draws the frames the core sends for it, never at the pointer itself - frame and view move
+// together (RB-094-18).
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UIcon from '@nuxt/ui/components/Icon.vue';
@@ -39,14 +43,10 @@ import {
   boardItems,
   createBoardDrag,
   labelPieces,
-  offsetOf,
   stepFor,
   type BoardEntry,
   type DragState,
 } from './board';
-
-/** How long a let-go label keeps its drawn place while the core's new state is on its way. */
-const SETTLE_MS = 300;
 
 const shell = useShell();
 const { t } = useI18n();
@@ -60,15 +60,14 @@ const drawn = computed(() => {
 });
 const board = computed(() => drawn.value?.layout.modes?.board ?? null);
 const items = computed(() => boardItems(drawn.value));
-/** The drag under way, or the last one until the core's state shows its result. */
+/** The drag under way (the cursor shows it); the core draws where it moves things. */
 const live = ref<DragState | null>(null);
 const space = ref(false);
 /** A drag started while Space was held on a label: its release activates nothing. */
 let spaceDragged = false;
-let settleTimer: ReturnType<typeof setTimeout> | undefined;
 
 const drag = createBoardDrag({
-  send: (request) => void shell.send(request),
+  send: (request) => shell.send(request),
   frame: (callback) => requestAnimationFrame(callback),
   cancelFrame: (handle) => cancelAnimationFrame(handle),
 });
@@ -157,22 +156,6 @@ watch(
   { flush: 'post' },
 );
 
-function settle(): void {
-  clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => (live.value = null), SETTLE_MS);
-}
-
-// The core's new places arrived: draw them as they are.
-watch(
-  () => JSON.stringify(board.value?.items ?? []),
-  () => {
-    if (drag.current() === null) {
-      clearTimeout(settleTimer);
-      live.value = null;
-    }
-  },
-);
-
 function capture(event: PointerEvent): void {
   const target = event.currentTarget as Element | null;
   try {
@@ -210,7 +193,6 @@ function onMove(event: PointerEvent): void {
 
 function onUp(event: PointerEvent): void {
   const target = drag.current()?.target;
-  const last = drag.move(event.clientX, event.clientY);
   const result = drag.end(event.clientX, event.clientY);
   if (result === 'click' && target?.kind === 'view') {
     live.value = null;
@@ -218,10 +200,8 @@ function onUp(event: PointerEvent): void {
     void shell.send(
       active ? { type: 'canvasSizePick', view: target.view } : { type: 'setActiveView', view: target.view },
     );
-  } else if (result === 'dragged') {
-    live.value = last;
-    settle();
   } else {
+    // The core's frames stay drawn until its state shows where the view or the camera went.
     live.value = null;
   }
 }
@@ -305,19 +285,23 @@ function onPieceClick(view: ViewId, piece: LabelPiece): void {
   void shell.send({ type: 'canvasPiece', view, piece });
 }
 
+// The address field the core opened in this label (RB-092-03), with the label for its name.
+function addressEditOf(item: BoardEntry): { url: string; label: string } | null {
+  const edit = shell.addressEdit.value;
+  return edit !== null && edit.view === item.view ? { url: edit.url, label: item.label } : null;
+}
+
 // The badge's click asks for the engine menu; the press never starts a drag of the label.
 function onEngineClick(view: ViewId): void {
   void shell.send({ type: 'canvasEnginePick', view });
 }
 
-function box(rect: MapRect, view: ViewId): Record<string, string> {
-  const offset = offsetOf(view, live.value);
+function box(rect: MapRect): Record<string, string> {
   return {
     left: `${rect.x}px`,
     top: `${rect.y}px`,
     width: `${rect.width}px`,
     height: `${rect.height}px`,
-    transform: `translate(${offset.x}px, ${offset.y}px)`,
   };
 }
 
@@ -331,7 +315,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('keyup', onKeyUp);
   window.removeEventListener('blur', onBlur);
-  clearTimeout(settleTimer);
   clearTimeout(wheelRest);
   if (paintFrame !== undefined) cancelAnimationFrame(paintFrame);
 });
@@ -354,7 +337,7 @@ onBeforeUnmount(() => {
     <template v-for="item in items" :key="item.view">
       <div
         class="pointer-events-none absolute rounded-sm border border-dashed border-accented"
-        :style="box(item.rect, item.view)"
+        :style="box(item.rect)"
         aria-hidden="true"
         :data-testid="`board-frame-${item.view}`"
       />
@@ -365,7 +348,7 @@ onBeforeUnmount(() => {
           item.visible ? '' : 'opacity-70',
           spacePans ? 'cursor-grabbing' : 'cursor-move',
         ]"
-        :style="box(item.labelRect, item.view)"
+        :style="box(item.labelRect)"
         :data-testid="`board-strip-${item.view}`"
         @pointerdown="(event) => onLabelDown(item.view, event)"
         @contextmenu="(event) => onContextMenu(event, item.view)"
@@ -393,6 +376,7 @@ onBeforeUnmount(() => {
           :view="item.view"
           :active="item.active"
           :pieces="labelPieces(item.pieces, badges)"
+          :edit="addressEditOf(item)"
           @pick="(piece) => onPieceClick(item.view, piece)"
         />
         <button

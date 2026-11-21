@@ -1,4 +1,4 @@
-use super::{authority_of, host_of, origin_of};
+use super::{authority_of, host_of, is_web_url, origin_of};
 
 #[test]
 fn the_authority_keeps_the_port_and_drops_the_user_info() {
@@ -12,6 +12,52 @@ fn the_authority_keeps_the_port_and_drops_the_user_info() {
     assert_eq!(authority_of("about:blank"), None);
     assert_eq!(authority_of("https://"), None);
     assert_eq!(authority_of("https:///nohost"), None);
+}
+
+#[test]
+fn a_web_url_is_http_or_https_with_a_host() {
+    for url in [
+        "https://example.com",
+        "http://localhost:3000/x",
+        "HTTPS://Example.com/a?b#c",
+        "http://user@a.test/",
+        "http://[::1]:8080/",
+    ] {
+        assert!(is_web_url(url), "{url}");
+    }
+}
+
+#[test]
+fn a_url_without_host_or_of_another_scheme_is_no_web_url() {
+    for url in [
+        "http://",
+        "https://",
+        "https:///nohost",
+        "http://user@/x",
+        "http://:8080/",
+        "about:blank",
+        "file:///C:/x.html",
+        "data:text/html,x",
+        "ws://live.test",
+        "example.com",
+        "",
+    ] {
+        assert!(!is_web_url(url), "{url}");
+    }
+}
+
+#[test]
+fn a_web_url_holds_no_whitespace_or_control_character() {
+    for url in [
+        " https://example.com",
+        "https://example.com ",
+        "https://exa mple.com/",
+        "https://example.com/a b",
+        "https://example.com/\n",
+        "https://example.com/\u{7f}",
+    ] {
+        assert!(!is_web_url(url), "{url:?}");
+    }
 }
 
 #[test]
@@ -109,4 +155,20 @@ fn an_origin_is_its_own_origin() {
     ] {
         assert_eq!(origin_of(origin).as_deref(), Some(origin));
     }
+}
+
+#[test]
+fn the_user_info_is_dropped_from_the_address() {
+    use super::without_user_info;
+    assert_eq!(
+        without_user_info("https://user:pw@a.test:8080/p?q=1#f"),
+        "https://a.test:8080/p?q=1#f"
+    );
+    // Only the authority's: an `@` in the path, the query or the fragment stays.
+    assert_eq!(
+        without_user_info("https://a.test/@me?mail=a@b#c@d"),
+        "https://a.test/@me?mail=a@b#c@d"
+    );
+    assert_eq!(without_user_info("mailto:a@b.test"), "mailto:a@b.test");
+    assert_eq!(without_user_info("https://a.test/"), "https://a.test/");
 }

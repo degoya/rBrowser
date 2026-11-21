@@ -33,6 +33,9 @@ fn sample() -> Recording {
             view: "mobile".into(),
             at_ms: 10,
             only_in: vec!["mobile".into()],
+            path: Vec::new(),
+            disabled: false,
+            pause_ms: None,
         }],
     }
 }

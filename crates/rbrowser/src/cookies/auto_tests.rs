@@ -25,3 +25,18 @@ fn a_view_counts_as_started_when_it_turns_running() {
     assert_eq!(started(&before, &now), vec![ViewId(2), ViewId(4)]);
     assert!(started(&HashMap::new(), &[]).is_empty());
 }
+
+/// RB-090-38: the status poll wakes only while there are external views to watch - once at the
+/// start, before anything was looked at, and never in a window of Chromium views alone.
+#[test]
+fn the_status_poll_runs_only_while_there_are_external_views() {
+    assert!(needs_poll(None, false), "the first look");
+    assert!(
+        !needs_poll(Some(&HashMap::new()), false),
+        "no external view: no wakeup"
+    );
+    let one = HashMap::from([(ViewId(3), ExternalStatus::Running)]);
+    assert!(needs_poll(Some(&one), false));
+    // A view switched to Firefox after the first look, its window not listed yet.
+    assert!(needs_poll(Some(&HashMap::new()), true));
+}

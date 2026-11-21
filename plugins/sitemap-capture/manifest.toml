@@ -25,6 +25,11 @@ license = "GPL-3.0-or-later"
 [locales]
 en = "locales/en.json"
 
+# thumbnailWidth: how wide the gallery's contact sheet shows a shot (Settings > Capture >
+# Sitemap, RB-090-86).
+[settings]
+schema = "settings.schema.json"
+
 # robots.txt, the sitemaps and their indexes: http(s) only, a redirect is answered and followed
 # here within its origin only, nothing on this machine or the local network unless the site is
 # local, at most four requests a second.

@@ -8,7 +8,7 @@ export type Box = [number, number, number, number];
 export interface Located {
   /** A selector that finds the element again (agent/src/selector's CSS path). */
   selector: string;
-  /** The element's path from the root, the findings' shared form (src/path.ts). */
+  /** The element's path from the root, the findings' shared form (web-common/src/element-path.ts). */
   path: string;
   /** Not exposed at all: `display: none`, `visibility: hidden`, `hidden`, inside a closed
    * `<details>` or `inert`. */
@@ -19,6 +19,9 @@ export interface Located {
 }
 
 export interface Heading extends Located {
+  /** Its place in the document: an index in document order, shared with the focus list
+   * (RB-094-02, the reading order). */
+  order: number;
   level: number;
   text: string;
   /** The accessible name, the alts of its images included; '' when it has none. */
@@ -73,6 +76,8 @@ export interface Field extends Located {
 }
 
 export interface Focusable extends Located {
+  /** Its place in the document, as a heading's `order`. */
+  order: number;
   tag: string;
   role: string;
   name: string;
@@ -102,6 +107,8 @@ export interface CustomResult {
 export interface PageOutline {
   url: string;
   lang: string;
+  /** The writing direction of the content, `ltr` or `rtl`: the reading order follows it. */
+  dir: string;
   headings: Heading[];
   landmarks: Landmark[];
   /** Read with the landmarks. */

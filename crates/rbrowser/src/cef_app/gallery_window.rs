@@ -1,21 +1,24 @@
-//! The sitemap gallery's window (RB-090-83, `crate::sitemap::gallery`): a run's `index.html` in a
-//! top-level window of its own, never in the grid's views. One window: the next gallery asked
-//! for loads into it and brings it to the front. Its client has no message router, no keyboard
-//! handler (no rBrowser shortcuts) and no page bridge, JavaScript is off (the gallery has none),
-//! and every request it makes - the main frame and every image, style or font - reaches only
-//! what lies in the run's folder ([`GalleryOpen::may_load`]): a gallery a repository put there
-//! cannot reach a share (an NTLM hash), the web or another file (security review, wave
-//! 090-w21). A link the person clicks, in the page or as a popup, goes to `app.open_link` (http
-//! and https only); anything else is refused. The policy is the gallery's own `<meta>` one -
-//! `file:` answers carry no headers to add one to - and JavaScript is off whatever it says. UI
-//! thread, but for the requests' check on CEF's IO thread.
+//! The sitemap gallery's window (RB-090-83, `crate::sitemap::gallery`): a top-level window of its
+//! own, never in the grid's views. One window: the next gallery asked for loads into it and
+//! brings it to the front.
+//!
+//! It shows the gallery page of the shell's pages (RB-090-86,
+//! `rbrowser://ui/settings.html#/sitemap-gallery?run=<id>`, Nuxt UI) with the pages window's
+//! client (`settings_window.rs`): it stays on the shell's pages, opens no popups and has no
+//! rBrowser shortcuts. Its queries are narrowed to reading its run, the theme and the text size
+//! and to `app.open_link` ([`crate::settings_window::guard::gallery_may_send`], its browser id
+//! [`browser_id`]); its images come from `rbrowser://sitemap/` (`sitemap_scheme.rs`), which
+//! serves this window's main frame alone and only the shots of the run it shows ([`shown_run`]).
+//! UI thread, but for the reads of the browser id and the run on CEF's IO thread.
 
 use std::cell::RefCell;
 use std::os::raw::c_int;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 use cef::*;
 
+use super::settings_window::PagesClient;
 use crate::cdp::lock;
 use crate::sitemap::gallery::GalleryOpen;
 
@@ -25,28 +28,29 @@ const SIZE: Size = Size {
     height: 860,
 };
 
+/// The gallery window's browser id; 0 while it is closed.
+static GALLERY_BROWSER: AtomicI32 = AtomicI32::new(0);
+/// The run the window shows: the image route serves its shots alone.
+static SHOWN: Mutex<Option<String>> = Mutex::new(None);
+
 struct Slot {
     window: Option<Window>,
     view: Option<BrowserView>,
 }
-
-/// The gallery shown now: what its requests are held to, read on the UI and the IO thread.
-static SHOWN: Mutex<Option<GalleryOpen>> = Mutex::new(None);
 
 thread_local! {
     /// The gallery window, while it stands.
     static GALLERY: RefCell<Option<Slot>> = const { RefCell::new(None) };
 }
 
-fn text(value: &CefStringUserfree) -> String {
-    CefString::from(value).to_string()
+/// The gallery window's browser id, 0 while it is closed (any thread).
+pub fn browser_id() -> i32 {
+    GALLERY_BROWSER.load(Ordering::Acquire)
 }
 
-/// Whether the gallery shown now may load `url`: a navigation or any other request.
-fn may_load(url: &str) -> bool {
-    lock(&SHOWN)
-        .as_ref()
-        .is_some_and(|shown| shown.may_load(url))
+/// The run the gallery window shows, while it is open (any thread).
+pub fn shown_run() -> Option<String> {
+    lock(&SHOWN).clone()
 }
 
 /// Shows `gallery`: in the open window, or in a new one.
@@ -56,8 +60,8 @@ pub fn open(gallery: GalleryOpen) {
             .as_ref()
             .map(|slot| (slot.window.clone(), slot.view.clone()))
     });
-    // First: the guard reads the gallery's folder for its first request.
-    *lock(&SHOWN) = Some(gallery.clone());
+    // First: the image route reads the run for the page's first image.
+    *lock(&SHOWN) = Some(gallery.run_id.clone());
     if let Some((window, view)) = shown {
         if let Some(frame) = view
             .as_ref()
@@ -73,13 +77,8 @@ pub fn open(gallery: GalleryOpen) {
         }
         return;
     }
-    let mut client = GalleryClient::new();
+    let mut client = PagesClient::new();
     let mut delegate = GalleryBrowser::new();
-    let settings = BrowserSettings {
-        // The gallery has no script; a file put in its place runs none either.
-        javascript: State::DISABLED,
-        ..Default::default()
-    };
     let title = gallery.title.clone();
     let url = gallery.url.clone();
     GALLERY.with(|slot| {
@@ -91,7 +90,7 @@ pub fn open(gallery: GalleryOpen) {
     let view = browser_view_create(
         Some(&mut client),
         Some(&CefString::from(url.as_str())),
-        Some(&settings),
+        Some(&BrowserSettings::default()),
         None,
         None,
         Some(&mut delegate),
@@ -128,15 +127,16 @@ pub fn close_all() {
     }
 }
 
-/// Empties the slot (`super::teardown`): its window and view must not outlive CefShutdown.
-pub fn release() {
-    GALLERY.with(|slot| slot.borrow_mut().take());
+/// Lets go of the window: no browser id, no run, an empty slot.
+fn forget() {
+    GALLERY_BROWSER.store(0, Ordering::Release);
     lock(&SHOWN).take();
+    GALLERY.with(|slot| slot.borrow_mut().take());
 }
 
-/// A web address the person clicked: through `app.open_link`, which takes http and https only.
-fn open_outside(url: String) {
-    super::report_window::open_outside(url);
+/// Empties the slot (`super::teardown`): its window and view must not outlive CefShutdown.
+pub fn release() {
+    forget();
 }
 
 wrap_window_delegate! {
@@ -179,8 +179,7 @@ wrap_window_delegate! {
         }
 
         fn on_window_destroyed(&self, _window: Option<&mut Window>) {
-            GALLERY.with(|slot| slot.borrow_mut().take());
-            lock(&SHOWN).take();
+            forget();
         }
 
         fn can_resize(&self, _window: Option<&mut Window>) -> c_int {
@@ -192,6 +191,13 @@ wrap_window_delegate! {
         }
 
         fn can_minimize(&self, _window: Option<&mut Window>) -> c_int {
+            1
+        }
+
+        // macOS draws the close, minimise and zoom buttons only on this answer; CEF's default
+        // is "not frameless", the cef crate's 0 - a window without them cannot be closed there
+        // (RB-090-98). Ignored on Windows.
+        fn with_standard_window_buttons(&self, _window: Option<&mut Window>) -> c_int {
             1
         }
 
@@ -212,119 +218,18 @@ wrap_browser_view_delegate! {
     impl ViewDelegate {}
 
     impl BrowserViewDelegate {
+        fn on_browser_created(
+            &self,
+            _browser_view: Option<&mut BrowserView>,
+            browser: Option<&mut Browser>,
+        ) {
+            if let Some(browser) = browser {
+                GALLERY_BROWSER.store(browser.identifier(), Ordering::Release);
+            }
+        }
+
         fn browser_runtime_style(&self) -> RuntimeStyle {
             RuntimeStyle::ALLOY
-        }
-    }
-}
-
-wrap_client! {
-    // No message router, no keyboard handler, no page bridge: the guard on what it loads and
-    // the popups it refuses.
-    struct GalleryClient {}
-
-    impl Client {
-        fn request_handler(&self) -> Option<RequestHandler> {
-            Some(GalleryRequests::new())
-        }
-
-        fn life_span_handler(&self) -> Option<LifeSpanHandler> {
-            Some(GalleryPopups::new())
-        }
-    }
-}
-
-wrap_request_handler! {
-    struct GalleryRequests {}
-
-    impl RequestHandler {
-        // Every request of the window, not only its navigations (IO thread).
-        fn resource_request_handler(
-            &self,
-            _browser: Option<&mut Browser>,
-            _frame: Option<&mut Frame>,
-            _request: Option<&mut Request>,
-            _is_navigation: c_int,
-            _is_download: c_int,
-            _request_initiator: Option<&CefString>,
-            _disable_default_handling: Option<&mut c_int>,
-        ) -> Option<ResourceRequestHandler> {
-            Some(GalleryResources::new())
-        }
-
-        fn on_before_browse(
-            &self,
-            _browser: Option<&mut Browser>,
-            frame: Option<&mut Frame>,
-            request: Option<&mut Request>,
-            user_gesture: c_int,
-            is_redirect: c_int,
-        ) -> c_int {
-            let url = request.map(|request| text(&request.url())).unwrap_or_default();
-            let main = frame.as_ref().is_some_and(|frame| frame.is_main() != 0);
-            if main && is_redirect == 0 && may_load(&url) {
-                return 0;
-            }
-            if main && user_gesture != 0 {
-                open_outside(url);
-            } else {
-                tracing::info!(main, "a gallery's navigation was refused");
-            }
-            1
-        }
-    }
-}
-
-wrap_resource_request_handler! {
-    struct GalleryResources {}
-
-    impl ResourceRequestHandler {
-        fn on_before_resource_load(
-            &self,
-            _browser: Option<&mut Browser>,
-            _frame: Option<&mut Frame>,
-            request: Option<&mut Request>,
-            _callback: Option<&mut Callback>,
-        ) -> ReturnValue {
-            let url = request.map(|request| text(&request.url())).unwrap_or_default();
-            if may_load(&url) {
-                ReturnValue::CONTINUE
-            } else {
-                // The address is the repository's: only that something was refused is logged.
-                tracing::info!("a gallery's request outside its folder was refused");
-                ReturnValue::CANCEL
-            }
-        }
-    }
-}
-
-wrap_life_span_handler! {
-    struct GalleryPopups {}
-
-    impl LifeSpanHandler {
-        fn on_before_popup(
-            &self,
-            _browser: Option<&mut Browser>,
-            _frame: Option<&mut Frame>,
-            _popup_id: c_int,
-            target_url: Option<&CefString>,
-            _target_frame_name: Option<&CefString>,
-            _target_disposition: WindowOpenDisposition,
-            user_gesture: c_int,
-            _popup_features: Option<&PopupFeatures>,
-            _window_info: Option<&mut WindowInfo>,
-            _client: Option<&mut Option<Client>>,
-            _settings: Option<&mut BrowserSettings>,
-            _extra_info: Option<&mut Option<DictionaryValue>>,
-            _no_javascript_access: Option<&mut c_int>,
-        ) -> c_int {
-            // The gallery opens no window of its own; a clicked link goes to the person's choice.
-            if user_gesture != 0
-                && let Some(url) = target_url
-            {
-                open_outside(url.to_string());
-            }
-            1
         }
     }
 }

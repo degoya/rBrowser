@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Settings of the security header check (RB-093-03): Settings > Checks > Security headers",
+  "type": "object",
+  "properties": {
+    "hstsMinAge": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 63072000,
+      "default": 31536000,
+      "description": "The smallest Strict-Transport-Security max-age, in seconds, that is not reported as too short.",
+      "x-category": "checks",
+      "x-section": "security-headers",
+      "x-order": 1,
+      "x-scope": ["project", "local", "user"]
+    }
+  }
+}

@@ -144,6 +144,9 @@ pub struct CleanPlan {
     pub selectors: Vec<String>,
     /// Freeze animations and videos, `prefers-reduced-motion: reduce`.
     pub freeze: bool,
+    /// Black out the password fields (a bug report's capture, RB-093-04); no settings key, the
+    /// caller sets it.
+    pub mask: bool,
     /// The wait after the preparation, in milliseconds.
     pub settle_ms: u32,
 }
@@ -203,6 +206,7 @@ impl CleanSettings {
             hide: hide && !selectors.is_empty(),
             selectors,
             freeze,
+            mask: false,
             settle_ms: self.settle_ms.min(MAX_SETTLE_MS),
         }
     }
@@ -211,7 +215,7 @@ impl CleanSettings {
 impl CleanPlan {
     /// Whether the plan leaves the page alone.
     pub fn is_noop(&self) -> bool {
-        !self.hide && !self.freeze
+        !self.hide && !self.freeze && !self.mask
     }
 
     /// The wait after the preparation.
@@ -230,6 +234,7 @@ impl CleanPlan {
             "hide": self.hide,
             "selectors": self.selectors,
             "freeze": self.freeze,
+            "mask": self.mask,
         });
         format!("{CLEAN_JS}\nglobalThis.__rbCaptureClean.prepare({options})")
     }

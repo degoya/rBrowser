@@ -219,10 +219,8 @@ fn read_index(path: &Path) -> BTreeMap<String, String> {
 
 /// Writes the record through a temporary file, so a crash leaves the old one or the new one.
 fn write_index(path: &Path, index: &BTreeMap<String, String>) -> Result<()> {
-    let temporary = path.with_extension("json.tmp");
-    std::fs::write(&temporary, serde_json::to_vec(index)?)
-        .with_context(|| format!("write {}", temporary.display()))?;
-    std::fs::rename(&temporary, path).with_context(|| format!("replace {}", path.display()))
+    rb_util::fs::write_atomic(path, &serde_json::to_vec(index)?)
+        .with_context(|| format!("replace {}", path.display()))
 }
 
 #[cfg(test)]

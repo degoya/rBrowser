@@ -190,26 +190,37 @@ pub fn decode(data: &str) -> Result<Image, Failure> {
 ///
 /// As [`decode_scan`].
 pub fn decode_region(data: &str, pick: impl FnOnce(u32, u32) -> Region) -> Result<Image, Failure> {
-    decode_scan(data, pick, None)
+    decode_scan(&png_bytes(data)?, pick, None)
 }
 
-/// The width and height of the screenshot CDP answered (`data`, base64 PNG), read from its header
-/// alone: nothing is inflated (RB-090-19).
+/// The PNG of the screenshot CDP answered (`data`, base64), decoded once: its size and its
+/// pixels are read from these bytes (RB-090-29; a large view's image is megabytes).
 ///
 /// # Errors
 ///
-/// `bad_data` for no base64 PNG.
-pub fn image_size(data: &str) -> Result<(u32, u32), Failure> {
-    let reader = png_reader(data)?;
+/// `bad_data` for no base64.
+pub fn png_bytes(data: &str) -> Result<Vec<u8>, Failure> {
+    #[cfg(test)]
+    tests::BASE64_DECODES.with(|count| count.set(count.get() + 1));
+    base64::engine::general_purpose::STANDARD
+        .decode(data.trim())
+        .map_err(|_| bad_data("screenshot"))
+}
+
+/// The width and height of the PNG `png` ([`png_bytes`]), read from its header alone: nothing is
+/// inflated (RB-090-19).
+///
+/// # Errors
+///
+/// `bad_data` for no PNG.
+pub fn image_size(png: &[u8]) -> Result<(u32, u32), Failure> {
+    let reader = png_reader(png)?;
     Ok((reader.info().width, reader.info().height))
 }
 
-/// The PNG of `data` (base64), its header read.
-fn png_reader(data: &str) -> Result<png::Reader<std::io::Cursor<Vec<u8>>>, Failure> {
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(data.trim())
-        .map_err(|_| bad_data("screenshot"))?;
-    let mut decoder = png::Decoder::new(std::io::Cursor::new(bytes));
+/// The PNG `png`, its header read.
+fn png_reader(png: &[u8]) -> Result<png::Reader<std::io::Cursor<&[u8]>>, Failure> {
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(png));
     decoder.set_transformations(png::Transformations::normalize_to_color8());
     decoder.read_info().map_err(|_| bad_data("screenshot"))
 }
@@ -220,19 +231,19 @@ pub type Rgb = [u8; 3];
 /// What sees every row of an image: its index and its pixels.
 pub type RowVisitor<'a> = &'a mut dyn FnMut(u32, &[Rgb]);
 
-/// [`decode_region`]; with `scan`, every row of the image is decoded and handed to it as well -
-/// the window image's markers ([`crate::calibrate`], RB-080-77). Without, rows below the region
-/// are not decoded.
+/// [`decode_region`] of the PNG `png` ([`png_bytes`]); with `scan`, every row of the image is
+/// decoded and handed to it as well - the window image's markers ([`crate::calibrate`],
+/// RB-080-77). Without, rows below the region are not decoded.
 ///
 /// # Errors
 ///
-/// `bad_data` for no base64 PNG, an interlaced one or more than [`MAX_PIXELS`] pixels.
+/// `bad_data` for no PNG, an interlaced one or more than [`MAX_PIXELS`] pixels.
 pub fn decode_scan(
-    data: &str,
+    png: &[u8],
     pick: impl FnOnce(u32, u32) -> Region,
     mut scan: Option<RowVisitor<'_>>,
 ) -> Result<Image, Failure> {
-    let mut reader = png_reader(data)?;
+    let mut reader = png_reader(png)?;
     let (width, height) = (reader.info().width, reader.info().height);
     if u64::from(width) * u64::from(height) > MAX_PIXELS || width == 0 || height == 0 {
         return Err(bad_data("screenshot_size"));

@@ -23,6 +23,10 @@ pub struct SessionSettings {
     /// Session cookies (logins without an expiry) are written to disk and survive a restart, in
     /// every session. Off, they end with the app as in a browser. Read when rBrowser starts.
     pub persist_session_cookies: bool,
+    /// `session.state_export` writes the cookies and storage of every domain in the session's
+    /// jar. Off, only those of the project's environments and start URL (RB-094-08). A login
+    /// state file is a secret; only a person widens it.
+    pub state_export_all_domains: bool,
 }
 
 /// The longest session id.

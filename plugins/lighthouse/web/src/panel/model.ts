@@ -127,3 +127,15 @@ export function pageLink(url: string | null | undefined): string | null {
 
 /** The sign of a change: `+3`, `-4`. */
 export const signed = (delta: number): string => (delta > 0 ? `+${delta}` : String(delta));
+
+/** The setting each failure names in its text (RB-094-21): the status line links there. */
+const FAILURE_SETTINGS: Readonly<Record<string, string>> = {
+  'plugin.lighthouse.errors.no_sidecar': 'engines.nodePath',
+  'plugin.lighthouse.errors.no_browser': 'engines.lighthouseBrowserPath',
+  'plugin.lighthouse.errors.browser_missing': 'engines.lighthouseBrowserPath',
+};
+
+/** The setting the failure `code` names, `undefined` for none. */
+export function settingOf(code: string | null | undefined): string | undefined {
+  return code ? FAILURE_SETTINGS[code] : undefined;
+}

@@ -329,3 +329,27 @@ fn json_line(name: &str, views: &[&str], run_id: &str) -> Vec<u8> {
         "request": { "kind": "flowRun", "name": name, "views": views, "runId": run_id },
     }))
 }
+
+#[test]
+fn a_check_request_is_held_to_its_bounds() {
+    let check_line = |args: serde_json::Value| {
+        line(serde_json::json!({
+            "version": PROTOCOL_VERSION,
+            "nonce": NONCE,
+            "request": { "kind": "check", "args": args },
+        }))
+    };
+    let taken = check(
+        &check_line(serde_json::json!({ "plugins": ["seo"], "format": "junit", "failOn": "info" })),
+        NONCE,
+    );
+    assert!(matches!(taken, Ok(Request::Check { .. })), "{taken:?}");
+    for bad in [
+        serde_json::json!({ "plugins": ["../seo"] }),
+        serde_json::json!({ "out": "relative.sarif" }),
+        serde_json::json!({ "format": "pdf" }),
+        serde_json::json!({ "shell": "rm" }),
+    ] {
+        assert_eq!(check(&check_line(bad), NONCE), Err(Refusal::BadRequest));
+    }
+}

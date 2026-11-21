@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+- Changed (RB-094-22, review of w33): the time one fill takes in all is the setting
+  `fillBudgetSeconds` (30, 5 to 300). The field identities are verified to last across a fill's
+  passes: every `evaluate` runs in the same isolated world of the document.
+
+- Fixed (RB-094-22, review of w32): a later pass tells fields apart by the element (`collect`
+  names each field's `uid`, kept in the plugin's isolated world while the document lives), so a
+  field a choice inserts before an unnamed or repeated one is filled. A fill takes at most 30 s
+  in all (`outOfTime`, `stopped: deadline`, `timeout`). The setting `tickConsent` (on) ticks
+  consent boxes; a newsletter or marketing box is never one.
+
+- Fixed (RB-094-22): fields that a choice brings or enables are filled in the same run. A pass
+  sets the control fields (select, radio group, checkbox) first; with `settleMilliseconds` (300,
+  0 to 2000) `apply` waits after each one it changed until the document had no DOM change for
+  that long (a MutationObserver; each wait at most 3 s, one apply at most 15 s; `src/settle.js`),
+  then sets the text fields. When a pass changed the page the fields are read again and a later
+  pass sets the new ones - with a value planned, never set before in the run and empty
+  (`collect` names `filled`); a field the page filled is shown skipped `filled`. At most
+  `maxPasses` passes (3, 1 to 5). A field gone while the page settled is `missing`, never set;
+  an `aria-disabled` field is skipped until enabled. A checkbox whose name, id or label asks for
+  consent (privacy, terms, GDPR, Datenschutz, AGB) is checked in a valid fill; buttons are never
+  clicked and nothing is submitted. Each view's answer names its `passes`; every view runs the
+  same passes with the same values. Fixture `tests/fixtures/forms/contact.html`.
+
+- Fixed (RB-090-86): a fill runs for the selector's element, else for the page's controls but
+  those of its navigation - in a header, a nav, a menu or a search (`role=search` forms
+  included) - and, outside a form, the disclosure toggles (`aria-controls`, `aria-expanded`,
+  `aria-haspopup`), such as a site's menu toggle. The focus decides nothing (an autofocused
+  search field or the field the last fill left focused would). Each view's answer names the
+  scope (`selector`, `page`). `apply` reports to a recording only the
+  fields it changed: a checkbox, radio, select or text that already held the value gives no
+  step, so a second fill of the same form adds none.
+
 - Fixed (RB-090-78): a fill during a recording is recorded. `apply` names, per field it set, its
   target the way the sync agent names an element (`src/target.js`, a copy of the agent's
   selector), what was done and the value set - a password only marked `sensitive`, never its

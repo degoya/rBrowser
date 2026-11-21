@@ -49,3 +49,42 @@ fn project_write_is_a_capability_of_its_own_interface() {
     );
     assert!(Capability::ALL.contains(&Capability::ProjectWrite));
 }
+
+#[test]
+fn consent_probe_is_a_capability_without_an_import() {
+    assert_eq!(
+        "consent-probe".parse::<Capability>(),
+        Ok(Capability::ConsentProbe)
+    );
+    assert_eq!(Capability::ConsentProbe.interface(), None);
+    assert!(Capability::ALL.contains(&Capability::ConsentProbe));
+    assert_eq!(
+        Capability::ConsentProbe.description_key(),
+        "plugins.capability.consent-probe"
+    );
+}
+
+#[test]
+fn the_api_client_is_a_capability_without_an_import() {
+    assert_eq!(
+        "api-client".parse::<Capability>(),
+        Ok(Capability::ApiClient)
+    );
+    assert_eq!(Capability::ApiClient.interface(), None);
+    assert!(Capability::ALL.contains(&Capability::ApiClient));
+    assert_eq!(
+        Capability::ApiClient.description_key(),
+        "plugins.capability.api-client"
+    );
+}
+
+#[test]
+fn the_load_test_is_a_capability_without_an_import() {
+    assert_eq!("load-test".parse::<Capability>(), Ok(Capability::LoadTest));
+    assert_eq!(Capability::LoadTest.interface(), None);
+    assert!(Capability::ALL.contains(&Capability::LoadTest));
+    assert_eq!(
+        Capability::LoadTest.description_key(),
+        "plugins.capability.load-test"
+    );
+}

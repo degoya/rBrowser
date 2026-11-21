@@ -166,3 +166,61 @@ fn replace_writes_over_an_existing_recording_only() {
         Err(StoreError::BadName(_))
     ));
 }
+
+#[test]
+fn delete_removes_one_stored_recording_only() {
+    // The Recorder panel's "Delete" (RB-090-91).
+    let root = project();
+    let store = RecordingStore::open(root.path(), DEFAULT_DIR, PROTECTED).expect("store");
+    store.save(&recording("login")).expect("saved");
+    store.save(&recording("old")).expect("saved");
+    store.delete("old").expect("deleted");
+    assert_eq!(store.list().expect("lists"), vec!["login".to_owned()]);
+    assert!(matches!(store.delete("old"), Err(StoreError::NotFound(_))));
+    for bad in ["../config", "a/b", "", "old.json", "CON"] {
+        assert!(
+            matches!(store.delete(bad), Err(StoreError::BadName(_))),
+            "{bad:?}"
+        );
+    }
+    assert!(root.path().join(".rbrowser").exists());
+    // A folder of that name is no recording.
+    fs::create_dir_all(store.dir().join("dir.json")).expect("folder");
+    assert!(matches!(store.delete("dir"), Err(StoreError::NotFound(_))));
+    assert!(store.dir().join("dir.json").is_dir());
+    assert!(store.path_of("login").expect("a path").is_file());
+}
+
+/// RB-092-01 review: read-modify-write under the store's lock loses no update, however many
+/// writers there are at once (an agent's step tools, the panel's save, a continued recording).
+#[test]
+fn edits_under_the_write_lock_lose_no_update() {
+    let root = project();
+    let store = RecordingStore::open(root.path(), DEFAULT_DIR, PROTECTED).expect("store");
+    store.save(&recording("search")).expect("saved");
+    let writers: Vec<_> = (0..4)
+        .map(|writer| {
+            let store = store.clone();
+            std::thread::spawn(move || {
+                for edit in 0..10 {
+                    let _guard = write_lock();
+                    let mut read = store.load("search").expect("read");
+                    read.start_url = Some(format!("http://x.test/{writer}/{edit}"));
+                    read.started_at_ms += 1;
+                    store.replace(&read).expect("written");
+                }
+            })
+        })
+        .collect();
+    for writer in writers {
+        writer.join().expect("a writer");
+    }
+    assert_eq!(store.load("search").expect("read").started_at_ms, 1 + 40);
+    let left: Vec<String> = fs::read_dir(store.dir())
+        .expect("the folder")
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.ends_with(".tmp"))
+        .collect();
+    assert!(left.is_empty(), "{left:?}");
+}

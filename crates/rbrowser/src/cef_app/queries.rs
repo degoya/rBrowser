@@ -1,6 +1,7 @@
 //! The browser side of `cefQuery`: only the shell's own pages reach the core - the shell view,
 //! the status bar (RB-080-15), the pages window (RB-010-08), the page windows and the canvas
-//! board (RB-080-04, only its own requests), each from its main frame on `rbrowser://ui/`
+//! board (RB-080-04, only its own requests) and the sitemap gallery window (RB-090-86, only its
+//! own), each from its main frame on `rbrowser://ui/`
 //! ([`crate::settings_window::guard`]); any other browser or frame is refused with 403, whatever
 //! it sends.
 
@@ -40,6 +41,7 @@ impl BrowserSideHandler for ShellQueries {
             history: page_windows::browser_id(PageWindow::History),
             status_bar: super::status_bar::browser_id(),
             board: canvas_board::browser_id(),
+            gallery: super::gallery_window::browser_id(),
         };
         let url = frame
             .as_ref()

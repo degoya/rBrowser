@@ -8,5 +8,5 @@ fn restart_arguments_read_engine_and_view() {
     assert_eq!(args.view, Some(ViewId(4)));
     let none = parse(&Value::Null).expect("no arguments");
     assert_eq!((none.engine, none.view), (None, None));
-    assert!(parse(&json!({ "engine": "safari" })).is_err());
+    assert!(parse(&json!({ "engine": "opera" })).is_err());
 }

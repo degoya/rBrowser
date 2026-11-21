@@ -3,17 +3,25 @@
 // against the reading order and its line in orange, a stop with a warning in red. The stop count
 // goes to the panel. Live (setting `tabOrder.live`): a stop focused in this view is ringed and
 // named to the component, which posts it to every view; each view rings the stop with the same
-// path - without moving the focus anywhere.
+// path - without moving the focus anywhere. The reading order (setting `tabOrder.readingOrder`,
+// RB-094-02): dashed arrows between the stops in source order, beside the tab order lines or
+// instead of them, and a frame on each stop the reading order reaches out of place
+// (./tab-order/reading.ts, the outline plugin's `reading-order` rule).
 
-import { LIVE, MARKER, REVERSE, WARNED } from './tab-order/colors';
+import { LIVE, MARKER, MISREAD, READING, REVERSE, WARNED } from './tab-order/colors';
 import { composedPath } from './tab-order/order';
 import { type TabItem, tabList, viewportRect } from './tab-order/list';
+import { contentRtl, readingOrder } from './tab-order/reading';
 import { type Overlay, type OverlayContext } from './overlay';
+import type { Item } from '../layer';
 import type { Shape } from '../shapes';
+import type { Rect } from '../types';
 
 const MARKERS = 'tab-order';
 const LINES = 'tab-order-lines';
 const RING = 'tab-order-live';
+const READING_ARROWS = 'tab-order-reading';
+const MISREAD_FRAMES = 'tab-order-misread';
 /** The most stops the overlay draws. */
 export const MAX_DRAWN = 500;
 /** The longest path a focus message carries (src/tab_order.rs `MAX_TEXT_CHARS`). */
@@ -58,8 +66,33 @@ export function shapes(items: readonly TabItem[], rects: readonly { x: number; y
   return { markers, lines: bars };
 }
 
+const centre = (rect: Rect): { x: number; y: number } => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+
+/** The reading order of `sequence` (stops in source order) at their boxes `rects`: a dashed arrow
+ *  from each centre to the next, and a frame on each stop of `misread`, the arrow to it alike. */
+export function readingShapes(sequence: readonly TabItem[], rects: readonly Rect[], misread: ReadonlySet<TabItem>): { arrows: Shape[]; marks: Item[] } {
+  const lines: Shape[] = [];
+  const heads: Shape[] = [];
+  const marks: Item[] = [];
+  sequence.forEach((item, place) => {
+    const rect = rects[place];
+    if (!rect) return;
+    const color = misread.has(item) ? MISREAD : READING;
+    if (misread.has(item)) marks.push({ rect, color, border: 2, halo: true });
+    const previous = rects[place - 1];
+    if (!previous) return;
+    const from = centre(previous);
+    const to = centre(rect);
+    lines.push({ kind: 'line', x1: from.x, y1: from.y, x2: to.x, y2: to.y, color, dashed: true });
+    heads.push({ kind: 'head', x: to.x, y: to.y, angle: Math.atan2(to.y - from.y, to.x - from.x), color });
+  });
+  // The heads after the lines, so they lie on them.
+  return { arrows: [...lines, ...heads], marks };
+}
+
 export function createTabOrder(): Overlay {
   let items: TabItem[] = [];
+  let reading: { sequence: TabItem[]; misread: Set<TabItem> } = { sequence: [], misread: new Set() };
   let paths: string[] = [];
   let told = -1;
   let live = '';
@@ -98,6 +131,10 @@ export function createTabOrder(): Overlay {
     measure(context: OverlayContext) {
       items = tabList(context.doc, context.win, { includeIframes: context.settings.tabOrderIncludeIframes }, MAX_DRAWN);
       paths = items.map((item) => composedPath(item.stop.element, item.stop.frames));
+      reading =
+        context.settings.tabOrderReadingOrder === 'off'
+          ? { sequence: [], misread: new Set() }
+          : readingOrder(items, contentRtl(context.doc, context.win), context.settings.tabOrderReadingTolerancePx);
       if (items.length !== told) {
         told = items.length;
         context.emit({ type: 'hits', overlay: 'tab-order', count: items.length });
@@ -107,9 +144,15 @@ export function createTabOrder(): Overlay {
     draw(context: OverlayContext) {
       const kept = items.filter((item) => item.stop.element.isConnected);
       const boxes = kept.map((item) => viewportRect(item.stop));
-      const drawn = shapes(kept, boxes, context.settings.tabOrderShowLines);
-      // The lines first, so the markers lie on them.
+      const mode = context.settings.tabOrderReadingOrder;
+      const drawn = shapes(kept, boxes, context.settings.tabOrderShowLines && mode !== 'instead');
+      const boxOf = new Map(kept.map((item, place) => [item, boxes[place] as Rect]));
+      const sequence = reading.sequence.filter((item) => boxOf.has(item));
+      const read = readingShapes(sequence, sequence.map((item) => boxOf.get(item) as Rect), reading.misread);
+      // The lines and arrows first, so the markers lie on them.
       context.layer.renderShapes(LINES, drawn.lines);
+      context.layer.renderShapes(READING_ARROWS, read.arrows);
+      context.layer.render(MISREAD_FRAMES, read.marks);
       context.layer.renderShapes(MARKERS, drawn.markers);
       const place = live ? paths.indexOf(live) : -1;
       const item = items[place];
@@ -120,10 +163,11 @@ export function createTabOrder(): Overlay {
       stopListening();
       items = [];
       paths = [];
+      reading = { sequence: [], misread: new Set() };
       told = -1;
       live = '';
       sent = '';
-      for (const group of [LINES, MARKERS, RING]) context.layer.clear(group);
+      for (const group of [LINES, READING_ARROWS, MISREAD_FRAMES, MARKERS, RING]) context.layer.clear(group);
     },
     receive(context: OverlayContext, message: unknown) {
       const focus = message as { type?: unknown; path?: unknown } | null;

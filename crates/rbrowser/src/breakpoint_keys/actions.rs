@@ -7,6 +7,7 @@ use std::time::Instant;
 use rb_commands::CommandError;
 use rb_config::{Breakpoint, DevicePreset};
 use rb_engine::{EngineError, Target, ViewHost, ViewId};
+use rb_util::url::is_web_url;
 use serde_json::{Value, json};
 
 use super::sizes::{self, FreeSize};
@@ -138,12 +139,6 @@ pub fn device_label(device: &DevicePreset) -> String {
 pub fn find(core: &Core, id: &str) -> Result<Breakpoint, CommandError> {
     sizes::find_breakpoint(&core.host().config(), &device_list(), id, device_label)
         .ok_or_else(|| CommandError::InvalidArgs(format!("no breakpoint or device `{id}`")))
-}
-
-/// Whether a page at `url` is one a new view may load (never `about:` or the app's scheme).
-fn is_web_url(url: &str) -> bool {
-    let lower = url.to_ascii_lowercase();
-    lower.starts_with("http://") || lower.starts_with("https://")
 }
 
 /// A host error as a command error.

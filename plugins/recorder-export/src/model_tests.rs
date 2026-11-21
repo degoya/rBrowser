@@ -69,3 +69,25 @@ fn what_is_no_recording_is_refused() {
         Err(ParseError::Invalid(_))
     ));
 }
+
+/// RB-092-01: a step switched off in the editor is neither exported nor played: the request
+/// leaves it out, whatever the format.
+#[test]
+fn a_step_switched_off_is_left_out_of_the_request() {
+    let text = BARE.replace(
+        r#""atMs": 5, "onlyIn""#,
+        r#""atMs": 5, "disabled": true, "onlyIn""#,
+    );
+    let request = parse_request(&text).expect("a recording");
+    let ids: Vec<u32> = request.recording.steps.iter().map(|step| step.id).collect();
+    assert_eq!(ids, [1]);
+    let wrapped = format!(r#"{{ "recording": {text} }}"#);
+    assert_eq!(
+        parse_request(&wrapped)
+            .expect("a request")
+            .recording
+            .steps
+            .len(),
+        1
+    );
+}

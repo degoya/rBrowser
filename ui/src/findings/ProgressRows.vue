@@ -3,15 +3,20 @@
 // word, views through, findings, and a badge per state only for the views worth naming
 // (running, failed, skipped) - in a `UAccordion` that opens a plugin to every view, a reason as
 // its sentence. The rows' order and sums are `progress.ts`; `FindingsProgress.vue` frames them.
+// After a run an open plugin offers "Run <plugin> again" (`rerun`, RB-094-17).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UAccordion from '@nuxt/ui/components/Accordion.vue';
 import UBadge from '@nuxt/ui/components/Badge.vue';
+import UButton from '@nuxt/ui/components/Button.vue';
 import UIcon from '@nuxt/ui/components/Icon.vue';
+import { failureParams } from './findings';
+import { FINDINGS_ICONS } from './icons';
 import { STATE_ICONS, type AttentionGroup, type PluginProgress } from './progress';
 import type { CheckJob, CheckJobState } from './types';
 
-const props = defineProps<{ rows: PluginProgress[] }>();
+const props = defineProps<{ rows: PluginProgress[]; canRerun?: boolean }>();
+const emit = defineEmits<{ rerun: [plugin: string] }>();
 const { t } = useI18n();
 
 /** The plugins open, by id, so an open row stays open while the rows move. */
@@ -48,13 +53,13 @@ function stateText(job: CheckJob): string {
   return t(`findings.progress.state.${job.state}`);
 }
 
-/** A reason's sentence with its parameters, so no `{service}` shows raw; the host's names of the
- * plugin last, so a plugin cannot rename itself, and no raw engine text (`reason`). */
+/** A reason's sentence with its parameters (`failureParams`): no `{service}` raw, the host's
+ * names of the plugin last, the `reason` of the plugin's own code only (RB-094-14). */
 function reasonText(job: CheckJob): string {
   if (job.reason === undefined) {
     return '';
   }
-  return t(job.reason, { ...job.reasonParams, id: job.plugin, plugin: job.plugin, reason: '' });
+  return t(job.reason, failureParams(job.reason, job.plugin, job.reasonParams));
 }
 
 /** A plugin through without findings or anything to name stays in the background. */
@@ -150,6 +155,19 @@ const GRID = 'grid w-full items-center gap-x-3 gap-y-1 text-start grid-cols-[min
           </span>
         </li>
       </ul>
+      <!-- A secondary action: an icon, named and explained by its tooltip. -->
+      <UButton
+        v-if="canRerun"
+        size="sm"
+        color="neutral"
+        variant="ghost"
+        class="ml-5"
+        :icon="FINDINGS_ICONS.rerun"
+        :aria-label="t('findings.rerun.one', { plugin: item.row.plugin })"
+        :title="t('findings.rerun.one', { plugin: item.row.plugin })"
+        :data-testid="`rerun-${item.row.plugin}`"
+        @click="emit('rerun', item.row.plugin)"
+      />
     </template>
   </UAccordion>
 </template>

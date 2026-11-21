@@ -255,6 +255,7 @@ async fn views_set_engine_runs_the_command_for_one_view_or_every_target() {
         target: Some(TargetArg::Name("mobile".to_owned())),
         engine: EngineArg::Firefox,
         file: None,
+        ios_device: None,
     };
     let (error, _) = answer_json(
         &server(&fake)
@@ -274,6 +275,7 @@ async fn views_set_engine_runs_the_command_for_one_view_or_every_target() {
         target: Some(TargetArg::all()),
         engine: EngineArg::Webkit,
         file: Some("project".to_owned()),
+        ios_device: None,
     };
     let (error, answer) = answer_json(
         &server(&fake)
@@ -296,6 +298,7 @@ async fn views_set_engine_runs_the_command_for_one_view_or_every_target() {
         target: None,
         engine: EngineArg::Chromium,
         file: None,
+        ios_device: None,
     };
     let (error, _) = answer_json(
         &server(&fake)
@@ -309,6 +312,25 @@ async fn views_set_engine_runs_the_command_for_one_view_or_every_target() {
         json!({ "engine": "chromium" }),
         "no view in the arguments"
     );
-    let refused: Result<SetEngineParams, _> = serde_json::from_value(json!({ "engine": "safari" }));
+    let refused: Result<SetEngineParams, _> = serde_json::from_value(json!({ "engine": "opera" }));
     assert!(refused.is_err());
+}
+
+#[tokio::test]
+async fn views_set_engine_hands_the_ios_device_to_the_command() {
+    let fake = Arc::new(FakeBackend::default());
+    let params: SetEngineParams =
+        serde_json::from_value(json!({ "engine": "ios", "iosDevice": "iPhone 16" }))
+            .expect("parses");
+    let (error, _) = answer_json(
+        &server(&fake)
+            .views_set_engine(Parameters(params))
+            .await
+            .expect("answer"),
+    );
+    assert!(!error);
+    assert_eq!(
+        fake.calls()[0].1,
+        json!({ "engine": "ios", "iosDevice": "iPhone 16" })
+    );
 }

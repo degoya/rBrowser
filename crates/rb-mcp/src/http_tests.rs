@@ -85,3 +85,34 @@ fn the_nonce_is_32_to_128_hex_digits() {
     assert_eq!(nonce_of(&format!("nonce={}", "z".repeat(40))), None);
     assert_eq!(nonce_of(&format!("x=1&nonce={}", "0".repeat(129))), None);
 }
+
+fn tool(name: &str, schema: serde_json::Value) -> crate::tools::plugins::PluginToolInfo {
+    crate::tools::plugins::PluginToolInfo {
+        name: name.to_owned(),
+        description: "A tool".to_owned(),
+        input_schema: schema,
+    }
+}
+
+#[test]
+fn the_tools_revision_changes_with_a_plugin_tool_s_arguments() {
+    // RB-092-06: a plugin updated live may keep a tool's name and change its arguments; the
+    // client hears `notifications/tools/list_changed` and lists the tools again.
+    let backend = crate::testing::FakeBackend::new(Vec::new());
+    let empty = super::tools_revision(&backend);
+    let v1 = serde_json::json!({ "type": "object", "properties": { "url": { "type": "string" } } });
+    backend.set_plugin_tools(vec![tool("seo_audit", v1.clone())]);
+    let first = super::tools_revision(&backend);
+    assert_ne!(first, empty);
+    backend.set_plugin_tools(vec![tool("seo_audit", v1.clone())]);
+    assert_eq!(super::tools_revision(&backend), first, "the same list");
+    let v2 =
+        serde_json::json!({ "type": "object", "properties": { "depth": { "type": "integer" } } });
+    backend.set_plugin_tools(vec![tool("seo_audit", v2)]);
+    assert_ne!(super::tools_revision(&backend), first);
+    // The order the tools come in is no change.
+    backend.set_plugin_tools(vec![tool("a_one", v1.clone()), tool("b_two", v1.clone())]);
+    let ordered = super::tools_revision(&backend);
+    backend.set_plugin_tools(vec![tool("b_two", v1.clone()), tool("a_one", v1)]);
+    assert_eq!(super::tools_revision(&backend), ordered);
+}

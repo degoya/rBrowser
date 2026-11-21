@@ -9,11 +9,13 @@
 //! | `{ custom: true }` | the picker's "Custom...": the size input in the toolbar (`NewSizeBar.vue`) |
 //!
 //! A view that was added is named in the status bar with its size ([`KEY_ADDED`]).
+//! [`add_engine_view`] opens a breakpoint of another engine at its own size the same way
+//! (`view.add_android`, RB-095-02).
 
 use std::collections::BTreeMap;
 
 use rb_commands::CommandError;
-use rb_config::{Breakpoint, ConfigFile, DevicePreset};
+use rb_config::{Breakpoint, ConfigFile, DevicePreset, EngineKind};
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
@@ -53,12 +55,17 @@ pub(super) struct AddSizeArgs {
     /// Open the size input in the toolbar.
     #[serde(default)]
     custom: bool,
+    /// The engine and label of [`add_engine_view`]; never read from the arguments.
+    #[serde(skip)]
+    engine: Option<(EngineKind, String)>,
 }
 
 /// What the new breakpoint is.
 enum Wanted {
     Size(FreeSize),
     Device(DevicePreset),
+    /// A view of another engine at its own size, with its label (an Android device).
+    Engine(FreeSize, EngineKind, String),
 }
 
 impl Wanted {
@@ -66,7 +73,7 @@ impl Wanted {
     /// device's id ([`device_breakpoint_id`]).
     fn id(&self, breakpoints: &[Breakpoint]) -> String {
         match self {
-            Self::Size(size) => size.id(),
+            Self::Size(size) | Self::Engine(size, _, _) => size.id(),
             Self::Device(device) => device_breakpoint_id(device, breakpoints),
         }
     }
@@ -74,7 +81,7 @@ impl Wanted {
     /// Width and height.
     fn size(&self) -> (u32, u32) {
         match self {
-            Self::Size(size) => (size.width, size.height),
+            Self::Size(size) | Self::Engine(size, _, _) => (size.width, size.height),
             Self::Device(device) => (device.viewport.width, device.viewport.height),
         }
     }
@@ -90,6 +97,12 @@ impl Wanted {
                 entry
             }
             Self::Device(device) => json!({ "id": id, "device": device.id }),
+            Self::Engine(size, engine, label) => {
+                let mut entry = Self::Size(*size).entry(id);
+                entry["label"] = json!(label);
+                entry["engine"] = json!(engine.name());
+                entry
+            }
         }
     }
 
@@ -99,6 +112,8 @@ impl Wanted {
     fn is(&self, existing: &Breakpoint, devices: &[DevicePreset]) -> bool {
         match self {
             Self::Device(device) => existing.device.as_deref() == Some(device.id.as_str()),
+            // A device keeps its breakpoint when it reports another size (turned).
+            Self::Engine(_, engine, _) => existing.engine == *engine,
             Self::Size(size) => {
                 size_of(existing, devices) == (size.width, size.height)
                     && (size.dpr.is_none() || existing.emulation.dpr == size.dpr)
@@ -168,7 +183,10 @@ fn wanted(args: &AddSizeArgs) -> Result<Option<Wanted>, CommandError> {
             .ok_or_else(|| CommandError::InvalidArgs(format!("no device preset `{id}`"))),
         (Some(_), _, _) => invalid("pass device, or width and height"),
         (None, Some(width), Some(height)) => FreeSize::new(width, height, args.dpr)
-            .map(|size| Some(Wanted::Size(size)))
+            .map(|size| match &args.engine {
+                Some((engine, label)) => Some(Wanted::Engine(size, *engine, label.clone())),
+                None => Some(Wanted::Size(size)),
+            })
             .ok_or_else(|| {
                 CommandError::InvalidArgs(format!(
                     "{width}x{height} at DPR {:?} is not a size",
@@ -235,7 +253,7 @@ pub(super) fn add_size(core: &Core, args: AddSizeArgs) -> Result<Value, CommandE
         Some(existing) => existing.device.clone(),
         None => match &wanted {
             Wanted::Device(device) => Some(device.id.clone()),
-            Wanted::Size(_) => None,
+            Wanted::Size(_) | Wanted::Engine(..) => None,
         },
     };
     let exists = existing.is_some();
@@ -291,6 +309,33 @@ pub(super) fn add_size(core: &Core, args: AddSizeArgs) -> Result<Value, CommandE
         answer["device"] = json!(device);
     }
     Ok(answer)
+}
+
+/// Opens the breakpoint `id` of `engine` at `size` labelled `label` as `view.add_size` opens a
+/// size (RB-095-02: `view.add_android`); answers as `view.add_size` does.
+///
+/// # Errors
+///
+/// As `view.add_size`: a breakpoint `id` of another engine, a preset's own grid without its
+/// cell, a write or reload that failed.
+pub fn add_engine_view(
+    core: &Core,
+    id: &str,
+    size: FreeSize,
+    engine: EngineKind,
+    label: &str,
+) -> Result<Value, CommandError> {
+    add_size(
+        core,
+        AddSizeArgs {
+            width: Some(size.width),
+            height: Some(size.height),
+            dpr: size.dpr,
+            name: Some(id.to_owned()),
+            engine: Some((engine, label.to_owned())),
+            ..AddSizeArgs::default()
+        },
+    )
 }
 
 /// The status bar's message for the view of breakpoint `id`.

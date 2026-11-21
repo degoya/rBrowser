@@ -4,7 +4,8 @@
 //! the test into a new export folder, [`super::panel_export`]). All
 //! four run off the UI thread ([`dispatch_off_thread`]): they read the disk - a WSL project's is
 //! a network share - and the export waits for the `recorder-export` plugin. `recordingsChanged`
-//! follows a save and a stop, so an open panel asks again.
+//! follows a save and a stop, so an open panel asks again. `resendRecordingSteps` (RB-090-89) runs
+//! off it too: it waits for the recorder, which a stop holds while it writes the file.
 
 use std::path::Path;
 use std::time::UNIX_EPOCH;
@@ -20,11 +21,16 @@ use super::glue;
 use crate::control::Core;
 use crate::ipc::Failure;
 
-/// Answers the panel's four requests; `None` for any other message. The shell's queries come
+/// Answers the panel's requests; `None` for any other message. The shell's queries come
 /// through [`dispatch_off_thread`]: every one reads the disk, the export waits for the plugin.
 pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Failure>> {
     Some(match message {
         ShellToCore::GetRecordings => Ok(CoreToShell::Recordings(list(core))),
+        // A panel opened while a recording runs catches up (RB-090-89).
+        ShellToCore::ResendRecordingSteps => {
+            super::live::resend(core);
+            Ok(CoreToShell::Ack)
+        }
         ShellToCore::GetRecording { name } => get(core, name),
         ShellToCore::SaveRecording { name, recording } => save(core, name, recording),
         ShellToCore::ExportRecording {
@@ -58,6 +64,7 @@ pub fn is_off_thread(message: &ShellToCore) -> bool {
             | ShellToCore::SaveRecording { .. }
             | ShellToCore::ExportRecording { .. }
             | ShellToCore::GetFlowRun
+            | ShellToCore::ResendRecordingSteps
     )
 }
 
@@ -182,7 +189,7 @@ fn get(core: &Core, name: &str) -> Result<CoreToShell, Failure> {
 }
 
 /// The panel's edited recording, checked: the model's schema (`recording.v1`), its name the
-/// file's, its step ids unique.
+/// file's, its step ids unique, its pauses and waits within their cap.
 ///
 /// # Errors
 ///
@@ -196,18 +203,18 @@ pub fn edited(name: &str, value: &Value) -> Result<Recording, String> {
             recording.name
         ));
     }
-    let mut ids: Vec<u32> = recording.steps.iter().map(|step| step.id).collect();
-    ids.sort_unstable();
-    if ids.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err("two steps have the same id".to_owned());
-    }
+    // Unique ids, the editor's pauses and waits at most 10 s (RB-092-01).
+    rb_sync::recorder::edit::check(&recording).map_err(|error| error.to_string())?;
     Ok(recording)
 }
 
 fn save(core: &Core, name: &str, value: &Value) -> Result<CoreToShell, Failure> {
     let recording = edited(name, value).map_err(|error| (IpcErrorCode::BadRequest, error))?;
     let store = glue::store_of(core.host()).map_err(|error| internal(&error))?;
+    // Never between another writer's read and write (an agent's step tools, RB-092-01).
+    let written = rb_sync::recorder::write_lock();
     store.replace(&recording).map_err(store_failure)?;
+    drop(written);
     tracing::info!(steps = recording.steps.len(), "recording edited");
     core.send(&CoreToShell::RecordingsChanged);
     Ok(CoreToShell::Recordings(list(core)))

@@ -41,3 +41,16 @@ fn releasing_forgets_an_idle_address_and_never_underflows() {
     assert_eq!(limits.total(), 0);
     assert_eq!(limits.addresses(), 0);
 }
+
+/// RB-096-05: behind the tunnel every connection comes from 127.0.0.1, so one address may take
+/// every slot there - and still no more than all of them.
+#[test]
+fn a_shared_address_takes_up_to_the_limit_in_all() {
+    let loopback = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
+    let mut limits = Limits::shared_address();
+    for _ in 0..MAX_CONNECTIONS {
+        assert!(limits.acquire(loopback));
+    }
+    assert!(!limits.acquire(loopback));
+    assert_eq!(limits.total(), MAX_CONNECTIONS);
+}

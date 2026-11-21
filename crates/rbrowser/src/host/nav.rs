@@ -64,8 +64,9 @@ pub fn normalize_url(input: &str) -> Result<String, EngineError> {
 }
 
 /// The scheme of `text`, when it has one: letters, digits, `+ - .` before a `:` that is not
-/// the port of a host (`localhost:3000`).
-fn scheme_of(text: &str) -> Option<&str> {
+/// the port of a host (`localhost:3000`). The label strip's address field names it in a
+/// refusal (RB-092-03, `crate::cell_info::address`).
+pub(crate) fn scheme_of(text: &str) -> Option<&str> {
     let (scheme, rest) = text.split_once(':')?;
     let well_formed = scheme
         .chars()

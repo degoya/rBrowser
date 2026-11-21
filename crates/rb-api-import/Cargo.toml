@@ -1,0 +1,19 @@
+[package]
+name = "rb-api-import"
+description = "The API client's importers (RB-096-02): Postman, Insomnia, Thunder Client, Bruno, HTTPie, .http files, OpenAPI and Swagger, HAR and a pasted curl command read into rb-api-model requests and environments, with a report of what was taken, reported and dropped - pure, std + serde, no file system"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rb-api-model = { path = "../rb-api-model" }
+serde.workspace = true
+serde_json.workspace = true
+# Insomnia's YAML export and OpenAPI/Swagger in YAML: pure Rust, no libyaml; without the
+# `encoding` feature (the text arrives as UTF-8).
+yaml-rust2 = { version = "0.13.0", default-features = false }
+
+[lints]
+workspace = true

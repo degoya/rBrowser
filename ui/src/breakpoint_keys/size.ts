@@ -4,8 +4,10 @@
 /** The command that opens the size input (`uiCommand`). */
 export const OPEN_COMMAND = 'view.set_size';
 
-/** The largest width or height a view takes, in CSS px. */
-export const MAX_SIDE = 16384;
+/** The largest width or height a view takes, in CSS px (the config's limit for a breakpoint). */
+export const MAX_SIDE = 10000;
+/** The smallest device pixel ratio (the config's limit for a breakpoint). */
+export const MIN_DPR = 0.25;
 /** The largest device pixel ratio. */
 export const MAX_DPR = 10;
 
@@ -50,5 +52,5 @@ export function parseSize(text: string): FreeSize | null {
     return null;
   }
   const dpr = Number(dprPlain);
-  return dpr > 0 && dpr <= MAX_DPR ? { width, height, dpr } : null;
+  return dpr >= MIN_DPR && dpr <= MAX_DPR ? { width, height, dpr } : null;
 }

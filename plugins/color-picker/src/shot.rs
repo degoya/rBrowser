@@ -32,6 +32,7 @@ pub use crate::calibrate::{MARKER, Map, Marker};
 use crate::color::Rgba;
 use crate::pixels::{
     Clip, Image, MAX_PIXELS, Mapping, Region, Rgb, decode, decode_region, decode_scan, image_size,
+    png_bytes,
 };
 use crate::visible::{Area, visible};
 
@@ -158,9 +159,11 @@ pub fn calibrate_view(
         );
         Unmapped::Image
     };
-    let data =
-        screenshot(host, view, &window_params()).map_err(|failure| failed(host, &failure))?;
-    let image = image_size(&data).map_err(|failure| failed(host, &failure))?;
+    // Decoded once: the size and the marker scan read the same bytes (RB-090-29).
+    let png = screenshot(host, view, &window_params())
+        .and_then(|data| png_bytes(&data))
+        .map_err(|failure| failed(host, &failure))?;
+    let image = image_size(&png).map_err(|failure| failed(host, &failure))?;
     let (width, height) = (port.width, port.height);
     let size = format!(
         "{} x {} px for {width} x {height} CSS px at DPR {}",
@@ -181,7 +184,7 @@ pub fn calibrate_view(
     let mut finder = Finder::default();
     let mut visit = |y: u32, row: &[Rgb]| finder.row(y, row);
     let decoded = decode_scan(
-        &data,
+        &png,
         |_, _| Region::around(-1, -1, 0, 1, 1),
         Some(&mut visit),
     );

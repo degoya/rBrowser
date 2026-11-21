@@ -260,3 +260,68 @@ fn the_handler_is_handed_out_to_run_without_the_registry() {
     assert_eq!(handler(Value::Null).expect("runs"), Value::from(7));
     assert!(CommandRegistry::new().handler(&id("sync.toggle")).is_none());
 }
+
+#[test]
+fn a_plugin_s_commands_leave_the_registry_with_their_bindings() {
+    // RB-092-06: a plugin removed or replaced at run time takes its commands along.
+    let mut registry = CommandRegistry::new();
+    registry
+        .register(
+            def("sync.toggle", Group::Sync, &["Ctrl+Shift+Space S S"]),
+            noop(),
+        )
+        .expect("registers");
+    for command in ["plugin.seo.check", "plugin.seo.audit", "plugin.seolint.run"] {
+        registry
+            .register_plugin(def(command, Group::Checks, &[]), noop())
+            .expect("registers");
+    }
+    let chord = registry.bindings(&id("plugin.seo.check"));
+    assert_eq!(chord, vec![binding("Ctrl+Shift+Space X A")]);
+    let removed = registry.unregister_plugin("seo");
+    assert_eq!(
+        removed,
+        vec![id("plugin.seo.audit"), id("plugin.seo.check")]
+    );
+    assert!(registry.get(&id("plugin.seo.check")).is_none());
+    assert!(registry.handler(&id("plugin.seo.audit")).is_none());
+    // Another plugin whose id starts alike and the core's commands stay.
+    assert!(registry.get(&id("plugin.seolint.run")).is_some());
+    assert!(registry.get(&id("sync.toggle")).is_some());
+    // Its chord is free again: the same plugin, loaded anew, gets it back.
+    assert_eq!(registry.resolve(&binding("Ctrl+Shift+Space X A")), None);
+    registry
+        .register_plugin(def("plugin.seo.check", Group::Checks, &[]), noop())
+        .expect("registers again");
+    assert_eq!(registry.bindings(&id("plugin.seo.check")), chord);
+    // Nothing of a core command, nothing for an id that is none.
+    assert!(registry.unregister_plugin("sync").is_empty());
+    assert!(registry.unregister_plugin("").is_empty());
+    assert!(registry.get(&id("sync.toggle")).is_some());
+}
+
+#[test]
+fn a_hyphenated_plugin_s_commands_leave_too() {
+    // A plugin id's `-` is `_` in its command ids (`PluginManifest::command_id`): removing
+    // `width-sweep` removes `plugin.width_sweep.*`, nothing of another plugin.
+    assert_eq!(plugin_command_prefix("width-sweep"), "plugin.width_sweep.");
+    let mut registry = CommandRegistry::new();
+    for command in [
+        "plugin.width_sweep.run",
+        "plugin.width_sweep.stop",
+        "plugin.width.run",
+    ] {
+        registry
+            .register_plugin(def(command, Group::Checks, &[]), noop())
+            .expect("registers");
+    }
+    assert_eq!(
+        registry.unregister_plugin("width-sweep"),
+        vec![id("plugin.width_sweep.run"), id("plugin.width_sweep.stop")]
+    );
+    assert!(registry.get(&id("plugin.width.run")).is_some());
+    // Registered again, as a live update does, without a duplicate.
+    registry
+        .register_plugin(def("plugin.width_sweep.run", Group::Checks, &[]), noop())
+        .expect("registers again");
+}

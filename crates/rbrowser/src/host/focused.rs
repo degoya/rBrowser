@@ -56,7 +56,9 @@ impl Host {
     /// Makes `view` the active view when it is not already, without focusing it again; `true`
     /// when it changed.
     pub fn on_view_focused(&self, view: ViewId) -> bool {
-        if self.active_view() == Some(view) || !self.config().sync.activate_on_focus {
+        if self.active_view() == Some(view)
+            || !self.with_config(|config| config.sync.activate_on_focus)
+        {
             return false;
         }
         match self.activate(view, false) {

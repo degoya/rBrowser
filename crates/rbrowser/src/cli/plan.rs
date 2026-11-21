@@ -236,6 +236,15 @@ pub fn before_ui(cli: &Cli, user: &UserSettings) -> Result<Option<Plan>, i32> {
             rb_config::local_dir().as_deref(),
         ));
     }
+    // `rbrowser check` runs in the project's running instance (RB-092-05).
+    if let Some(Command::Check(args)) = &cli.command {
+        return Err(super::check::run(
+            cli,
+            args,
+            &env,
+            rb_config::local_dir().as_deref(),
+        ));
+    }
     if matches!(cli.command, Some(Command::Diagnostics(_))) {
         return Ok(None);
     }

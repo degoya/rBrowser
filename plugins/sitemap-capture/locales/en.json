@@ -50,6 +50,13 @@
       "tools": {
         "discover": "Finds a site's sitemaps (robots.txt, sitemap.xml, indexes, gzip) or reads a given sitemap, file or URL list, and answers the pages a capture would take after the patterns, languages, lastmod, sampling and the environment rewrite. Captures nothing.",
         "gallery": "Renders the HTML gallery of a sitemap capture run from its run.json. Writes nothing."
+      },
+      "settings": {
+        "thumbnailWidth": {
+          "label": "Gallery thumbnail width",
+          "description": "The width of a shot in the gallery's contact sheet, in CSS pixels.",
+          "help": "The width of a shot in the contact sheet of a sitemap capture's gallery, in CSS pixels. A gallery is written when its capture ends, so a new width applies to the next capture. Click a shot to see it at full size. Example: 320."
+        }
       }
     }
   }

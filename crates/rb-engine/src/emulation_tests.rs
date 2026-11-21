@@ -277,6 +277,8 @@ fn values_a_browser_would_refuse_are_errors() {
         value
     };
     assert!(invalid(base(serde_json::json!({ "dpr": 0.0 }))));
+    assert!(invalid(base(serde_json::json!({ "dpr": 0.001 }))));
+    assert!(!invalid(base(serde_json::json!({ "dpr": 0.25 }))));
     assert!(invalid(base(serde_json::json!({ "dpr": 11.0 }))));
     assert!(invalid(base(serde_json::json!({ "textScale": -1.0 }))));
     assert!(invalid(base(

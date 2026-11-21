@@ -288,9 +288,7 @@ impl Registry {
             std::fs::create_dir_all(dir)?;
         }
         let text = serde_json::to_vec_pretty(&recorded).map_err(io::Error::other)?;
-        let temporary = self.file.with_extension("json.tmp");
-        std::fs::write(&temporary, text)?;
-        std::fs::rename(&temporary, &self.file)
+        rb_util::fs::write_atomic(&self.file, &text)
     }
 }
 

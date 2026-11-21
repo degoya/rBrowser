@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rb_engine::ViewId;
-use rb_ipc::{StateSnapshot, ViewMetrics};
+use rb_ipc::{PluginProgress, StateSnapshot, ViewMetrics};
 use tokio::runtime::Handle;
 
 use super::*;
@@ -67,6 +67,50 @@ async fn new_metrics_alone_go_out_as_metrics() {
     );
     let mut both = measured;
     both.url = "http://localhost:5173/cart".to_owned();
+    assert_eq!(
+        push.next(both.clone()),
+        Some(CoreToShell::State(Box::new(both)))
+    );
+}
+
+fn progress(done: u32) -> PluginProgress {
+    PluginProgress {
+        plugin: "width-sweep".to_owned(),
+        name: "Width sweep".to_owned(),
+        done,
+        total: 160,
+        cancel: None,
+    }
+}
+
+#[tokio::test]
+async fn new_plugin_progress_alone_goes_out_as_plugin_progress() {
+    let state = state();
+    let mut push = StatePush::default();
+    push.next(state.clone());
+    let mut running = state.clone();
+    for done in 1..=4 {
+        running.plugin_progress = vec![progress(done)];
+        assert_eq!(
+            push.next(running.clone()),
+            Some(CoreToShell::PluginProgress {
+                progress: vec![progress(done)]
+            }),
+            "a step of a plugin is no whole state"
+        );
+    }
+    assert_eq!(push.next(running.clone()), None);
+    assert_eq!(
+        push.next(state.clone()),
+        Some(CoreToShell::PluginProgress {
+            progress: Vec::new()
+        }),
+        "the call ended"
+    );
+    // Progress and metrics at once, or progress with another change: the whole state.
+    let mut both = state;
+    both.plugin_progress = vec![progress(9)];
+    both.metrics = vec![metrics(1)];
     assert_eq!(
         push.next(both.clone()),
         Some(CoreToShell::State(Box::new(both)))

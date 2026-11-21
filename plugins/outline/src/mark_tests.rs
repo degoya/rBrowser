@@ -1,3 +1,4 @@
+use rb_plugin_api::{Failure, FailureKind, codes};
 use serde_json::json;
 
 use super::*;

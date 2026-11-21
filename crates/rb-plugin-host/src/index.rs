@@ -15,9 +15,9 @@
 //! unsigned. Not taken from rDownloader: revocations inside the index and the carried-over
 //! entries of earlier indexes - an index here lists what it offers now.
 
-use chrono::{DateTime, Utc};
 use ed25519_dalek::SigningKey;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 #[path = "index_build.rs"]
 mod build;
@@ -66,9 +66,11 @@ pub struct PluginIndex {
     /// The publisher's monotonic counter, from 1; never goes backwards.
     pub sequence: u64,
     /// When the publisher signed it.
-    pub issued_at: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub issued_at: OffsetDateTime,
     /// After this instant the index is refused, newer or not.
-    pub expires_at: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub expires_at: OffsetDateTime,
     /// Every package offered, at most one entry per plugin id and version.
     #[serde(default)]
     pub plugins: Vec<IndexEntry>,
@@ -217,7 +219,7 @@ pub fn verify(
     bytes: &[u8],
     signers: &IndexSigners,
     known_sequence: Option<u64>,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<PluginIndex, IndexError> {
     if bytes.len() > MAX_INDEX_BYTES {
         return Err(IndexError::TooLarge);

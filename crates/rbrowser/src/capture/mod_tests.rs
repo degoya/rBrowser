@@ -90,6 +90,7 @@ async fn the_views_are_read_after_the_delay() {
         folder: None,
         clean: rb_visual::CleanOverrides::default(),
         at: None,
+        mask_passwords: false,
     };
     let capture = tokio::spawn({
         let core = core.clone();
@@ -136,6 +137,7 @@ fn a_capture_names_its_start_once() {
         folder: None,
         clean: rb_visual::CleanOverrides::default(),
         at: None,
+        mask_passwords: false,
     };
     let Some(CoreToShell::Notification(started)) =
         capturing_notice(&request(CaptureMode::FullPage, 0))

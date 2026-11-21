@@ -39,10 +39,10 @@ pub struct RemoveParams {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AddSizeParams {
-    /// Width in CSS px, 1 to 16384; with `height`, unless `device` is given.
+    /// Width in CSS px, 1 to 10000; with `height`, unless `device` is given.
     #[serde(default)]
     pub width: Option<u32>,
-    /// Height in CSS px, 1 to 16384.
+    /// Height in CSS px, 1 to 10000.
     #[serde(default)]
     pub height: Option<u32>,
     /// A device preset's id (`devices_list`) instead of `width` and `height`: the view gets

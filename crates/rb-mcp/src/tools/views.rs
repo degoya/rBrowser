@@ -82,6 +82,10 @@ pub enum EngineArg {
     Firefox,
     /// Playwright's WebKit, in an external window.
     Webkit,
+    /// The real Safari over safaridriver, in an external window; macOS only (RB-095-03).
+    Safari,
+    /// Mobile Safari on the iOS Simulator or a connected iPhone or iPad; macOS only (RB-095-04).
+    Ios,
 }
 
 /// `views_set_engine`.
@@ -91,12 +95,16 @@ pub struct SetEngineParams {
     /// `"all"`, a view id or a breakpoint id; the active view when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
-    /// `chromium`, `firefox` or `webkit`.
+    /// `chromium`, `firefox`, `webkit`, `safari` or `ios` (both macOS only).
     pub engine: EngineArg,
     /// `local` (`config.local.json`, personal, the default) or `project` (`config.json`,
     /// shared with the team).
     #[serde(default)]
     pub file: Option<String>,
+    /// With engine `ios`: a simulator model (`iPhone 16`) or a udid from `ios_devices`; absent,
+    /// engines.ios.defaultSimulator or the connected device.
+    #[serde(default)]
+    pub ios_device: Option<String>,
 }
 
 #[tool_router(router = views_router, vis = "pub(crate)")]
@@ -174,7 +182,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Set the engine of the targeted views (target: \"all\", a view id or a breakpoint id; default the active view) to chromium, firefox or webkit. The engine is written as breakpoints[].engine of each view's breakpoint into file local (config.local.json, the default) or project (config.json, shared with the team), the config is read again and the view follows - Firefox and WebKit in external windows. An engine that cannot run (Firefox not found, WebKit not installed) is refused with the reason. Answers per view { view, breakpoint, engine, file, changed } - changed is false when a config.local.json entry of the breakpoint shadows a project write - or { view, failed } for a view without a breakpoint of the config; target all is one write and one reload."
+        description = "Set the engine of the targeted views (target: \"all\", a view id or a breakpoint id; default the active view) to chromium, firefox, webkit, safari (the real Safari, macOS only; a Safari view follows the active view and never leads) or ios (Mobile Safari on the iOS Simulator or a connected iPhone or iPad, macOS only; iosDevice names a model such as \"iPhone 16\" or a udid from ios_devices; it follows and never leads, its size is the device's). The engine is written as breakpoints[].engine of each view's breakpoint into file local (config.local.json, the default) or project (config.json, shared with the team), the config is read again and the view follows - Firefox and WebKit in external windows. An engine that cannot run (Firefox not found, WebKit not installed, Safari outside macOS or with remote automation off, iOS without Xcode and without a device) is refused with the reason. Answers per view { view, breakpoint, engine, file, changed, iosDevice? } - changed is false when a config.local.json entry of the breakpoint shadows a project write - or { view, failed } for a view without a breakpoint of the config; target all is one write and one reload."
     )]
     pub(crate) async fn views_set_engine(
         &self,
@@ -201,6 +209,7 @@ impl RbMcpServer {
                     ("view", one.map(|view| Value::from(view.0))),
                     ("engine", Some(engine)),
                     ("file", params.file.clone().map(Value::String)),
+                    ("iosDevice", params.ios_device.clone().map(Value::String)),
                 ]),
                 many => object([
                     (
@@ -214,6 +223,7 @@ impl RbMcpServer {
                     ),
                     ("engine", Some(engine)),
                     ("file", params.file.clone().map(Value::String)),
+                    ("iosDevice", params.ios_device.clone().map(Value::String)),
                 ]),
             };
             self.command("view.set_engine", args).await

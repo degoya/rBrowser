@@ -20,6 +20,7 @@
 
 use std::collections::HashSet;
 
+use rb_util::url::is_web_url;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -143,8 +144,7 @@ pub fn base_url(config: &ProjectConfig, environment: Option<&str>) -> Option<Str
             config
                 .start_url
                 .as_deref()
-                .and_then(origin)
-                .map(str::to_owned)
+                .and_then(rb_util::url::origin_of)
         })
         .or_else(|| config.environments.first().map(|env| env.url.clone()))
 }
@@ -324,30 +324,6 @@ pub fn is_bookmark_path(path: &str) -> bool {
         && !path
             .chars()
             .any(|c| c == '\\' || c.is_whitespace() || c.is_control())
-}
-
-/// Whether `url` is an absolute `http`/`https` URL with a host and no whitespace or control
-/// character.
-pub fn is_web_url(url: &str) -> bool {
-    origin(url).is_some() && !url.chars().any(|c| c.is_whitespace() || c.is_control())
-}
-
-/// `scheme://host[:port]` of an `http`/`https` URL; `None` for anything else.
-fn origin(url: &str) -> Option<&str> {
-    let lower = url.get(..8).unwrap_or(url).to_ascii_lowercase();
-    let scheme = if lower.starts_with("https://") {
-        8
-    } else if lower.starts_with("http://") {
-        7
-    } else {
-        return None;
-    };
-    let rest = url.get(scheme..)?;
-    let host_len = rest.find(['/', '?', '#']).unwrap_or(rest.len());
-    if host_len == 0 {
-        return None;
-    }
-    url.get(..scheme + host_len)
 }
 
 fn issue(path: String, key: &str, message: String) -> ConfigIssue {

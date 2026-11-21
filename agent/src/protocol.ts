@@ -86,6 +86,10 @@ export interface MouseData {
   detail: number;
   modifiers: number;
   target: ElementTarget;
+  /** A click on the label of a checkbox or radio: the CSS path of that control (RB-090-93).
+   *  The engine's own click on the control that follows is not sent; the control's `change`
+   *  belongs to this click. */
+  control?: string;
 }
 
 /** `keydown` and `keyup`. */
@@ -161,8 +165,10 @@ export type SyncEvent =
   | {
       type: 'hover';
       target: ElementTarget;
-      /** Not a move: the hover on a menu entry at a press into its hover-only submenu
-       *  (`menu-trigger.ts`, RB-090-76). */
+      /** Not a move: a hover the recorder keeps as a step - on a menu entry at a press into its
+       *  hover-only submenu (`menu-trigger.ts`, RB-090-76), or while a recording runs on a menu's
+       *  entry where the pointer rested `RecordConfig.hoverDwellMs` (`record-hover.ts`,
+       *  RB-090-87). */
       menu?: true;
     }
   | {
@@ -257,10 +263,31 @@ export interface VitalsData {
   unsupported: VitalMetric[];
 }
 
+/** A point of the pointer's way (RB-090-87): CSS px of the viewport, `t` ms after the first. */
+export interface PathPoint {
+  x: number;
+  y: number;
+  t: number;
+}
+
+/** `automation.recorder.recordPointer`: which of the pointer's way a recording keeps. */
+export type RecordPointerMode = 'menu' | 'all' | 'off';
+
+/** What the active view's agent does for a running recording (RB-090-87); absent otherwise. */
+export interface RecordConfig {
+  /** Report a menu entry's hover once the pointer rests there (`recordHover` not `off`). */
+  menuHovers: boolean;
+  /** How long the pointer rests (`automation.recorder.hoverDwellMs`). */
+  hoverDwellMs: number;
+  /** `automation.recorder.recordPointer`. */
+  recordPointer: RecordPointerMode;
+}
+
 /** Agent -> core, the binding's payload (JSON text). */
 export type AgentMessage =
   | ({ kind: 'ready'; url: string } & Origin)
-  | ({ kind: 'event'; seq: number; time: number; event: SyncEvent } & Origin)
+  /** `path`: the pointer's way to the event while a recording keeps it (RB-090-87). */
+  | ({ kind: 'event'; seq: number; time: number; event: SyncEvent; path?: PathPoint[] } & Origin)
   /** A page's bus message (RB-020-08): only from the top frame, `origin` the page's origin. */
   | ({ kind: 'bus'; time: number; origin: string; type: string; payload: JsonValue } & Origin)
   /** Browsersync's client is in the document: the core switches its own sync off (RB-020-06). */
@@ -302,6 +329,8 @@ export interface AgentConfig {
    * scroll position, so no wheel is captured; `wheel` captures the wheel. Absent: `anchor`.
    */
   scrollMode?: ScrollMode;
+  /** While a recording runs, in the view it records (RB-090-87); absent otherwise. */
+  record?: RecordConfig;
 }
 
 /** `sync.scrollMode`. */
@@ -330,7 +359,7 @@ export interface PageInfo {
   height: number;
   /** The view's place in the grid, from 0. */
   index: number;
-  engine: 'chromium' | 'firefox' | 'webkit';
+  engine: 'chromium' | 'firefox' | 'webkit' | 'android' | 'safari' | 'ios';
   emulation: PageEmulation;
 }
 
@@ -351,6 +380,24 @@ export interface PageState {
 }
 
 /** Core -> agent, evaluated as `__rbAgent.command(<json>)` in the agent's world. */
+/** The text direction the core forces on the page's `<html dir>` (RB-092-02). */
+export type PageDir = 'ltr' | 'rtl' | 'auto';
+
+/** The pseudo-localisation of the page's texts (RB-092-02): the length factor (1 to 3),
+ *  accented letters, right to left. */
+export interface PseudoLocale {
+  factor: number;
+  accents: boolean;
+  rtl: boolean;
+}
+
+/** What the core forces on the page's language (RB-092-02); an absent field is the page's own. */
+export interface PageLocale {
+  dir?: PageDir;
+  lang?: string;
+  pseudo?: PseudoLocale;
+}
+
 export type AgentCommand =
   | { cmd: 'configure'; config: AgentConfig }
   /** The replay marker: nothing is captured for `ms` (0 ends it), so replays cause no echo. */
@@ -371,7 +418,9 @@ export type AgentCommand =
   /** Scroll sync (RB-020-04): bring the same content to the container's top edge. */
   | ({ cmd: 'scroll' } & ScrollData)
   /** The point of a target inside the viewport, never scrolling (wheel replay, RB-020-04). */
-  | { cmd: 'point'; target: ElementTarget };
+  | { cmd: 'point'; target: ElementTarget }
+  /** The page's direction, language and pseudo-localisation (RB-092-02): `done`. */
+  | { cmd: 'locale'; locale: PageLocale };
 
 /** Where a target is in a view, in CSS pixels of the agent's frame viewport. */
 export type ResolveResult =

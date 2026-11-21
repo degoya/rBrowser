@@ -269,3 +269,30 @@ fn a_window_image_larger_than_a_4k_screen_is_not_read() {
         garbled.logged
     );
 }
+
+/// RB-090-29: measuring a view decodes its window image's base64 once - the size and the marker
+/// scan read the same bytes (twice before, a cost on large views, RB-090-19).
+#[test]
+fn a_calibration_decodes_the_window_image_once() {
+    let port = (400.0, 300.0);
+    let mut host = host(window(
+        (400, 300),
+        port,
+        (0, 0),
+        1.0,
+        Some(MANAGED),
+        (5.0, 5.0),
+    ));
+    let viewport = super::Viewport {
+        width: port.0,
+        height: port.1,
+        dpr: 1.0,
+        scroll_x: 0.0,
+        scroll_y: 0.0,
+    };
+    let marker = corners(port);
+    let decodes = crate::pixels::tests::base64_decodes(|| {
+        let _ = super::calibrate_view(&mut host, 4, &viewport, &marker, true);
+    });
+    assert_eq!(decodes, 1);
+}

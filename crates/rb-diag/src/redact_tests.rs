@@ -171,3 +171,38 @@ fn json_keeps_ordinary_keys_that_look_like_secret_names() {
     let config = json!({ "breakpoints": [{ "session": "admin" }], "key": "F5" });
     assert_eq!(redact_json(&config).value, config);
 }
+
+#[test]
+fn the_log_s_names_lie_inside_the_one_list() {
+    // RB-094-10: the log rules keep their narrower lists (in prose `code=1` stays), every name of
+    // them taken from `rb_util::mask`.
+    use rb_util::mask::{sensitive_header, sensitive_param};
+    for name in SECRET_NAMES.iter().chain(SECRET_PARTS).chain(SECRET_WORDS) {
+        assert!(
+            sensitive_param(name) || sensitive_header(name),
+            "{name} is missing from rb_util::mask"
+        );
+    }
+    for name in CREDENTIAL_HEADERS {
+        assert!(
+            sensitive_header(name),
+            "{name} is missing from rb_util::mask"
+        );
+    }
+}
+
+#[test]
+fn an_ios_device_s_udid_stays_out_of_the_zip_and_the_logs() {
+    let udid = "00008110-001A2B3C4D5E801E";
+    let config = json!({ "breakpoints": [{ "id": "phone", "engine": "ios", "iosDevice": udid }] });
+    let redacted = redact_json(&config);
+    assert_eq!(
+        redacted.value,
+        json!({ "breakpoints": [{ "id": "phone", "engine": "ios", "iosDevice": "***" }] })
+    );
+    assert_eq!(redacted.removed, [udid]);
+    assert_eq!(
+        redact_text(&format!(r#"{{"iosDevice": "{udid}"}}"#)),
+        r#"{"iosDevice": "***"}"#
+    );
+}

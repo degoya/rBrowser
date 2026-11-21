@@ -4,6 +4,12 @@
 //! follows as a `setup` event, since the analyser reads the site and the files may lie in WSL.
 //! Those three carry the page's `requestId`, which their event echoes: the core runs them one
 //! after the other, and the page takes only the answer to its newest request.
+//!
+//! RB-091-08: a proposal of the analyser template says what the analyser did - the stylesheets it
+//! read (`sheets`) or, when it had no proposal and the views are the mobile + desktop fallback,
+//! why (`reason`: a [`SetupReasonCode`] and its values; the text is the page's,
+//! `firstrun.project.reason.<code>`). A step that panics answers `failed` with
+//! `firstrun.error.step_failed` instead of no answer.
 
 use std::collections::BTreeMap;
 
@@ -78,6 +84,41 @@ pub enum SetupSource {
     Devices,
 }
 
+/// Why the analyser had no proposal (RB-091-08).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SetupReasonCode {
+    /// No web page to read: no address and no `startUrl`.
+    NoPage,
+    /// The page could not be fetched.
+    Unreachable,
+    /// The page did not answer in time.
+    Timeout,
+    /// The page has no stylesheet that could be read.
+    NoCss,
+    /// The breakpoint analyser plugin is not loaded (not installed, refused or not loaded yet).
+    PluginMissing,
+    /// The plugin's call failed.
+    PluginFailed,
+    /// The plugin answered with something that cannot be used.
+    BadOutput,
+    /// The stylesheets name no breakpoint.
+    NothingFound,
+    /// The proposal does not pass the config's checks.
+    Invalid,
+}
+
+/// Why the analyser had no proposal, with values for the text (`url`, a plugin's `code`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupReason {
+    /// The reason.
+    pub code: SetupReasonCode,
+    /// Its values.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub params: BTreeMap<String, String>,
+}
+
 /// The layout the basics step chooses.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -137,6 +178,12 @@ pub enum SetupAnswer {
         config: Value,
         /// Where its breakpoints came from.
         source: SetupSource,
+        /// The stylesheets the analyser read, when its proposal is the source.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        sheets: Option<u32>,
+        /// Why the analyser had none, when it was asked and the source is the fallback.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<SetupReason>,
     },
     /// `write` wrote the config.
     Written {

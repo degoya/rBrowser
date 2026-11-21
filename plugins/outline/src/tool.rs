@@ -22,7 +22,7 @@ pub const AXTREE: &str = "axtree";
 pub const MIN_BUDGET: usize = 4 * 1024;
 pub const MAX_BUDGET: usize = 4 * 1024 * 1024;
 
-fn invalid(reason: &str) -> Failure {
+pub(crate) fn invalid(reason: &str) -> Failure {
     Failure::coded(FailureKind::BadData, codes::INVALID).with_param("reason", reason)
 }
 
@@ -41,6 +41,23 @@ pub fn parse(args: &str) -> Result<Value, Failure> {
     } else {
         Err(invalid("arguments"))
     }
+}
+
+/// The answer budget asked for, in bytes of JSON; none without `budget`.
+///
+/// # Errors
+///
+/// `plugins.error.invalid` for a budget outside [`MIN_BUDGET`] to [`MAX_BUDGET`].
+pub(crate) fn budget(args: &Value) -> Result<Option<usize>, Failure> {
+    args.get("budget")
+        .map(|value| {
+            value
+                .as_u64()
+                .and_then(|n| usize::try_from(n).ok())
+                .filter(|n| (MIN_BUDGET..=MAX_BUDGET).contains(n))
+                .ok_or_else(|| invalid("budget"))
+        })
+        .transpose()
 }
 
 /// The sections asked for: the page's and whether the accessibility tree is one of them; every
@@ -69,8 +86,9 @@ fn sections(args: &Value) -> Result<(Vec<String>, bool), Failure> {
     Ok((page, tree))
 }
 
-fn finding_json(finding: &Finding) -> Value {
-    json!({
+/// A finding as the tools answer it; a reading-order finding's other element as `data`.
+pub(crate) fn finding_json(finding: &Finding) -> Value {
+    let mut value = json!({
         "rule": finding.rule,
         "severity": finding.severity.as_str(),
         "message": finding.message,
@@ -78,7 +96,15 @@ fn finding_json(finding: &Finding) -> Value {
         "view": finding.view,
         "selector": finding.selector,
         "path": finding.path,
-    })
+    });
+    if let Some(data) = finding
+        .data
+        .as_deref()
+        .and_then(|data| serde_json::from_str::<Value>(data).ok())
+    {
+        value["data"] = data;
+    }
+    value
 }
 
 fn params_json(finding: &Finding) -> Value {
@@ -107,16 +133,7 @@ pub fn get(host: &mut dyn PluginHost, args: &Value) -> Result<Value, Failure> {
     if !matches!(shape, "merged" | "views") {
         return Err(invalid("shape"));
     }
-    let budget = match args.get("budget") {
-        None => None,
-        Some(value) => Some(
-            value
-                .as_u64()
-                .and_then(|n| usize::try_from(n).ok())
-                .filter(|n| (MIN_BUDGET..=MAX_BUDGET).contains(n))
-                .ok_or_else(|| invalid("budget"))?,
-        ),
-    };
+    let budget = budget(args)?;
     let findings_only = match args.get("findingsOnly") {
         None => false,
         Some(value) => value.as_bool().ok_or_else(|| invalid("findingsOnly"))?,
@@ -173,19 +190,20 @@ pub fn get(host: &mut dyn PluginHost, args: &Value) -> Result<Value, Failure> {
         sections_out.insert(AXTREE.to_owned(), json!({ "views": trees }));
     }
     let subjects: Vec<_> = collected.outlines.iter().map(|(id, _)| *id).collect();
+    // The rules over the breakpoints compare the sections of `outline.diff.elements` asked for.
+    let compared = settings.diff_sections(&page_sections);
+    let across = if compared.is_empty() {
+        Vec::new()
+    } else {
+        run::across(&[], &views, &collected.outlines, &subjects, &compared)
+    };
     let findings: Vec<Value> = collected
         .outlines
         .iter()
         .flat_map(|(view, outline)| {
             rules::findings(&[], *view, outline, &page_sections, &[], &settings)
         })
-        .chain(run::across(
-            &[],
-            &views,
-            &collected.outlines,
-            &subjects,
-            &page_sections,
-        ))
+        .chain(across)
         .filter_map(|finding| levels.apply(finding))
         .map(|finding| finding_json(&finding))
         .collect();

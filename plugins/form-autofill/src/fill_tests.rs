@@ -1,5 +1,6 @@
 use super::*;
 use crate::fake::FakeHost;
+use rb_plugin_api::ViewId;
 use serde_json::json;
 
 fn register(locale: &str) -> Value {
@@ -233,4 +234,187 @@ fn hidden_inputs_are_read_for_the_fill_only_with_the_setting() {
     host.set("captureHiddenInputs", "true");
     run(&mut host, "{}", Some(Mode::Valid));
     assert_eq!(host.requests(1)[2]["hiddenInputs"], true);
+}
+
+#[test]
+fn each_view_names_the_scope_its_fields_came_from() {
+    let mut host = host();
+    let mut chosen = register("en-US");
+    chosen["scope"] = json!("selector");
+    host.collect(1, chosen);
+    let answer = run(&mut host, r#"{"seed":3}"#, Some(Mode::Valid));
+    assert_eq!(answer["views"][0]["scope"], "selector");
+    assert_eq!(
+        answer["views"][1]["scope"], "",
+        "an answer without one names none"
+    );
+}
+
+/// A contact form whose topic select brings a company field and a privacy checkbox (RB-094-22):
+/// the first read has the select and the name, the second the fields the select brought.
+fn contact() -> (Value, Value) {
+    let first = json!({ "locale": "en-US", "fields": [
+        { "index": 0, "key": "input:text:name", "sig": "n", "tag": "input", "type": "text",
+          "name": "name" },
+        { "index": 1, "key": "select:select:topic", "sig": "t", "tag": "select", "type": "select",
+          "name": "topic", "options": [{ "value": "", "label": "-" }, { "value": "sales", "label": "Sales" }],
+          "required": true },
+        { "index": 2, "key": "input:text:company", "sig": "c", "tag": "input", "type": "text",
+          "name": "company", "skip": "disabled" }
+    ] });
+    let second = json!({ "locale": "en-US", "fields": [
+        { "index": 0, "key": "input:text:name", "sig": "n", "tag": "input", "type": "text",
+          "name": "name", "filled": true },
+        { "index": 1, "key": "select:select:topic", "sig": "t", "tag": "select", "type": "select",
+          "name": "topic", "options": [{ "value": "", "label": "-" }, { "value": "sales", "label": "Sales" }],
+          "required": true, "filled": true },
+        { "index": 2, "key": "input:text:company", "sig": "c", "tag": "input", "type": "text",
+          "name": "company" },
+        { "index": 3, "key": "input:text:vat", "sig": "v", "tag": "input", "type": "text",
+          "name": "vat", "filled": true },
+        { "index": 4, "key": "input:checkbox:privacy", "sig": "p", "tag": "input",
+          "type": "checkbox", "name": "privacy", "required": true }
+    ] });
+    (first, second)
+}
+
+fn contact_host() -> FakeHost {
+    let (first, second) = contact();
+    let mut host = FakeHost::default();
+    host.view(1, "Mobile", "chromium")
+        .collect(1, first)
+        .collect_next(1, second)
+        .apply_next(
+            1,
+            json!({ "fields": [
+                { "index": 1, "status": "done", "changed": true, "value": "sales" },
+                { "index": 0, "status": "done", "changed": true, "value": "Ada",
+                  "record": { "kind": "fill" } } ] }),
+        )
+        .apply_next(
+            1,
+            json!({ "formValid": true, "fields": [
+                { "index": 4, "status": "done", "changed": true, "value": "true" },
+                { "index": 2, "status": "done", "changed": true, "value": "ACME" } ] }),
+        );
+    host
+}
+
+fn ops(host: &FakeHost, view: ViewId) -> Vec<String> {
+    host.requests(view)
+        .iter()
+        .map(|request| request["op"].as_str().unwrap_or_default().to_owned())
+        .collect()
+}
+
+fn indices(request: &Value) -> Vec<u64> {
+    request["actions"]
+        .as_array()
+        .map(|list| list.iter().filter_map(|a| a["index"].as_u64()).collect())
+        .unwrap_or_default()
+}
+
+#[test]
+fn the_fields_a_select_brings_are_filled_in_the_same_run() {
+    let mut host = contact_host();
+    let answer = run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    // Read, set, read again after the page settled, set what is new, read once more: nothing left.
+    assert_eq!(
+        ops(&host, 1),
+        ["collect", "apply", "collect", "apply", "collect"]
+    );
+    let applies = host.applies(1);
+    // Control fields first in each pass: the select before the name, the checkbox before the text.
+    assert_eq!(indices(&applies[0]), [1, 0]);
+    assert_eq!(indices(&applies[1]), [4, 2]);
+    // Every apply waits for the page to settle after a control field (300 ms by default).
+    assert_eq!(applies[0]["settle"]["quiet"], 300);
+    let view = &answer["views"][0];
+    assert_eq!(view["passes"], 2);
+    assert_eq!(view["status"], "filled");
+    assert_eq!(view["formValid"], true);
+    let fields: Vec<(&str, &str)> = view["fields"]
+        .as_array()
+        .expect("fields")
+        .iter()
+        .map(|f| {
+            (
+                f["key"].as_str().unwrap_or_default(),
+                f["status"]
+                    .as_str()
+                    .unwrap_or(f["skip"].as_str().unwrap_or_default()),
+            )
+        })
+        .collect();
+    assert_eq!(
+        fields,
+        [
+            ("input:text:name", "done"),
+            ("select:select:topic", "done"),
+            ("input:text:company", "done"),
+            ("input:text:vat", "filled"),
+            ("input:checkbox:privacy", "done"),
+        ]
+    );
+    assert_eq!(view["record"], json!([{ "kind": "fill" }]));
+}
+
+#[test]
+fn the_passes_stop_at_the_setting_and_a_settle_of_zero_waits_for_nothing() {
+    let mut host = contact_host();
+    host.set("maxPasses", "1").set("settleMilliseconds", "0");
+    let answer = run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    assert_eq!(ops(&host, 1), ["collect", "apply"]);
+    assert!(host.applies(1)[0].get("settle").is_none());
+    assert_eq!(answer["views"][0]["passes"], 1);
+    assert_eq!(answer["views"][0]["fields"][2]["skip"], "disabled");
+}
+
+#[test]
+fn every_synced_view_runs_the_same_passes_with_the_same_values() {
+    let (first, second) = contact();
+    let mut host = contact_host();
+    host.view(2, "Desktop", "chromium")
+        .collect(2, first)
+        .collect_next(2, second)
+        .apply_next(
+            2,
+            json!({ "fields": [{ "index": 1, "status": "done", "changed": true }] }),
+        );
+    run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    let one = host.applies(1);
+    let two = host.applies(2);
+    assert_eq!(one.len(), 2);
+    assert_eq!(two.len(), 2);
+    assert_eq!(one[1]["actions"], two[1]["actions"]);
+}
+
+#[test]
+fn a_fill_stops_its_passes_at_the_overall_deadline_and_says_so() {
+    let (first, _) = contact();
+    let mut host = contact_host();
+    host.view(2, "Desktop", "chromium").collect(2, first);
+    // Every evaluate takes 20 s of the clock: the first view's first pass ends past the budget.
+    host.tick = 20;
+    let answer = run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    assert_eq!(Settings::default().fill_budget_seconds, 30);
+    assert_eq!(ops(&host, 1), ["collect", "apply"]);
+    assert_eq!(answer["views"][0]["passes"], 1);
+    assert_eq!(answer["views"][0]["stopped"], "deadline");
+    assert_eq!(answer["views"][1]["status"], "timeout");
+    assert!(host.requests(2).is_empty());
+    assert_eq!(answer["outOfTime"], true);
+    let mut host = contact_host();
+    let answer = run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    assert!(answer["views"][0].get("stopped").is_none());
+    assert_eq!(answer["outOfTime"], false);
+    // `fillBudgetSeconds` (code review w33, item 9): with 300 s the slow page gets its views.
+    let (first, _) = contact();
+    let mut host = contact_host();
+    host.view(2, "Desktop", "chromium").collect(2, first);
+    host.set("fillBudgetSeconds", "300");
+    host.tick = 20;
+    let answer = run(&mut host, r#"{"seed":5}"#, Some(Mode::Valid));
+    assert_ne!(answer["views"][1]["status"], "timeout");
+    assert!(!host.requests(2).is_empty());
 }

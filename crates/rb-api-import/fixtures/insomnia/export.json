@@ -1,0 +1,70 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-10-01T10:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    { "_id": "wrk_1", "_type": "workspace", "parentId": null, "name": "Billing", "scope": "collection" },
+    { "_id": "fld_1", "_type": "request_group", "parentId": "wrk_1", "name": "Invoices", "environment": {} },
+    {
+      "_id": "req_1",
+      "_type": "request",
+      "parentId": "fld_1",
+      "name": "List invoices",
+      "method": "GET",
+      "url": "{{ _.baseUrl }}/invoices",
+      "parameters": [
+        { "name": "status", "value": "open" },
+        { "name": "debug", "value": "1", "disabled": true }
+      ],
+      "headers": [{ "name": "Accept", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.token }}", "prefix": "" },
+      "body": {},
+      "settingFollowRedirects": "off",
+      "description": "Open invoices."
+    },
+    {
+      "_id": "req_2",
+      "_type": "request",
+      "parentId": "fld_1",
+      "name": "Create invoice",
+      "method": "POST",
+      "url": "{{ _.baseUrl }}/invoices",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "basic", "username": "billing", "password": "pa55" },
+      "body": { "mimeType": "application/json", "text": "{\"amount\": 10, \"at\": \"{% now 'iso-8601' %}\"}" },
+      "preRequestScript": "insomnia.environment.set('a', 1);"
+    },
+    {
+      "_id": "req_3",
+      "_type": "request",
+      "parentId": "wrk_1",
+      "name": "Upload",
+      "method": "POST",
+      "url": "https://billing.example/upload",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          { "name": "note", "value": "hi" },
+          { "name": "doc", "type": "file", "fileName": "/tmp/invoice.pdf" }
+        ]
+      },
+      "authentication": { "type": "ntlm", "username": "u", "password": "p" }
+    },
+    {
+      "_id": "req_4",
+      "_type": "request",
+      "parentId": "wrk_1",
+      "name": "Query",
+      "method": "POST",
+      "url": "https://billing.example/graphql",
+      "body": { "mimeType": "application/graphql", "text": "{\"query\":\"{ invoices { id } }\",\"variables\":{\"first\":1}}" },
+      "authentication": { "type": "apikey", "key": "X-Key", "value": "abc123", "addTo": "queryParams" }
+    },
+    { "_id": "ws_1", "_type": "websocket_request", "parentId": "wrk_1", "name": "Live", "url": "wss://billing.example/live" },
+    { "_id": "env_base", "_type": "environment", "parentId": "wrk_1", "name": "Base Environment", "data": { "baseUrl": "https://billing.example", "nested": { "region": "eu" } } },
+    { "_id": "env_prod", "_type": "environment", "parentId": "env_base", "name": "Production", "data": { "baseUrl": "https://prod.billing.example", "token": "live-token" }, "isPrivate": false },
+    { "_id": "env_private", "_type": "environment", "parentId": "env_base", "name": "Mine", "data": { "pin": "1234" }, "isPrivate": true },
+    { "_id": "jar_1", "_type": "cookie_jar", "parentId": "wrk_1", "name": "Default Jar", "cookies": [] }
+  ]
+}

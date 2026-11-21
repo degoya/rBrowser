@@ -257,7 +257,7 @@ async fn relay_connection(
     router: &Arc<CdpRouter>,
     inspect: &InspectQueue,
 ) {
-    let mut events = router.subscribe();
+    let mut events = router.subscribe_raw();
     let attached = router
         .call(
             "Target.attachToTarget",
@@ -388,7 +388,7 @@ pub(crate) async fn send_ordered<T: Send + 'static>(
 
 /// Takes the events already received; `true` when the page's session is gone.
 fn drain_events(
-    events: &mut tokio::sync::broadcast::Receiver<CdpEvent>,
+    events: &mut tokio::sync::broadcast::Receiver<Arc<CdpEvent>>,
     relay: &mut Relay,
     outbox: &mut Vec<Value>,
 ) -> bool {

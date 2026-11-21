@@ -28,6 +28,7 @@ const STRINGS: Record<string, string> = {
   'plugin.snippets.panel.keep': 'Keep',
   'plugin.snippets.errors.header': 'Bad header: @{tag}.',
   'plugin.snippets.errors.save_untrusted': 'Saving needs trust.',
+  'plugin.snippets.panel.setting_link': 'Open the setting',
   'plugin.snippets.errors.no_active_view': 'No view is active.',
   'plugins.error.busy': 'The plugin is busy.',
 };
@@ -205,8 +206,18 @@ describe('the snippets panel', () => {
     await settle();
     expect(calls('save')[0]?.args).toEqual({ name: 'Mine', code: 'return 1' });
     await reply(calls('save')[0], 'plugin.snippets.errors.save_untrusted', false);
-    expect($('status').textContent).toBe('Saving needs trust.');
+    expect($('status').textContent).toContain('Saving needs trust.');
     expect($('status').dataset.tone).toBe('error');
+    // RB-094-21: "keep the snippet in Settings > DevTools & Debugging > Snippets" links there.
+    ($('status').querySelector('[data-testid="setting-link-snippets.library"]') as HTMLElement).click();
+    expect(posted).toContainEqual({ target: 'host', action: 'open_settings', key: 'snippets.library' });
+  });
+
+  // RB-094-21: "or add one in Settings > DevTools & Debugging > Snippets" links there.
+  it('links the empty list to the snippets of the settings', async () => {
+    await type($('filter') as HTMLInputElement, 'no snippet has this name');
+    ($('empty').querySelector('[data-testid="setting-link-snippets.library"]') as HTMLElement).click();
+    expect(posted).toContainEqual({ target: 'host', action: 'open_settings', key: 'snippets.library' });
   });
 
   it('deletes a saved snippet only after asking, inline', async () => {

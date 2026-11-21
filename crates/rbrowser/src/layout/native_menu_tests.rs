@@ -213,6 +213,18 @@ fn the_portal_button_is_a_pulldown() {
     assert!(!is_pulldown("portal-x"));
 }
 
+// RB-094-20: the toolbar's "+" builds its menu in the shell, and it and the main menu list the
+// devices - opening either takes the device list again for the next opening.
+#[test]
+fn the_add_button_is_a_pulldown_and_the_device_menus_refresh_the_list() {
+    assert!(PULLDOWNS.contains(&"add"));
+    assert!(is_pulldown("add-4"));
+    assert!(lists_devices("add-4"));
+    assert!(lists_devices("menu-1"));
+    assert!(!lists_devices("theme-2"));
+    assert!(!lists_devices("checks-1"));
+}
+
 #[test]
 fn the_pulldowns_are_named_by_their_kind() {
     assert!(is_pulldown("bookmarks"));

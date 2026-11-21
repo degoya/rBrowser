@@ -1,0 +1,20 @@
+structured-data - rBrowser's structured data plugin
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+The plugin holds the page to the schema.org vocabulary, release 30.1, compiled in from
+plugins/schema-org/data/vocabulary.json, which is derived from schemaorg-current-https.jsonld
+(https://github.com/schemaorg/schemaorg, tag v30.1). The schema.org vocabulary is licensed under
+the Creative Commons Attribution-ShareAlike 3.0 Unported licence (CC BY-SA 3.0,
+https://creativecommons.org/licenses/by-sa/3.0/); see https://schema.org/docs/terms.html. The
+derived vocabulary is distributed under the same licence. rBrowser is not affiliated with
+schema.org or with Google; the rich-result needs follow Google Search's published documentation.
+
+The plugin's panel (panel/dist/panel.js, panel/dist/panel.css) is built with Vite from web/src
+and bundles third-party code unchanged: Vue, Nuxt UI and the packages they use (reka-ui,
+TanStack Table, Floating UI, VueUse, tailwind-variants, unhead and others), the compiled styles
+of Tailwind CSS, and a selection of Lucide icons (from @iconify-json/lucide). Each is under the
+MIT License, Lucide under the ISC License (and the MIT License for the icons derived from
+Feather). The name, version and full licence text of every bundled package is in
+panel/dist/THIRD-PARTY-LICENSES.txt, which the build writes beside the panel.

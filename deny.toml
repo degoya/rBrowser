@@ -10,9 +10,9 @@ targets = [
 yanked = "warn"
 # Every ignored advisory names its reason and the condition under which it leaves the list.
 ignore = [
-    # chrono is unmaintained (no vulnerability, no fixed release). rmcp and schemars bring it in
-    # beside rBrowser's own use, so dropping that use alone would not remove it. Leaves the list
-    # when rmcp and schemars no longer depend on chrono; rBrowser's own use moves first (RB-090-77).
+    # chrono is unmaintained (no vulnerability, no fixed release). rBrowser's own use moved to
+    # `time` (RB-090-77); rmcp still depends on it and switches on schemars' `chrono04`. Leaves
+    # the list when rmcp and schemars no longer depend on chrono.
     { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; transitive through rmcp and schemars, no safe upgrade" },
 ]
 

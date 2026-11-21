@@ -55,6 +55,7 @@ fn settings(path: Option<&Path>) -> VideoSettings {
         &VideoConfig::default(),
         &ToolsSettings {
             ffmpeg_path: path.map(|path| path.display().to_string()),
+            ..ToolsSettings::default()
         },
     )
 }

@@ -1,0 +1,75 @@
+{
+  "description": "The reading order against the source order (RB-094-02): the outline plugin's rule `reading-order` (plugins/outline/src/rules/reading.rs) and the tab order overlay's reading arrows (plugins/overlays/web/src/overlays/tab-order/reading.ts) decide these cases alike. Each case: the boxes [x, y, width, height] in CSS px in source order, the content's direction, the tolerance in px, and the places (from 0) of the elements that show before the one before them in the source.",
+  "cases": [
+    {
+      "name": "order -1 on the second of three buttons",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[96, 0, 80, 30], [0, 0, 80, 30], [192, 0, 80, 30]],
+      "outOfPlace": [1]
+    },
+    {
+      "name": "three buttons without order",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[0, 0, 80, 30], [96, 0, 80, 30], [192, 0, 80, 30]],
+      "outOfPlace": []
+    },
+    {
+      "name": "right to left content reading from the right",
+      "dir": "rtl",
+      "tolerance": 4,
+      "boxes": [[192, 0, 80, 30], [96, 0, 80, 30], [0, 0, 80, 30]],
+      "outOfPlace": []
+    },
+    {
+      "name": "right to left content laid out left to right",
+      "dir": "rtl",
+      "tolerance": 4,
+      "boxes": [[0, 0, 80, 30], [96, 0, 80, 30], [192, 0, 80, 30]],
+      "outOfPlace": [1, 2]
+    },
+    {
+      "name": "a column to the right is read after the left one",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[0, 400, 600, 30], [640, 0, 200, 30]],
+      "outOfPlace": []
+    },
+    {
+      "name": "a column to the left is read first",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[240, 400, 600, 30], [0, 0, 200, 30]],
+      "outOfPlace": [1]
+    },
+    {
+      "name": "flex-direction column-reverse",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[0, 100, 300, 40], [0, 0, 80, 30]],
+      "outOfPlace": [1]
+    },
+    {
+      "name": "neighbours overlapping within the tolerance",
+      "dir": "ltr",
+      "tolerance": 4,
+      "boxes": [[96, 0, 80, 30], [0, 0, 99, 30]],
+      "outOfPlace": [1]
+    },
+    {
+      "name": "neighbours overlapping beyond the tolerance",
+      "dir": "ltr",
+      "tolerance": 0,
+      "boxes": [[96, 0, 80, 30], [0, 0, 99, 30]],
+      "outOfPlace": []
+    },
+    {
+      "name": "two elements in the same box",
+      "dir": "ltr",
+      "tolerance": 50,
+      "boxes": [[10, 10, 10, 10], [10, 10, 10, 10]],
+      "outOfPlace": []
+    }
+  ]
+}

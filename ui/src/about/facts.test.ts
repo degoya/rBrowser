@@ -74,6 +74,19 @@ describe('the engines', () => {
     expect(engineRows(INFO).map((row) => row.id)).toEqual(['cef', 'chromium', 'firefox', 'webkit', 'node']);
   });
 
+  it('adds Safari after WebKit where the core names it (macOS, RB-095-03)', () => {
+    expect(engineRows({ ...INFO, safari: '26.1' }).map((row) => row.id)).toEqual([
+      'cef',
+      'chromium',
+      'firefox',
+      'webkit',
+      'safari',
+      'node',
+    ]);
+    const safari = engineRows({ ...INFO, safari: '26.1' }).find((row) => row.id === 'safari');
+    expect(safari && engineText(safari, t)).toBe('26.1');
+  });
+
   it('shows an absent engine by its absence', () => {
     const firefox = engineRows(INFO).find((row) => row.id === 'firefox');
     expect(firefox && engineText(firefox, t)).toBe('not found');

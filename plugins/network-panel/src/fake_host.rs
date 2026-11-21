@@ -23,6 +23,8 @@ pub struct FakeHost {
     pub now: u64,
     pub logs: Vec<(String, String)>,
     pub cdp_calls: Vec<(ViewId, String, String)>,
+    /// What `findings.report` received (RB-096-06).
+    pub findings: Vec<Finding>,
 }
 
 /// A Chromium view of `width` pixels.
@@ -139,8 +141,9 @@ impl PluginHost for FakeHost {
         Ok(())
     }
 
-    fn report_findings(&mut self, _items: &[Finding]) -> Result<(), Failure> {
-        Err(Capability::Findings.denied())
+    fn report_findings(&mut self, items: &[Finding]) -> Result<(), Failure> {
+        self.findings.extend_from_slice(items);
+        Ok(())
     }
 
     fn sidecar_call(&mut self, _method: &str, _params: &str) -> Result<String, Failure> {

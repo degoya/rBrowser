@@ -2,7 +2,8 @@
 //! `saveRecording`), an export's files (`exportRecording`, a preview when nothing is written)
 //! and the flow run going on with the last result (`getFlowRun`). `recordingsChanged` and
 //! `flowRunChanged` tell the panels to ask again; `flowStep` pushes each step of a run as it
-//! starts and ends (RB-090-84). TypeScript mirror: `ui/src/ipc/recordings.ts`.
+//! starts and ends (RB-090-84); `recordingSteps` pushes the steps of the recording that runs
+//! (RB-090-89). TypeScript mirror: `ui/src/ipc/recordings.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -112,6 +113,10 @@ pub struct FlowRunning {
     /// The flows of a `flows.run_all` still waiting to run after this one, in order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub queued: Vec<String>,
+    /// The `step(` calls of the flow's text (RB-090-68): the `m` of "step n/m"; `None` without
+    /// any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_steps: Option<u32>,
 }
 
 /// One view's status in a run going on.
@@ -122,6 +127,19 @@ pub struct FlowViewStatus {
     pub view: u32,
     /// Its status.
     pub status: String,
+    /// The step it is at (RB-090-68); `None` before its first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step: Option<FlowStepAt>,
+}
+
+/// The step a view of a run going on is at (RB-090-68).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowStepAt {
+    /// The steps the view started so far, this one included: the `n` of "step n/m".
+    pub number: u32,
+    /// The step's name.
+    pub name: String,
 }
 
 /// A step of a flow run started or ended (RB-090-84): the runner's `step(name, ...)` as the
@@ -145,6 +163,12 @@ pub struct FlowStep {
     /// Why a failed step failed: its error's first line, masked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// A step that starts: the steps its view started so far, this one included (RB-090-68).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub number: Option<u32>,
+    /// The `step(` calls of the flow's text, as [`FlowRunning::total_steps`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<u32>,
 }
 
 /// The pause before a step of a recording at the pace `recorded` (RB-090-84), as the
@@ -157,4 +181,62 @@ pub struct StepPause {
     pub step: u32,
     /// The pause before it, in ms.
     pub ms: u64,
+}
+
+/// The steps of the recording that runs (RB-090-89): pushed while it records, with
+/// `automation.recorder.showLiveSteps`, so the Recorder panel lists each step as it is taken -
+/// only what changed, the steps from `from` on - and all of them after `resendRecordingSteps`.
+/// `state` says when the list ends: the recording was saved, or the setting went off.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingSteps {
+    /// The recording.
+    pub name: String,
+    /// The place of the first of `steps`: the steps before it are the ones pushed before.
+    #[serde(default)]
+    pub from: u32,
+    /// The steps from `from` on, as `recording.v1` writes them; the newest last.
+    #[serde(default)]
+    pub steps: Vec<Value>,
+    /// Whether the list goes on.
+    #[serde(default)]
+    pub state: LiveState,
+    /// While a recording continues from one of its steps (RB-092-01): that step's id - the new
+    /// steps land after it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continue_after: Option<u32>,
+}
+
+/// The element the Recorder panel's "Pick in view" picked (RB-092-01,
+/// `recorder.pick_element`): its locator as a recording holds it, its visible text (never a
+/// field's value), the breakpoints whose views have it (empty: all) and a `<select>`'s options.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickedElement {
+    /// The view it was picked in.
+    pub view: u32,
+    /// The locator (`recording.v1`).
+    pub locator: Value,
+    /// Its visible text.
+    #[serde(default)]
+    pub text: String,
+    /// The breakpoints it runs in; empty: all.
+    #[serde(default)]
+    pub only_in: Vec<String>,
+    /// A `<select>`'s options, `{ value, label }`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<Value>,
+}
+
+/// Whether the live list of [`RecordingSteps`] goes on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LiveState {
+    /// It records: the steps change the list.
+    #[default]
+    Recording,
+    /// It was saved: the panel opens it.
+    Ended,
+    /// `showLiveSteps` went off: the panel lets the list go.
+    Hidden,
 }

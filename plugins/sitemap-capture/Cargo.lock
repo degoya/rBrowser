@@ -309,6 +309,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
+name = "plugin-util"
+version = "0.1.0"
+dependencies = [
+ "rb-plugin-api",
+ "serde_json",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,7 +365,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "rb-config"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "indexmap",
  "rb-i18n",
@@ -373,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "rb-engine"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "async-trait",
  "rb-config",
@@ -387,7 +395,7 @@ dependencies = [
 
 [[package]]
 name = "rb-i18n"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -396,7 +404,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -404,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -413,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "rb-settings"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "schemars",
  "serde",
@@ -423,13 +431,14 @@ dependencies = [
 
 [[package]]
 name = "rb-util"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 
 [[package]]
 name = "rb-visual"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "png",
+ "rb-util",
  "serde",
  "serde_json",
  "thiserror",
@@ -639,6 +648,7 @@ dependencies = [
  "async-trait",
  "base64",
  "miniz_oxide 0.9.1",
+ "plugin-util",
  "rb-engine",
  "rb-plugin-api",
  "rb-visual",

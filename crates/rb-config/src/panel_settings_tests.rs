@@ -139,3 +139,15 @@ fn the_schema_knows_the_new_keys_and_not_the_old_one() {
     assert_eq!(properties["dockState"]["default"], json!("rail"));
     assert_eq!(properties["dock"]["default"], json!("right"));
 }
+
+#[test]
+fn three_hidden_panel_frames_stay_loaded_by_default() {
+    // RB-090-38: switching back to one of the last panels shown does not load it again.
+    let settings: PanelSettings = serde_json::from_value(json!({})).expect("defaults");
+    assert_eq!(settings.keep_frames, 3);
+    assert_eq!(PanelSettings::default().keep_frames, 3);
+    let none: PanelSettings =
+        serde_json::from_value(json!({ "keepFrames": 0 })).expect("keep none");
+    assert_eq!(none.keep_frames, 0);
+    assert_eq!(serde_json::to_value(none).expect("writes")["keepFrames"], 0);
+}

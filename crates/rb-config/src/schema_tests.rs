@@ -312,3 +312,16 @@ fn x_new_templates_are_entries_the_checks_accept() {
     });
     crate::validate::validate(config).expect("a valid config");
 }
+
+#[test]
+fn the_schemas_are_built_once_and_match_a_fresh_build() {
+    assert!(std::ptr::eq(cached(), cached()), "one build per process");
+    let (project, user) = build();
+    assert_eq!(schemas().0.as_value(), project.as_value());
+    assert_eq!(schemas().1.as_value(), user.as_value());
+    assert_eq!(
+        crate::project_schema().as_value(),
+        cached().0.as_value(),
+        "the accessors read the cache"
+    );
+}

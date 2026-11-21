@@ -116,3 +116,31 @@ fn a_submit_that_commits_a_new_url_is_followed_once() {
             .is_empty()
     );
 }
+
+/// RB-090-32: the time from the load the hub gave to the view's commit is the counter
+/// `sync.navigation` (K11 for the external windows).
+#[test]
+fn a_given_load_that_commits_is_counted_as_a_navigation() {
+    use rb_util::perf::{global, names};
+    let count = || {
+        global()
+            .snapshot()
+            .iter()
+            .find(|series| series.name == names::SYNC_NAVIGATION)
+            .map_or(0, |series| series.count)
+    };
+    let mut hub = hub();
+    let now = Instant::now();
+    let before = count();
+    hub.mark_loading(B, now);
+    hub.navigated(
+        B,
+        "http://localhost/next",
+        now + std::time::Duration::from_millis(40),
+    );
+    assert!(count() > before, "the commit of a given load is counted");
+    let after = count();
+    // A navigation of the view's own (no load given) is not the hub's to count.
+    hub.navigated(C, "http://localhost/own", now);
+    assert_eq!(count(), after);
+}

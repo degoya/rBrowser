@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "rendered"
+      ],
+      "default": "raw",
+      "x-category": "checks",
+      "x-section": "html-validation",
+      "x-order": 9,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "engine": {
+      "type": "string",
+      "enum": [
+        "builtin",
+        "nu"
+      ],
+      "default": "builtin",
+      "x-category": "checks",
+      "x-section": "html-validation",
+      "x-order": 10,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "nuAddress": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\\s@/?#]+(/[^\\s?#]*)?$",
+      "default": "",
+      "x-category": "checks",
+      "x-section": "html-validation",
+      "x-order": 11,
+      "x-scope": [
+        "user"
+      ],
+      "x-protected": true
+    },
+    "disabledRules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+        "x-options": [
+          "area-alt",
+          "aria-label-misuse",
+          "attr-spacing",
+          "attribute-allowed-values",
+          "attribute-misuse",
+          "close-attr",
+          "close-order",
+          "deprecated",
+          "doctype-html",
+          "element-name",
+          "element-permitted-content",
+          "element-permitted-occurrences",
+          "element-permitted-order",
+          "element-permitted-parent",
+          "element-required-ancestor",
+          "element-required-attributes",
+          "element-required-content",
+          "map-dup-name",
+          "map-id-name",
+          "missing-doctype",
+          "multiple-labeled-controls",
+          "no-abstract-role",
+          "no-deprecated-attr",
+          "no-dup-attr",
+          "no-dup-id",
+          "no-missing-references",
+          "no-multiple-main",
+          "no-raw-characters",
+          "script-element",
+          "unrecognized-char-ref",
+          "valid-autocomplete",
+          "valid-for",
+          "valid-id",
+          "void-content",
+          "nu-error",
+          "nu-warning",
+          "nu-info"
+        ]
+      },
+      "maxItems": 64,
+      "uniqueItems": true,
+      "default": [],
+      "x-category": "checks",
+      "x-section": "html-validation",
+      "x-order": 12,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "minSeverity": {
+      "type": "string",
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "default": "warning",
+      "x-category": "checks",
+      "x-section": "html-validation",
+      "x-order": 13,
+      "x-scope": [
+        "user",
+        "project",
+        "local"
+      ]
+    }
+  }
+}

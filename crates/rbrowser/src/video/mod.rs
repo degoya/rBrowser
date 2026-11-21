@@ -33,6 +33,7 @@ pub mod ffmpeg;
 pub mod library;
 pub mod pacing;
 pub mod panel;
+pub mod pause;
 pub mod poster;
 pub mod recorder;
 pub mod registry;

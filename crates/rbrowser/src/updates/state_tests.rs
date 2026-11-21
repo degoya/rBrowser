@@ -1,4 +1,4 @@
-use rb_update::{Artifact, DateTime, Utc};
+use rb_update::{Artifact, OffsetDateTime};
 
 use super::*;
 
@@ -6,7 +6,7 @@ fn offer(version: &str) -> Offer {
     Offer {
         version: version.to_owned(),
         channel: Channel::Beta,
-        released_at: DateTime::<Utc>::from_timestamp(1_790_000_000, 0).expect("time"),
+        released_at: OffsetDateTime::from_unix_timestamp(1_790_000_000).expect("time"),
         notes: "- Self-update".to_owned(),
         artifact: Some(Artifact {
             platform: "windows".to_owned(),

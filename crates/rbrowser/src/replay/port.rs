@@ -75,7 +75,7 @@ impl ReplayPort for HostPort {
     fn context_menu(&self) -> bool {
         self.host
             .upgrade()
-            .is_some_and(|host| host.config().sync.context_menu)
+            .is_some_and(|host| host.with_config(|config| config.sync.context_menu))
     }
 
     fn scroll_mode(&self) -> ScrollMode {

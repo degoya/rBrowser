@@ -350,3 +350,45 @@ fn a_body_chunked_anew_goes_out_as_http_1_1() {
         "as it came: {text}"
     );
 }
+
+/// RB-096-05: in the presentation's traffic no cookie goes either way, no Cloudflare header
+/// reaches the dev server and no server detail the viewer; the answer asks not to be indexed.
+#[test]
+fn the_public_map_keeps_cookies_and_server_details_at_the_portal() {
+    let public = OriginMap::new(
+        "http://localhost:5173",
+        "https://quick-brown-fox.trycloudflare.com",
+    )
+    .public();
+    assert!(public.is_public());
+    assert!(!map().is_public());
+    let head = parse_head(
+        b"GET /app HTTP/1.1\r\nHost: quick-brown-fox.trycloudflare.com\r\n\
+          Cookie: __rbportal=secret; app=1\r\nCf-Connecting-Ip: 203.0.113.9\r\nCf-Ray: 1\r\n\
+          Cdn-Loop: cloudflare\r\nAccept: text/html\r\n\r\n",
+    )
+    .expect("parses");
+    let text = request_head(&head, &upstream(), &public, false);
+    assert!(!text.contains("Cookie"), "{text}");
+    assert!(!text.contains("203.0.113.9"), "{text}");
+    assert!(!text.to_ascii_lowercase().contains("cf-"), "{text}");
+    assert!(!text.contains("Cdn-Loop"), "{text}");
+    assert!(text.contains("Accept: text/html\r\n"), "{text}");
+    let response = parse_response_head(
+        b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nSet-Cookie: session=presenter\r\n\
+          Server: nginx/1.27 (Ubuntu)\r\nX-Powered-By: PHP/8.4\r\nX-Debug-Token: abc\r\n\r\n",
+    )
+    .expect("parses");
+    let out = response_head(&response, &public, OutBody::Upstream);
+    for gone in ["Set-Cookie", "presenter", "nginx", "PHP", "X-Debug-Token"] {
+        assert!(!out.contains(gone), "{gone}: {out}");
+    }
+    assert!(out.contains("Content-Type: text/html\r\n"), "{out}");
+    assert!(out.contains("X-Robots-Tag: noindex, nofollow\r\n"), "{out}");
+    let lan = response_head(&response, &map(), OutBody::Upstream);
+    assert!(
+        lan.contains("Set-Cookie: session=presenter"),
+        "the LAN portal keeps them"
+    );
+    assert!(!lan.contains("X-Robots-Tag"), "{lan}");
+}

@@ -85,6 +85,30 @@
         "local"
       ]
     },
+    "basicAuth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ids of the environments behind Basic auth. Their credentials are set with\n`environment.auth` and kept in the credential store, never here. The settings window\noffers the project's environments (`x-options`).",
+          "default": [],
+          "x-options": "environments",
+          "x-category": "project",
+          "x-section": "environments",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ],
+          "x-protected": true
+        }
+      },
+      "description": "The environments behind HTTP Basic auth; their credentials never live here (RB-094-08)."
+    },
     "sessions": {
       "type": "array",
       "items": {
@@ -876,9 +900,31 @@
                 "description": "Playwright's WebKit build (\"WebKit, not Safari\").",
                 "type": "string",
                 "const": "webkit"
+              },
+              {
+                "description": "Chrome on an Android device on USB, over ADB (RB-095-02): the device's own size.",
+                "type": "string",
+                "const": "android"
+              },
+              {
+                "description": "The real Safari over `safaridriver`, macOS only (RB-095-03).",
+                "type": "string",
+                "const": "safari"
+              },
+              {
+                "description": "Mobile Safari on iOS over `safaridriver`, macOS only: the iOS Simulator or a connected\niPhone or iPad (RB-095-04).",
+                "type": "string",
+                "const": "ios"
               }
             ],
             "default": "chromium"
+          },
+          "iosDevice": {
+            "description": "With engine `ios` (RB-095-04): the simulator model (`iPhone 16`) or the UDID of a\nsimulator or a connected device; absent, `engines.ios.defaultSimulator` or the one\ndevice connected.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "session": {
             "description": "The session (cookie/storage partition) of `sessions[]`; `default` when absent.",
@@ -1363,6 +1409,53 @@
               {
                 "type": "null"
               }
+            ]
+          },
+          "dir": {
+            "description": "The text direction forced on the page's `<html dir>`, live (RB-092-02).",
+            "anyOf": [
+              {
+                "description": "The text direction forced on the page's `<html dir>`.",
+                "oneOf": [
+                  {
+                    "description": "Left to right.",
+                    "type": "string",
+                    "const": "ltr"
+                  },
+                  {
+                    "description": "Right to left.",
+                    "type": "string",
+                    "const": "rtl"
+                  },
+                  {
+                    "description": "`dir=\"auto\"`: the browser decides by the first strong character.",
+                    "type": "string",
+                    "const": "auto"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lang": {
+            "description": "The language forced on the page's `<html lang>` (BCP 47), live; empty keeps the page's\n(RB-092-02).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-options": [
+              "en-US",
+              "en-GB",
+              "de-DE",
+              "de-AT",
+              "de-CH",
+              "fr-FR",
+              "es-ES",
+              "it-IT",
+              "nl-NL",
+              "ja-JP"
             ]
           }
         },
@@ -2563,6 +2656,67 @@
             "project",
             "local"
           ]
+        },
+        "dir": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "ltr",
+                  "description": "Left to right."
+                },
+                {
+                  "type": "string",
+                  "const": "rtl",
+                  "description": "Right to left."
+                },
+                {
+                  "type": "string",
+                  "const": "auto",
+                  "description": "`dir=\"auto\"`: the browser decides by the first strong character."
+                }
+              ],
+              "description": "The text direction forced on the page's `<html dir>`."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The text direction forced on the page's `<html dir>`, live (RB-092-02).",
+          "x-category": "emulation",
+          "x-section": "text-direction",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "lang": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The language forced on the page's `<html lang>` (BCP 47), live; empty keeps the page's\n(RB-092-02).",
+          "x-options": [
+            "en-US",
+            "en-GB",
+            "de-DE",
+            "de-AT",
+            "de-CH",
+            "fr-FR",
+            "es-ES",
+            "it-IT",
+            "nl-NL",
+            "ja-JP"
+          ],
+          "x-category": "emulation",
+          "x-section": "text-direction",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
         }
       },
       "description": "Project-wide emulation defaults (Settings > Emulation > Defaults, RB-010-05).",
@@ -3560,6 +3714,138 @@
       },
       "description": "Capture > Environment compare (RB-080-03); written only when it differs from the\ndefaults."
     },
+    "report": {
+      "type": "object",
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": {
+            "description": "One part of a bug report.",
+            "oneOf": [
+              {
+                "description": "A screenshot of each view, password fields blacked out.",
+                "type": "string",
+                "const": "screenshots"
+              },
+              {
+                "description": "One image of every view side by side.",
+                "type": "string",
+                "const": "overview"
+              },
+              {
+                "description": "The console errors and warnings and the uncaught exceptions, deduplicated.",
+                "type": "string",
+                "const": "console"
+              },
+              {
+                "description": "The failed requests (status 400 and above, aborted), without headers or bodies.",
+                "type": "string",
+                "const": "network"
+              },
+              {
+                "description": "The page address and the environment.",
+                "type": "string",
+                "const": "environment"
+              },
+              {
+                "description": "Breakpoint, size and emulation of each view.",
+                "type": "string",
+                "const": "emulation"
+              },
+              {
+                "description": "The rBrowser version and the engines.",
+                "type": "string",
+                "const": "version"
+              }
+            ]
+          },
+          "description": "The parts a bug report holds; every part by default.",
+          "default": [
+            "screenshots",
+            "overview",
+            "console",
+            "network",
+            "environment",
+            "emulation",
+            "version"
+          ],
+          "uniqueItems": true,
+          "x-category": "capture",
+          "x-section": "report",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "annotate": {
+          "type": "boolean",
+          "description": "Open the screenshot editor on the report's newest image once it is written.",
+          "default": false,
+          "x-category": "capture",
+          "x-section": "report",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Capture > Bug report (RB-093-04); written only when it differs from the defaults."
+    },
+    "engineCompare": {
+      "type": "object",
+      "properties": {
+        "threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "description": "How different two pixels may be and still count as equal, 0 to 1; `visual.threshold`\nwhen absent. Anti-aliased pixels (font smoothing) never count.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "x-category": "capture",
+          "x-section": "engine-compare",
+          "x-order": 1,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "maxDiffPercent": {
+          "type": "number",
+          "format": "double",
+          "description": "The share of differing pixels, in percent, up to which two engines still count as the\nsame (0 to 100).",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "default": 0.0,
+          "x-category": "capture",
+          "x-section": "engine-compare",
+          "x-order": 2,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        },
+        "waitMs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "description": "The pause after the page loaded in each engine, before its screenshot, in milliseconds\n(0 to 30000).",
+          "maximum": 30000,
+          "default": 1000,
+          "x-category": "capture",
+          "x-section": "engine-compare",
+          "x-order": 3,
+          "x-scope": [
+            "project",
+            "local"
+          ]
+        }
+      },
+      "description": "Capture > Engine compare (RB-094-03); written only when it differs from the defaults."
+    },
     "capture": {
       "type": "object",
       "properties": {
@@ -4011,6 +4297,108 @@
             "local",
             "user"
           ]
+        },
+        "export": {
+          "type": "object",
+          "properties": {
+            "defaultFormat": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "sarif",
+                      "description": "SARIF 2.1.0: one run per check plugin, for code-scanning viewers."
+                    },
+                    {
+                      "type": "string",
+                      "const": "junit",
+                      "description": "JUnit XML: one test suite per breakpoint, one test case per rule."
+                    },
+                    {
+                      "type": "string",
+                      "const": "html",
+                      "description": "One HTML file that opens offline."
+                    },
+                    {
+                      "type": "string",
+                      "const": "json",
+                      "description": "`findings.json` as the run wrote it."
+                    }
+                  ],
+                  "description": "A file format of the findings export."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The format of the findings panel's Export button, of the command `checks.export` and of\n`rbrowser check` without `--format`.",
+              "default": "sarif",
+              "x-category": "checks",
+              "x-section": "findings",
+              "x-order": 5,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            },
+            "failOn": {
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Errors only."
+                    },
+                    {
+                      "type": "string",
+                      "const": "warning",
+                      "description": "Warnings and errors."
+                    },
+                    {
+                      "type": "string",
+                      "const": "info",
+                      "description": "Every finding."
+                    }
+                  ],
+                  "description": "From which severity on a finding fails `rbrowser check` (exit code 1)."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "From which severity on `rbrowser check` without `--fail-on` exits with 1.",
+              "default": "error",
+              "x-category": "checks",
+              "x-section": "findings",
+              "x-order": 6,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ]
+            },
+            "dir": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The folder exports are written to; empty for `.rbrowser/out/exports` in the project. A\nrelative folder lies below `.rbrowser/out/`; only the user settings may name an absolute\nfolder. MCP writes only there or below `.rbrowser/out/`.",
+              "x-category": "checks",
+              "x-section": "findings",
+              "x-order": 7,
+              "x-scope": [
+                "project",
+                "local",
+                "user"
+              ],
+              "x-protected": true,
+              "x-input": "folder"
+            }
+          },
+          "description": "The findings export (RB-092-05): `checks.export.*`."
         }
       },
       "description": "The check plugins.",
@@ -4262,7 +4650,7 @@
                 {
                   "type": "string",
                   "const": "menu",
-                  "description": "Only the hover that opened the submenu the next click goes into."
+                  "description": "Every hover on a menu's entry where the pointer rested `hoverDwellMs`."
                 },
                 {
                   "type": "string",
@@ -4280,11 +4668,54 @@
                   "description": "The earlier form of this setting: `true` loads as `menu`, `false` as `off`."
                 }
               ],
-              "description": "Which hovers are steps (RB-090-81): `menu` only the hover that opened the submenu the\nnext click goes into, `all` also a hover the recorder guesses revealed what the next\nclick hits, `off` none.",
+              "description": "Which hovers are steps (RB-090-81, RB-090-87): `menu` every hover on a menu's entry -\none whose hover opened a submenu, or one inside an open submenu - where the pointer\nrested `hoverDwellMs`, with or without a click after it; `all` also a hover the recorder\nguesses revealed what the next click hits; `off` none.",
               "default": "menu",
               "x-category": "automation",
               "x-section": "recorder",
               "x-order": 2,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "hoverDwellMs": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0,
+              "description": "How long, in milliseconds, the pointer rests on a menu's entry before its hover is a step\n(RB-090-87); passing over it quicker is no step.",
+              "maximum": 5000,
+              "default": 250,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 3,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "recordPointer": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "menu",
+                  "description": "The way to a menu's hover, and to a click while a menu is open or into one."
+                },
+                {
+                  "type": "string",
+                  "const": "all",
+                  "description": "The way to every hover step and click."
+                },
+                {
+                  "type": "string",
+                  "const": "off",
+                  "description": "No way."
+                }
+              ],
+              "description": "Which of the pointer's way a recording keeps (RB-090-87): `menu` the way to a menu's\nhover and to a click while a menu is open, `all` the way to every hover step and click,\n`off` none. Play and the export move the pointer along it before the step when the view\nhas the size it was recorded in.",
+              "default": "menu",
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 4,
               "x-scope": [
                 "project",
                 "local"
@@ -4296,7 +4727,7 @@
               "default": true,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 3,
+              "x-order": 5,
               "x-scope": [
                 "project",
                 "local"
@@ -4319,7 +4750,7 @@
               "default": "fast",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 4,
+              "x-order": 6,
               "x-scope": [
                 "project",
                 "local"
@@ -4331,7 +4762,19 @@
               "default": true,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 5,
+              "x-order": 7,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "showLiveSteps": {
+              "type": "boolean",
+              "description": "While a recording runs, the Recorder panel lists its steps as they are recorded - the\nnewest marked and scrolled into sight, hovers with their pause and pointer path\n(RB-090-89). Off, the steps show once the recording is saved.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 8,
               "x-scope": [
                 "project",
                 "local"
@@ -4346,7 +4789,34 @@
               "default": 0,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 6,
+              "x-order": 9,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "insertedStepPauseMs": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0,
+              "description": "The pause, in milliseconds, before a step added in the Recorder panel's editor\n(RB-092-01), waited at the pace `recorded`; each step's own can be changed there.",
+              "maximum": 10000,
+              "default": 500,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 10,
+              "x-scope": [
+                "project",
+                "local"
+              ]
+            },
+            "confirmDelete": {
+              "type": "boolean",
+              "description": "\"Delete\" in the Recorder panel asks in the panel before the recording's file is deleted\n(RB-090-91). Off, a click deletes it at once.",
+              "default": true,
+              "x-category": "automation",
+              "x-section": "recorder",
+              "x-order": 11,
               "x-scope": [
                 "project",
                 "local"
@@ -4361,7 +4831,7 @@
               "default": [],
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 7,
+              "x-order": 12,
               "x-scope": [
                 "project",
                 "local"
@@ -4374,7 +4844,7 @@
               "default": ".rbrowser/out/recordings",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 8,
+              "x-order": 13,
               "x-scope": [
                 "project",
                 "local"
@@ -4387,10 +4857,15 @@
           "default": {
             "recordScroll": true,
             "recordHover": "menu",
+            "hoverDwellMs": 250,
+            "recordPointer": "menu",
             "recordAutofill": true,
             "playbackPace": "fast",
             "followPlayback": true,
+            "showLiveSteps": true,
             "minPauseMs": 0,
+            "insertedStepPauseMs": 500,
+            "confirmDelete": true,
             "secretFields": [],
             "dir": ".rbrowser/out/recordings"
           }
@@ -4430,7 +4905,7 @@
               "default": "auto",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 9,
+              "x-order": 14,
               "x-scope": [
                 "project",
                 "local"
@@ -4442,7 +4917,7 @@
               "default": ".rbrowser/out/exports",
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 10,
+              "x-order": 15,
               "x-scope": [
                 "project",
                 "local"
@@ -4456,7 +4931,7 @@
               "default": true,
               "x-category": "automation",
               "x-section": "recorder",
-              "x-order": 11,
+              "x-order": 16,
               "x-scope": [
                 "project",
                 "local"
@@ -4476,10 +4951,15 @@
         "recorder": {
           "recordScroll": true,
           "recordHover": "menu",
+          "hoverDwellMs": 250,
+          "recordPointer": "menu",
           "recordAutofill": true,
           "playbackPace": "fast",
           "followPlayback": true,
+          "showLiveSteps": true,
           "minPauseMs": 0,
+          "insertedStepPauseMs": 500,
+          "confirmDelete": true,
           "secretFields": [],
           "dir": ".rbrowser/out/recordings"
         },

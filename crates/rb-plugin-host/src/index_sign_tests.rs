@@ -1,6 +1,6 @@
-use chrono::{DateTime, Duration, Utc};
 use ed25519_dalek::SigningKey;
 use serde::{Deserialize, Serialize};
+use time::{OffsetDateTime, SignedDuration};
 
 use super::{
     Freshness, IndexSigners, SignatureError, SignedDocument, StaleError, check_freshness,
@@ -123,8 +123,8 @@ fn too_many_signatures_do_not_parse() {
     assert!(SignedDocument::parse(&bytes).is_err());
 }
 
-fn at(minutes: i64) -> DateTime<Utc> {
-    DateTime::from_timestamp(1_790_000_000 + minutes * 60, 0).expect("timestamp")
+fn at(minutes: i64) -> OffsetDateTime {
+    OffsetDateTime::from_unix_timestamp(1_790_000_000 + minutes * 60).expect("timestamp")
 }
 
 fn fresh(sequence: u64) -> Freshness {
@@ -166,12 +166,27 @@ fn clock_skew_is_tolerated_and_next_week_is_not() {
     };
     assert_eq!(check_freshness(skewed, None, at(0)), Ok(()));
     let ahead = Freshness {
-        issued_at: at(0) + Duration::days(7),
-        expires_at: at(0) + Duration::days(30),
+        issued_at: at(0) + SignedDuration::days(7),
+        expires_at: at(0) + SignedDuration::days(30),
         sequence: 1,
     };
     assert!(matches!(
         check_freshness(ahead, None, at(0)),
         Err(StaleError::FromTheFuture { .. })
     ));
+}
+
+/// RB-090-77: an error names the time as chrono's `DateTime<Utc>` showed it.
+#[test]
+fn a_stale_index_names_its_time_in_utc() {
+    let expired = StaleError::Expired { expires_at: at(0) };
+    assert_eq!(
+        expired.to_string(),
+        "the index expired at 2026-09-21 14:13:20 UTC"
+    );
+    let future = StaleError::FromTheFuture { issued_at: at(60) };
+    assert_eq!(
+        future.to_string(),
+        "the index is issued 2026-09-21 15:13:20 UTC, further ahead than clock skew explains"
+    );
 }

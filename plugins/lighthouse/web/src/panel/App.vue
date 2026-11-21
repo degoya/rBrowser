@@ -8,14 +8,15 @@
 // the browser through the host's `open_link`, on a click only. RB-091-02: each report opens in
 // rBrowser's report window (the command `open_report`), the history lists every run on disk
 // (the tool `reports`) with a delete that asks first (the command `delete_run`), and two runs
-// of a breakpoint compare by scores and metrics.
+// of a breakpoint compare by scores and metrics. A failure that names a setting links there from
+// the status line (RB-094-21).
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { format } from '../../../../web-common/panel-ui/src/format';
 import type { StatusLine } from '../../../../web-common/panel-ui/src/status';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
-import { moveCell, pageLink, rows as scoreRows, signed, type LighthouseStatus, type ScoreCell } from './model';
+import { moveCell, pageLink, rows as scoreRows, settingOf, signed, type LighthouseStatus, type ScoreCell } from './model';
 import type { HistoryRun } from './history';
 import History from './History.vue';
 import Compare from './Compare.vue';
@@ -27,6 +28,9 @@ const t = panel.t;
 const status = ref<LighthouseStatus | null>(null);
 const runFailure = ref<string | null>(null);
 const statusFailure = ref<string | null>(null);
+/** The codes of the run's and the status's failures, for the setting they name (RB-094-21). */
+const runCode = ref<string | null>(null);
+const statusCode = ref<string | null>(null);
 const reportFailure = ref<string | null>(null);
 const runs = ref<HistoryRun[]>([]);
 const historyLoaded = ref(false);
@@ -47,8 +51,10 @@ async function refresh(): Promise<void> {
   try {
     status.value = (await panel.call({ tool: 'status' })) as LighthouseStatus;
     statusFailure.value = null;
+    statusCode.value = null;
   } catch (error) {
     statusFailure.value = panel.error(error);
+    statusCode.value = codeOf(error);
   } finally {
     inFlight = false;
     starting.value = false;
@@ -96,16 +102,29 @@ function removeRun(run: string): void {
   );
 }
 
+function codeOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** `line` with the link to the setting the failure `code` names (RB-094-21). */
+function linked(line: StatusLine, code: string | null | undefined): StatusLine {
+  const key = settingOf(code);
+  return key === undefined ? line : { ...line, setting: { key, label: t('panel.setting_link') } };
+}
+
 /** The status line: a failure, the sidecar missing, the host's waiting, or the run going on. */
 const line = computed<StatusLine | null>(() => {
   void panel.strings.value;
   const failure = runFailure.value ?? reportFailure.value ?? statusFailure.value;
-  if (failure) return { tone: 'error', text: failure };
+  if (failure) {
+    const code = runFailure.value !== null ? runCode.value : reportFailure.value !== null ? null : statusCode.value;
+    return linked({ tone: 'error', text: failure }, code);
+  }
   const sidecar = status.value?.sidecar;
   if (sidecar && !sidecar.available) {
     const template = panel.strings.value[sidecar.error ?? ''];
     const reason = template === undefined ? [sidecar.error ?? '', sidecar.reason ?? ''].join(' ').trim() : format(template, { reason: sidecar.reason ?? '' });
-    return { tone: 'error', text: t('panel.unavailable', { reason }) };
+    return linked({ tone: 'error', text: t('panel.unavailable', { reason }) }, sidecar.error);
   }
   if (panel.waiting.value) return { tone: 'busy', text: panel.strings.value['plugins.panel.waiting'] ?? '' };
   if (running.value) {
@@ -140,13 +159,17 @@ function tileName(score: ScoreCell): string {
 
 function run(): void {
   runFailure.value = null;
+  runCode.value = null;
   starting.value = true;
   panel.call({ command: 'run' }).then(
     () => refresh(),
     (error: unknown) => {
-      const code = error instanceof Error ? error.message : String(error);
+      const code = codeOf(error);
       // The panels window stops waiting after its timeout; the run goes on.
-      if (!code.startsWith('plugins.error.host_failed')) runFailure.value = panel.error(error);
+      if (!code.startsWith('plugins.error.host_failed')) {
+        runFailure.value = panel.error(error);
+        runCode.value = code;
+      }
       void refresh();
     },
   );

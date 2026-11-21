@@ -8,6 +8,8 @@ export interface AboutInfo {
   chromium: string;
   firefox?: string;
   webkit?: string;
+  /** The installed Safari's version, macOS only (RB-095-03). */
+  safari?: string;
   node?: string;
   /** The build time, UTC; absent when unknown. */
   built?: string;

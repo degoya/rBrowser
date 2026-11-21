@@ -3,7 +3,7 @@
 // impact, HTML and failure summary - cut, so the answer stays far below the 4 MiB `evaluate`
 // allows. The component chooses the rules; this script never widens them.
 
-import { elementPath } from './path';
+import { elementPath } from '../../../web-common/src/element-path';
 
 /** What the component asks for (src/script.rs builds it). */
 export interface RunOptions {

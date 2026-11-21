@@ -40,6 +40,8 @@ export interface AutofillView {
   formValid?: boolean | null;
   blockedSubmits?: number;
   forms?: AutofillForm[];
+  /** The controls the fill ran for: `selector` or `page` (RB-090-86). */
+  scope?: string;
   fields: AutofillField[];
 }
 
@@ -57,7 +59,7 @@ export const STRATEGIES = ['mixed', 'empty', 'format', 'bounds', 'length', 'char
 export const MAX_SEED = 4294967295;
 const MAX_SELECTOR = 1024;
 /** The reasons of a skip the locale has words for. */
-const REASONS = ['disabled', 'file', 'hidden', 'readonly'];
+const REASONS = ['disabled', 'file', 'hidden', 'readonly', 'filled'];
 /** Engine names are product names, never translated. */
 const ENGINES: Record<string, string> = { chromium: 'Chromium', firefox: 'Firefox', webkit: 'WebKit' };
 
@@ -239,7 +241,7 @@ export function viewText(t: Translate, cell: Cell): string {
 function viewState(t: Translate, say: (code: string) => string, view: AutofillView): string {
   if (view.status === 'unsupported') return t('panel.status.unsupported', { engine: ENGINES[view.engine] ?? view.engine });
   if (view.status === 'failed') return t('panel.status.failed', { error: say(view.error ?? '') });
-  if (['empty', 'not-found', 'selector'].includes(view.status)) return t('panel.status.' + view.status);
+  if (['empty', 'not-found', 'selector', 'timeout'].includes(view.status)) return t('panel.status.' + view.status);
   return view.status;
 }
 

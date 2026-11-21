@@ -4,7 +4,7 @@
 
 use std::collections::BTreeSet;
 
-use chrono::Duration;
+use time::SignedDuration;
 
 use super::{
     IndexEntry, IndexError, MAX_INDEX_PLUGINS, MAX_RELEASE_NOTES_CHARS, MAX_VALIDITY_DAYS,
@@ -38,7 +38,7 @@ impl PluginIndex {
         if self.expires_at <= self.issued_at {
             return Err(invalid("expires_at is not after issued_at"));
         }
-        if self.expires_at - self.issued_at > Duration::days(MAX_VALIDITY_DAYS) {
+        if self.expires_at - self.issued_at > SignedDuration::days(MAX_VALIDITY_DAYS) {
             return Err(invalid(format!(
                 "valid for longer than {MAX_VALIDITY_DAYS} days"
             )));

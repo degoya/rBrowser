@@ -10,7 +10,7 @@
 //! proves the token with an HMAC over its port and the nonce ([`McpToken::proof`]).
 
 use std::fmt;
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Read as _};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -136,18 +136,7 @@ pub fn write(path: &Path, instance: &Instance) -> io::Result<()> {
         .ok_or_else(|| io::Error::other("the instance file has no folder"))?;
     rb_process::create_private_dir(dir)?;
     let bytes = serde_json::to_vec_pretty(instance).map_err(io::Error::other)?;
-    let temp = path.with_extension(format!("json.tmp-{}", std::process::id()));
-    let written = private_file(&temp).and_then(|mut out| {
-        out.write_all(&bytes)?;
-        out.sync_all()
-    });
-    if let Err(error) = written {
-        let _ = std::fs::remove_file(&temp);
-        return Err(error);
-    }
-    std::fs::rename(&temp, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&temp);
-    })
+    rb_util::fs::write_atomic_private(path, &bytes)
 }
 
 /// Removes the instance file at `path` when it is still the one of the server on `port` (a
@@ -156,17 +145,6 @@ pub fn remove_own(path: &Path, port: u16) {
     if read(path).is_some_and(|instance| instance.port == port) {
         let _ = std::fs::remove_file(path);
     }
-}
-
-fn private_file(path: &Path) -> io::Result<std::fs::File> {
-    let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        options.mode(0o600);
-    }
-    options.open(path)
 }
 
 /// A blocking HTTP agent for 127.0.0.1: no proxy (one from the environment would see the

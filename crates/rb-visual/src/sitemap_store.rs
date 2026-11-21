@@ -112,6 +112,14 @@ pub fn oldest_first(mut runs: Vec<(Option<SystemTime>, String)>) -> Vec<String> 
     runs.into_iter().map(|(_, name)| name).collect()
 }
 
+/// A shot opened for reading ([`RunStore::open_shot`]).
+#[derive(Debug)]
+pub struct ShotFile {
+    pub file: std::fs::File,
+    /// Its length in bytes.
+    pub length: u64,
+}
+
 /// One run's folder.
 #[derive(Clone, Debug)]
 pub struct RunStore {
@@ -215,6 +223,50 @@ impl RunStore {
             return Err(refused(name));
         }
         read_file(&self.dir.join(name), limit)
+    }
+
+    /// The shot of `breakpoint` on the page `slug` (`<slug>/<breakpoint>.png`) opened for
+    /// reading, at most `limit` bytes long; `None` when it is not there. Walked like every write:
+    /// plain names, no link followed, the folder and the file real ones (RB-090-86). The caller
+    /// streams it, so a large shot is never held whole.
+    ///
+    /// # Errors
+    ///
+    /// A name that is not plain, a link or a file where the folder goes, a link or a folder where
+    /// the shot goes, a shot longer than `limit`, or a file that cannot be opened.
+    pub fn open_shot(
+        &self,
+        slug: &str,
+        breakpoint: &str,
+        limit: u64,
+    ) -> Result<Option<ShotFile>, VisualError> {
+        if !valid_name(breakpoint) {
+            return Err(refused(breakpoint));
+        }
+        if !valid_name(slug) {
+            return Err(refused(slug));
+        }
+        let Some(folder) = walk(&self.dir, &[slug], false)? else {
+            return Ok(None);
+        };
+        let path = folder.join(format!("{breakpoint}.png"));
+        match kind(&path)? {
+            None => return Ok(None),
+            Some(found) if found.is_file() => {}
+            Some(_) => return Err(refused(breakpoint)),
+        }
+        let io = |source| VisualError::Io {
+            path: path.display().to_string(),
+            source,
+        };
+        let file = std::fs::File::open(&path).map_err(io)?;
+        let length = file.metadata().map_err(io)?.len();
+        if length > limit {
+            return Err(VisualError::Png(format!(
+                "{breakpoint}.png is larger than {limit} bytes"
+            )));
+        }
+        Ok(Some(ShotFile { file, length }))
     }
 
     /// Writes `bytes` as the file `name` of the run's folder (the gallery); its path.

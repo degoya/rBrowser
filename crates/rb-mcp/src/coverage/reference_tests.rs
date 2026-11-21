@@ -74,3 +74,38 @@ fn mcp_tools_file_is_current() {
         "{TOOLS_FILE} is stale; regenerate with {REGENERATE}"
     );
 }
+
+#[test]
+fn the_document_lists_the_prompts_and_resources() {
+    let document = parsed();
+    let names: Vec<&str> = document["prompts"]
+        .as_array()
+        .expect("prompts")
+        .iter()
+        .filter_map(|prompt| prompt["name"].as_str())
+        .collect();
+    assert_eq!(names, crate::prompts::NAMES);
+    assert_eq!(
+        document["prompts"][0]["arguments"][1]["name"],
+        "breakpoints"
+    );
+    let uris: Vec<&str> = document["resources"]
+        .as_array()
+        .expect("resources")
+        .iter()
+        .filter_map(|resource| resource["uri"].as_str())
+        .collect();
+    assert_eq!(
+        uris,
+        [
+            crate::resources::VIEWS,
+            crate::resources::FINDINGS,
+            crate::resources::SCREENSHOTS,
+            crate::resources::CONFIG
+        ]
+    );
+    assert_eq!(
+        document["resourceTemplates"][0]["uriTemplate"],
+        crate::resources::SCREENSHOT_TEMPLATE
+    );
+}

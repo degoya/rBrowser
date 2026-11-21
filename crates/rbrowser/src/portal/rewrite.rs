@@ -12,6 +12,7 @@
 use super::origin_map::OriginMap;
 use super::origins::Upstream;
 use super::pairing::COOKIE_NAME;
+use super::present::headers::{request_dropped, response_dropped};
 use rb_cdp::request::{HeadError, MAX_HEAD, RequestHead, head_end};
 
 /// Hop-by-hop and proxy headers that never pass the portal.
@@ -207,6 +208,8 @@ pub fn request_head(
         let lower = name.to_ascii_lowercase();
         match lower.as_str() {
             "host" | "accept-encoding" => {}
+            // The presentation's traffic (RB-096-05): no cookie, no Cloudflare header.
+            other if map.is_public() && request_dropped(other) => {}
             "origin" => push(name, &map.origin_to_upstream(value)),
             "referer" => push(name, &map.to_upstream_url(value)),
             "cookie" => {
@@ -252,6 +255,8 @@ pub fn response_head(response: &ResponseHead, map: &OriginMap, body: OutBody) ->
     for (name, value) in &response.headers {
         let lower = name.to_ascii_lowercase();
         match lower.as_str() {
+            // The presentation's traffic (RB-096-05): no cookie, no server detail.
+            other if map.is_public() && response_dropped(other) => {}
             "location" | "content-location" => {
                 push(name, &map.to_portal_url(value));
             }
@@ -279,6 +284,9 @@ pub fn response_head(response: &ResponseHead, map: &OriginMap, body: OutBody) ->
     }
     if body != OutBody::Upstream {
         push("Cache-Control", "no-store");
+    }
+    if map.is_public() {
+        push("X-Robots-Tag", "noindex, nofollow");
     }
     if upgrade {
         push("Upgrade", response.header("upgrade").unwrap_or("websocket"));

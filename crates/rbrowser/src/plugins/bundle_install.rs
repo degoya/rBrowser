@@ -18,7 +18,11 @@
 //!   Skip - the recommended set is chosen and the choice no longer waits for the wizard.
 //!
 //! The settings window's pages alone send these (`settings_window::guard`); MCP never does.
-//! Everything loads at the next start, like every install. `plugins.catalog.preferRepository`
+//! Each takes effect live and says `restart: false` (RB-092-06): at the very first start the load
+//! waits for the wizard's answer (RB-091-08) and each of the three releases it; later the plugins
+//! load again ([`super::live::reload`]). `restart: true` only when no load can run (the app
+//! quits). `installChosen` with no id answers a pending choice with nothing.
+//! `plugins.catalog.preferRepository`
 //! off leaves every install to the bundle; `plugins.catalog.autoUpdate` lets the update check
 //! install what [`rb_plugin_host::newer_than`] allows ([`super::bundle_offer::auto_update`]).
 
@@ -26,14 +30,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
-use chrono::Utc;
+use rb_commands::CommandError;
 use rb_config::UserSettings;
-use rb_ipc::{CoreToShell, IpcErrorCode, PluginGrantDetails};
+use rb_ipc::{CoreToShell, IpcErrorCode, Notification, NotificationLevel, PluginGrantDetails};
 use rb_plugin_host::{
     Catalog, CatalogStore, Consent, HttpFetcher, OFFICIAL_REPOSITORY, Offer, Reachability, Shipped,
     replacement, valid_plugin_id,
 };
 use serde_json::{Value, json};
+use time::OffsetDateTime;
 
 use crate::control::Core;
 use crate::ipc::Failure;
@@ -51,8 +56,8 @@ pub const PROGRESS_KEY: &str = "pluginInstallProgress";
 
 /// The hosts that failed lately, for the life of the process.
 static REACHABILITY: LazyLock<Reachability> = LazyLock::new(Reachability::default);
-/// The versions installed in this session, by plugin id: they load at the next start, and until
-/// then they are the base of an update check (review 6).
+/// The versions installed in this session, by plugin id: the base of an update check, also when
+/// the install could not load live (review 6).
 static SESSION: Mutex<BTreeMap<String, String>> = Mutex::new(BTreeMap::new());
 
 /// Records that `version` of plugin `id` was installed in this session.
@@ -132,7 +137,7 @@ fn progress(core: &Core, id: &str, done: usize, total: usize, state: &str, error
 pub(super) fn open(user: &UserSettings, online: bool) -> Option<(Catalog, bool)> {
     let dir = super::catalog::store_dir()?;
     let (mut catalog, _) = super::catalog::open_catalog(user, dir);
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let official = catalog
         .repositories()
         .iter()
@@ -149,14 +154,14 @@ pub(super) fn open(user: &UserSettings, online: bool) -> Option<(Catalog, bool)>
             .any(|(id, outcome)| id == OFFICIAL_REPOSITORY && outcome.is_err());
         REACHABILITY.note(&url, !failed, Instant::now());
     }
-    let missing = !catalog.is_loaded(OFFICIAL_REPOSITORY, Utc::now());
+    let missing = !catalog.is_loaded(OFFICIAL_REPOSITORY, OffsetDateTime::now_utc());
     Some((catalog, missing))
 }
 
 /// Every repository's offer of plugin `id`.
 pub(super) fn offers_of(catalog: &Catalog, id: &str) -> Vec<Offer> {
     catalog
-        .entries(Utc::now())
+        .entries(OffsetDateTime::now_utc())
         .into_iter()
         .find(|entry| entry.id == id)
         .map(|entry| entry.offers)
@@ -177,7 +182,7 @@ pub(super) fn install_offer(
             &offer.repository,
             &offer.entry.id,
             &offer.entry.version,
-            Utc::now(),
+            OffsetDateTime::now_utc(),
         )
         .map_err(code)?;
     if !REACHABILITY.reachable(&url, Instant::now()) {
@@ -229,7 +234,7 @@ pub(super) fn install_offer(
         plugin_id = installed.id.as_str(),
         version = installed.version.as_str(),
         repository = offer.repository.as_str(),
-        "a first-party plugin was installed from the repository; it loads at the next start"
+        "a first-party plugin was installed from the repository"
     );
     Ok(())
 }
@@ -287,19 +292,50 @@ fn install_one(
     Ok("repository")
 }
 
-/// The answer to `installChosen`, after every plugin. Blocking.
+/// The first choice is answered (RB-091-08): it no longer waits - nothing failed makes the load
+/// fall back to the recommended set - and a load it held starts now. Whether the plugins load
+/// live, in this process.
+fn answered() -> bool {
+    if super::bundle::choice_pending()
+        && let Err(code) = super::bundle::update_choice(|state| state.pending = false)
+    {
+        tracing::warn!(
+            code = code.as_str(),
+            "the answered plugin choice was not saved"
+        );
+    }
+    crate::analyzer::plugins::release()
+}
+
+/// Whether a change takes effect live: a load the first choice held starts now (`released`),
+/// else `reload` loads the plugins again (RB-092-06) - never on top of the held load.
+pub fn live_after(released: bool, reload: impl FnOnce() -> bool) -> bool {
+    released || reload()
+}
+
+/// The choice is answered and takes effect: whether the plugins load live.
+fn take_effect(core: &Core) -> bool {
+    live_after(answered(), || super::live::reload(core))
+}
+
+/// The answer to `installChosen`, after every plugin; no id answers a pending first choice with
+/// nothing (RB-091-08). Blocking.
 ///
 /// # Errors
 ///
 /// [`INVALID_CODE`] for the request as a whole; a plugin's failure is its result's.
 pub fn install_chosen(core: &Core, ids: Vec<String>) -> Result<Value, Failure> {
-    let ids = valid_ids(ids)?;
+    let ids = if ids.is_empty() { ids } else { valid_ids(ids)? };
     let user = core.user_settings();
     let bundle = super::bundle_offer::bundled_plugins();
     let installed = super::bundle::installed_ids().unwrap_or_default();
     let online =
         user.plugins.catalog.prefer_repository || ids.iter().any(|id| !bundle.contains_key(id));
-    let opened = open(&user, online);
+    let opened = if ids.is_empty() {
+        None
+    } else {
+        open(&user, online)
+    };
     let total = ids.len();
     let mut results = Vec::new();
     for (done, id) in ids.iter().enumerate() {
@@ -315,15 +351,94 @@ pub fn install_chosen(core: &Core, ids: Vec<String>) -> Result<Value, Failure> {
             }
         }
     }
-    Ok(json!({ "value": { "results": results, "restart": true } }))
+    let live = take_effect(core);
+    Ok(json!({ "value": { "results": results, "restart": !live } }))
 }
 
-/// The answer to `removeChosen`. Blocking.
+/// The status bar's notice after the new bundled plugins were installed (`{count}`, RB-094-13).
+pub const NEW_INSTALLED_KEY: &str = "plugins.notice.new_installed";
+/// Its warning when some were not (`{plugins}`).
+pub const NEW_FAILED_KEY: &str = "plugins.notice.new_failed";
+
+/// Installing a plugin is a person's click: MCP's `run_command` never runs `plugins.install`,
+/// whatever tool would forward it (review of RB-094-13; its coverage is `omitted`).
+///
+/// # Errors
+///
+/// For `plugins.install`.
+pub fn refuse_mcp(id: &str) -> Result<(), CommandError> {
+    if id == "plugins.install" {
+        return Err(CommandError::Failed(format!(
+            "plugins.install is a person's click: {}",
+            rb_plugin_host::PROTECTED_REASON
+        )));
+    }
+    Ok(())
+}
+
+/// `plugins.install` with `bundled`, the ids the notice of the plugins new in this version named
+/// (RB-094-13): installs them off the caller's thread, as the wizard's choice does - live - and
+/// says in the status bar how it went.
+///
+/// # Errors
+///
+/// `bundled` is not a list of plugin ids, or the window is closed.
+pub fn install_new(core: &std::sync::Weak<Core>, ids: &Value) -> Result<Value, CommandError> {
+    let ids: Vec<String> = serde_json::from_value(ids.clone())
+        .map_err(|_| CommandError::InvalidArgs("bundled: a list of plugin ids".to_owned()))?;
+    let ids = valid_ids(ids)
+        .map_err(|(_, code)| CommandError::InvalidArgs(format!("bundled: {code}")))?;
+    // Only what ships beside rBrowser: this button installs nothing from a repository unasked.
+    let bundle = super::bundle_offer::bundled_plugins();
+    if let Some(id) = ids.iter().find(|id| !bundle.contains_key(*id)) {
+        return Err(CommandError::InvalidArgs(format!(
+            "bundled: {id} is not a bundled plugin"
+        )));
+    }
+    let core = core
+        .upgrade()
+        .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
+    let runtime = core.runtime().clone();
+    runtime.spawn_blocking(move || {
+        let failed: Vec<String> = match install_chosen(&core, ids.clone()) {
+            Ok(answer) => answer["value"]["results"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|result| result["ok"] != true)
+                .filter_map(|result| result["id"].as_str().map(str::to_owned))
+                .collect(),
+            Err(_) => ids.clone(),
+        };
+        let (level, key, args) = if failed.is_empty() {
+            (
+                NotificationLevel::Info,
+                NEW_INSTALLED_KEY,
+                [("count".to_owned(), ids.len().to_string())],
+            )
+        } else {
+            (
+                NotificationLevel::Warning,
+                NEW_FAILED_KEY,
+                [("plugins".to_owned(), failed.join(", "))],
+            )
+        };
+        core.notify(CoreToShell::Notification(Notification {
+            level,
+            message_key: key.to_owned(),
+            args: args.into(),
+            settings_key: None,
+        }));
+    });
+    Ok(Value::Null)
+}
+
+/// The answer to `removeChosen`; the plugins leave live (RB-092-06). Blocking.
 ///
 /// # Errors
 ///
 /// [`INVALID_CODE`] for the request as a whole; a plugin's failure is its result's.
-pub fn remove_chosen(ids: Vec<String>) -> Result<Value, Failure> {
+pub fn remove_chosen(core: &Core, ids: Vec<String>) -> Result<Value, Failure> {
     let ids = valid_ids(ids)?;
     let folders = super::catalog::store_dir().zip(crate::analyzer::plugins::user_dir());
     let mut results = Vec::new();
@@ -343,23 +458,27 @@ pub fn remove_chosen(ids: Vec<String>) -> Result<Value, Failure> {
             Err(code) => json!({ "id": id, "ok": false, "error": code }),
         });
     }
-    Ok(json!({ "value": { "results": results, "restart": true } }))
+    let live = take_effect(core);
+    Ok(json!({ "value": { "results": results, "restart": !live } }))
 }
 
 /// The answer to `applyRecommended`, the first-run wizard's Skip (review 7): the recommended part
-/// of the bundle is added to the choice, which no longer waits for the wizard. Loads at the next
-/// start. Blocking.
+/// of the bundle is added to the choice, which no longer waits for the wizard. Loads live - with
+/// the answer when the first choice held the load (RB-091-08), else again (RB-092-06). Blocking.
 ///
 /// # Errors
 ///
 /// The code of a choice that was not saved.
-pub fn apply_recommended() -> Result<Value, Failure> {
+pub fn apply_recommended(core: &Core) -> Result<Value, Failure> {
     let bundled: BTreeSet<String> = super::bundle_offer::bundled_plugins().into_keys().collect();
     let recommended = super::first_party::recommended();
     let state =
         super::bundle::update_choice(|state| state.apply_recommended(&bundled, &recommended))
             .map_err(|code| (IpcErrorCode::Internal, code))?;
-    Ok(json!({ "value": { "chosen": state.chosen, "restart": true } }))
+    let live = live_after(crate::analyzer::plugins::release(), || {
+        super::live::reload(core)
+    });
+    Ok(json!({ "value": { "chosen": state.chosen, "restart": !live } }))
 }
 
 #[cfg(test)]

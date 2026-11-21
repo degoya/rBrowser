@@ -19,6 +19,8 @@ fn a_step_of_the_progress_becomes_the_shells_flow_step() {
             step_id: Some(3),
             state: "failed".to_owned(),
             message: Some("locator.click: sent Bearer *** now".to_owned()),
+            number: None,
+            total: None,
         })
     );
     let plain = json!({ "viewId": 1, "step": { "name": "log in", "state": "running" } });

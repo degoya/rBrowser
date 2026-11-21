@@ -80,3 +80,25 @@ describe('a selector from a 1440 px view in a 393 px view', () => {
     expect(resolve(target, document)).toMatchObject({ status: 'ok' });
   });
 });
+
+describe('a burger label a wider breakpoint hides (RB-090-93)', () => {
+  const BURGER = `<!doctype html><html><head><style>
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    @media (min-width: 1024px) { .lg-hidden { display: none; } }
+  </style></head><body><header>
+    <input type="checkbox" id="nav-toggle" class="sr-only">
+    <label for="nav-toggle" class="lg-hidden"><span></span><span></span><span></span><span class="sr-only">Menu</span></label>
+  </header></body></html>`;
+
+  it('resolves where the label shows and is not_visible where it has no box', () => {
+    setViewport(768);
+    loadPage(BURGER);
+    const label = el('label[for="nav-toggle"]');
+    const target = makeTarget(el('label[for="nav-toggle"] span'), 40, 30);
+    expect(target.element).toMatchObject({ kind: 'text', tag: 'label', text: 'Menu' });
+    expect(resolve(target, document)).toMatchObject({ status: 'ok' });
+    setViewport(1024);
+    expect(isVisible(label)).toBe(false);
+    expect(resolve(target, document)).toEqual({ status: 'not_visible' });
+  });
+});

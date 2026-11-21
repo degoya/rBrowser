@@ -61,7 +61,7 @@ export interface RbrowserPageApi {
   readonly height: number;
   /** The view's place in the grid, from 0. */
   readonly index: number;
-  readonly engine: 'chromium' | 'firefox' | 'webkit';
+  readonly engine: 'chromium' | 'firefox' | 'webkit' | 'android' | 'safari' | 'ios';
   readonly emulation: RbrowserEmulation;
   readonly bus: RbrowserBus;
 }

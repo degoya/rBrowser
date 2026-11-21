@@ -124,11 +124,18 @@
     },
     { "type": "exportRecording", "name": "login", "format": "both", "exportName": "login-flow", "write": true, "overwrite": true },
     { "type": "getFlowRun" },
+    { "type": "resendRecordingSteps" },
     { "type": "activityBar", "place": "top" },
     { "type": "collapseActivity", "activity": "video", "collapsed": true },
+    { "type": "getSitemapGallery", "runId": "2026-11-11_10-00-00" },
     {
       "type": "setup",
       "request": { "op": "preview", "requestId": 7, "root": "C:/work/shop", "url": "http://localhost:5173", "template": "devices", "devices": ["iphone-15"] }
+    },
+    { "type": "bugReport", "request": { "op": "decide", "previewId": 4, "save": true } },
+    {
+      "type": "mcpSetup",
+      "request": { "op": "write", "requestId": 4, "client": "cursor", "root": "C:/work/shop", "project": true, "user": false }
     }
   ],
   "coreToShell": [
@@ -206,8 +213,17 @@
       "detected": [{ "width": 768, "kind": "min", "label": "md", "count": 12, "heuristic": false }],
       "devtools": { "view": 1, "mode": "docked-bottom" },
       "recorder": { "phase": "recording", "name": "login", "steps": 3 },
-      "video": { "views": [1, 2], "startedAtMs": 1763380800000, "maxDurationSec": 600 },
+      "video": { "views": [1, 2], "startedAtMs": 1763380800000, "maxDurationSec": 600, "pausedAtMs": 1763380830000, "pausedMs": 5000 },
       "activityBar": { "place": "top", "collapsed": ["video", "desync"], "recorded": "login" },
+      "timeControl": {
+        "clock": { "start": "2026-12-24T10:00:00", "local": true, "speed": 1.5 },
+        "animations": [{ "view": 2, "rate": 0.25 }]
+      },
+      "pluginProgress": [
+        { "plugin": "width-sweep", "name": "Width sweep", "done": 12, "total": 160, "cancel": "plugin.width_sweep.cancel" },
+        { "plugin": "seo", "name": "SEO", "done": 0, "total": 0 }
+      ],
+      "forcedStates": [{ "view": 1, "states": ["hover", "focus-within"] }],
       "bookmarks": [
         { "id": "checkout", "label": "Checkout", "group": "Shop", "url": "http://localhost:5173/checkout", "shortcut": "Alt+F7", "path": "/checkout" },
         { "id": "docs", "label": "Docs" }
@@ -233,6 +249,10 @@
       "values": [{ "key": "ui.theme", "value": "dark", "origin": "user" }]
     },
     { "type": "metrics", "metrics": [{ "view": 1, "soft": true }] },
+    {
+      "type": "pluginProgress",
+      "progress": [{ "plugin": "seo", "name": "SEO", "done": 1, "total": 4, "cancel": "plugin.seo.cancel" }]
+    },
     {
       "type": "commands",
       "leader": "Ctrl+Shift+Space",
@@ -432,7 +452,8 @@
       "at": 1762946400000,
       "level": "success",
       "messageKey": "diagnostics.created",
-      "args": { "path": "C:/logs/rbrowser-diagnostics.zip" }
+      "args": { "path": "C:/logs/rbrowser-diagnostics.zip" },
+      "copy": { "labelKey": "report.action.copy_markdown", "report": "2026-11-20_14-03-07" }
     },
     {
       "type": "statusMessages",
@@ -595,9 +616,10 @@
       "running": {
         "runId": "20261117-101500-a1b2c3",
         "flow": "login",
-        "views": [{ "view": 1, "status": "running" }],
+        "views": [{ "view": 1, "status": "running", "step": { "number": 2, "name": "Step 2: waitFor" } }],
         "startedAtMs": 1794910500000,
-        "queued": ["checkout"]
+        "queued": ["checkout"],
+        "totalSteps": 3
       },
       "last": {
         "version": 1,
@@ -631,7 +653,76 @@
       "name": "Step 2: waitFor",
       "stepId": 2,
       "state": "failed",
-      "message": "locator.waitFor: Timeout 10000ms exceeded."
+      "message": "locator.waitFor: Timeout 10000ms exceeded.",
+      "number": 2,
+      "total": 3
+    },
+    {
+      "type": "recordingSteps",
+      "name": "checkout",
+      "from": 1,
+      "steps": [
+        {
+          "id": 2,
+          "action": { "type": "hover", "target": { "selectors": [{ "kind": "css", "path": "#menu" }] } },
+          "view": "mobile",
+          "atMs": 1800,
+          "path": [{ "x": 10, "y": 20, "t": 0 }]
+        }
+      ],
+      "state": "recording",
+      "continueAfter": 1
+    },
+    {
+      "type": "recorderElementPicked",
+      "view": 2,
+      "locator": { "selectors": [{ "kind": "role", "role": "button", "name": "Filter" }, { "kind": "css", "path": "aside > button" }] },
+      "text": "Filter",
+      "onlyIn": ["tablet", "desktop"],
+      "options": [{ "value": "42", "label": "Size 42" }]
+    },
+    { "type": "recorderStepCommand", "command": "recorder.step_add" },
+    {
+      "type": "sitemapGallery",
+      "runId": "2026-11-11_10-00-00",
+      "source": "http://localhost:3000/",
+      "state": "finished",
+      "thumbnailWidth": 320,
+      "breakpoints": [
+        {
+          "name": "mobile",
+          "label": "Mobile",
+          "width": 375,
+          "height": 812
+        }
+      ],
+      "pages": [
+        {
+          "url": "http://localhost:3000/",
+          "status": 200,
+          "shots": {
+            "mobile": {
+              "state": "done",
+              "image": "rbrowser://sitemap/2026-11-11_10-00-00/index/mobile.png",
+              "compare": {
+                "status": "differs",
+                "ratio": 0.0123
+              }
+            }
+          }
+        },
+        {
+          "url": "http://localhost:3000/old",
+          "status": 404,
+          "finalUrl": "http://localhost:3000/new",
+          "shots": {
+            "mobile": {
+              "state": "failed",
+              "error": "timeout"
+            }
+          }
+        }
+      ]
     },
     {
       "type": "setup",
@@ -642,6 +733,44 @@
         "root": "C:/work/shop",
         "config": { "version": 1, "breakpoints": [{ "id": "iphone-15", "label": "iPhone 15", "device": "iphone-15" }] },
         "source": "devices"
+      }
+    },
+    {
+      "type": "bugReport",
+      "answer": {
+        "kind": "preview",
+        "previewId": 4,
+        "folder": "C:/work/shop/.rbrowser/out/reports/2026-11-20_14-03-07",
+        "markdown": "# Bug report\n",
+        "images": 3,
+        "annotate": false
+      }
+    },
+    {
+      "type": "mcpSetup",
+      "answer": {
+        "op": "plan",
+        "requestId": 1,
+        "enabled": false,
+        "root": "C:/work/shop",
+        "clients": [
+          {
+            "client": "cursor",
+            "project": {
+              "path": ".cursor/mcp.json",
+              "status": "create",
+              "entry": "{\n  \"type\": \"stdio\",\n  \"command\": \"C:\\\\Tools\\\\rBrowser\\\\rbrowser.exe\",\n  \"args\": [\n    \"mcp\"\n  ]\n}",
+              "kept": 0
+            },
+            "userFile": {
+              "path": "C:\\Users\\me\\.cursor\\mcp.json",
+              "status": "add",
+              "entry": "{}",
+              "kept": 2
+            },
+            "note": "mcp.setup.note.cursor"
+          }
+        ]
       }
     }
   ]

@@ -6,6 +6,9 @@ export type Tone = 'info' | 'ok' | 'warn' | 'error' | 'busy';
 export interface StatusLine {
   tone: Tone;
   text: string;
+  /** The setting a text that names a settings path means (RB-094-21): the line links there,
+   * named by the plugin's own `label` ("Open the setting"). */
+  setting?: { key: string; label: string };
 }
 
 /** Nuxt UI's colour of a tone. */

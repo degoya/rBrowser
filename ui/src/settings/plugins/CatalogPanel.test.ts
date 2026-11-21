@@ -6,6 +6,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createShellI18n } from '../../i18n';
 import type { IpcClient } from '../../ipc/client';
+import type { CoreToShell } from '../../ipc/protocol';
 import type { PanelRequest } from '../../panels/protocol';
 import { settle } from '../test/mountPage';
 import CatalogPanel from './CatalogPanel.vue';
@@ -18,8 +19,12 @@ afterEach(() => {
   current = null;
 });
 
-/** A client answering every catalogue request with the samples, recording what was asked. */
-function stubClient(failInstall = false, review: unknown = SAMPLE_REVIEW) {
+/** The core's events the page listens to (RB-092-06), sent by the test. */
+let emit: (message: CoreToShell) => void = () => undefined;
+
+/** A client answering every catalogue request with the samples, recording what was asked; a
+ * change answers `restart` as given. */
+function stubClient(failInstall = false, review: unknown = SAMPLE_REVIEW, restart = true) {
   const requests: PanelRequest[] = [];
   const client = {
     async expect(message: { type: string; request: PanelRequest }) {
@@ -28,14 +33,20 @@ function stubClient(failInstall = false, review: unknown = SAMPLE_REVIEW) {
         throw new Error('plugins.catalog.error.checksum');
       }
       const answers: Record<string, unknown> = { catalog: SAMPLE_CATALOG, catalogPrepare: review };
-      return { type: 'pluginPanel', message: answers[message.request.op] ?? { value: { restart: true } } };
+      return { type: 'pluginPanel', message: answers[message.request.op] ?? { value: { restart } } };
+    },
+    on(listener: (message: CoreToShell) => void) {
+      emit = listener;
+      return () => {
+        emit = () => undefined;
+      };
     },
   };
   return { client: client as unknown as IpcClient, requests };
 }
 
-async function open(failInstall = false, review: unknown = SAMPLE_REVIEW) {
-  const { client, requests } = stubClient(failInstall, review);
+async function open(failInstall = false, review: unknown = SAMPLE_REVIEW, restart = true) {
+  const { client, requests } = stubClient(failInstall, review, restart);
   const wrapper = mount(CatalogPanel, {
     props: { client },
     attachTo: document.body,
@@ -127,6 +138,34 @@ describe('Settings > Plugins > Catalog', () => {
     expect(row.find('[data-testid="catalog-update"]').exists()).toBe(false);
   });
 
+  it('says a removal took effect, and "at the next start" only when the core could not load it live (RB-092-06)', async () => {
+    const live = await open(false, SAMPLE_REVIEW, false);
+    await live.wrapper.get('[data-plugin="outline"] [data-testid="catalog-remove"]').trigger('click');
+    await settle();
+    const notice = live.wrapper.get('[data-testid="catalog-notice"]').text();
+    expect(notice).not.toContain('next start');
+    live.wrapper.unmount();
+    current = null;
+
+    const later = await open(false, SAMPLE_REVIEW, true);
+    await later.wrapper.get('[data-plugin="outline"] [data-testid="catalog-remove"]').trigger('click');
+    await settle();
+    expect(later.wrapper.get('[data-testid="catalog-notice"]').text()).toContain('next start');
+  });
+
+  it('asks for the catalogue again when the installed plugins changed elsewhere (RB-092-06)', async () => {
+    const { requests } = await open();
+    const asked = () => requests.filter((request) => request.op === 'catalog').length;
+    expect(asked()).toBe(1);
+    emit({ type: 'pluginPanel', message: { panelsChanged: true } });
+    await settle();
+    expect(asked()).toBe(1);
+    emit({ type: 'pluginPanel', message: { pluginsChanged: true } });
+    await settle();
+    expect(asked()).toBe(2);
+    expect(requests.at(-1)).toEqual({ op: 'catalog', refresh: false });
+  });
+
   it('opens the automatic updates setting above the list', async () => {
     const { wrapper } = await open();
     await wrapper.get('[data-testid="catalog-auto-update-key"]').trigger('click');
@@ -168,6 +207,7 @@ describe('Settings > Plugins > Catalog, the bundled plugins (RB-091-04)', () => 
             : { value: { results: [{ id: 'peek', ok: true, origin: 'bundle' }], restart: true } };
         return { type: 'pluginPanel', message: answer };
       },
+      on: () => () => undefined,
     };
     const wrapper = mount(CatalogPanel, {
       props: { client: client as unknown as IpcClient },

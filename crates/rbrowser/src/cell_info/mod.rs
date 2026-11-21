@@ -9,8 +9,12 @@
 //! once per burst and only when something changed; a CPU reading that moves no warning changes
 //! nothing. The shell state keeps the pieces too, for the canvas board, which draws its labels
 //! itself ([`board`], RB-090-69). MCP reads the same data from `view_metrics` and `views_list`.
+//! The address of a view with its own navigation opens an address field of its own on a click
+//! ([`address`], [`edit`], RB-092-03).
 
+pub mod address;
 pub mod board;
+pub mod edit;
 mod text;
 
 use std::collections::BTreeMap;
@@ -38,6 +42,8 @@ pub enum PieceAction {
     /// Marks the element behind the vital in the view (RB-060-10, `highlightVital`); the vitals
     /// bar's click (RB-090-71).
     Mark(rb_sync::VitalMetric),
+    /// `view.edit_address`: the address field of a view with its own navigation (RB-092-03).
+    EditAddress,
 }
 
 /// One piece of a label strip, or the vitals bar (RB-090-71).
@@ -72,18 +78,22 @@ struct Published {
     bars: BTreeMap<ViewId, Piece>,
 }
 
-/// The pieces of every view as the core holds them now.
+/// The pieces of every view as the core holds them now; the address of a decoupled view opens
+/// its address field (RB-092-03).
 pub fn infos_of(core: &Core) -> Vec<CellInfo> {
     let host = core.host();
     let shell = host.shell_state();
     let ui = core.user_settings().ui;
-    cell_infos(
+    let mut infos = cell_infos(
         &host.views(),
         host.active_view(),
         &shell.externals,
         &ui.cell_label,
         ui.engine_badge,
-    )
+    );
+    let decoupled = crate::nav_sync::status(host).decoupled;
+    address::mark_editable(&mut infos, &decoupled, &ui.cell_label);
+    infos
 }
 
 /// The pieces and the vitals bars as the core holds them now.

@@ -63,6 +63,19 @@ impl EngineRouter {
     }
 }
 
+/// The timing counter of `engine`'s replays (RB-090-32).
+pub fn engine_counter(engine: EngineKind) -> &'static str {
+    use rb_util::perf::names;
+    match engine {
+        EngineKind::Chromium => names::SYNC_REPLAY_CHROMIUM,
+        EngineKind::Firefox => names::SYNC_REPLAY_FIREFOX,
+        EngineKind::Webkit => names::SYNC_REPLAY_WEBKIT,
+        EngineKind::Android => names::SYNC_REPLAY_ANDROID,
+        EngineKind::Safari => names::SYNC_REPLAY_SAFARI,
+        EngineKind::Ios => names::SYNC_REPLAY_IOS,
+    }
+}
+
 #[async_trait]
 impl Replay for EngineRouter {
     async fn dispatch(&self, request: ReplayRequest) -> ReplayOutcome {
@@ -73,6 +86,13 @@ impl Replay for EngineRouter {
         match replay {
             Some(replay) => replay.dispatch(request).await,
             None => ReplayOutcome::Unsupported,
+        }
+    }
+
+    fn counter(&self, view: ViewId) -> &'static str {
+        match self.route(view) {
+            ViewRoute::Engine(engine) => engine_counter(engine),
+            ViewRoute::Stopped => rb_util::perf::names::SYNC_REPLAY,
         }
     }
 }

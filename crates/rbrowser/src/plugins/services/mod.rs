@@ -4,7 +4,10 @@
 //! only does the work, for the window the runtime started in ([`AppServices::bind`]):
 //!
 //! - `views`, `evaluate`, `cdp` over the window's views ([`page`]); a lasting emulation a plugin
-//!   set is undone when it is disabled or loses the workspace trust ([`resets`]);
+//!   set is undone when it is disabled or loses the workspace trust ([`resets`]); a view's width
+//!   is a lease that ends with the plugin's calls ([`widths`], RB-093-01);
+//! - `report-progress` as the activity bar's plugins entry while the plugin's calls run,
+//!   throttled ([`progress`], RB-093-01);
 //! - `http` through a transport that resolves every name itself and connects only to public
 //!   addresses, or to a trusted project's own origins ([`http`], [`net`]);
 //! - `project-read` and `out-write` below the open project ([`AppServices::project_root`]); the
@@ -25,8 +28,10 @@
 pub mod http;
 pub mod net;
 pub mod page;
+pub mod progress;
 pub mod resets;
 pub mod settings;
+pub mod widths;
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -63,6 +68,10 @@ pub struct AppServices {
     values: settings::SettingsCache,
     /// The lasting CDP state each plugin set on the views.
     resets: resets::CdpResets,
+    /// The views the plugins lease at another width.
+    widths: Arc<widths::WidthLeases>,
+    /// The progress the plugins' running calls report.
+    progress: progress::ProgressBoard,
 }
 
 impl AppServices {
@@ -76,6 +85,8 @@ impl AppServices {
             project_plugins: RwLock::new(BTreeSet::new()),
             values: settings::SettingsCache::default(),
             resets: resets::CdpResets::default(),
+            widths: Arc::default(),
+            progress: progress::ProgressBoard::default(),
         }
     }
 
@@ -138,15 +149,22 @@ impl AppServices {
     }
 
     /// Plugins `plugin_ids` stopped (disabled, or a project's without trust): the lasting CDP
-    /// state each set on a view is undone ([`resets`]); a view gone since is skipped.
+    /// state each set on a view is undone ([`resets`]) and each width lease ends ([`widths`]); a
+    /// view gone since is skipped.
     pub fn reset_cdp<'a>(&self, plugin_ids: impl IntoIterator<Item = &'a str>) {
+        let plugin_ids: Vec<&str> = plugin_ids.into_iter().collect();
         let undo: Vec<_> = plugin_ids
-            .into_iter()
+            .iter()
             .flat_map(|plugin| self.resets.take(plugin))
+            .collect();
+        let leased: Vec<u32> = plugin_ids
+            .iter()
+            .flat_map(|plugin| self.widths.stop(plugin))
             .collect();
         let Some(core) = self.core() else {
             return;
         };
+        widths::restore_later(&core, &self.widths, leased);
         if undo.is_empty() {
             return;
         }
@@ -171,6 +189,16 @@ impl AppServices {
             *held = schemas;
         }
         self.settings_changed();
+    }
+
+    /// The settings schema plugin `plugin_id` declares, while it is loaded.
+    pub fn plugin_schema(&self, plugin_id: &str) -> Option<Value> {
+        self.schemas
+            .read()
+            .ok()?
+            .iter()
+            .find(|(id, _)| id == plugin_id)
+            .map(|(_, schema)| schema.clone())
     }
 
     /// The values of plugin `plugin_id`'s own settings keys, `<plugin-id>.<path>` to JSON.
@@ -338,6 +366,19 @@ impl HostServices for AppServices {
     ) -> Result<String, Failure> {
         self.admit(caller.plugin_id)?;
         let core = self.core_or("cdp")?;
+        if widths::lease_method(method) {
+            let (plugin, view) = (caller.plugin_id, ViewId(view));
+            return widths::send(
+                &self.widths,
+                &core,
+                plugin,
+                view,
+                method,
+                params,
+                caller.timeout,
+            )
+            .await;
+        }
         let answer =
             page::cdp(&**core.host(), ViewId(view), method, params, caller.timeout).await?;
         if let Ok(sent) = serde_json::from_str::<Value>(params) {
@@ -380,6 +421,31 @@ impl HostServices for AppServices {
                 )),
             Err(_) => Err(Failure::coded(FailureKind::Other, codes::HOST_FAILED)
                 .with_param("reason", "timeout")),
+        }
+    }
+
+    fn call_started(&self, plugin_id: &str) {
+        self.widths.started(plugin_id);
+        self.progress.started(plugin_id);
+    }
+
+    fn call_ended(&self, plugin_id: &str) {
+        let leased = self.widths.ended(plugin_id);
+        let progress_ended = self.progress.ended(plugin_id);
+        if let Some(core) = self.core() {
+            widths::restore_later(&core, &self.widths, leased);
+            if progress_ended {
+                progress::publish(&core, &self.progress);
+            }
+        }
+    }
+
+    fn report_progress(&self, plugin_id: &str, done: u32, total: u32) {
+        let now = std::time::Instant::now();
+        if self.progress.report(plugin_id, done, total, now)
+            && let Some(core) = self.core()
+        {
+            progress::publish(&core, &self.progress);
         }
     }
 

@@ -51,6 +51,7 @@
           "filled": "filled",
           "not-found": "nothing matches the selector",
           "selector": "the selector is not valid",
+          "timeout": "not filled, the fill ran out of its time (Time for one fill)",
           "unsupported": "{engine}, not filled"
         },
         "strategies": {
@@ -81,7 +82,8 @@
           "file": "file input",
           "hidden": "hidden",
           "readonly": "read-only",
-          "hidden-input": "hidden input, no preset value"
+          "hidden-input": "hidden input, no preset value",
+          "filled": "held a value already"
         },
         "formMixed": "Form invalid in {count, plural, one {# view} other {# views}}",
         "profileUsed": "Profile: {name}",
@@ -191,6 +193,26 @@
           "label": "Take hidden inputs",
           "description": "Takes the values of hidden inputs (type=hidden) into a preset taken from a form, and lets a fill set them from a profile or preset. Off leaves them out of both. A hidden input whose name looks like a token or secret is never taken.",
           "help": "Takes hidden inputs (type=hidden) into a preset taken from a form and fills them from it. Inputs named like a token or secret are never taken."
+        },
+        "settleMilliseconds": {
+          "label": "Wait after a choice (ms)",
+          "description": "How long the page must stay unchanged after a fill sets a select, radio button or checkbox before it goes on, so fields the choice shows or enables are there; each wait ends after 3 seconds at the latest. 0 waits for nothing.",
+          "help": "Milliseconds without a page change a fill waits for after it sets a select, radio button or checkbox, so the fields the choice brings are filled too. Example: 300. 0 waits for nothing."
+        },
+        "maxPasses": {
+          "label": "Passes for new fields",
+          "description": "How often a fill reads the form again and fills the fields that appeared or became enabled, such as the fields a select shows. A later pass sets only empty fields and never one it set before.",
+          "help": "How often one fill reads the form again for fields that appeared or became enabled; a later pass fills only empty fields. Example: 3."
+        },
+        "fillBudgetSeconds": {
+          "label": "Time for one fill (s)",
+          "description": "The most seconds one fill takes in all, every view and pass together. Past it no further pass and no further view starts, and the answer says the fill ran out of time.",
+          "help": "Seconds one fill may take across all views and passes; a slow page stops at this limit and says so. Example: 30."
+        },
+        "tickConsent": {
+          "label": "Tick consent boxes",
+          "description": "Ticks the checkboxes a valid fill finds asking for consent - privacy, terms, GDPR - even when the page does not mark them required, since a page often enables its submit button only then. A newsletter or marketing box is never one of them and stays left to the seed. Off leaves consent boxes to the seed too; required boxes are always ticked.",
+          "help": "Ticks privacy, terms and GDPR checkboxes in a valid fill, so a form that enables its submit button only then can be sent. Newsletter and marketing boxes are not ticked by this."
         }
       },
       "tools": {

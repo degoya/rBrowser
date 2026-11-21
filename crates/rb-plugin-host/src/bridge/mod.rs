@@ -132,7 +132,7 @@ impl PageBridge {
 fn random_token() -> String {
     let mut bytes = [0u8; 12];
     rand::rng().fill_bytes(&mut bytes);
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    rb_util::hex(&bytes)
 }
 
 /// What a page script sent through its binding.

@@ -9,8 +9,8 @@
 //!
 //! Adapted from rCommander's `crates/rc-update/src/offer.rs`: no database schema flag.
 
-use chrono::{DateTime, Utc};
 use serde::Serialize;
+use time::OffsetDateTime;
 
 use crate::manifest::{Artifact, Channel, UpdateManifest, kind};
 
@@ -20,7 +20,8 @@ use crate::manifest::{Artifact, Channel, UpdateManifest, kind};
 pub struct Offer {
     pub version: String,
     pub channel: Channel,
-    pub released_at: DateTime<Utc>,
+    #[serde(serialize_with = "crate::utc::serialize")]
+    pub released_at: OffsetDateTime,
     /// Plain text, the version's section of the changelog.
     pub notes: String,
     /// The file for this platform and architecture, when the release has one.

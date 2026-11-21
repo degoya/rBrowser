@@ -23,6 +23,34 @@ fn messages_are_numbered_from_one_and_kept_in_order() {
     assert_eq!(keys, ["a.one", "a.two", "a.three"]);
 }
 
+/// RB-093-04: a saved bug report's message keeps both its buttons in the log, so the bar and
+/// the history that read it later show them too.
+#[test]
+fn a_message_keeps_its_command_and_its_copy_button() {
+    let log = StatusLog::new(10);
+    let action = StatusAction {
+        command: "report.open_folder".to_owned(),
+        label_key: "report.action.open_folder".to_owned(),
+        label_args: BTreeMap::new(),
+        args: serde_json::Value::Null,
+    };
+    let copy = rb_ipc::StatusCopy {
+        label_key: "report.action.copy_markdown".to_owned(),
+        report: "2026-11-20_14-03-07".to_owned(),
+    };
+    let message = log.push_with_copy(
+        notice("report.notice.written", NotificationLevel::Success),
+        Some(action.clone()),
+        Some(copy.clone()),
+        100,
+    );
+    assert_eq!(message.action, Some(action));
+    assert_eq!(message.copy, Some(copy));
+    assert_eq!(log.items(), [message]);
+    let plain = log.push_with(notice("a.one", NotificationLevel::Info), None, 200);
+    assert_eq!(plain.copy, None);
+}
+
 #[test]
 fn the_oldest_messages_go_once_the_log_is_full() {
     let log = StatusLog::new(2);

@@ -29,6 +29,7 @@ pub mod js;
 pub mod locator;
 pub mod model;
 pub mod pace;
+pub mod path;
 pub mod spec;
 pub mod steps;
 

@@ -14,14 +14,13 @@
 // Plugins has its own tabs (RB-080-80): Installed and Disabled list the plugins with a count
 // each, Settings holds the category's cards; with the tabs off the list heads its card.
 // The search is a `UInput`, the categories a vertical `UNavigationMenu` and the sandbox warning a
-// `UAlert` (Nuxt UI, RB-080-88).
+// `UAlert` (Nuxt UI, RB-080-88); in a narrow window the categories are a select above the content
+// (`SettingsNav.vue`, RB-080-96).
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UAlert from '@nuxt/ui/components/Alert.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
-import UInput from '@nuxt/ui/components/Input.vue';
-import UNavigationMenu, { type NavigationMenuItem } from '@nuxt/ui/components/NavigationMenu.vue';
-import USwitch from '@nuxt/ui/components/Switch.vue';
+import type { NavigationMenuItem } from '@nuxt/ui/components/NavigationMenu.vue';
 import type { IpcClient } from '../ipc/client';
 import AboutPage from '../about/AboutPage.vue';
 import type { DevicePreset, JsonValue } from '../ipc/protocol';
@@ -32,7 +31,7 @@ import DiagnosticsSave from './DiagnosticsSave.vue';
 import TrustPage from '../trust/TrustPage.vue';
 import { SETTINGS_ICONS } from './icons';
 import JsonPanel from './JsonPanel.vue';
-import { createInstalledLoader } from './plugins/loader';
+import { createInstalledLoader, refreshOnChange } from './plugins/loader';
 import CatalogPanel from './plugins/CatalogPanel.vue';
 import PluginsList from './plugins/PluginsList.vue';
 import { CATALOG_TAB, countTabs, disabledIds, type PluginListTab, showBundled } from './plugins/pluginTabs';
@@ -41,6 +40,8 @@ import { type CategoryView, findDef, layoutOf } from './schema';
 import { filterOf } from './search';
 import SectionCard from './SectionCard.vue';
 import SectionHeader from './SectionHeader.vue';
+import SettingsNav, { type SettingsCategoryItem } from './SettingsNav.vue';
+import { isNarrow, useWindowWidth } from './narrow';
 import TabStrip from './TabStrip.vue';
 import { flagOf, SECTION_TABS_KEY } from './flags';
 import { createSettingsStore } from './store';
@@ -55,6 +56,8 @@ const props = defineProps<{
   routeSection?: string | null;
   /** Whether the open project is trusted (Project > workspace trust shows it). */
   trusted?: boolean | null;
+  /** The page width, for tests; the window's own width otherwise (RB-080-96). */
+  pageWidth?: number;
 }>();
 const { t, locale } = useI18n();
 const store = createSettingsStore(props.client);
@@ -78,11 +81,17 @@ const tab = ref<string | null>(null);
 // The installed plugins, for the plugin tabs and their counts (RB-080-80); asked for when
 // Plugins opens, so the list is fresh there.
 const plugins = createInstalledLoader(props.client);
+// RB-092-06: an install, update or removal takes effect live; a list shown follows it.
+let stopFollowing: (() => void) | null = null;
 
-onMounted(() => void store.start());
+onMounted(() => {
+  void store.start();
+  stopFollowing = refreshOnChange(props.client, plugins);
+});
 onUnmounted(() => {
   store.stop();
   plugins.stop();
+  stopFollowing?.();
 });
 watch(selected, (id) => {
   if (id === PLUGINS_CATEGORY) plugins.refresh();
@@ -115,6 +124,12 @@ const navItems = computed<NavigationMenuItem[]>(() =>
     };
   }),
 );
+/** The categories as choices of the narrow window's select (RB-080-96). */
+const categoryChoices = computed<SettingsCategoryItem[]>(() =>
+  allCategories.value.map((category) => ({ label: t(category.titleKey), value: category.id })),
+);
+const windowWidth = useWindowWidth();
+const narrow = computed(() => isNarrow(props.pageWidth ?? windowWidth.value));
 const sectionTabs = computed(() => flagOf(store.values.value, SECTION_TABS_KEY, true));
 const visible = computed(() => {
   const current = schema.value;
@@ -245,32 +260,22 @@ watch(
 
 <template>
   <!-- overflow-clip, not hidden: scrollIntoView would scroll a hidden root and leave it there. -->
-  <div class="flex h-screen overflow-clip bg-default text-default">
-    <aside class="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto border-r border-default p-3">
-      <UInput
-        v-model="query"
-        type="search"
-        :icon="SETTINGS_ICONS.search"
-        :placeholder="t('settings.search.placeholder')"
-        :aria-label="t('settings.search.placeholder')"
-        class="w-full"
-        data-testid="search"
-      />
-      <label class="flex items-center gap-2 text-sm">
-        <USwitch v-model="onlyChanged" :aria-label="t('settings.search.only_changed')" data-testid="only-changed" />
-        {{ t('settings.search.only_changed') }}
-      </label>
-      <UNavigationMenu
-        :items="navItems"
-        orientation="vertical"
-        color="primary"
-        :aria-label="t('settings.nav.label')"
-        :ui="{ list: 'gap-0.5', link: 'cursor-pointer' }"
-        data-testid="settings-nav"
-      />
-    </aside>
+  <div class="flex h-screen overflow-clip bg-default text-default" :class="narrow ? 'flex-col' : ''">
+    <SettingsNav
+      v-model:query="query"
+      v-model:only-changed="onlyChanged"
+      :items="navItems"
+      :categories="categoryChoices"
+      :current="searching ? null : selected"
+      :narrow="narrow"
+      @select="select"
+    />
 
-    <main class="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6" data-testid="settings-main">
+    <main
+      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto"
+      :class="narrow ? 'p-3' : 'p-6'"
+      data-testid="settings-main"
+    >
       <p v-if="store.loadError.value" class="text-sm text-error" role="alert">
         {{ t('settings.load_failed', { reason: store.loadError.value }) }}
       </p>

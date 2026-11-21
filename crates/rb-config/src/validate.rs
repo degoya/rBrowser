@@ -11,14 +11,17 @@
 use std::collections::HashSet;
 
 use rb_util::json_pointer::escape;
+use rb_util::url::is_web_url;
 use serde_json::Value;
 
-use crate::bookmarks::is_web_url;
 use crate::emulation_extras::check_extras;
 use crate::{ConfigError, ConfigIssue, Layout, ProjectConfig, Zoom};
 
 /// The session every Chromium view without one shares; it need not be listed in `sessions`.
 pub const DEFAULT_SESSION: &str = "default";
+/// The largest width or height of a breakpoint in CSS px, as the device presets' viewports
+/// (security review w23: a full-page capture grows a view by it).
+pub const MAX_BREAKPOINT_SIZE: u32 = 10_000;
 /// The i18n key of a `startUrl` that is no absolute `http`/`https` URL.
 pub const START_URL_KEY: &str = "config.error.start_url";
 /// The i18n key of an `environments[].url` that is no absolute `http`/`https` URL.
@@ -65,6 +68,14 @@ pub fn check(config: &ProjectConfig) -> Vec<ConfigIssue> {
                     format!("{at}/{field}"),
                     "config.error.size_zero",
                     format!("breakpoint `{}`: {field} must be at least 1", breakpoint.id),
+                )),
+                Some(size) if size > MAX_BREAKPOINT_SIZE => issues.push(issue(
+                    format!("{at}/{field}"),
+                    "config.error.size_too_large",
+                    format!(
+                        "breakpoint `{}`: {field} is at most {MAX_BREAKPOINT_SIZE} CSS px",
+                        breakpoint.id
+                    ),
                 )),
                 None if breakpoint.device.is_none() && breakpoint.emulation.paper.is_none() => {
                     issues.push(issue(

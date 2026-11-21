@@ -7,6 +7,675 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-11-21
+
+### Added
+
+- Android: a local dev server reachable on the device (RB-096-12). A view that loads
+  `localhost`, `127.0.0.1` or `[::1]` gets `adb reverse` for exactly that port (the scheme's
+  without one) before the page loads - on opening, navigating, a history step and a reload -
+  after `adb reverse --list`, with `--no-rebind`, never touching another tool's reverse. A view
+  holds only the port of the address it loads now; rBrowser removes a reverse when no view
+  needs it any more, when Android or the new protected setting `engines.android.reverseLocalhost`
+  (on) is switched off, and first thing when it quits. One a crash left stays until the device
+  reconnects or the person removes it (adb names no owner, so rBrowser never removes a reverse
+  it cannot prove its own). Off, the view tells once per port that the device cannot reach the
+  address, with the setting linked.
+- API client laid out anew (RB-096-11): the request's header - method, URL, Send; title,
+  collection, Save, Save as new, Delete, Copy as code with its language, Benchmark - stands fixed
+  above the request's tabs, and the side column is tabs Requests, Variables, Import and Export
+  under an environment picker that is always there. Collections (folders below `.rbrowser/api/`)
+  are made, renamed, duplicated, exported and deleted, and requests opened, duplicated, renamed,
+  moved and deleted, from a context menu (right-click, the menu key or Shift+F10; a delete asks
+  and names the count). The Variables tab edits `http-client.env.json` - `$shared` and each
+  environment as a table, environments added, renamed and removed; a row marked private goes
+  to the private values, never into the file; a save over a file changed meanwhile is refused.
+  The editor shows each variable of the request with its value and marks one without a value,
+  and a `{{$secret name}}` without a value gets "Set value" before the send, kept at once.
+  `{{$secret name}}` now reads the private values (the environment's, then `$shared`) before
+  `RB_SECRET_<NAME>`. A plugin panel opens the settings at a key (`open_settings`); the API
+  client's texts that name a setting link to it. The new ops are the panel's alone: MCP neither
+  changes nor deletes a collection.
+- Every settings mention is a link (RB-094-21): a text that names a settings path ("Settings >
+  Engines > Android") opens Settings at its key. A notice links in the status bar, its history,
+  the error toast and MCP `status_messages` also when its code named no setting or the text is a
+  failure's reason; the Portal panel's off hint, the setup wizard (off, welcome, plugin step,
+  missing analyser, MCP that did not switch on) and the panels of Fonts, Lighthouse, Load test,
+  Network, Rulers, Security headers, Snippets and Structured data show *Open the setting* beside
+  the text (panel-ui `SettingLink`, a status line's `setting`). The settings lint fails on a
+  mention without its row in `crates/rbrowser/data/settings-links.json`.
+- Findings panel: run one check or a selection again (RB-094-17) - "Run <check> again" in a
+  check's row of the progress details and beside the plugin filter, checkboxes and "Run selected
+  again" in the details. The run goes over the last run's views and page and each check's result
+  is merged into the last run, the other checks' findings and rows kept; `checks_run` with
+  `plugins` over the same views merges the same way.
+- Requests of the page into the API client (RB-096-08): the network panel opens a captured
+  request in the API client as an unsaved draft (method, URL, headers, body) or saves it as a
+  request, and Save shown as requests saves the filtered list at once - one `.http` file per
+  method and path below `.rbrowser/api/<host>/`, one saved before skipped, the counts in the
+  status line; the endpoint view opens its newest request. Cookie, Authorization, API-key and
+  token headers, secret query parameters and body fields become variables named after the host;
+  their values go to the private values (`config.local.json`) or nowhere
+  (`api-client.captureSecrets`), a value the capture masked stays a variable without one. A body
+  is checked for secrets whatever its type (JSON sent as `text/plain`, multipart fields); one
+  that cannot be checked or that the view cannot hand over is left out and said, and a draft
+  over unsaved edits in the API client waits for Replace. MCP
+  `networkpanel_api_open` (read only) and `networkpanel_api_save` never keep a value; commands
+  `Leader D G` and `Leader D K`.
+- rBrowser's version and the credit line in the main window's title (RB-094-19):
+  `<project> - rBrowser <version> - made with Love by Alexander Herling/DEGOYA.digital`, without
+  the project part when none is open. `ui.titleBar.showVersion` and `ui.titleBar.showCredit`
+  (both on, Settings > General > Appearance) switch each part off at once; the other windows keep
+  their titles.
+- Devices and engines in the menus, an action's error at the top (RB-094-20, RB-096-10): ≡ ›
+  Devices & engines and the end of the toolbar's "+" (now built in the shell) list the Android
+  devices adb saw last with their state, "No device - how to connect" and Try again, the setting
+  while Android is off, Download adb, Safari and iOS ("macOS only" elsewhere). The error of an
+  action the person started shows as a toast in the toolbar's strip with Retry, Settings and
+  Download (`ui.notifications.errorToast`, on); a view that failed to start names its reason in
+  its label strip and retries on a click. An empty device list names the USB mode "File
+  transfer", USB debugging, the maker's Windows driver and Samsung's Auto Blocker; the debug log
+  names the adb in use and its answer to `adb devices -l`. No command is reachable only by a
+  shortcut any more: `mcp.setup` and `portal.present.start` got main menu rows, and the menu
+  coverage test allows no omission beyond the main menu's opener and the numbered families.
+- Connect an AI agent over MCP (RB-091-09): the setup wizard's recommended step "AI agent"
+  (skippable) and Settings > Automation > MCP under the new `mcp.client` show, for Claude Code,
+  VS Code / Copilot, Claude Desktop, Cursor, OpenAI Codex and pi, the client's project file
+  (`.mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`, `.pi/mcp.json`) and its connection for
+  every project (`claude mcp add --scope user`, `code --add-mcp`, `codex mcp add`, `pi mcp add`,
+  or Cursor's and Claude Desktop's user file, written only after the person ticks it and with a
+  copy of the old file). Every way is stdio through `rbrowser mcp`, no port and no token in any
+  file; an existing file keeps every other server, a file that cannot be merged is never
+  written. The wizard's button switches `mcp.enabled` on - the person's decision, never MCP's;
+  "Check connection" says when a client last reached rBrowser. `mcp.setup` (`Leader , N`) opens
+  the setup.
+- Accessibility of the shell UI (RB-090-08): axe-core's WCAG 2.2 A/AA rules and keyboard
+  checks (every control reachable, every Tab stop named) run in `npm test` over every page,
+  route and bar of the shell; the setup wizard's radio groups are named, the activity bar says
+  which activities start and end, scrolling code views are named regions; inventory and the
+  Windows/NVDA pass in `docs/accessibility.md`.
+- MCP prompts and resources (RB-095-01): an agent's client offers the prompts
+  `responsive_review` (every breakpoint looked at, findings per breakpoint), `a11y_triage` (axe's
+  findings by severity with fixes) and `bug_repro` (a bug reproduced in every view, then a bug
+  report), each with `url` and `breakpoints`; the read-only resources `rbrowser://views`,
+  `rbrowser://findings/latest`, `rbrowser://screenshots/latest` (a PNG only when its own URI is
+  read) and `rbrowser://config` (without the protected keys) save tool calls. Same token and
+  answer limit as the tools; settings `mcp.prompts` and `mcp.resources` (on), Settings >
+  Automation > MCP.
+- Android devices on USB as views (RB-095-02): with `engines.android.enabled` on, "Add an
+  Android device as a view" (`view.add_android`, `Leader V ;`, MCP `view_add_android`) adds
+  Chrome on the device over ADB as the breakpoint `android-<serial>` at the device's own size;
+  its navigations follow the grid, screenshots and CDP input reach the device, and its DevTools
+  port is forwarded to 127.0.0.1 only (a forward that answers beyond the machine is refused).
+  adb comes from `engines.android.adbPath`, PATH, `ANDROID_HOME`, `ANDROID_SDK_ROOT` or the
+  usual SDK folders; without one, `tools.adb.install` (`Leader X S`) downloads Google's
+  Platform Tools after the consent notice - never shipped, never over MCP. MCP
+  `android_devices` lists the devices.
+- Safari as the engine of a view on macOS (RB-095-03): a view set to `safari` (engine badge, `Leader B E`, MCP `views_set_engine`) opens the installed Safari over `safaridriver` in a window of its own at the breakpoint's viewport; it follows navigation and scroll, replays clicks, keys and text, takes screenshots, and only follows - Safari locks input in automated windows. Remote automation switched off names `safaridriver --enable`; outside macOS the badge menu shows Safari disabled with the reason. Settings `engines.safari.enabled` and `engines.safari.technologyPreview`; the Safari version in Settings > About. The new crate `rb-safari`; written against a fake driver, the spike on a Mac is open.
+- iOS as the engine of a view on macOS (RB-095-04): a view set to `ios` runs in Mobile Safari over `safaridriver` - in the iOS Simulator when Xcode is installed (any model, booted on demand), otherwise on an iPhone or iPad connected over USB; without either, the reason names both ways and the setting. The breakpoint's `iosDevice` names the model or the UDID; `Leader B I` (`ios.devices`) and the engine badge's menu list the simulators and devices, MCP `ios_devices` lists them and `views_set_engine` takes `iosDevice`. The size is the device's (marked), a click replays as a touch, the view only follows. Settings `engines.ios.mode`, `engines.ios.defaultSimulator`, `engines.ios.bootTimeoutSec`; device UDIDs are cut short in logs and masked in the diagnostics ZIP. Written against fakes; the spike on a Mac is open.
+- API client panel (RB-096-01, plugin `api-client`, `Leader P 4`): build a request - method, URL
+  with its query as rows, headers, body (JSON, form, multipart, raw, binary file, GraphQL), auth
+  (basic, bearer, API key; digest and OAuth 2 kept, not sent yet), timeout, redirects, TLS check
+  - and send it from rBrowser's core, without CORS, through the environment's proxy, with the
+  phases timed (DNS, connection, TLS, first byte, total); read the answer as a JSON tree with
+  search and a JSONPath filter, as source, as an image, its headers and cookies. Requests are
+  kept as one `.http` file each below `.rbrowser/api/` (VS Code REST Client and the JetBrains
+  HTTP Client run them as they are); variables `{{name}}` from
+  `.rbrowser/api/http-client.env.json`, coupled to the views' environment (`{{baseUrl}}`), the
+  private values of `api-client.secrets` (config.local.json) and `RB_SECRET_*`, every secret
+  masked in what comes back. The first send to a new host asks; the hosts allowed are kept for
+  the project (`api-client.allowedHosts`, Settings > Network > API client) and redirects follow
+  only to them. MCP: `api_collections`, `api_run` (saved requests only), `api_history`. New
+  capability `api-client`, the model crate `rb-api-model`.
+- Load test (RB-096-07, plugin `load-test`, `Leader P 5`, Stop `Leader K 2`): your own server
+  put under load on purpose by many virtual users sending the API client's saved requests - a
+  scenario in `.rbrowser/api/load/*.json` (order or weights, think times, values per user,
+  constant users or a ramp up, hold and down, a target rate, abort rules on the failure rate and
+  p95), run in the core on its own connection pool, live in the panel (requests per second,
+  p50/p95/p99, failures by kind, users, a time chart) and in the activity bar with Stop, a report
+  per run in `.rbrowser/out/load-test/` (JSON and HTML) and two reports compared. Targets only the
+  trusted project's own sites and this machine, any other host after the person confirms it is
+  theirs or theirs to test (`load-test.allowedHosts`, config.local.json, `x-protected`); every
+  run starts by the person's click on its summary; the ceilings are settings only
+  (`load-test.maxUsers` 50, `maxRps` 200, `maxDurationS` 300); Stop and closing rBrowser end every
+  connection at once; every request says `User-Agent: ... (rBrowser load test)` and goes out
+  without a proxy. MCP `load_reports`, `load_report`, `load_compare` read only; capability
+  `load-test` (risky in the trust dialog).
+- API client checks, collection runs and a benchmark (RB-096-04): checks per request - status
+  (`201`, `2xx`), a JSONPath value equals or contains, a header, the time - kept as
+  `# @rb-check` lines in the `.http` file, judged on every send; a collection run (`Leader K 1`,
+  MCP `api_run_collection`) sends every saved request and judges its checks, keeps the report in
+  `.rbrowser/out/api-client/report.json` (MCP `api_report`) and puts its failures into the
+  findings panel (rules `api-client.check-failed`, `api-client.request-failed`); the benchmark
+  of a saved request (MCP `api_bench`) sends it `api-client.benchRepeats` times (10) in one or
+  two environments, at most `api-client.benchConcurrency` (1, at most 4) at once, only to allowed
+  hosts, and shows min, median, p95 and max of every phase and the difference between the two.
+- API client imports (RB-096-02): the panel's **Import a collection** reads Postman (collection
+  v2.0/v2.1, environment, globals), Insomnia (export 4, JSON and YAML), Thunder Client, a Bruno
+  folder, HTTPie Desktop, `.http` files of several requests (VS Code REST Client, JetBrains, and
+  `http-client.env.json`), OpenAPI 3.x and Swagger 2.0 (one request per operation with an example
+  body), HAR and a pasted `curl` command into `.rbrowser/api/<folder>/` - one `.http` file per
+  request, no file overwritten, environments added to `http-client.env.json` without changing a
+  value (`api-client.importEnvironments`). A preview first; the report names what was taken,
+  what rBrowser does not run (scripts, tests, other auth kinds) and what was left out; every
+  literal token, password, key or cookie becomes a `{{$secret <name>}}` placeholder. Panel only,
+  never MCP. New crate `rb-api-import`.
+
+- API client: export and code (RB-096-03). **Copy as code** turns the request in the editor into
+  curl, HTTPie, `fetch` (Node) or a Playwright test - the environment's plain values put in, every
+  secret an environment variable the code reads (`api-client.codeVariables`), the command quoted
+  for PowerShell, cmd or a POSIX shell (`api-client.codeShell`). **Export** writes a folder, or
+  every request, as a Postman v2.1 collection, one `.http` file or a curl script to
+  `.rbrowser/out/api-client/exports/`, every variable kept. MCP `api_code` (saved requests,
+  read-only). New crate `rb-api-export`.
+
+- The portal as a presentation over the internet (RB-096-05): `Leader S W` (`portal.present.start`,
+  a person only - MCP can read its state and end it, `portal_present_status`,
+  `portal_present_stop`) opens a Cloudflare Quick Tunnel (no account) after the consent in the
+  Portal panel and hands out one-time links (`#t=` token in the fragment, `portal.presentation.
+  linkTtlSec`, `maxViewers`, five failures spend a link); the customer's browser follows the
+  presenter and drives nothing, paths outside `allowPaths` or in `denyPaths` answer 404 without
+  reaching the dev server, and no cookie or server detail passes. cloudflared is a managed tool
+  (pinned, SHA-256, Apache-2.0, downloaded only after the person's word) or
+  `tools.cloudflaredPath`; `Leader S K` a new link, `Leader S E` ends it; the activity bar shows
+  the viewers and the link's time left.
+- Endpoint analysis in the network panel (RB-096-06): a tab **Endpoints** groups the requests the
+  views already made by method and path, ids as placeholders (`/api/users/{id}`; own patterns in
+  `network-panel.endpoints.patterns`), with calls, median and p95 of duration and time to first
+  byte, sizes, status mix, caching and compression per endpoint and per view, and **Show the
+  requests** to jump to them. Findings for duplicate calls, N+1 patterns, large uncompressed and
+  uncacheable answers, slow endpoints and endpoints one breakpoint calls more often (`checks_run`,
+  `endpoints_check`, `Leader K 7`); limits in Settings > Network > Endpoints; MCP
+  `networkpanel_endpoints`. `network_requests` and the plugins' capture now carry each response's
+  waiting time, caching and compression facts and decoded size.
+- Pause a video recording (RB-090-68): `capture.video.pause` (`Leader C Z`, the activity bar's
+  Pause/Resume, the Video menu's check row, MCP `record_video` `pause`/`resume`) holds the
+  recording; the files leave the pause out - no gap, no frozen stretch - and
+  `capture.video.maxDurationSec` counts recorded time. Paused, the activity bar and the toolbar's
+  indicator say so and the time stands still. A flow run's activity bar entry names the step each
+  running view is at, "step n/m" (`m` the `step(` calls of the flow).
+- After an update that ships plugins you were not offered before, the status bar names them once
+  with an **Install all** button (they load at once); `plugins.catalog.newNotice` switches it off
+  (RB-094-13).
+- Reading order arrows in the tab order overlay (RB-094-02): `tabOrder.readingOrder` (off,
+  beside, instead) draws the reading order - the source order screen readers follow - as dashed
+  arrows between the tab stops, beside the tab order lines or instead of them, and frames each
+  element shown before the one before it in the source (CSS `order`, grid placement, reversed
+  flex, absolute positioning; WCAG 1.3.2), right to left where the content reads so; fixed,
+  sticky and unseen stops are left out. The outline plugin's `reading-order` rule, with
+  `tabOrder.readingTolerancePx` (4 px) as its tolerance; Settings > DevTools > Overlays.
+- An address field of its own for a decoupled view (RB-092-03): a click on the address in the
+  label strip of a view whose navigation is decoupled, `view.edit_address` (`Leader S L`,
+  palette) or the page menu's Sync › Edit this view's address opens a field in the strip (on the
+  canvas in the board's label); Enter loads the address in that view only - http, https and file,
+  a path under the environment in effect, the address bar's completion otherwise - and the other
+  views keep their pages; Escape cancels. A refused address (`javascript:`, `data:`,
+  `chrome:`, ...) names its reason in the status bar. A view that follows the active view gets
+  no field (the menu entry is disabled and says why). Setting `ui.cellLabel.addressEditable`
+  (on); MCP loads a view's page with `navigate { target: viewId }`.
+- `dir`/`lang` per view and pseudo-localisation of the page (RB-092-02): the emulation fields
+  `dir` (ltr, rtl, auto) and `lang` set the page's `<html dir lang>` live in Chromium views -
+  per breakpoint, as project defaults or with `emulation.set` / MCP `emulation_set`;
+  `emulation.toggle_dir` (`Leader V .`) flips right to left. `overlays.pseudo_locale`
+  (`Leader O Y`, MCP `pseudo_locale`) makes the page's texts longer, accented and marked with
+  `[ ]` (Settings > Emulation > Text direction and pseudo-localisation) and puts them back
+  without a reload; the sync keeps finding the elements, as the selectors read the original
+  texts. Both in the page's context menu Emulation.
+- A bug report bundle (RB-093-04): `report.create` (`Leader C U`, Capture > Bug report in the
+  page and main menus, the palette, MCP `bug_report { target, note? }`, which answers the paths
+  only) writes `.rbrowser/out/reports/<time>/` with a screenshot of each view (password fields
+  blacked out), the overview, the console errors and warnings and the failed requests
+  deduplicated over the views, page, environment, breakpoint, size, emulation, engine and version
+  - as `report.md` with relative image paths and as `report.zip`. Every text is masked (query
+  values, credentials, cookie and header values); headers and bodies are never read. Before
+  anything is saved a preview window shows the masked `report.md` with Save and Cancel (Cancel
+  leaves nothing behind; `report.preview`, on), and `report.folder` puts reports in a folder of
+  the person's choice - both user settings no MCP client or project config can set. Settings
+  Capture > Bug report: `report.include`, `report.annotate`; the status bar's Open folder
+  (`report.open_folder`, `Leader C Y`) and Copy Markdown.
+- Width sweep (RB-093-01): the plugin `width-sweep` drives one view from `width-sweep.from` to
+  `width-sweep.to` (320 to 1920 px) in steps of `width-sweep.step` (10 px), then pixel by pixel
+  around every change, and reports where the layout breaks between the breakpoints - horizontal
+  overflow (without the `100vw` false report), text cut off, overlapping siblings
+  (`width-sweep.kinds`) - as width ranges in the findings panel ("700-740 px: horizontal overflow
+  caused by `.hero img`"). The view leaves the sync while it runs; the end, Escape in the view,
+  `plugin.width_sweep.cancel` and MCP `sweep_cancel` give it its own width and sync back, the other
+  views keep URL and size. `plugin.width_sweep.run` (`Leader B W`, the context menu's Checks) and
+  MCP `sweep_run`. For it a plugin may send `Emulation.setDeviceMetricsOverride` with only a
+  `width` and `Emulation.clearDeviceMetricsOverride`: the host's width lease of the view, which
+  ends with the plugin's last running call at the latest.
+- HTML validation of the rendered DOM and per project (RB-094-06): `html-validate.source`
+  (`raw`, the default, or `rendered`; MCP `html_validate { source }`) validates the DOM after
+  rendering, serialized in the view, its findings by element instead of line. A trusted
+  project's `.rbrowser/htmlvalidate.json` sets the levels and options of the plugin's rules over
+  `html-validate.disabledRules` - only `rules`, never plugins, presets or element tables that load
+  code - and can switch on the opt-in `no-unknown-attributes`. Every finding with a line names
+  its element, so the findings panel highlights it in the view. html-validate is listed in the
+  About dialog's licences.
+- Live CSS (RB-094-04): the plugin `live-css` applies a CSS draft in every view at once, block
+  by block in every view or in chosen breakpoints (inside the media query of their widths), again
+  after a navigation (`live-css.applyOnNavigate`); on and off without losing it, *Copy as media
+  query* per block, the draft kept in `.rbrowser/out/live-css/` (`draft.css` as one stylesheet)
+  only in a trusted workspace. Panel (`Ctrl+Shift+Space P Q`), toggle (`Ctrl+Shift+Space D L`),
+  MCP `livecss_set` and `livecss_clear`.
+- Basic auth per environment and a session's login state (RB-094-08): `environment.auth`
+  (`Leader E A`) stores the user and password of an environment in the Windows Credential Manager,
+  bound to the project and the environment's origin - never in `config.json`; every view and
+  session then signs in to the environments listed under `basicAuth.environments` (Settings >
+  Project > Environments, protected) without a prompt, and nothing else gets the credential.
+  `session.state_export` (`Leader E W`) writes a session's cookies and `localStorage` as Playwright
+  `storageState` to `.rbrowser/out/state/<session>.json` (the project's sites only unless
+  `sessions.stateExportAllDomains`), `session.state_import` (`Leader E I`)
+  loads one into a session, and a flow's `// @storageState <file>` starts it logged in. MCP can
+  neither read nor set credentials or login state.
+- The outline across the breakpoints (RB-094-02): the Outline plugin finds the interactive
+  elements, headings and landmarks some breakpoints show and others lack or hide - one finding per
+  element naming the breakpoints missing it (`outline.diff.elements`) - and the reading order
+  against the source order (WCAG 1.3.2): a heading or control CSS `order`, grid placement or
+  reversed flex shows before its predecessor, both named, right to left where the page reads so
+  (`outline.readingOrder.tolerancePx`). The panel's tabs Breakpoints (the table element x
+  breakpoint) and Reading order, the commands `outline.breakpoint_diff` (`Leader B D`) and
+  `outline.reading_order` (`Leader B R`), MCP `outline_breakpoint_diff` and
+  `outline_reading_order`; the findings also through `checks_run`.
+- Clock and animations in every view (RB-094-07): `emulation.clock` (`Leader S T`, palette, page
+  menu Emulation > Clock, MCP `clock_set`) sets the time the pages read in every Chromium view at
+  once - fixed, or running from a start at real or faster speed, `Date` and `Intl.DateTimeFormat`
+  alike, a time without a zone each page's local time; the timers stay real. `overlays.animations`
+  (`Leader O J`, Emulation > Animations, MCP `animations_set`) stops, slows (10 %, 25 %) or
+  steps CSS and Web Animations per view or in all; a capture keeps a stopped view stopped. The
+  activity bar shows either while changed, with Step, 100 % and Real time. Settings > Emulation >
+  Clock and animations; Firefox and WebKit views are named as unsupported.
+- Engine comparison (RB-094-03): `compare.engines` (`Leader C Q`, palette, Capture > Visual and
+  the view's Screenshot menu) takes the view's page at its breakpoint in Chromium (a hidden render
+  view), Firefox and WebKit (a window of their own) at the same size and DPR, each with its own
+  user agent, and diffs every engine pair with the colour tolerance and the anti-aliasing test, so
+  font smoothing is no difference; `report.html` (side by side, slider, difference, the differing
+  areas) and `report.json` land in `.rbrowser/out/engine-compare/<run>/`. An engine that is not
+  installed or switched off is named, not an error. MCP `compare_engines` answers when done with
+  every path and per engine pair the share of differing pixels and the areas. Settings
+  `engineCompare.threshold`, `engineCompare.maxDiffPercent`, `engineCompare.waitMs` (Capture >
+  Engine compare). The environment comparison's report lists the differing areas too.
+- Plugin progress in the activity bar and Show at N px (RB-093-01): `host.report-progress` of a
+  running plugin call is the activity bar's plugins entry - the plugin, `done` of `total` and
+  Cancel, which runs the plugin's own `cancel` command (the width sweep's
+  `plugin.width_sweep.cancel`) - throttled to 4 steps a second and gone with the plugin's last
+  call; `ui.activityBar.show.plugins`. A finding that names a width (the width sweep's) offers
+  Show at N px in the findings panel: the plugin's `show` command (`plugin.width_sweep.show`, MCP
+  `sweep_show`) holds the finding's view at that width through the width lease until Escape,
+  Cancel, another width or `width-sweep.showSeconds` (120 s).
+- The last pages at the start (RB-092-04): with `startup.restore = last` (Settings > General >
+  Start behaviour; default `startUrl`) every view opens the page it showed when rBrowser closed -
+  a page under an environment in the environment in effect now -, and a decoupled view stays
+  decoupled; a URL on the command line wins. The pages are kept per view in the project's browser
+  profile only (on close and every 15 s), never in the project files, logs or diagnostics ZIP.
+  `views.restore_last` (`Leader R L`, palette) and MCP `views_restore_last` open them at any time.
+- Findings export and `rbrowser check` (RB-092-05): the last check run as SARIF 2.1.0 (one run
+  per plugin, breakpoints, views, engines and URL in each result), JUnit XML (one suite per
+  breakpoint, one case per rule), one offline HTML file or its JSON - from the findings panel's
+  Export split button, `checks.export` (`Leader K B`) and MCP `checks_export`, which writes only
+  below `.rbrowser/out/` or the protected `checks.export.dir`. `rbrowser check [--plugins]
+  [--format] [--out] [--fail-on]` runs the checks in the project's running rBrowser and exits 0
+  without a finding at or above the threshold, 1 with one, 2 when a plugin failed or none runs.
+  Settings `checks.export.defaultFormat`, `checks.export.failOn` and `checks.export.dir`.
+- A visual editor for recordings (RB-092-01): in the Recorder panel a `+` between two steps and
+  "Add step" at the end add a step of any kind (Navigation, Interaction, Input, Wait, Assert),
+  its element taken by "Pick in view" as a recorded click names it, the locator's candidates
+  editable; each step can be opened in the editor (kind, name, element, value, button and
+  modifiers, pause before it, breakpoints, on/off), tried alone in the active view, played from,
+  duplicated or skipped - a skipped step stays in the recording but is neither played nor
+  exported. "Continue recording from here" plays the steps up to a step at the pace Fast and
+  records the new steps after it (no recording when a step before fails). A fixed wait
+  (`wait`, at most 10 s) waits at every pace; a pause set in the editor replaces the recorded one.
+  Commands `recorder.step_add` (`Leader F N`), `recorder.step_try` (`F J`), `recorder.play_from`
+  (`F H`), `recorder.continue_from` (`F U`), `recorder.step_toggle` (`F B`),
+  `recorder.pick_element` (`F I`); MCP `recorder_step_add`, `recorder_step_update`,
+  `recorder_step_remove`, `recorder_step_toggle`, `recorder_step_try`, `recorder_start`
+  `continueFrom`, `recorder_play` `fromStep`; `automation.recorder.insertedStepPauseMs` (500 ms).
+- Responsive images per breakpoint and pixel density (RB-093-02): the first-party plugin
+  `responsive-images` shows, live in every view, which file the browser took from `srcset` or
+  `<picture>` and whether it is too large or too small for its rendered size times the view's
+  device pixel ratio, a `srcset` with widths but no `sizes`, and an LCP image that loads lazily or
+  without `fetchpriority="high"` - without a Lighthouse run. A table per breakpoint whose hover
+  marks the image in every view; settings in Checks > Responsive images
+  (`responsive-images.oversizeFactor`, `undersizeFactor`, `checkLcp`); `Leader K N`, `Leader P V`,
+  MCP `images_check`, `images_mark`, and part of `checks_run`.
+- A security header check (RB-093-03): the first-party plugin `security-headers` holds the main
+  document's headers and the cookies it sets to the common rules - CSP (missing, `'unsafe-inline'`/
+  `'unsafe-eval'`, wildcards, no `object-src`/`base-uri`), HSTS (`security-headers.hstsMinAge`; not
+  over `http:` or on a loopback host), frame protection, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`, CORS `*` with credentials, cookie `Secure`/`HttpOnly`/`SameSite` and the
+  `__Host-`/`__Secure-` prefixes, an HTTPS page redirecting to HTTP, cookie values never shown - one finding per URL and environment, and
+  compares the page across the project's environments in a panel (header x environment, the
+  differences marked); `Ctrl+Shift+Space K U`, `Ctrl+Shift+Space E H`, MCP `headers_check`,
+  `headers_compare`.
+- Container queries made visible (RB-094-01): the plugin `container-queries` frames every size
+  container in every view with its name, its size and the `@container` conditions that match now,
+  and drags one container's width on a handle to test its rules without changing the view (a
+  double click resets the inline style). Its panel lists every condition with its bounds and each
+  container per view with the next bound below and above and the breakpoints that switch it
+  (`Leader O U`, `Leader B C`; MCP `containers_overlay`, `containers_analyze`, `containers_resize`;
+  Settings > DevTools & Debugging > Container queries).
+- Consent pre-check (RB-094-05): the plugin `consent-check` lists which requests to other sites
+  (host and kind: script, pixel, font, iframe), cookies (name, domain, lifetime; never a value)
+  and localStorage keys a page has before any consent and after "Reject all" of a detected
+  cookie banner, with the differences and four rules for `checks_run`; settings
+  `consent-check.allowHosts`, `consent-check.rejectStep`, `consent-check.essentialCookies`; a
+  panel, `Ctrl+Shift+Space K Y`, MCP `consent_check`. A technical pre-check, no legal advice. The
+  tool and the command run in a fresh, discarded session of the core's consent probe (RB-094-09);
+  a `checks_run` reads the view as it is, read only.
+- HTML validation like the W3C validator (RB-090-97): the plugin `html-validate` checks the page
+  source as the view loaded it - not the rendered DOM - offline with html-validate (MIT, bundled),
+  or with a Nu HTML Checker at `html-validate.nuAddress` (empty by default; only then does the
+  source leave the device). Findings with rule, line and column per breakpoint, rules off and the
+  lowest severity in Settings > Checks > HTML validation, MCP `html_validate`, `Leader K V`.
+- A structured data panel (RB-090-96): the first-party plugin `structured-data` shows the
+  schema.org data of the chosen view's page - JSON-LD, Microdata and RDFa - as a tree and checks
+  it against the schema.org 30.1 vocabulary and the needs of the common rich results, each
+  finding at its node and in a list (`structured-data.richResults`, `structured-data.minSeverity`;
+  `Leader K T`, `Leader P U`, MCP `structureddata_inspect`). The SEO check's JSON-LD, Microdata
+  and RDFa readers moved into the shared library `plugins/schema-org`.
+- Recordings keep every menu hover and the pointer's way (RB-090-87): with `recordHover` `menu`
+  every hover on a menu entry of any level becomes a step once the pointer rests there
+  `automation.recorder.hoverDwellMs` (250 ms), with or without a click after it; passing over
+  quicker is no step. `automation.recorder.recordPointer` (`menu`, `all`, `off`) keeps the way to a
+  menu's hover or click with the step; Play and the exported flow and test move the pointer
+  along it with `page.mouse.move` before the step - with the recorded timing at the pace As
+  recorded, without waits at Fast - in a view of the recording's size. The Recorder panel shows
+  "Pointer path (N points)".
+- The Recorder panel shows the steps while recording (RB-090-89): each step as soon as it is
+  recorded, read-only, the newest marked and scrolled into sight, hovers with their pause and
+  pointer path; once saved, the recording opens for editing
+  (`automation.recorder.showLiveSteps`, on by default). Play brings a recording's view into
+  sight when the layout hides every view it plays in - the canvas centres on it, the strip
+  scrolls to it, focus mode focuses its breakpoint - and says so
+  (`automation.flows.revealRecording`, on by default).
+- Flows and recordings can be deleted (RB-090-91): "Delete" beside each entry of the Flows and
+  the Recorder panel, asked in the panel first (`automation.flows.confirmDelete`,
+  `automation.recorder.confirmDelete`, on by default); the commands `flows.delete` (`Leader F D`)
+  and `recorder.delete` (`Leader F M`) open their panel without a name. A trusted project stays
+  trusted when only the deleted flow left its protected folder; the flow running and the
+  recording being recorded or played stay. No MCP tool: an agent never deletes project files.
+- The SEO panel previews the page as a Google search result for desktop and mobile (RB-090-95):
+  favicon, site name, the URL as a breadcrumb, title and description cut by pixel width with an
+  ellipsis at a word end, the characters and width per text and what was cut;
+  `seo.serpPreview` (`both`, `desktop`, `mobile`, `off`). MCP `seo_social_preview` answers it as
+  `serp` with the limits per device (unverified).
+- Consent probe in the core (RB-094-09): a plugin granted the new capability `consent-probe`
+  (the consent check, RB-094-05) has rBrowser load an `http(s)` page in a fresh, empty,
+  temporary session of its own - never a view's -, capture its requests, cookies (name, domain,
+  expiry; never a value) and localStorage keys before consent and, with the plugin's "Reject
+  all" step, once more after it, then delete the session; the capture reaches the plugin as
+  `$consent`, and a `$consent` a caller sends is dropped. The probe loads only public addresses
+  and the trusted project's own sites unless `plugins.consentProbeAnyUrl` (Settings > Plugins,
+  off, not over MCP) allows any; a cancelled probe closes its session too. The trust dialog
+  marks the capability risky.
+- Timing counters and the K1/K11 measurement (RB-090-32): release builds keep counters of the
+  sync hub (queue wait, replay per engine, the navigation a view was given), the plugin calls
+  (wait for a slot, run), the window's requests and the start-up time to the first view's
+  first load - count, p50, p95, max over the last 1024. The MCP tool `app_perf` answers them
+  (`reset` measures afresh), "Show the timing counters" (`Leader D B`, the DevTools menu) shows
+  the p95s, the diagnostics ZIP carries `perf.json`; `performance.counters` (Settings >
+  Advanced > Diagnostics, on) switches them. `scripts/perf.sh` measures K1 (100 clicks on
+  `latency.html`, p95 at most 150 ms) and, with `--counters` and the saved `app_perf` answer,
+  K11 (Firefox and WebKit, p95 at most 300 ms) and the start-up time; `--runs 0` reports them
+  without a scroll run. `docs/dod.md` says what stands in for `scripts/e2e-windows.sh` until
+  RB-090-05 brings it.
+
+### Changed
+
+- Form autofill (RB-094-22): a fill takes at most `fillBudgetSeconds` (30 seconds, 5 to 300)
+  in all, every view and pass together; past it no further pass or view starts, and the answer says so (`outOfTime`, a
+  view's `stopped: deadline`, a view not started `timeout`). Consent checkboxes are ticked only
+  while the new setting `tickConsent` (on by default) says so, and a newsletter or marketing box
+  is never taken for one, whatever else its name says.
+- A captured request of a host whose name has `-` or `_` (RB-096-08) goes on into the untagged
+  folder an earlier capture made for it (`api-example-test/`), as long as only that host's
+  requests are in it and the tagged folder does not exist; a new host gets the tagged name.
+
+- Forced pseudo-class states stand in the activity bar (RB-094-16): while a view has a state
+  forced (page menu Force state, `view.force_state.set`, MCP `views_force_state`), an entry names
+  the states and the views - narrow, its icon and the number of views - with Reset for every
+  view (`view.force_state.reset`) and the close button; folded or with
+  `ui.activityBar.show.forcedStates` off, its compact form stands in the toolbar. The status bar
+  no longer says "forced" for as long as they last; views without the element, failures and the
+  last state gone stay one-off messages there.
+- The first-party plugins share their copied helpers - the crawl's URL and `robots.txt`, base64,
+  the rules' levels and the CDP mark of an element - in the library `plugins/plugin-util`, and
+  write the guest half of their components with `rb_plugin_api::guest_host!`: about 5,200 lines
+  fewer in the plugins, behaviour unchanged (RB-094-11).
+- The status bar's notice that pseudo-class states are forced has a **Reset** button that takes
+  them back in every view (`view.force_state.reset`, RB-090-56).
+- Settings help texts name the choices by the names the settings window shows, not by their
+  config ids (panels, breakpoint bar, toolbar, activity bar, links, cookies and eight plugins);
+  the desync timeout names the toolbar's Desynced (n) button. The settings lint refuses a text
+  that names an option id; the user SID is read once in `rb-process`, and the colour picker
+  decodes a window image's base64 once (RB-090-29).
+- One log store and one collector for MCP and the plugins (RB-090-34): `console_logs`,
+  `network_requests`, `errors` and the plugins' `$console` feed share the window's buffers instead
+  of collecting every event twice, and the views' network requests are collected only from the
+  first time they are asked for - or from the start with the new setting `mcp.collectNetwork`
+  (off), Settings > Automation > MCP.
+- Less idle work and fewer copies (RB-090-38): the plugin engine's epoch ticker runs only while a
+  plugin call does, the cookie copy's status poll only while Firefox or WebKit views exist; panel
+  files are served from the plugin's own files instead of a copy, and the sync paths read the
+  config's sync section without copying the whole project config. Switching back to one of the
+  plugin panels shown last no longer loads it again (`panels.keepFrames`, 3, Settings > Plugins),
+  and the palette's popup and the panels window no longer load the settings page with them.
+- The activity bar keeps its room, empty while nothing runs, so the views and panels no longer
+  jump when a check, a recording or a video starts and ends: `ui.activityBar.mode` `always`, the
+  new default; `bar` shows it only while something runs (RB-094-13).
+- Hot paths of the core trimmed (RB-094-10): every CDP event is built once and shared by its
+  subscribers instead of copied per subscriber; screencast frames no longer flow through the
+  shared event buffer, and the sync agents, the navigation sync and the plugin page scripts
+  follow their events on channels of their own, so a video recording no longer makes them miss
+  a binding call. A burst of bounds changes applies a view's device metrics latest-wins on one
+  worker per view; CDP frames are written to the pipe on a thread of their own; the annotated
+  settings schemas are built once per process; the MCP log collector looks a session of no view
+  up once; a plugin's progress reaches the shell pages as its own message instead of the whole
+  state; the leader's timeout ticker runs only while a chord is open.
+- Plugins load and unload live (RB-092-06): an install, update or removal from the catalogue,
+  the first-run wizard or the update check, and a project trusted after the start, take effect at
+  once - commands and shortcuts, the palette and menus, panels, page scripts in the open views,
+  checks, the context menu, settings and MCP tools (`notifications/tools/list_changed`) follow
+  without a restart. A call to a plugin removed while it runs ends with
+  `plugins.error.not_available`. "At the next start" is said only when no load can run.
+- The setup wizard runs in one click per step (RB-091-08): each step's button says what it does
+  and does it - "Install 3 plugins & continue" (the grants of the choice stand in the step, the
+  click is the consent; "Continue without plugins"), "Write config & continue", "Apply &
+  continue" - with progress, each plugin's state and Retry in the step. At the very first start
+  the plugins chosen there load at once, without a restart: the one load of the plugins waits
+  until the plugin step is answered (or the wizard closes). The project step previews by itself;
+  with an address the breakpoint analyser is preselected and says what it found ("2 breakpoints
+  in 3 stylesheets") or why it had no proposal, with Try again and Use mobile + desktop.
+- The Recorder panel stops a recording where it started it (RB-090-94): while one runs, "Stop
+  recording" stands beside its badge in place of "Start recording".
+- Dependencies: Nuxt UI 4.13.0 in the shell, the plugin panels and the SDK template.
+- The page's context menu is grouped like the main menu `≡` (RB-090-92): its submenus carry the
+  main menu's names in its order - View (the bars), Layout (Analyze breakpoints), Sync,
+  Emulation, Environments › Sessions, Capture › Screenshot and Video, Checks, Tools (Force state
+  and the plugins' tools), Flows › Run flow and Recorder, Panels; Inspect element, DevTools and
+  the view's own entries stay flat.
+- One element path for every check plugin (RB-094-10): the path a finding's id is made of is one
+  function in `plugins/web-common` for every page bundle and one in Rust (`schema-org`, re-exported
+  by `seo`), held with the page copy of `seo` to the shared cases
+  `tests/fixtures/element-path/cases.json`. Findings of `width-sweep` are re-identified once (a
+  step is numbered only among siblings of its tag), those of `overlays` and `seo` at camel-case
+  SVG elements and at the top-level children of a shadow root too; container paths of
+  `container-queries` drop the id form. One `isObject` and one tab-row arithmetic for the shell
+  and the plugins, the protocol names of the agent held to `rb-sync`.
+- Core consolidation of the quality audit (RB-094-10): one check whether an address is a web
+  page (`rb_util::url::is_web_url`: http(s) with a host, no whitespace) for presets, the
+  breakpoint keys, environment compare, bookmarks, the config check, restore-last and the
+  Lighthouse plugin; one whole-file write (`rb_util::fs::write_atomic`, synced, a temporary name
+  per write) for config files, instance files, the session state, flow results, the video
+  registry, the plugin catalogue and compile cache, baselines and recordings; one versioned folder
+  (`versioned_dir`) for extensions and managed tools; one text cut and hex (`rb_util::text`,
+  `rb_util::hex`); the project key table of the settings annotations in a file of its own.
+- The dates and times of the update manifests, the update journal, the plugin index, the
+  page clock and the local file names run on `time` instead of the unmaintained `chrono`
+  (RUSTSEC-2026-0543); files, MCP answers and messages keep their forms. `chrono` stays in
+  `Cargo.lock` through `rmcp` and `schemars`, so the advisory stays ignored in `deny.toml`
+  (RB-090-77).
+
+### Fixed
+
+- Windows: stopping a load test ends the requests still waiting for a slow server at once (a closed socket does not wake a blocking read there); two tests held to Windows' paths (RB-096-07).
+- Review of w33 (RB-096-12, RB-096-11, RB-094-22): an Android view's earlier loopback port is
+  released when it loads another address, so a page that sends it on to another local port
+  leaves no reverse behind; a view closed while its reverse was set gives it back; the reverses'
+  state locks per device and runs adb outside the shared lock; the reverse ledger is one file
+  per process, capped, a broken one moved aside. The Variables tab puts the private values back
+  when the environment file cannot be written after them, and lets one save delete an
+  environment and rename another onto its name.
+
+- Review of w32 (RB-096-11, RB-094-22, RB-096-08): a captured value past the first 1000 is
+  still masked in the log; a later autofill pass tells fields apart by the element, not by its
+  position, so a field a choice inserts is filled and the one before it is not reported twice;
+  the Variables tab refuses a rename onto an environment that keeps private values (`exists`),
+  moves both in a swap, writes the environment file only after the private values were kept,
+  keeps a new environment's private values when one of its name was removed in the same save,
+  and keeps numbers and booleans as such; a collection is not moved where its subfolders would
+  lie deeper than four levels (`too_deep`).
+
+- A request taken from the network panel into the API client (RB-096-08) can no longer carry
+  page content that sends more than the page did: a body line that would send a project file
+  is left out (and the API client never writes a text part that reads back as a file), and a
+  request holding variable placeholders the page wrote is skipped as `template`. Tokens in the
+  path (reset and invite links, webhook and bot paths, long random segments) become variables,
+  in the title and file name too; `X-Session`, `X-Auth`, `X-Sid` and `X-Session-Id` count as
+  secret headers; numbers and lists under a secret JSON key become variables, and a JSON string
+  that names a secret leaves the body out. Two hosts never share a folder, and a captured value
+  kept in place of another is named `replaced`.
+- The debug log of `adb devices -l` (RB-096-10) names each device's state with its serial cut
+  to four characters, never the whole serial, model or USB path.
+- Findings of test ZIP w30 (RB-096-09): a change of the user settings reaches the engines at
+  once - `engines.android.enabled` switched on no longer answers `android.disabled` until a
+  restart, and `engines.external`, Firefox, WebKit, Safari and iOS follow too (applied only when
+  `engines.*` changed, so no running window restarts for an unrelated setting). The load test's
+  editor without a saved request says where requests are made and opens the API client panel
+  (refused with a message when that plugin is not loaded),
+  and reads the requests again when the panel gets the focus back or a request list opens; the
+  Portal panel's "Presenting over the internet is off" hint opens Settings at
+  `portal.presentation.enabled`.
+- An Android view starts: rBrowser reads Chrome's `/json/version` up to its length (Chrome keeps the connection open) and takes the browser target Chrome on Android names without an id; before, the view waited about a minute and failed (RB-096-10).
+- Form autofill fills the fields a choice brings in the same run (RB-094-22): selects, radio
+  buttons and checkboxes are set first, after each one that changed the fill waits until the page
+  is quiet (`form-autofill.settleMilliseconds`, 300 ms, each wait at most 3 s), then reads the
+  form again and fills the fields that appeared or became enabled (also `aria-disabled` ones) in
+  up to `form-autofill.maxPasses` passes (3) - only empty ones, none twice. A privacy or terms
+  checkbox is checked in a valid fill, so a submit button it enables becomes active; nothing is
+  clicked or submitted. Each view's answer names its `passes`.
+
+- Security review of 0.9.6 (RB-096-01, RB-096-02, RB-096-05): the API client masks a secret also
+  form-encoded (a query API key) and in a Basic pair, takes no credential (`Authorization`,
+  `Proxy-Authorization`, `Cookie`, the API key's header, a header holding a secret) across a
+  redirect to another origin or from https to http, and reads no body file under `.git` or
+  `.rbrowser` in a Windows spelling (`.RBROWSER`, `.rbrowser.`, `GIT~1`); the importers cap an
+  OpenAPI example at 10 000 nodes and 1 MiB and refuse YAML nested deeper than 128 before it is
+  built; the presentation drops a start whose stop came during cloudflared's download, denies the
+  dev servers' editor launches by default (`/__open-in-editor`, `/__open-stack-frame-in-editor`,
+  `/__nextjs_launch-editor`, `/__nextjs_original-stack-frame`), sends a viewer's WebSocket control
+  frames only to the dev server (no HMR event such as `vite:invalidate`), refuses 8.3 short-name
+  path segments, passes no client-address header and starts cloudflared with a blank `--config`
+  of its own, so `~/.cloudflared/config.yml` is never read.
+- The storage panel's pins load again in a trusted workspace (RB-094-15): the plugin's component
+  refused the folder listing its trust check asks for, so every workspace counted as untrusted
+  and no pin was read, applied or saved.
+- Follow-ups of the 0.9.5 security review (RB-095-05): a changed Safari edition
+  (`engines.safari.technologyPreview`) starts that edition's `safaridriver` and the old driver's
+  views restart on it; the Safari driver's answers are parsed as they arrive, chunk sizes
+  checked; the adb search skips relative `PATH` entries; the Android exposure check asks every
+  own address of the machine and refuses a forward with none to ask at; an Android tab whose
+  attach fails is closed; long Android serials get breakpoint ids with a hash suffix; adb,
+  `xcrun` and `system_profiler` output is capped at 1 MiB; `rbrowser://screenshots/latest/{n}`
+  follows no link and answers only a PNG; a breakpoint's `iosDevice` is always written to
+  `config.local.json`.
+- A narrow settings window keeps room for its tabs (RB-080-96): below 640 px the fixed 256 px
+  category column gave way to a bar above the content - the categories as a select, the search
+  and "Only changed" beside it - so at 400 px the tab row has the whole width.
+- A plugin's own check run (RB-094-14) no longer replaces the findings panel's last run: over the
+  same views only that plugin's findings, failures and skips are replaced (summary recounted, the
+  export follows), its progress rows show the new result, and the plugin and view filters fall
+  back to all when their choice is gone; a failure under the plugin's own code shows its reason.
+- The consent check's probe reads and clears its cookies through its own page; it failed with
+  "the probe's browser did not answer" (RB-094-13).
+- The HTML validation of the served source failed in every view ("has no served source"):
+  rBrowser turns the Page domain on in the view's session before a plugin reads a resource's
+  content, which Chromium answers only then (RB-094-13).
+- Dragging a view or the canvas board moves the view together with its label and frame; the view
+  ran about a frame ahead (RB-094-13).
+- Dragging a view by its label or panning the canvas board moves the view, its label, frame and
+  footer frame together: the board no longer draws a drag at the pointer, the core sends it the
+  frames of each move and moves the views once the board painted them, as for a zoom; one move
+  at a time, the newest only, and the window skips a placement a newer one overtook. The pace is
+  logged at `debug` (target `rbrowser::canvas_pace`) (RB-094-18).
+- Audit fixes for secrets and URLs (RB-094-10): one list of secret URL parameter and header
+  names (`rb_util::mask`) for MCP answers, page texts, the log rules, recordings, bug reports and
+  the network panel's sessions - now with signed-URL credentials (`X-Amz-*`, `X-Goog-*`), `jwt`,
+  `ticket` and SAML messages - masking the fragment's parameters and an address's user info
+  too; a recording drops an address's user info and the recorder export's `baseURL` carries
+  none (RB-050-01, RB-050-02); MCP's `checks_run` and `breakpoints_detect` take only the URLs
+  `navigate` may load - http(s), or a file inside the project without links (RB-094-08); a
+  stored Basic auth credential answers a second realm of its environment's origin once as well
+  (RB-094-08).
+- Hardening from the w27 security review: a bug report masks token-shaped URL path segments and
+  blacks out a password field shown in clear and fields named for a password, secret, token or
+  PIN (RB-093-04); a plugin updated live has its lasting CDP state reset like a removed one
+  (RB-092-06); the canvas board's `view.edit_address` is refused unless its arguments are a view
+  id and an optional address of bounded length (RB-092-03).
+- The setup wizard no longer installs the recommended plugins when Next is pressed without Apply;
+  it installs the ticked ones (RB-091-08). Back to the plugin step shows what is installed. The
+  analyser no longer falls back to a mobile and a desktop view without a word: the wizard and
+  `rbrowser init` (stderr) name the reason - not reachable, no answer in time, no stylesheet, the
+  plugin not loaded or failed, nothing found. A wizard step that fails unexpectedly answers with
+  an error instead of a spinner that never ends.
+- A recorded click on a label whose text is visually hidden plays back (RB-090-93): the export
+  takes the elements of the recorded tag whose whole text it is
+  (`locator('label').filter({ hasText: /^\s*Menu\s*$/ })`) instead of clicking the hidden span
+  the label covers; the checkbox or radio a label toggles is no `check` step of its own, the
+  click stays the step; and a view where the label is not shown drops out of the step's `onlyIn`.
+- macOS: every window shows its close, minimise and zoom buttons, and the menu bar has a
+  Window menu with Minimize (Cmd+M) and Close Window (Cmd+W) (RB-090-98).
+- Sitemap shots of a breakpoint with a pixel ratio above 1 show the page once (RB-090-90): the
+  render view paints at the breakpoint's ratio, where an iPad mini at 2 showed the page twice side
+  by side and repeated down the image. The main menu opens the gallery of a capture while it
+  runs, as the sitemap bar does, from the run's start on: the window learns of a run when it
+  starts, not with its first shot, so the menu's Gallery and Cancel no longer act on the run
+  before.
+- The sitemap gallery's filters work and its shots are readable (RB-090-86): the breakpoint and
+  status filters reach the contact sheet (still without a script); the shots are as wide as the
+  new setting Capture > Sitemap > Gallery thumbnail width says (160 to 640 px, 320 by default)
+  and a click opens the large view. The gallery window shows the gallery as a page of the app
+  (Nuxt UI): the run's facts, the filters, the contact sheet, a large view with Previous, Next and
+  the arrow keys, and the errors; its images come from a route that serves only that run's shots
+  to that window. The `index.html` in the run's folder stays the export for the system browser,
+  now in the app's colours, light and dark. The form autofill fills the chosen form, else the
+  page's fields but those of its navigation - header, nav, menus and search forms - and never a
+  menu toggle outside a form such as a site's mobile menu checkbox; the focus no longer narrows
+  a fill. A recording gets only the fields a fill changed, so a second fill of the same form
+  adds no steps.
+- Sitemap: the gallery opens while a capture runs, and full-page shots show the whole page
+  (RB-090-88). The gallery window reads the run as it goes - from the menu, the sitemap bar, the
+  command and MCP; with Open the gallery in set to your browser, a run without its `index.html`
+  yet says that the file is written when the capture ends instead of failing with
+  `sitemap.error.no_gallery`. A full-page shot grows the windowless render view to the page's
+  height for the shot and back, so the image is no longer the top of the page repeated down to
+  its length, nor striped at a device pixel ratio of 2 or 3. A shot stays within 16384 px of
+  height at any pixel ratio and 64 megapixels; a page beyond fails its shot with the reason.
+- A recording plays in the view it was recorded in after focus mode (RB-090-89): leaving the
+  canvas or the strip for focus mode or the grid kept the views' off-screen marks, so Play took
+  the focused view for hidden and failed with "every view of the run is hidden in the layout".
+
+- A breakpoint's DPR is at least 0.25 and its width and height at most 10000 CSS px (security
+  review w23): a full-page capture grows a view by them. A size typed into a view, `view_add`
+  and the size shortcuts keep to the same limits.
+- Audit fixes of the core (RB-094-10): a width sweep's late restore never undoes the width of a
+  lease taken after it (RB-093-01); a version of an extension or a managed tool set aside during
+  an install that cannot be put back is logged as an error, no longer dropped silently; a flow
+  result no longer leaves `result.json.partial` behind; the coverage plugin counts a file at the
+  page's origin with `:443` or `:80` written out as first-party; Lighthouse refuses a URL with
+  leading whitespace or without a host.
+
 ## [0.9.0-beta.2] - 2026-11-19
 
 ### Added

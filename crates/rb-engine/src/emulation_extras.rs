@@ -21,9 +21,21 @@ pub const CPU_THROTTLING: &str = "cpuThrottling";
 pub const OFFLINE: &str = "offline";
 /// The print media type (`media.mediaType: "print"`, the print view).
 pub const PRINT: &str = "print";
+/// The page's forced `<html dir>` (RB-092-02): the sync agent of a Chromium view sets it.
+pub const DIR: &str = "dir";
+/// The page's forced `<html lang>` (RB-092-02).
+pub const LANG: &str = "lang";
 
 /// The extras in marking order.
-const FIELDS: [&str; 5] = [GEOLOCATION, TIMEZONE, CPU_THROTTLING, OFFLINE, PRINT];
+const FIELDS: [&str; 7] = [
+    GEOLOCATION,
+    TIMEZONE,
+    CPU_THROTTLING,
+    OFFLINE,
+    PRINT,
+    DIR,
+    LANG,
+];
 
 /// Whether an engine can emulate a field.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +90,8 @@ fn is_set(emulation: &Emulation, field: &str) -> bool {
         CPU_THROTTLING => emulation.cpu_throttling.is_some(),
         OFFLINE => emulation.network.is_some_and(|network| network.offline),
         PRINT => emulation.media.media_type == Some(MediaType::Print),
+        DIR => emulation.dir.is_some(),
+        LANG => emulation.lang.is_some(),
         _ => false,
     }
 }

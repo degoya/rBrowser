@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added (RB-096-08): Open in API client and Save as request on a request, Save shown as
+  requests over the filtered list, Open in API client on an endpoint; the core reads the
+  headers and the body and makes every secret a variable (capability `api-client`). MCP
+  `networkpanel_api_open`, `networkpanel_api_save`; commands `api_open`
+  (`Ctrl+Shift+Space D G`) and `api_save` (`Ctrl+Shift+Space D K`).
+- Fixed (RB-094-10): a saved session masks the app's one list of secret URL parameters, now
+  with signed-URL credentials (`X-Amz-*`, `X-Goog-*`), `jwt`, `ticket` and SAML messages, in
+  the fragment too, and an address's user info.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.
@@ -14,6 +22,22 @@
   choice of two, a breakpoint's views as a choice of the grid's views; the confirmation of Clear
   site data inline; failures as sentences, counts as plurals; headers and bodies in the one
   highlighter, the text fields coloured as you type.
+
+## 0.3.0
+
+The endpoint analysis (RB-096-06): the tab Endpoints groups the capture by method, origin and path
+with ids as placeholders - a segment of digits `{id}`, a UUID `{uuid}`, a hex hash or a
+random-looking token `{hash}`, the person's patterns (`endpoints.patterns`, `/api/products/{slug}`)
+first - and shows per endpoint the calls, failures, median and p95 of duration and waiting time,
+sizes transferred and decoded, statuses, `Cache-Control`, validators and compression, per view
+too; Show the requests filters the Requests tab by the endpoint (`list`'s new `endpoint`). Nothing
+is sent. The plugin is a `check-plugin` too: `endpoint.duplicate`, `.n-plus-one`,
+`.uncompressed`, `.no-cache`, `.slow` and `.breakpoint-calls` over each view's current page, the
+person's rule levels applied; command `endpoints_check` (`Ctrl+Shift+Space K 7`) reports them,
+command `endpoints` (`Ctrl+Shift+Space P 7`) opens the tab. Tools `endpoints` (masked URLs, the
+hand-over `apiClient` for the API client) and `endpoints_check`; settings `endpoints.resourceTypes`,
+`.patterns`, `.slowMs`, `.largeBytes`, `.nPlusOne`, `.breakpointDifference` (Network > Endpoints);
+capability `findings`.
 
 ## 0.2.0
 

@@ -99,6 +99,7 @@ pub fn facts_from(build: Build<'_>, dirs: &Dirs) -> AboutInfo {
         chromium,
         firefox: None,
         webkit: None,
+        safari: None,
         node: None,
         built: known(build.built),
         platform: Some(platform()),

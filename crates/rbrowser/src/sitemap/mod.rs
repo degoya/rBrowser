@@ -15,7 +15,8 @@
 //! - [`app`]: the commands ([`defs`]: `sitemap.capture` `Leader C M`, `sitemap.cancel`
 //!   `Leader C X`, `sitemap.gallery` `Leader C I`, `panels.sitemap` `Leader P G`), the MCP tools'
 //!   entry points ([`tool`]) and the shell's progress; [`feedback`] the notices of a start,
-//!   [`gallery`] the gallery's own window; [`http`] is the plugins' HTTP transport.
+//!   [`gallery`] the gallery's own window and [`gallery_page`] the run and the images the page
+//!   in it shows (RB-090-86); [`http`] is the plugins' HTTP transport.
 //!
 //! Output: `.rbrowser/out/sitemap-capture/<run>/<page>/<breakpoint>.png`, `run.json`,
 //! `index.html`.
@@ -25,9 +26,11 @@ pub mod backend;
 pub mod defs;
 pub mod feedback;
 pub mod gallery;
+pub mod gallery_page;
 pub mod http;
 mod job;
 pub mod plan;
+mod render_surface;
 pub mod render_views;
 pub mod runs;
 pub mod scripts;

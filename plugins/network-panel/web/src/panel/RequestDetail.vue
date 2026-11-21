@@ -2,7 +2,8 @@
 // The selected request (RB-070-02, on Nuxt UI since RB-080-84): its address, a line per view
 // (status with MIME type and cache below it, size, time - or that the view did not load it) with Show for its
 // response body, the body in the syntax colours of its MIME type (the one highlighter, text
-// only), and the request's actions: Mock this request, Repeat, Repeat 10x (live list only).
+// only), and the request's actions: Mock this request, Repeat, Repeat 10x, Open in API client and
+// Save as request (RB-096-08; live list only).
 import { computed, ref, watch } from 'vue';
 import type { TableColumn } from '@nuxt/ui';
 import CodeBlock from '../../../../web-common/panel-ui/src/code/CodeBlock.vue';
@@ -105,6 +106,8 @@ const lang = computed(() => (body.value && !body.value.base64 ? highlighter().de
       <UButton id="mock-this" size="sm" variant="outline" color="neutral" icon="i-lucide-flask-conical" :label="t('detail.mockThis')" @click="net.mockThis()" />
       <UButton id="repeat-this" size="sm" variant="outline" color="neutral" icon="i-lucide-repeat" :label="t('compose.repeat')" @click="net.repeat(1)" />
       <UButton id="repeat-ten" size="sm" variant="outline" color="neutral" icon="i-lucide-repeat-2" :label="t('compose.repeatTen')" @click="net.repeat(10)" />
+      <UButton id="api-open" size="sm" variant="outline" color="neutral" icon="i-lucide-send" :label="t('api.open')" @click="net.api.open()" />
+      <UButton id="api-save" size="sm" variant="outline" color="neutral" icon="i-lucide-save" :label="t('api.save')" @click="net.api.save()" />
     </div>
   </UCard>
 </template>

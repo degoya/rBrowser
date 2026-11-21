@@ -137,6 +137,10 @@ fn a_screenshot_is_waited_for_beyond_its_delay() {
         ignore_cache: false,
     };
     assert_eq!(reply_timeout(&reload), REPLY_TIMEOUT);
+    let check = Request::Check {
+        args: crate::checks::export::check::CheckRequest::default(),
+    };
+    assert!(reply_timeout(&check) > crate::checks::export::check::CHECK_BUDGET);
 }
 
 #[test]

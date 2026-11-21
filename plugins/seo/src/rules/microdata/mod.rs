@@ -1,48 +1,22 @@
 //! RB-080-11, the group `microdata`: the page's Microdata and RDFa Lite items, read from the
 //! document the essentials read (the rendered one when there is one). `microdata.type_missing`
 //! (an item without a type), `microdata.type_unknown` (a schema.org type the table
-//! `data/schema.json` does not know - a hint, the table holds the common types only),
-//! `microdata.required_missing` (a property the type's rich result needs, from the same table,
-//! nested items too) and `microdata.jsonld_conflict` (a text property the page's JSON-LD gives
-//! the same entity another value).
-
-use std::collections::BTreeMap;
-
-use serde::Deserialize;
+//! `plugins/schema-org/data/rich-results.json` does not know - a hint, the table holds the
+//! common types only), `microdata.required_missing` (a property the type's rich result needs,
+//! from the same table, nested items too) and `microdata.jsonld_conflict` (a text property the
+//! page's JSON-LD gives the same entity another value).
 
 use crate::audit::Page;
 use crate::rules::{Element, Sink, short};
 
-pub mod extract;
-pub mod jsonld;
+// The readers and the table live in the shared library `plugins/schema-org` (RB-090-96), which
+// the structured data panel reads too; the old paths hold.
+pub use schema_org::jsonld;
+pub use schema_org::microdata as extract;
+pub use schema_org::rich::{Required, Table, table};
 
 use extract::{Item, Value};
 use jsonld::Entity;
-
-/// The type table, compiled in.
-const DATA: &str = include_str!("../../../data/schema.json");
-
-/// What a type needs.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(default)]
-pub struct Required {
-    pub all: Vec<String>,
-    pub any: Vec<Vec<String>>,
-}
-
-/// `data/schema.json`.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-pub struct Table {
-    pub version: u32,
-    pub types: Vec<String>,
-    pub required: BTreeMap<String, Required>,
-}
-
-/// The type table.
-#[must_use]
-pub fn table() -> Table {
-    serde_json::from_str(DATA).expect("data/schema.json is the plugin's own and parses")
-}
 
 pub fn check(page: &Page<'_>, sink: &mut Sink<'_>) {
     let rules = [
@@ -65,7 +39,7 @@ pub fn check(page: &Page<'_>, sink: &mut Sink<'_>) {
     for item in &items {
         held(item, &table, sink);
     }
-    let entities = jsonld::entities(&facts.json_ld);
+    let entities = jsonld::entities(facts.json_ld.iter().map(|block| block.text.as_str()));
     if !entities.is_empty() {
         conflicts(&items, &entities, sink);
     }

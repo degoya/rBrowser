@@ -97,6 +97,15 @@ describe('the tab order', () => {
     expect(names()).toEqual(['toggle', 'help']);
   });
 
+  it('gives every stop its place in the source order, a positive tabindex and shadow content included (RB-094-02)', () => {
+    document.body.innerHTML = '<button data-t="a">a</button><x-a data-t="host"></x-a><button data-t="b" tabindex="2">b</button><button data-t="c">c</button>';
+    const root = (document.querySelector('x-a') as HTMLElement).attachShadow({ mode: 'open' });
+    root.innerHTML = '<button data-t="s2" tabindex="1">2</button><button data-t="s1">1</button>';
+    const stops = tabOrder(document, { includeIframes: true });
+    expect(stops.map((stop) => stop.element.getAttribute('data-t'))).toEqual(['b', 'a', 's2', 's1', 'c']);
+    expect(stops.map((stop) => stop.source)).toEqual([3, 0, 1, 2, 4]);
+  });
+
   it('marks an iframe it does not walk as one stop', () => {
     document.body.innerHTML = '<button data-t="one">1</button><iframe data-t="frame"></iframe><button data-t="two">2</button>';
     expect(names(document, false)).toEqual(['one', 'iframe:frame', 'two']);
@@ -111,5 +120,22 @@ describe('the composed selector and path', () => {
     const button = root.querySelector('button') as Element;
     expect(composedSelector(button)).toBe('#card >>> button.buy');
     expect(composedPath(button)).toBe('html > body > main > x-card >>> div > button');
+  });
+
+  it('number the top-level children of a shadow root, name the frames first and keep the end of a long path (RB-094-10)', () => {
+    document.body.innerHTML = '<main><x-card></x-card></main><iframe></iframe>';
+    const root = (document.querySelector('x-card') as HTMLElement).attachShadow({ mode: 'open' });
+    root.innerHTML = '<div></div><div><button>b</button></div>';
+    const button = root.querySelector('button') as Element;
+    const frame = document.querySelector('iframe') as HTMLIFrameElement;
+    expect(composedPath(button)).toBe('html > body > main > x-card >>> div:nth-of-type(2) > button');
+    expect(composedPath(button, [frame])).toBe('html > body > iframe >>> html > body > main > x-card >>> div:nth-of-type(2) > button');
+    const deep = document.createElement('section');
+    let leaf: Element = deep;
+    for (let level = 0; level < 60; level += 1) leaf = leaf.appendChild(document.createElement('div'));
+    document.body.append(deep);
+    const path = composedPath(leaf);
+    expect(path).toHaveLength(300);
+    expect(path.endsWith(' > div > div')).toBe(true);
   });
 });

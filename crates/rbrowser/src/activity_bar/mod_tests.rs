@@ -193,6 +193,22 @@ async fn the_running_video_reaches_the_state_and_leaves_it() {
     assert_eq!(core.host().shell_state().video, None);
 }
 
+/// RB-090-68: a pause and its resume reach the running video's entry; without a video nothing
+/// is made up.
+#[tokio::test]
+async fn a_pause_reaches_the_running_video() {
+    let (_ui, core) = core(ActivityBarPosition::Top, ActivityBarMode::Bar);
+    publish_video_pause(core.host(), Some(1_763_380_810_000), 0);
+    assert_eq!(core.host().shell_state().video, None);
+    publish_video(core.host(), Some((vec![ViewId(1)], 1_763_380_800_000, 600)));
+    publish_video_pause(core.host(), Some(1_763_380_810_000), 0);
+    let video = core.host().shell_state().video.expect("a video runs");
+    assert_eq!(video.paused_at_ms, Some(1_763_380_810_000));
+    publish_video_pause(core.host(), None, 4_000);
+    let video = core.host().shell_state().video.expect("a video runs");
+    assert_eq!((video.paused_at_ms, video.paused_ms), (None, 4_000));
+}
+
 #[tokio::test]
 async fn other_messages_are_not_this_modules() {
     let (_ui, core) = core(ActivityBarPosition::Top, ActivityBarMode::Bar);

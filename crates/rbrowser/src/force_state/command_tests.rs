@@ -115,13 +115,29 @@ fn the_reset_takes_every_view_without_a_target() {
 fn the_notice_carries_its_key_level_and_placeholders() {
     let CoreToShell::Notification(notification) = notice(
         NotificationLevel::Warning,
-        FORCED_KEY,
+        MISSING_KEY,
         &[("views", "Mobile, Desktop".to_owned())],
     ) else {
         panic!("a notification");
     };
     assert_eq!(notification.level, NotificationLevel::Warning);
-    assert_eq!(notification.message_key, FORCED_KEY);
+    assert_eq!(notification.message_key, MISSING_KEY);
     assert_eq!(notification.args["views"], "Mobile, Desktop");
     assert_eq!(notification.settings_key, None);
+}
+
+/// RB-094-16: while states are forced the activity bar shows them with Reset; the status bar
+/// says nothing lasting about it.
+#[test]
+fn forced_states_leave_the_status_bar_alone() {
+    assert_eq!(status_of(true), None);
+}
+
+/// The last forced state gone (a reset, a navigation) is a one-off message, without a button.
+#[test]
+fn the_cleared_notice_is_a_message_of_its_own() {
+    let notification = status_of(false).expect("the cleared notice");
+    assert_eq!(notification.message_key, CLEARED_KEY);
+    assert_eq!(notification.level, NotificationLevel::Info);
+    assert!(notification.args.is_empty());
 }

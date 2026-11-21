@@ -42,6 +42,7 @@ const STRINGS: Record<string, string> = {
   'plugin.fonts.panel.preview.title': 'Preview',
   'plugin.fonts.panel.preview.too_large': 'No preview: the font file is larger than {kb} KiB.',
   'plugin.fonts.panel.preview.installed': 'Shown with the font installed on this computer, by its name.',
+  'plugin.fonts.panel.setting_link': 'Open the setting',
   'plugins.error.busy': 'The plugin is busy.',
   'plugins.panel.waiting': 'Waiting for the running check.',
 };
@@ -177,6 +178,11 @@ describe('the Fonts panel', () => {
     expect(preview?.args).toEqual({ view: 1, src: 'http://localhost/v.woff2', offset: 0 });
     await answer('preview', { src: 'http://localhost/v.woff2', error: 'too_large', maxKb: 1024 });
     expect($('#families [role="option"]:first-child [data-preview-missing]')?.textContent?.trim()).toBe('No preview: the font file is larger than 1024 KiB.');
+    // RB-094-21: the reason names Settings > Checks > Fonts > Largest preview file; the detail links there.
+    const link = $('#detail [data-section="preview"] [data-testid="setting-link-fonts.previewMaxKb"]') as HTMLElement;
+    expect(link.textContent?.trim()).toBe('Open the setting');
+    link.click();
+    expect(posted).toContainEqual({ target: 'host', action: 'open_settings', key: 'fonts.previewMaxKb' });
     const generic = $('#families [role="option"]:last-child [data-preview]') as HTMLElement;
     expect(generic.textContent?.trim()).toBe('Hamburgefonstiv');
     expect(generic.style.fontFamily).toBe('ui-monospace');

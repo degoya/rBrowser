@@ -102,6 +102,17 @@ fn the_base_url_is_the_hosts_else_the_start_urls_origin() {
     assert!(text.contains("    baseURL: process.env.RB_BASE_URL ?? 'http://127.0.0.1:8000',\n"));
 }
 
+/// RB-094-10: the start URL's user info never reaches `baseURL`; its scheme counts in any case.
+#[test]
+fn the_start_urls_origin_carries_no_user_info() {
+    let mut with_user = request("", "{}");
+    with_user.recording.start_url = Some("HTTPS://ann:pa55@Shop.Test:443/a?b#c".to_owned());
+    assert_eq!(base_url(&with_user).as_deref(), Some("https://shop.test"));
+    assert!(!config(&with_user).contains("pa55"));
+    with_user.recording.start_url = Some("file:///C:/site/index.html".to_owned());
+    assert_eq!(base_url(&with_user), None);
+}
+
 #[test]
 fn the_spec_is_one_test_named_after_the_recording() {
     let text = spec(&request(

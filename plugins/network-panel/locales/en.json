@@ -1,6 +1,30 @@
 {
   "plugin": {
     "network-panel": {
+      "api": {
+        "bodyMissing": "{count, plural, one {# request has} other {# requests have}} no body: the view could not hand it over, it could not be checked for secrets, or it was too large. Add it in the API client.",
+        "errors": {
+          "capture_gone": "The views no longer hold this request; load the page again.",
+          "capture_template": "This request holds variable placeholders (double braces) the page wrote; it is not taken, so sending it can never fill in a secret.",
+          "no_project": "No project is open; saved requests live in the project's .rbrowser/api folder.",
+          "not_written": "The request could not be written below .rbrowser/api.",
+          "secrets_not_saved": "The captured values could not be kept in the project's local settings; the requests hold variables without values.",
+          "untrusted": "Requests are saved in a trusted workspace only: trust this workspace first."
+        },
+        "missing": "{count, plural, one {# variable has} other {# variables have}} no value yet: {names}. Set them in Settings > Network > API client.",
+        "noSelection": "Select a request first.",
+        "nothingShown": "The list shows no request to save.",
+        "open": "Open in API client",
+        "opened": "Opened {name} in the API client, not saved yet.",
+        "partial": "The list shows only part of the captured requests; the ones it does not show are not saved.",
+        "replaced": "{count, plural, one {# variable has} other {# variables have}} a new value in place of the one kept before: {names}.",
+        "save": "Save as request",
+        "saveShown": "Save shown as requests",
+        "saved": "{saved, plural, =0 {No request saved} one {# request saved} other {# requests saved}} below .rbrowser/api; {skipped, plural, =0 {none skipped} one {# skipped (saved before, the same method and path, or gone)} other {# skipped (saved before, the same method and path, or gone)}}.",
+        "template": "{count, plural, one {# request holds} other {# requests hold}} variable placeholders (double braces) the page wrote and {count, plural, one {is} other {are}} not saved, so sending can never fill in a secret.",
+        "tooMany": "Only the newest {most} of the shown requests are saved; filter the list to save the others.",
+        "setting_link": "Open the setting"
+      },
       "breakpoints": {
         "abort": "Abort",
         "abortAll": "Abort for all views",
@@ -40,8 +64,12 @@
         "viewsHelp": "No view chosen: the breakpoint holds requests in every view."
       },
       "commands": {
+        "api_open": "Open the network panel's request in the API client",
+        "api_save": "Save the network panel's shown requests as API requests",
         "breakpoints_toggle": "Switch the request breakpoints on or off",
         "cache_toggle": "Switch the cache off or on",
+        "endpoints": "Show the endpoints of the page",
+        "endpoints_check": "Check the endpoints of the page",
         "har_export": "Export the requests as HAR",
         "mocks_toggle": "Switch the mocks on or off",
         "panel": "Show the network panel",
@@ -110,17 +138,79 @@
         "status": "Status",
         "title": "New rule"
       },
+      "endpoints": {
+        "cacheNone": "no caching headers",
+        "caching": "Caching",
+        "check": "Check",
+        "checked": "{findings, plural, =0 {No findings.} one {# finding in the findings panel.} other {# findings in the findings panel.}}",
+        "clearFilter": "Show every request",
+        "close": "Close the endpoint",
+        "columns": {
+          "calls": "Calls",
+          "endpoint": "Endpoint",
+          "median": "Median",
+          "p95": "p95",
+          "size": "Size",
+          "status": "Status",
+          "ttfb": "TTFB p95"
+        },
+        "compression": "Compression",
+        "currentPage": "Current page only",
+        "decoded": "Decoded",
+        "empty": "No endpoint yet: load a page that calls an API.",
+        "encodingNone": "none",
+        "failed": "failed",
+        "filtered": "Endpoint {endpoint}",
+        "findings": "Issues on this page",
+        "fromCache": "{count} from cache",
+        "issues": "{count, plural, one {# issue} other {# issues}}",
+        "none": "None on this page.",
+        "origin": "Origin",
+        "search": "Filter endpoints",
+        "severity": {
+          "error": "Error",
+          "info": "Info",
+          "warning": "Warning"
+        },
+        "showRequests": "Show the requests",
+        "sizeOf": "{total} in all, median {median}",
+        "sort": "Sort by",
+        "sorts": {
+          "calls": "Most calls",
+          "p95": "Slowest (p95)",
+          "size": "Largest",
+          "ttfb": "Slowest first byte"
+        },
+        "statuses": "Statuses",
+        "title": "Endpoints",
+        "transferred": "Transferred",
+        "truncated": "Showing {shown} of {total, plural, one {# endpoint} other {# endpoints}}.",
+        "validators": "{count} with ETag or Last-Modified",
+        "view": "View",
+        "views": "Per view"
+      },
       "errors": {
         "bad_args": "The network panel got arguments it cannot read: {reason}",
         "bad_rule": "The rule does not read: {reason}",
         "har_invalid": "This is no HAR file: {reason}",
         "har_path": "Only a .har file below .rbrowser/ can be imported.",
         "har_read": "The HAR file cannot be read.",
+        "no_api_client": "This rBrowser cannot take requests into the API client.",
         "no_body": "The view no longer holds this response's body.",
         "too_many": "The plugin keeps at most {limit} added rules.",
         "unknown_breakpoint": "There is no breakpoint {id}.",
         "unknown_rule": "There is no rule {id}.",
         "untrusted": "Mocks are project content: trust this workspace first (the trust dialog lists the mock files)."
+      },
+      "findings": {
+        "endpoint": {
+          "breakpoint-calls": "{endpoint} is called a different number of times per breakpoint: {breakpoints}.",
+          "duplicate": "{method} {url} was requested {count, plural, one {# time} other {# times}} in one page load: request it once and share the answer.",
+          "n-plus-one": "{endpoint} was called with {count} different URLs in one page load: fetch them in one request if the API allows.",
+          "no-cache": "{endpoint} answered {count, plural, one {# GET} other {# GETs}} without Cache-Control, Expires, ETag or Last-Modified: no cache may keep or revalidate it.",
+          "slow": "{endpoint}: {p95} ms at the 95th percentile (median {median} ms), over the limit of {limit} ms.",
+          "uncompressed": "{endpoint} sent {size, plural, one {# byte} other {# bytes}} without compression: enable gzip or Brotli on the server."
+        }
       },
       "kinds": {
         "block": "Block",
@@ -163,6 +253,16 @@
       "panels": {
         "network": "Network"
       },
+      "rules": {
+        "endpoint": {
+          "breakpoint-calls": "Endpoint called more often at one breakpoint",
+          "duplicate": "Same request twice in one page load",
+          "n-plus-one": "Many calls of one endpoint in one page load (N+1)",
+          "no-cache": "GET answer nothing may cache",
+          "slow": "Slow endpoint",
+          "uncompressed": "Large text answer sent uncompressed"
+        }
+      },
       "sessions": {
         "close": "Back to live requests",
         "none": "No saved sessions.",
@@ -196,6 +296,38 @@
           "help": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space, R, N switches it for the session. On shows every load as a first visit.",
           "label": "Cache off at start"
         },
+        "endpoints": {
+          "breakpointDifference": {
+            "description": "An endpoint one breakpoint calls this many times more often than another is reported.",
+            "help": "How many calls more one breakpoint makes to an endpoint than another before it is a finding (mobile loading more, for example). Default 2.",
+            "label": "Calls apart between breakpoints"
+          },
+          "largeBytes": {
+            "description": "A text, JSON or script answer of at least this many bytes sent without compression is reported.",
+            "help": "The size, in bytes, from which a text, JSON, JavaScript, XML or SVG answer sent without Content-Encoding is a finding. Default 10240 (10 KiB).",
+            "label": "Large uncompressed answer (bytes)"
+          },
+          "nPlusOne": {
+            "description": "This many different calls of one endpoint in one page load are reported as an N+1 pattern.",
+            "help": "How many different URLs of one endpoint (/api/items/1, /api/items/2, ...) in one view's page load make an N+1 finding. Default 5.",
+            "label": "N+1 calls"
+          },
+          "patterns": {
+            "description": "Paths that group into one endpoint, {name} for one segment, checked before the automatic ids.",
+            "help": "Your own path patterns, one per entry, starting with /: {name} stands for one path segment, the rest must match as written. Example: with /api/products/{slug}, the paths /api/products/red-shoes and /api/products/blue-hat are one endpoint. Numbers, UUIDs and hashes become {id}, {uuid} and {hash} without a pattern.",
+            "label": "Endpoint path patterns"
+          },
+          "resourceTypes": {
+            "description": "The request types the Endpoints tab and its rules count; none chosen counts every type.",
+            "help": "The resource types grouped into endpoints and checked. Default XHR and Fetch, the page's API calls; add Document or Script to see pages and scripts too. Choosing none counts every request.",
+            "label": "Endpoint request types"
+          },
+          "slowMs": {
+            "description": "An endpoint whose 95th percentile duration reaches this many milliseconds is reported as slow.",
+            "help": "The duration, in milliseconds, at which an endpoint counts as slow: its 95th percentile in one view's page load at or above it is a finding. Default 1000.",
+            "label": "Slow endpoint (ms)"
+          }
+        },
         "harBodies": {
           "description": "A HAR export carries the response bodies the views still hold (at most 1 MiB each).",
           "help": "A HAR export carries the response bodies the views still hold, at most 1 MiB each. Off exports headers and timings only, for a smaller file.",
@@ -215,6 +347,23 @@
           "description": "Whether the mocks of .rbrowser/mocks apply when a session starts; the panel and Ctrl+Shift+Space P M switch them for the session. Mocks apply only in a trusted workspace.",
           "help": "Whether the mock responses of the mocks folder apply when a session starts; the panel and Ctrl+Shift+Space, P, M switch them for the session. Mocks apply only in a trusted workspace.",
           "label": "Mocks on at start"
+        },
+        "option": {
+          "endpoints": {
+            "resourceTypes": {
+              "document": "Document",
+              "eventSource": "EventSource",
+              "fetch": "Fetch",
+              "font": "Font",
+              "image": "Image",
+              "media": "Media",
+              "other": "Other",
+              "script": "Script",
+              "stylesheet": "Stylesheet",
+              "webSocket": "WebSocket",
+              "xHR": "XHR"
+            }
+          }
         },
         "rewrite": {
           "maxBodyBytes": {
@@ -241,6 +390,7 @@
       "tabs": {
         "breakpoints": "Breakpoints",
         "compose": "Compose",
+        "endpoints": "Endpoints",
         "mocks": "Mocks",
         "requests": "Requests",
         "sessions": "Sessions"
@@ -260,6 +410,8 @@
       },
       "tools": {
         "abort": "Fails a held request (id from debug), with allViews the same request held in every view.",
+        "api_open": "One request the views captured (view and id from networkpanel_list or networkpanel_endpoints) as the API client would take it: method, URL, headers and body with every secret - Cookie, Authorization, API key and token headers, secret query parameters and body fields - as a variable named after the host; a secret path segment too; per variable whether a value is present in the private values or missing. A request holding variable placeholders (double braces) the page wrote is refused (capture_template). Nothing is saved, opened or kept; no secret value is ever answered.",
+        "api_save": "Saves requests the views captured (up to 200, view and id each) as API client requests below .rbrowser/api/<host>/, one file per method and path, named after them; a request saved before or a second one of the same method and path is skipped. Every secret is a variable named after the host and its value is never kept over MCP. Answers saved (id, name), skipped (name, reason: exists, duplicate, gone, notHttp, template - the request holds variable placeholders the page wrote) and the variables with whether a value is present or missing.",
         "body": "The response body of one request (view and request id from networkpanel_list) while the view still holds it, cut to 32 KiB.",
         "breakpoint_add": "Adds a breakpoint: urlPattern (glob, or regex: true), method, resourceType, stage (request: method, URL, headers and body editable before it leaves; response: status, headers and body), views (ids; every view when absent). A held request goes on unchanged after network-panel.breakpoints.timeoutMs. Answers the id.",
         "breakpoint_enable": "Switches one breakpoint on or off.",
@@ -269,6 +421,8 @@
         "compose": "Sends a request (method, url, headers, body) from the context of view (its cookies, user agent and headers), times in a row (at most 10); the results arrive in debug's composed, masked. The panel's path; over MCP only with mcp.allowEvaluate and network-panel.allowComposeFromMcp. A redirect is answered, never followed.",
         "continue": "Lets a held request go on (id from debug), with edits (method, url, headers, body or bodyBase64, status) and with allViews the same request held in every view; a masked value sent back means as it was. The panel's path; over MCP only with mcp.allowEvaluate - network_continue carries the finer gate.",
         "debug": "The HTTP debugger's state: the requests held at breakpoints (masked), the breakpoints, the composed and repeated results, the host's answers to the panel's asks and the limits in force. Over MCP only with mcp.allowEvaluate (it carries the held bodies); network_breakpoints lists the held requests without them.",
+        "endpoints": "The page's requests grouped by endpoint - method, origin and path with ids as placeholders (/api/users/{id}: numbers, UUIDs, hashes, the patterns of the setting network-panel.endpoints.patterns) - from what the views already loaded; nothing is sent. Per endpoint: calls, failed, fromCache, durationMs and ttfbMs (median, p95), transferred and decoded bytes (total, median), statuses, encodings, cacheControl, validators, per view the same, the newest requests (view, id, url) and issues (the rules it breaks on the current page); the views and the current page's findings. Filters: types (resource types; default the setting endpoints.resourceTypes), search, currentPage (only what each view loaded since its last navigation); sort p95 (default), calls, size, ttfb; limit. URLs are masked: secret query values and user info show as ***; no header but Cache-Control and Content-Encoding.",
+        "endpoints_check": "The endpoint rules over every view's current page into the findings panel: duplicate calls, N+1 patterns, large uncompressed answers, GET answers nothing may cache, slow endpoints (setting endpoints.slowMs) and endpoints one breakpoint calls more often; answers how many findings and whether they were reported. Nothing is sent.",
         "har_export": "Writes the captured requests as HAR 1.2 to .rbrowser/out/network-panel/ - merged, per view (merged: false) or of the target view - with the response bodies the views still hold; answers the file paths.",
         "har_import": "Imports a HAR file below .rbrowser/ as replay mocks (one rule per method and URL) into the plugin's own mock files. Needs workspace trust, and over MCP the evaluate switch (mcp.allowEvaluate).",
         "list": "The requests of every view in one list, grouped by method and URL, each with what every view saw (status, size, time); partial marks a request some views did not load (srcset picking another image), differs one the views saw differently. Filters: search, types, status (ok, error, failed), differences.",

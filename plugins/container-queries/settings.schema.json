@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "container-queries plugin settings",
+  "type": "object",
+  "properties": {
+    "overlay": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "boolean",
+          "default": true,
+          "x-category": "devtools",
+          "x-section": "container-queries",
+          "x-order": 1,
+          "x-scope": ["user", "project"]
+        },
+        "color": {
+          "type": "string",
+          "format": "color",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#0d9488",
+          "x-category": "devtools",
+          "x-section": "container-queries",
+          "x-order": 2,
+          "x-scope": ["user"]
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,8 @@
 //! One snapshot per step kind, for the spec and for the flow.
 
-use super::{Context, Guard, render};
+use super::{Context, Guard, render, step_pauses};
 use crate::model::{Action, Assertion, Locator, LocatorPreference, Selector, Step};
+use crate::pace::Pace;
 
 fn button() -> Locator {
     Locator {
@@ -26,6 +27,9 @@ fn step(id: u32, action: Action) -> Step {
         view: "desktop".to_owned(),
         only_in: Vec::new(),
         at_ms: 0,
+        path: Vec::new(),
+        disabled: false,
+        pause_ms: None,
     }
 }
 
@@ -421,4 +425,37 @@ fn a_step_without_a_usable_selector_names_its_id() {
     )
     .expect_err("no selector");
     assert_eq!(error.step, 9);
+}
+
+/// RB-092-01: the editor's fixed wait waits at every pace, at most 10 s.
+#[test]
+fn a_fixed_wait_waits_at_every_pace_and_at_most_ten_seconds() {
+    assert_eq!(
+        spec(Action::Wait { ms: 1500 }),
+        "  // Step 7: wait\n  await page.waitForTimeout(1500);\n"
+    );
+    assert_eq!(
+        flow(Action::Wait { ms: 60_000 }),
+        "// Step 7: wait\nawait step('Step 7: wait', async () => {\n  await page.waitForTimeout(10000);\n});\n"
+    );
+}
+
+/// RB-092-01: a pause set in the editor takes the place of the measured one, the first step's
+/// included, and is capped like it.
+#[test]
+fn a_pause_set_in_the_editor_replaces_the_measured_one() {
+    let mut first = step(1, Action::Wait { ms: 1 });
+    first.pause_ms = Some(400);
+    let mut second = step(2, Action::Wait { ms: 1 });
+    second.at_ms = 3000;
+    let mut third = step(3, Action::Wait { ms: 1 });
+    third.at_ms = 3100;
+    third.pause_ms = Some(25_000);
+    assert_eq!(
+        step_pauses(&[first.clone(), second.clone(), third.clone()], 0),
+        [(1, 400), (2, 3000), (3, 10_000)]
+    );
+    let mut context = spec_context().paced(Pace::Recorded);
+    let text = render(&[first], &mut context, 0).expect("rendered");
+    assert!(text.contains("await page.waitForTimeout(400);"), "{text}");
 }

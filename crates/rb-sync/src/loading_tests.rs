@@ -83,3 +83,24 @@ fn views_that_are_gone_are_forgotten() {
         "B's count was forgotten"
     );
 }
+
+#[test]
+fn a_given_load_says_when_it_was_given_until_it_is_cleared() {
+    let now = Instant::now();
+    let mut table = LoadTable::default();
+    assert_eq!(table.given_at(A, now), None);
+    table.mark(A, now);
+    assert_eq!(table.given_at(A, now), Some(now));
+    assert_eq!(table.given_at(B, now), None);
+    assert!(table.clear(A));
+    assert_eq!(table.given_at(A, now), None);
+}
+
+/// Review w30: a load that never started within the grace is no navigation to time.
+#[test]
+fn a_given_load_that_never_started_is_not_timed_after_the_grace() {
+    let now = Instant::now();
+    let mut table = LoadTable::default();
+    table.mark(A, now);
+    assert_eq!(table.given_at(A, now + LOAD_START_GRACE), None);
+}

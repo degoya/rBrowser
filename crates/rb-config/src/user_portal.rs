@@ -38,6 +38,8 @@ pub struct PortalSettings {
     /// does not list in `assetOrigins`, the status bar offers to add it; a person's click writes
     /// the project config. Off, the log names the origin only (RB-090-71).
     pub offer_asset_origins: bool,
+    /// The portal shown over the internet through a Cloudflare Quick Tunnel (RB-096-05).
+    pub presentation: crate::PresentationSettings,
 }
 
 impl Default for PortalSettings {
@@ -49,6 +51,7 @@ impl Default for PortalSettings {
             pairing_ttl_sec: 300,
             max_devices: 5,
             offer_asset_origins: true,
+            presentation: crate::PresentationSettings::default(),
         }
     }
 }
@@ -64,11 +67,12 @@ impl PortalSettings {
     }
 
     /// The keys that make the listener: a change of any of them stops a running portal; the
-    /// offer of asset origins is read where it is used.
+    /// offer of asset origins is read where it is used, the presentation has its own listener.
     #[must_use]
     pub fn listener(&self) -> Self {
         Self {
             offer_asset_origins: true,
+            presentation: crate::PresentationSettings::default(),
             ..self.clone()
         }
     }

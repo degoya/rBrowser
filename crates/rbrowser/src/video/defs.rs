@@ -3,7 +3,8 @@
 //! start a recording or stop the running one; `tools.ffmpeg.install` (`Leader X F`) downloads
 //! the pinned LGPL ffmpeg - the person's consent, so no MCP tool reaches it - and
 //! `tools.ffmpeg.remove` (`Leader X G`) deletes it again; `capture.video.panel` (`Leader C T`)
-//! shows the Videos panel (RB-110-12). Every command answers at once; the work runs on the
+//! shows the Videos panel (RB-110-12); `capture.video.pause` (`Leader C Z`, RB-090-68) pauses
+//! the running recording or resumes it. Every command answers at once; the work runs on the
 //! host's runtime or a blocking thread and ends in a notification.
 
 use std::sync::{Arc, Weak};
@@ -18,6 +19,7 @@ use serde_json::{Value, json};
 
 use super::app::{self, FAILED_KEY, StartRequest, TOOL_NAME};
 use super::ffmpeg::{self, NOT_INSTALLED_KEY, REMOVED_KEY, notice};
+use super::pause::{self, PauseRequest};
 use super::{VideoError, app::Finished};
 use crate::control::Core;
 
@@ -25,6 +27,8 @@ use crate::control::Core;
 pub const TOGGLE: &str = "capture.video.toggle";
 /// Record every view, or stop.
 pub const TOGGLE_ALL: &str = "capture.video.toggle_all";
+/// Pause the running recording, or resume it (RB-090-68).
+pub const PAUSE: &str = "capture.video.pause";
 /// Download the pinned ffmpeg.
 pub const INSTALL: &str = "tools.ffmpeg.install";
 /// Delete the downloaded ffmpeg.
@@ -48,9 +52,10 @@ type Row = (
 );
 
 /// The commands.
-const ROWS: [Row; 5] = [
+const ROWS: [Row; 6] = [
     (TOGGLE, Group::Capture, ['C', 'V'], Ok(TOOL_NAME)),
     (TOGGLE_ALL, Group::Capture, ['C', 'W'], Ok(TOOL_NAME)),
+    (PAUSE, Group::Capture, ['C', 'Z'], Ok(TOOL_NAME)),
     (INSTALL, Group::Plugins, ['X', 'F'], Err(INSTALL_OMITTED)),
     (REMOVE, Group::Plugins, ['X', 'G'], Err(REMOVE_OMITTED)),
     (PANEL, Group::Capture, ['C', 'T'], Err(PANEL_OMITTED)),
@@ -112,11 +117,28 @@ fn target_of(args: &Value) -> Result<Option<Target>, CommandError> {
     }
 }
 
+/// What `capture.video.pause` asks for: `paused` `true` or `false`, else a toggle.
+fn pause_request_of(args: &Value) -> Result<PauseRequest, CommandError> {
+    match args.get("paused") {
+        None | Some(Value::Null) => Ok(PauseRequest::Toggle),
+        Some(Value::Bool(true)) => Ok(PauseRequest::Pause),
+        Some(Value::Bool(false)) => Ok(PauseRequest::Resume),
+        Some(other) => Err(CommandError::InvalidArgs(format!(
+            "paused is true or false, not {other}"
+        ))),
+    }
+}
+
 /// Runs the command `id`: answers at once, the work goes on in the background.
 fn run(core: &Arc<Core>, id: &str, args: &Value) -> Result<Value, CommandError> {
     match id {
         TOGGLE => Ok(toggle(core, target_of(args)?)),
         TOGGLE_ALL => Ok(toggle(core, Some(Target::All))),
+        PAUSE => {
+            let state = pause::set(core, pause_request_of(args)?)
+                .map_err(|error| CommandError::Failed(error.to_string()))?;
+            serde_json::to_value(state).map_err(|error| CommandError::Failed(error.to_string()))
+        }
         PANEL => {
             // A person's choice (no MCP tool runs it): a folded dock opens (RB-090-71).
             let videos = crate::panel_dock::core_panels::VIDEOS;
@@ -191,7 +213,7 @@ fn toggle(core: &Arc<Core>, target: Option<Target>) -> Value {
 }
 
 /// The MCP tool `record_video`: `action` `start` (with `target` or `views`), `stop` (answers
-/// the files) or `status`. Never downloads ffmpeg.
+/// the files), `pause`, `resume` (RB-090-68) or `status`. Never downloads ffmpeg.
 ///
 /// # Errors
 ///
@@ -205,7 +227,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
     let action = args
         .remove("action")
         .and_then(|action| action.as_str().map(str::to_owned))
-        .ok_or_else(|| invalid("action is start, stop or status".to_owned()))?;
+        .ok_or_else(|| invalid("action is start, stop, pause, resume or status".to_owned()))?;
     let failure = |error: VideoError| rb_mcp::ToolFailure::new(error.code(), error.to_string());
     match action.as_str() {
         "start" => {
@@ -231,9 +253,11 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
                 .map_err(failure)?;
             answer(finished.as_ref())
         }
+        "pause" => answer(&pause::set(core, PauseRequest::Pause).map_err(failure)?),
+        "resume" => answer(&pause::set(core, PauseRequest::Resume).map_err(failure)?),
         "status" => answer(&app::status(core)),
         other => Err(invalid(format!(
-            "action {other} is not start, stop or status"
+            "action {other} is not start, stop, pause, resume or status"
         ))),
     }
 }

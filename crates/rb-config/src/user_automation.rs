@@ -58,6 +58,13 @@ pub struct FlowSettings {
     /// What a run does with views the layout hides: `skip` plays in the views shown and names the
     /// rest, `layout` shows `runLayout` for the run (RB-090-84).
     pub hidden_views: HiddenViews,
+    /// With `hiddenViews: skip`, a played recording whose views the layout all hides brings the
+    /// first into sight - the canvas centred on it, the strip scrolled to it, focus mode on its
+    /// breakpoint - instead of failing (RB-090-89). Off, it fails as any run with no view shown.
+    pub reveal_recording: bool,
+    /// "Delete" in the Flows panel asks in the panel before the flow's file is deleted
+    /// (RB-090-91). Off, a click deletes it at once.
+    pub confirm_delete: bool,
     /// The layout a run shows with `hiddenViews: layout`: `grid`, `horizontal`, `split` or
     /// `canvas` over the preset shown, or a preset's id.
     /// The settings window offers the modes and the project's presets (source `layouts`).
@@ -75,6 +82,8 @@ impl Default for FlowSettings {
             sync_during_run: false,
             screenshot_on_failure: true,
             hidden_views: HiddenViews::Skip,
+            reveal_recording: true,
+            confirm_delete: true,
             run_layout: "grid".to_owned(),
         }
     }

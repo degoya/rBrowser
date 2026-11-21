@@ -133,6 +133,17 @@ video encoder
   upstream https://github.com/FFmpeg/FFmpeg at commit c179411bbb.
   Files: none in the package; ffmpeg.exe and LICENSE.txt in the folder above
 
+cloudflared 2026.11.1 (Cloudflare's release build) - the tunnel of the
+portal's presentation over the internet
+  https://github.com/cloudflare/cloudflared
+  Copyright (c) Cloudflare, Inc.
+  Licence: Apache License 2.0 (Apache-2.0). rBrowser does not ship it: it is
+  downloaded only when you agree in the Portal panel to start a presentation
+  ("Portal: present over the internet"), pinned by version and SHA-256, into
+  %LOCALAPPDATA%\rBrowser\tools\cloudflared\<version>\. Its source code is
+  at https://github.com/cloudflare/cloudflared (tag 2026.11.1).
+  Files: none in the package; cloudflared.exe in the folder above
+
 
 -------------------------------------------------------------------------------
 Chromium Embedded Framework - BSD 3-Clause

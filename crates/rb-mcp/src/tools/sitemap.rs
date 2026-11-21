@@ -127,7 +127,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Open the gallery (index.html) of a sitemap capture (runId; the latest run when absent) for the person in a window of rBrowser's own - never in the system browser or the grid's views. Answers the runId, the gallery's path and where it opened (window); a run without a gallery yet is the error sitemap.error.no_gallery."
+        description = "Open the gallery of a sitemap capture (runId; the latest run when absent) for the person in a window of rBrowser's own - never in the system browser or the grid's views. A running capture opens too; the window follows it. Answers the runId, the gallery file index.html (null until the capture has ended and written it) and where it opened (window)."
     )]
     pub(crate) async fn sitemap_gallery(
         &self,

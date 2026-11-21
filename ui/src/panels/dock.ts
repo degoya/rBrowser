@@ -33,6 +33,10 @@ export const CLOSE_COMMAND = 'panels.close';
 export const TOGGLE_COMMAND = 'panels.dock.toggle';
 export const SIDEBAR_SETTING = 'panels.sidebar';
 export const STATE_SETTING = 'panels.dockState';
+/** How many hidden panels stay loaded (RB-090-38). */
+export const KEEP_FRAMES_SETTING = 'panels.keepFrames';
+/** The most `panels.keepFrames` allows. */
+const MAX_KEEP_FRAMES = 10;
 
 /** The folded dock's strip in CSS px, as the core sizes it (`panel_dock/collapse.rs`): the icon
  * column beside the views, the icon row below them. */
@@ -48,6 +52,8 @@ export interface DockState {
   /** Not open: folded to the rail, or hidden. */
   collapsed: boolean;
   sidebar: SidebarMode;
+  /** `panels.keepFrames`: the panels shown last kept loaded, hidden, beside the shown one. */
+  keepFrames: number;
 }
 
 /** The core's defaults (RB-080-93): docked right, folded to the icon rail. */
@@ -57,6 +63,7 @@ export const DEFAULT_STATE: DockState = {
   shown: 'rail',
   collapsed: true,
   sidebar: 'expanded',
+  keepFrames: 3,
 };
 
 function isShown(value: JsonValue | undefined): value is DockShown {
@@ -81,12 +88,15 @@ export function stateOf(values: SettingValue[]): DockState {
   const value = byKey.get(STATE_SETTING);
   const shown = isShown(value) ? value : DEFAULT_STATE.shown;
   const sidebar = byKey.get(SIDEBAR_SETTING);
+  const keep = byKey.get(KEEP_FRAMES_SETTING);
   return {
     position: isPosition(position) ? position : DEFAULT_STATE.position,
     sizes,
     shown,
     collapsed: shown !== 'open',
     sidebar: sidebar === 'icons' || sidebar === 'expanded' ? sidebar : DEFAULT_STATE.sidebar,
+    keepFrames:
+      typeof keep === 'number' && Number.isInteger(keep) && keep >= 0 ? Math.min(keep, MAX_KEEP_FRAMES) : DEFAULT_STATE.keepFrames,
   };
 }
 

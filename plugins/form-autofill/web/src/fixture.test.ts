@@ -108,4 +108,26 @@ describe('the fixture form', () => {
     expect(answer.blockedSubmits).toBe(1);
     expect(log.submits()).toBe(0);
   });
+
+  // Code review w33, item 1: each `evaluate` runs in the same isolated world of the document
+  // (Chromium finds the world again by its name in the view's one CDP session, as hot reload's
+  // does), so the identities kept there last from pass to pass - as this window's globals do.
+  it('keeps a filled field its identity when the page inserts one before it, so pass 2 sets only the new one', () => {
+    loadForm();
+    const first = page({ op: 'collect', selector: '#register', skipHidden: true }).fields;
+    const email = first.find((field: any) => field.id === 'email');
+    const filled = page({ op: 'apply', selector: '#register', skipHidden: true, actions: [
+      { index: email.index, sig: email.sig, op: 'text', candidates: ['qa@example.com'] },
+    ] });
+    expect(filled.fields[0].status).toBe('done');
+    document.getElementById('email')?.insertAdjacentHTML('beforebegin', '<input name="promo">');
+    const second = page({ op: 'collect', selector: '#register', skipHidden: true }).fields;
+    const moved = second.find((field: any) => field.id === 'email');
+    const inserted = second.find((field: any) => field.name === 'promo');
+    expect(moved.index).toBe(email.index + 1);
+    expect(moved.uid).toBe(email.uid);
+    expect(moved.filled).toBe(true);
+    expect(inserted.filled).toBe(false);
+    expect(first.map((field: any) => field.uid)).not.toContain(inserted.uid);
+  });
 });

@@ -40,7 +40,7 @@ describe('a path with the choices the core found', () => {
   // RB-080-88: a `UInputMenu` with free entry in place of the datalist.
   it('offers every installation as a labelled suggestion and takes the chosen path', async () => {
     const wrapper = await control(null, FOUND);
-    const menu = wrapper.findComponent(UInputMenu);
+    const menu = wrapper.findComponent(UInputMenu) as unknown as VueWrapper;
     const items = (menu.props() as Record<string, unknown>).items as { value: string; label: string }[];
     expect(items.map((item) => item.value)).toEqual([RELEASE, DEVELOPER]);
     expect(items[1]?.label).toContain('Developer Edition');
@@ -151,7 +151,7 @@ describe('a string with the values of a source', () => {
       dynamic: { options: [{ value: 'grid', label: 'grid' }, { value: 'review', label: 'review' }] },
     });
     current = wrapper;
-    const menu = wrapper.findComponent(UInputMenu);
+    const menu = wrapper.findComponent(UInputMenu) as unknown as VueWrapper;
     const items = (menu.props() as Record<string, unknown>).items as { value: string }[];
     expect(items.map((item) => item.value)).toEqual(['grid', 'review']);
   });

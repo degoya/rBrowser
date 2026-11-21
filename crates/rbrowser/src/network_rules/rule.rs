@@ -19,6 +19,7 @@
 //! settings (the block list). The debugger's parts of the document - `breakpoints`,
 //! `breakpointsEnabled`, `settings`, `asks` - are [`super::document`] (RB-080-37).
 
+use rb_util::text::cut;
 use regex::{Regex, RegexBuilder};
 use serde_json::Value;
 
@@ -196,10 +197,6 @@ fn reject(id: &str, reason: &str) -> Rejected {
         id: id.to_owned(),
         reason: reason.to_owned(),
     }
-}
-
-fn cut(text: &str, chars: usize) -> String {
-    text.chars().take(chars).collect()
 }
 
 fn rule(raw: &Value) -> Result<Rule, &'static str> {

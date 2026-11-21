@@ -197,6 +197,29 @@ fn the_404_link_is_broken_and_the_label_shares_its_id() {
     assert_eq!(host.fetched.len(), before);
 }
 
+#[test]
+fn a_menu_link_only_on_the_desktop_is_one_finding_naming_the_breakpoint_missing_it() {
+    // RB-094-02: the main navigation's links show only in the wide view; the merged findings
+    // panel shows one finding per element, here the mobile view's.
+    let mut host = fixture();
+    let mut found = run(&mut host, 1);
+    found.extend(run(&mut host, 2));
+    let has = |finding: &Finding, key: &str, value: &str| {
+        finding.params.contains(&(key.to_owned(), value.to_owned()))
+    };
+    let pricing: Vec<&Finding> = found
+        .iter()
+        .filter(|f| f.rule == "interactive-differs" && has(f, "text", "link \"Pricing\""))
+        .collect();
+    assert_eq!(pricing.len(), 1);
+    assert_eq!(pricing[0].view, Some(2));
+    assert!(has(pricing[0], "missing", "Mobile"));
+    assert!(
+        found.iter().all(|f| f.rule != "reading-order"),
+        "the fixture's boxes are all alike: no reading order"
+    );
+}
+
 fn get(host: &mut Fixture, args: &str) -> Value {
     let answer = Outline.call_tool(host, "get", args).expect("answer");
     serde_json::from_str(&answer).expect("json")

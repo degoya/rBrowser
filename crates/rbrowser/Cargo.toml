@@ -29,9 +29,6 @@ path = "src/bin/rbrowser-helper.rs"
 async-trait.workspace = true
 # The PNG data of `Page.captureScreenshot` (RB-050-03).
 base64.workspace = true
-# The plugin catalogue's clock: index expiry and freshness (`plugins/catalog.rs`, RB-091-01).
-# `clock`: the local offset of the names a person reads (`local_time`, RB-090-69).
-chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 # The DevTools endpoint (RB-010-06).
 futures-util.workspace = true
@@ -43,6 +40,11 @@ notify.workspace = true
 # The CDP proxy's logic and the endpoint secrets (RB-030-06).
 rb-cdp = { path = "../rb-cdp" }
 rb-commands = { path = "../rb-commands" }
+# The API client's request model and its .http files (RB-096-01) and its importers (RB-096-02).
+rb-api-import = { path = "../rb-api-import" }
+rb-api-model = { path = "../rb-api-model" }
+# The API client's exporters and code generators (RB-096-03).
+rb-api-export = { path = "../rb-api-export" }
 # Firefox over WebDriver BiDi: the engine of the Firefox views (RB-040-02).
 rb-bidi = { path = "../rb-bidi" }
 rb-config = { path = "../rb-config" }
@@ -57,6 +59,8 @@ rb-plugin-host = { path = "../rb-plugin-host" }
 # The findings model and the check-plugin kind (RB-060-01).
 rb-plugin-types = { path = "../rb-plugin-types" }
 rb-process = { path = "../rb-process" }
+# Safari on macOS over safaridriver: the engine of the Safari views (RB-095-03).
+rb-safari = { path = "../rb-safari" }
 rb-settings = { path = "../rb-settings" }
 # The Node sidecar: started on first need, stopped on quit, its versions in diagnostics (RB-040-03).
 rb-sidecar = { path = "../rb-sidecar" }
@@ -82,6 +86,10 @@ serde_json.workspace = true
 # The SHA-256 of a managed tool's download, checked while it streams (`tools/store.rs`, RB-080-02).
 sha2.workspace = true
 thiserror.workspace = true
+# The plugin catalogue's clock: index expiry and freshness (`plugins/catalog.rs`, RB-091-01);
+# the page clock's times (`time_control`, RB-094-07).
+# `local-offset`: the local offset of the names a person reads (`local_time`, RB-090-69).
+time = { workspace = true, features = ["local-offset"] }
 tokio.workspace = true
 # The DevTools endpoint (RB-010-06).
 tokio-tungstenite.workspace = true
@@ -108,6 +116,8 @@ windows-sys = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_Security_Authorization",
+    # The Credential Manager keeps the Basic auth credentials (RB-094-08).
+    "Win32_Security_Credentials",
     "Win32_Storage_FileSystem",
     # The terminal of a command line call: AttachConsole, the standard handles (RB-010-11).
     "Win32_System_Console",
@@ -163,6 +173,8 @@ embed-resource.workspace = true
 rb-bidi = { path = "../rb-bidi", features = ["test-support"] }
 # The engine conformance and doubles for the engines' tests (RB-040-01).
 rb-engine = { path = "../rb-engine", features = ["test-support"] }
+# The fake safaridriver of the Safari glue's tests (`rb_safari::testing`, RB-095-03).
+rb-safari = { path = "../rb-safari", features = ["test-support"] }
 # The repo lints' own tests (tests/repo_lints).
 tempfile.workspace = true
 # The paused clock of the analyser's settle test (RB-080-26).

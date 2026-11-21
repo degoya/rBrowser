@@ -6,15 +6,21 @@
 //!
 //! The commands: `mcp.toggle` (`Leader , M`) switches the setting - never over MCP, a person
 //! decides - and `mcp.copy_config` (`Leader , C`) shows the line that adds rBrowser to Claude
-//! Code (stdio through `rbrowser mcp`, so no token is in it).
+//! Code (stdio through `rbrowser mcp`, so no token is in it). `mcp.setup` (`Leader , N`) opens
+//! Settings > Automation > MCP at the client choice, where [`setup`] connects an AI client in
+//! the project or for every project (RB-091-09; the setup wizard's step does the same).
 
 pub mod autostart;
 pub mod backend;
 pub mod cli;
+pub mod clients;
 pub(crate) mod collect;
 pub mod host_tools;
+pub mod latest;
 pub mod network_tools;
 pub mod settings;
+pub mod setup;
+pub mod shared_logs;
 pub mod shortcuts;
 pub mod url_policy;
 pub mod wsl;
@@ -27,10 +33,9 @@ use rb_commands::{
     McpCoverage,
 };
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
-use rb_mcp::{HttpHandle, LogStore, McpHttpConfig, McpToken};
+use rb_mcp::{HttpHandle, McpHttpConfig, McpToken};
 use rb_settings::Scope;
 use serde_json::{Value, json};
-use tokio::sync::watch;
 
 use crate::cdp::lock;
 use crate::control::Core;
@@ -40,8 +45,12 @@ use crate::settings_window::Caller;
 pub const TOGGLE: &str = "mcp.toggle";
 /// `mcp.copy_config`.
 pub const COPY_CONFIG: &str = "mcp.copy_config";
+/// `mcp.setup`.
+pub const SETUP: &str = "mcp.setup";
 /// The setting that switches the server.
 pub const ENABLED_KEY: &str = "mcp.enabled";
+/// The client the MCP setup shows first; `mcp.setup` opens the settings there (RB-091-09).
+pub const CLIENT_KEY: &str = "mcp.client";
 /// The i18n keys of the notices; `{port}` and `{snippet}` are placeholders.
 pub mod notice {
     /// The server listens.
@@ -57,12 +66,17 @@ pub mod notice {
 }
 
 /// The commands: id, keys after the leader, why there is no MCP tool.
-const COMMANDS: [(&str, [char; 2], &str); 2] = [
+const COMMANDS: [(&str, [char; 2], &str); 3] = [
     (TOGGLE, [',', 'M'], "protected: MCP cannot switch itself"),
     (
         COPY_CONFIG,
         [',', 'C'],
         "ui-only: a line for the person's agent configuration",
+    ),
+    (
+        SETUP,
+        [',', 'N'],
+        "ui-only: a person connects an AI client and confirms every file it writes",
     ),
 ];
 
@@ -76,10 +90,8 @@ struct Server {
     handle: Option<HttpHandle>,
     /// A start is wanted (running or on its way).
     wanted: bool,
-    /// The log buffers of the running server.
-    logs: Option<Arc<LogStore>>,
-    /// Stops the log collector when dropped.
-    collector: Option<watch::Sender<bool>>,
+    /// The log buffers of the running server, shared with the plugins (RB-090-34).
+    logs: Option<Arc<shared_logs::SharedLogs>>,
 }
 
 static SERVER: Mutex<Server> = Mutex::new(Server {
@@ -88,7 +100,6 @@ static SERVER: Mutex<Server> = Mutex::new(Server {
     handle: None,
     wanted: false,
     logs: None,
-    collector: None,
 });
 
 /// The port the running MCP server listens on; `None` while it does not run. The portal never
@@ -141,6 +152,11 @@ fn handler(id: &str, core: Weak<Core>) -> Handler {
         match id.as_str() {
             TOGGLE => toggle(&core),
             COPY_CONFIG => Ok(copy_config(&core)),
+            SETUP => {
+                core.ui()
+                    .open_settings_window(crate::shell::page_url(&setup_route()));
+                Ok(Value::Null)
+            }
             other => Err(CommandError::UnknownCommand(other.to_owned())),
         }
     })
@@ -188,6 +204,12 @@ fn copy_config(core: &Core) -> Value {
     };
     core.notify(shown);
     json!({ "snippet": snippet, "wslSnippet": wsl })
+}
+
+/// The pages window's route `mcp.setup` opens: the client choice in Settings > Automation > MCP.
+#[must_use]
+pub fn setup_route() -> String {
+    format!("settings/{CLIENT_KEY}")
 }
 
 /// `claude mcp add rbrowser -- "<exe>" mcp [--project "<root>"]`: stdio through `rbrowser mcp`,
@@ -249,9 +271,7 @@ pub fn on_user_settings_changed(core: &Core) {
     if settings.enabled && !server.wanted {
         start_locked(&mut server, core, settings.port);
     }
-    if let Some(logs) = &server.logs {
-        logs.set_limits(backend::log_limits(&settings));
-    }
+    shared_logs::apply_settings(&settings);
 }
 
 /// Stops the server (the app quits); the instance file goes with it.
@@ -262,10 +282,9 @@ pub fn shutdown() {
 fn stop_locked(server: &mut Server) {
     server.generation += 1;
     server.wanted = false;
-    // Dropping the handle stops the server and removes the instance file; dropping the
-    // collector's sender stops it.
+    // Dropping the handle stops the server and removes the instance file; letting the buffers go
+    // stops their collector unless the plugins still hold them.
     server.handle = None;
-    server.collector = None;
     server.logs = None;
 }
 
@@ -298,14 +317,10 @@ fn start_locked(server: &mut Server, core: &Core, port: Option<u16>) {
             .map(|root| root.to_string_lossy().into_owned())
             .unwrap_or_default(),
     };
-    let logs = Arc::new(LogStore::new(backend::log_limits(
-        &core.user_settings().mcp,
-    )));
-    let (stop, stopped) = watch::channel(false);
-    collect::spawn(core, Arc::clone(&logs), stopped);
-    server.collector = Some(stop);
-    server.logs = Some(Arc::clone(&logs));
-    let backend: Arc<dyn rb_mcp::Backend> = Arc::new(backend::CoreBackend::new(&core_arc, logs));
+    let logs = shared_logs::acquire(core);
+    let store = Arc::clone(logs.store());
+    server.logs = Some(logs);
+    let backend: Arc<dyn rb_mcp::Backend> = Arc::new(backend::CoreBackend::new(&core_arc, store));
     let weak = Arc::downgrade(&core_arc);
     core.runtime().spawn(async move {
         let started = rb_mcp::serve_http(backend, config).await;

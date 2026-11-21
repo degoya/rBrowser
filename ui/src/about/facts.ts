@@ -41,7 +41,7 @@ export function isWebLink(url: string): boolean {
 
 export type Translate = (key: string, args?: Record<string, unknown>) => string;
 
-export type EngineId = 'cef' | 'chromium' | 'firefox' | 'webkit' | 'node';
+export type EngineId = 'cef' | 'chromium' | 'firefox' | 'webkit' | 'safari' | 'node';
 
 export interface EngineRow {
   id: EngineId;
@@ -52,8 +52,12 @@ export interface EngineRow {
   absentKey: string;
 }
 
-/** The engine rows in the page's order. */
+/** The engine rows in the page's order; Safari only where the core names it (macOS). */
 export function engineRows(info: AboutInfo): EngineRow[] {
+  const safari: EngineRow[] =
+    info.safari === undefined
+      ? []
+      : [{ id: 'safari', name: 'Safari', version: info.safari, absentKey: 'settings.about.engine.not_found' }];
   return [
     { id: 'cef', name: 'CEF', version: info.cef, absentKey: 'settings.about.engine.unknown' },
     { id: 'chromium', name: 'Chromium', version: info.chromium, absentKey: 'settings.about.engine.unknown' },
@@ -64,6 +68,7 @@ export function engineRows(info: AboutInfo): EngineRow[] {
       version: info.webkit ?? null,
       absentKey: 'settings.about.engine.not_installed',
     },
+    ...safari,
     { id: 'node', name: 'Node', version: info.node ?? null, absentKey: 'settings.about.engine.not_detected' },
   ];
 }

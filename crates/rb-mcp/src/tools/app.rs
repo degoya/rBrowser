@@ -1,4 +1,4 @@
-//! The app: `app_info`, `wsl_info`, `diagnostics`, `devtools_open`, `plugins_list`.
+//! The app: `app_info`, `wsl_info`, `diagnostics`, `app_perf`, `devtools_open`, `plugins_list`.
 
 use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::Deserialize;
@@ -26,6 +26,16 @@ pub struct DiagnosticsParams {
     /// A file name ending in `.zip` inside the diagnostics folder; a fresh name when absent.
     #[serde(default)]
     pub out: Option<String>,
+}
+
+/// `app_perf` (RB-090-32).
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AppPerfParams {
+    /// Empty every counter after the answer, so the next call measures afresh (the start-up
+    /// time stays).
+    #[serde(default)]
+    pub reset: Option<bool>,
 }
 
 /// `devtools_open`.
@@ -81,6 +91,18 @@ impl RbMcpServer {
         // and opens no dialog and no Explorer window for an agent's call (RB-080-73).
         let args = object([("out", params.out.map(Value::String))]);
         respond(self.command("diagnostics.create", args).await)
+    }
+
+    #[tool(
+        description = "rBrowser's timing counters (release builds too; setting performance.counters): per counter name, count, window (samples covered, at most window), p50Ms, p95Ms, maxMs and meanMs, plus enabled and uptimeMs. Counters: sync.wait (event routed to replay start), sync.replay.<engine> (routed to replay answered; chromium is K1, firefox and webkit K11), sync.navigation (a load sync gave until it committed), plugin.wait and plugin.call, ipc.query (shell query to answer), startup.firstView (process start to the first view's first load). reset: true empties the counters after the answer."
+    )]
+    pub(crate) async fn app_perf(
+        &self,
+        Parameters(params): Parameters<AppPerfParams>,
+    ) -> ToolResult {
+        // Named arguments, never `null`: `null` is the shell's call, which shows a notice.
+        let args = object([("reset", params.reset.map(Value::Bool))]);
+        respond(self.command("debug.perf_counters", args).await)
     }
 
     #[tool(

@@ -9,6 +9,7 @@ const KNOWN: KnownBrowsers = KnownBrowsers {
     history: 15,
     status_bar: 17,
     board: 19,
+    gallery: 23,
 };
 
 fn from(browser: i32, main_frame: bool, url: &str) -> bool {
@@ -172,6 +173,11 @@ fn the_canvas_board_sends_only_its_own_requests() {
     ] {
         assert!(!board_sends(refused), "{refused}");
     }
+    // RB-092-03: the address field of a decoupled view's label; the command checks the view and
+    // the address itself.
+    assert!(board_sends(
+        r#"{ "type": "runCommand", "id": "view.edit_address", "args": { "view": 2, "url": "/a" } }"#
+    ));
     assert!(board_sends(
         r#"{ "type": "canvasSizePick", "view": 2, "force": true }"#
     ));
@@ -304,4 +310,183 @@ fn only_the_pages_window_sends_the_setup_wizards_requests() {
             assert!(!sends_from(other, &request), "{op} from browser {other}");
         }
     }
+}
+
+#[test]
+fn only_the_pages_window_sends_the_mcp_setups_requests() {
+    // RB-091-09: the MCP setup writes client files; nothing but the wizard and the settings in
+    // the pages window sends its requests.
+    for op in [
+        r#"{"op":"plan","requestId":1}"#,
+        r#"{"op":"write","requestId":2,"client":"cursor","project":true,"user":true}"#,
+        r#"{"op":"check","requestId":3}"#,
+    ] {
+        let request = format!(r#"{{"type":"mcpSetup","request":{op}}}"#);
+        assert!(
+            sends_from(KNOWN.pages, &request),
+            "{op} from the pages window"
+        );
+        for other in [
+            KNOWN.shell,
+            KNOWN.palette,
+            KNOWN.panels,
+            KNOWN.panels_dock,
+            KNOWN.status_bar,
+            KNOWN.history,
+            KNOWN.board,
+            KNOWN.gallery,
+        ] {
+            assert!(!sends_from(other, &request), "{op} from browser {other}");
+        }
+    }
+}
+
+#[test]
+fn the_gallery_window_reads_its_run_and_opens_links_and_nothing_else() {
+    // RB-090-86: the sitemap gallery page reads the theme, the text size and its run, and opens
+    // a page's address through `app.open_link`; it writes nothing and runs no other command.
+    for request in [
+        r#"{"type":"getState"}"#,
+        r#"{"type":"getSettings"}"#,
+        r#"{"type":"getTextScale"}"#,
+        r#"{"type":"getSitemapGallery","runId":"2026-11-11_10-00-00"}"#,
+        r#"{"type":"getSitemapGallery"}"#,
+        r#"{"type":"runCommand","id":"app.open_link","args":{"url":"http://localhost:3000/"}}"#,
+    ] {
+        assert!(gallery_may_send(request), "{request}");
+        assert!(sends_from(KNOWN.gallery, request), "{request}");
+    }
+    for request in [
+        r#"{"type":"getSettings","includeSchema":true}"#,
+        r#"{"type":"setSetting","key":"ui.theme","value":"dark","scope":"user"}"#,
+        r#"{"type":"runCommand","id":"sitemap.capture","args":{}}"#,
+        r#"{"type":"runCommand","id":"app.open_link_x","args":{}}"#,
+        r#"{"type":"navigate","url":"http://localhost:3000/"}"#,
+        r#"{"type":"pickPath","kind":"file"}"#,
+        r#"{"type":"pluginPanel","request":{"op":"installed"}}"#,
+        r#"{"type":"listCommands"}"#,
+        r#"{"type":"getTrust"}"#,
+        r#"{"type":"setup","request":{"op":"info"}}"#,
+        "not json",
+    ] {
+        assert!(!gallery_may_send(request), "{request}");
+        assert!(!sends_from(KNOWN.gallery, request), "{request}");
+    }
+    // The others are not narrowed by it.
+    assert!(sends_from(KNOWN.pages, r#"{"type":"listCommands"}"#));
+    assert!(sends_from(KNOWN.pages, r#"{"type":"getSitemapGallery"}"#));
+}
+
+#[test]
+fn the_gallery_window_queries_from_its_main_frame_on_the_shells_pages_only() {
+    let url = "rbrowser://ui/settings.html#/sitemap-gallery?run=2026-11-11_10-00-00";
+    assert!(from(23, true, url));
+    assert!(!from(23, false, url));
+    assert!(!from(
+        23,
+        true,
+        "file:///C:/work/.rbrowser/out/sitemap-capture/r1/index.html"
+    ));
+    let closed = KnownBrowsers {
+        gallery: 0,
+        ..KNOWN
+    };
+    assert!(!query_allowed(
+        QueryOrigin {
+            browser: 23,
+            main_frame: true,
+            url,
+        },
+        closed,
+    ));
+}
+
+// Security review w27: the board's one command is checked for its shape at the guard - a view id
+// and, optionally, the typed address as a bounded string; nothing else reaches the command.
+#[test]
+fn the_board_edits_an_address_only_with_a_view_and_a_bounded_url() {
+    let edit = |args: &str| {
+        board_sends(&format!(
+            r#"{{ "type": "runCommand", "id": "view.edit_address", "args": {args} }}"#
+        ))
+    };
+    let longest = "a".repeat(crate::open_link::address::MAX_URL_CHARS);
+    assert!(edit(r#"{ "view": 2, "url": "/a" }"#));
+    assert!(edit(r#"{ "view": 2 }"#));
+    assert!(edit(&format!(
+        r#"{{ "view": 4294967295, "url": "{longest}" }}"#
+    )));
+    let too_long = format!(r#"{{ "view": 2, "url": "{longest}a" }}"#);
+    for refused in [
+        "null",
+        "[]",
+        r#""view""#,
+        "{}",
+        r#"{ "url": "/a" }"#,
+        r#"{ "view": "two", "url": "/a" }"#,
+        r#"{ "view": -1 }"#,
+        r#"{ "view": 2.5 }"#,
+        r#"{ "view": 4294967296 }"#,
+        r#"{ "view": null, "url": "/a" }"#,
+        r#"{ "view": 2, "url": null }"#,
+        r#"{ "view": 2, "url": 7 }"#,
+        r#"{ "view": 2, "url": ["/a"] }"#,
+        r#"{ "view": 2, "url": "/a", "target": "all" }"#,
+        too_long.as_str(),
+    ] {
+        assert!(!edit(refused), "{refused}");
+    }
+    assert!(!board_sends(
+        r#"{ "type": "runCommand", "id": "view.edit_address" }"#
+    ));
+}
+
+// The canvas zoom badge's click (RB-090-28) sets one view's page zoom back: only that command,
+// only `{ target: <view id> }`.
+#[test]
+fn the_board_resets_one_views_page_zoom_and_nothing_more() {
+    let reset = |args: &str| {
+        board_sends(&format!(
+            r#"{{ "type": "runCommand", "id": "view.page_zoom.reset", "args": {args} }}"#
+        ))
+    };
+    assert!(reset(r#"{ "target": 3 }"#));
+    for refused in [
+        "{}",
+        "null",
+        r#"{ "target": "all" }"#,
+        r#"{ "target": -1 }"#,
+        r#"{ "target": 3, "zoom": 2 }"#,
+    ] {
+        assert!(!reset(refused), "{refused}");
+    }
+    assert!(!board_sends(
+        r#"{ "type": "runCommand", "id": "view.page_zoom.set", "args": { "target": 3 } }"#
+    ));
+}
+
+#[test]
+fn only_the_pages_window_decides_on_a_bug_reports_preview() {
+    // RB-093-04: Save or Cancel of the preview is the person's in the pages window; the status
+    // bar may still ask for a saved report's Markdown (its copy button), the board and the
+    // gallery for nothing of it.
+    let decide = r#"{"type":"bugReport","request":{"op":"decide","previewId":1,"save":true}}"#;
+    let markdown = r#"{"type":"bugReport","request":{"op":"getMarkdown","report":"r"}}"#;
+    assert!(sends_from(KNOWN.pages, decide));
+    for browser in [
+        KNOWN.shell,
+        KNOWN.palette,
+        KNOWN.panels,
+        KNOWN.panels_dock,
+        KNOWN.history,
+        KNOWN.status_bar,
+        KNOWN.board,
+        KNOWN.gallery,
+    ] {
+        assert!(!sends_from(browser, decide), "browser {browser}");
+    }
+    assert!(sends_from(KNOWN.status_bar, markdown));
+    assert!(sends_from(KNOWN.pages, markdown));
+    assert!(!sends_from(KNOWN.board, markdown));
+    assert!(!sends_from(KNOWN.gallery, markdown));
 }

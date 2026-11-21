@@ -163,3 +163,17 @@ fn keeping_session_cookies_is_a_protected_user_key() {
         .expect("a user key");
     assert!(def.protected, "never set over MCP");
 }
+
+#[test]
+fn a_login_state_export_keeps_the_projects_sites_by_default() {
+    let settings: SessionSettings = serde_json::from_value(json!({})).expect("defaults");
+    assert!(!settings.state_export_all_domains);
+    let settings: SessionSettings =
+        serde_json::from_value(json!({ "stateExportAllDomains": true })).expect("reads");
+    assert!(settings.state_export_all_domains);
+    let (_, user) = crate::schema::schemas();
+    let user = serde_json::to_value(user).expect("schema");
+    let key = &user["properties"]["sessions"]["properties"]["stateExportAllDomains"];
+    assert_eq!(key[rb_settings::X_PROTECTED], true, "{key}");
+    assert_eq!(key[rb_settings::X_SECTION], "sessions");
+}

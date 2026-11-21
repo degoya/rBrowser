@@ -179,3 +179,56 @@ fn only_the_navigate_command_is_checked() {
         .is_ok()
     );
 }
+
+/// RB-094-10 (security review w28): `checks_run`'s `url` and `breakpoints_detect`'s `urls` are
+/// held to the policy like `navigate`'s; the person's commands never pass this check.
+#[test]
+fn the_check_run_and_the_analyser_take_only_what_navigate_may_load() {
+    let project = Some(Path::new("/project"));
+    let refused = check_command(
+        CHECKS_RUN,
+        &serde_json::json!({ "url": "file:///etc/passwd" }),
+        project,
+    );
+    assert!(
+        matches!(refused, Err(CommandError::InvalidArgs(_))),
+        "{refused:?}"
+    );
+    let refused = check_command(
+        ANALYZE,
+        &serde_json::json!({ "urls": ["https://a.test/", "file:///etc/passwd"] }),
+        project,
+    );
+    assert!(
+        matches!(refused, Err(CommandError::InvalidArgs(_))),
+        "{refused:?}"
+    );
+    let refused = check_command(ANALYZE, &serde_json::json!({ "urls": [7] }), project);
+    assert!(
+        matches!(refused, Err(CommandError::InvalidArgs(_))),
+        "{refused:?}"
+    );
+
+    for (id, args) in [
+        (CHECKS_RUN, serde_json::json!({ "url": "https://a.test/" })),
+        (CHECKS_RUN, serde_json::json!({ "plugins": ["seo"] })),
+        (CHECKS_RUN, serde_json::Value::Null),
+        (
+            ANALYZE,
+            serde_json::json!({ "urls": ["https://a.test/", "localhost:3000"] }),
+        ),
+        (ANALYZE, serde_json::json!({ "urls": [], "mode": "all" })),
+        (ANALYZE, serde_json::Value::Null),
+        (
+            "view.reload",
+            serde_json::json!({ "url": "file:///etc/passwd" }),
+        ),
+    ] {
+        assert_eq!(check_command(id, &args, project), Ok(()), "{id} {args}");
+    }
+}
+
+#[test]
+fn the_command_ids_are_the_modules() {
+    assert_eq!(CHECKS_RUN, crate::checks::RUN_ALL_COMMAND);
+}

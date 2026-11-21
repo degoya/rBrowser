@@ -49,9 +49,30 @@ fn a_video_names_its_views_its_start_and_its_limit() {
         views: vec![ViewId(1), ViewId(3)],
         started_at_ms: 1_763_380_800_000,
         max_duration_sec: 600,
+        paused_at_ms: None,
+        paused_ms: 0,
     };
     assert_eq!(
         serde_json::to_value(&video).expect("json"),
         json!({ "views": [1, 3], "startedAtMs": 1_763_380_800_000_u64, "maxDurationSec": 600 })
     );
+}
+
+/// RB-090-68: a paused video names when it paused and the time paused before.
+#[test]
+fn a_paused_video_names_its_pause() {
+    let video = VideoActivity {
+        views: vec![ViewId(1)],
+        started_at_ms: 1_763_380_800_000,
+        max_duration_sec: 600,
+        paused_at_ms: Some(1_763_380_830_000),
+        paused_ms: 5_000,
+    };
+    let value = serde_json::to_value(&video).expect("json");
+    assert_eq!(value["pausedAtMs"], 1_763_380_830_000_u64);
+    assert_eq!(value["pausedMs"], 5_000);
+    let back: VideoActivity =
+        serde_json::from_value(json!({ "views": [1], "startedAtMs": 1, "maxDurationSec": 2 }))
+            .expect("an older state reads");
+    assert_eq!((back.paused_at_ms, back.paused_ms), (None, 0));
 }

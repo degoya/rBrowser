@@ -11,10 +11,13 @@
 #[cfg_attr(target_os = "macos", path = "macos/activate.rs")]
 mod activate;
 mod active_label;
+mod address_field;
 mod app;
+// Basic auth per environment (RB-094-08).
 #[cfg(target_os = "macos")]
 #[path = "macos/application.rs"]
 mod application;
+mod auth;
 mod backend;
 #[cfg_attr(target_os = "macos", path = "macos/board_pan.rs")]
 mod board_pan;
@@ -55,6 +58,7 @@ mod report_scheme;
 mod report_window;
 mod scheme;
 mod settings_window;
+mod sitemap_scheme;
 mod splitter;
 mod start;
 mod status_bar;
@@ -215,6 +219,8 @@ fn run(
     if child {
         return execute_process(Some(main_args), Some(&mut app), sandbox_info);
     }
+    // The start the timing counter `startup.firstView` counts from (RB-090-32).
+    rb_util::perf::mark_start();
     // The terminal of rbrowser.com or the calling shell, until the window opens (RB-010-11).
     crate::cli::console::attach();
     // An older Finder adds `-psn_...` to an app it starts (macOS); no parser knows it.
@@ -341,6 +347,9 @@ fn run(
         return start_failed(&profile);
     }
     run_message_loop();
+    // RB-091-08: a plugin load still waiting for the wizard's choice waits no longer, and none
+    // starts while the app quits.
+    crate::analyzer::plugins::abandon();
     // `updates.autoInstall = onQuit`: a ready download goes to the updater, which switches once
     // this process is gone; never waits for a download (RB-090-14).
     crate::updates::on_quit();
@@ -396,6 +405,8 @@ fn prepare(
     if let Some(url) = plan.and_then(|plan| plan.urls.first()) {
         config.start_url = Some(url.clone());
     }
+    // A URL on the command line always wins over the last pages (RB-092-04).
+    crate::restore_last::set_url_on_command_line(plan.is_some_and(|plan| !plan.urls.is_empty()));
     // `%LOCALAPPDATA%\rBrowser`, or beside the executable in the portable mode (RB-010-15).
     let base = rb_config::local_dir()
         .unwrap_or_else(|| std::env::temp_dir().join(rb_config::LOCAL_APP_DIR));
@@ -418,7 +429,7 @@ fn prepare(
     );
     let launch = Launch {
         background: plan.map_or(cli.background, |plan| plan.background),
-        title: launch::window_title(root.as_deref()),
+        title: launch::window_title(root.as_deref(), &setup.user.ui.title_bar),
         config,
         root,
         trusted,

@@ -16,6 +16,24 @@ fn defaults_run_every_view_for_thirty_seconds_with_screenshots_and_without_sync(
     // RB-090-84, the owner's decision: a run skips the views the layout hides by default.
     assert_eq!(settings.hidden_views, HiddenViews::Skip);
     assert_eq!(settings.run_layout, "grid");
+    // RB-090-89: a played recording whose views are all hidden comes into sight by default.
+    assert!(settings.reveal_recording);
+}
+
+#[test]
+fn bringing_a_recording_into_sight_can_be_switched_off() {
+    let settings: AutomationSettings =
+        serde_json::from_value(json!({ "flows": { "revealRecording": false } })).expect("reads");
+    assert!(!settings.flows.reveal_recording);
+}
+
+#[test]
+fn deleting_a_flow_asks_first_by_default_and_can_be_switched_off() {
+    // RB-090-91: "Delete" in the Flows panel asks in the panel before the file goes.
+    assert!(FlowSettings::default().confirm_delete);
+    let settings: AutomationSettings =
+        serde_json::from_value(json!({ "flows": { "confirmDelete": false } })).expect("reads");
+    assert!(!settings.flows.confirm_delete);
 }
 
 #[test]

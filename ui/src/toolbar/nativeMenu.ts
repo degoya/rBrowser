@@ -35,9 +35,10 @@ export interface NativeMenuOptions {
 
 /**
  * The pulldowns the core draws a native menu for (`native_menu::PULLDOWNS`; the portal RB-090-62;
- * the main menu `≡` and the split buttons RB-090-63).
+ * the main menu `≡` and the split buttons RB-090-63; the "+" RB-094-20).
  */
 export type PulldownKind =
+  | 'add'
   | 'theme'
   | 'environment'
   | 'layout'

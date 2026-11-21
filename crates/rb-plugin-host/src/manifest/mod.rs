@@ -295,7 +295,10 @@ impl PluginManifest {
     /// The command id `plugin.<id>.<command>`, a `-` of the id written `_` (contract 0.1).
     #[must_use]
     pub fn command_id(&self, command: &str) -> String {
-        format!("plugin.{}.{command}", self.id.replace('-', "_"))
+        format!(
+            "{}{command}",
+            rb_commands::registry::plugin_command_prefix(&self.id)
+        )
     }
 
     /// The MCP tool name `<mcp_prefix>_<tool>`; `None` without a prefix.

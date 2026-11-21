@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API client plugin settings",
+  "type": "object",
+  "properties": {
+    "allowedHosts": {
+      "type": "array",
+      "maxItems": 500,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9_.-]+)$" },
+      "default": [],
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 1,
+      "x-scope": ["local"],
+      "x-local-only": true,
+      "x-protected": true
+    },
+    "secrets": {
+      "type": "object",
+      "maxProperties": 200,
+      "additionalProperties": {
+        "type": "object",
+        "maxProperties": 200,
+        "additionalProperties": { "type": "string", "maxLength": 8192 }
+      },
+      "default": {},
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 2,
+      "x-scope": ["local"],
+      "x-local-only": true,
+      "x-protected": true
+    },
+    "historySize": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 500,
+      "default": 50,
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 3,
+      "x-scope": ["user", "project", "local"]
+    },
+    "maxResponseBytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 2097152,
+      "default": 1048576,
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 4,
+      "x-scope": ["user", "project", "local"]
+    },
+    "benchRepeats": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10,
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 5,
+      "x-scope": ["user", "project", "local"]
+    },
+    "benchConcurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 1,
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 6,
+      "x-scope": ["user", "project", "local"]
+    },
+    "codeShell": {
+      "type": "string",
+      "enum": ["powershell", "cmd", "posix"],
+      "default": "powershell",
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 7,
+      "x-scope": ["user", "project", "local"]
+    },
+    "codeVariables": {
+      "type": "string",
+      "enum": ["environment", "template"],
+      "default": "environment",
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 8,
+      "x-scope": ["user", "project", "local"]
+    },
+    "importEnvironments": {
+      "type": "boolean",
+      "default": true,
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 9,
+      "x-scope": ["user", "project", "local"]
+    },
+    "captureSecrets": {
+      "type": "string",
+      "enum": ["private", "drop"],
+      "default": "private",
+      "x-category": "network",
+      "x-section": "api-client",
+      "x-order": 10,
+      "x-scope": ["user", "project", "local"]
+    }
+  }
+}

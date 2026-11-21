@@ -72,7 +72,8 @@ pub struct EmulationParams {
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The emulation fields to set (a breakpoint's `emulation` in the config: colorScheme,
-    /// reducedMotion, userAgent, locale, timezone, network, ...); absent fields stay.
+    /// reducedMotion, userAgent, locale, timezone, network, dir, lang, ...); absent fields
+    /// stay; `null` for colorScheme, dir or lang drops the live override.
     #[serde(default)]
     pub fields: Map<String, Value>,
 }
@@ -248,7 +249,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Change the emulation of the targeted views live (\"all\", a view id or a breakpoint id; default the active view): fields as in a breakpoint's emulation. Answers the views changed and whether a reload is needed."
+        description = "Change the emulation of the targeted views live (\"all\", a view id or a breakpoint id; default the active view): fields as in a breakpoint's emulation - dir (ltr, rtl, auto) and lang (BCP 47) set <html dir> and <html lang> of the page without a reload (Chromium views); null for colorScheme, dir or lang drops the live override. Answers the views changed and whether a reload is needed."
     )]
     pub(crate) async fn emulation_set(
         &self,

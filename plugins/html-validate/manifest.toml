@@ -1,0 +1,74 @@
+# The HTML validation check (RB-090-97, RB-094-06, docs/plugins.md): the page validated per view -
+# by default the source as the server sent it, as the W3C validator sees it, from the view's own
+# network (`Page.getResourceContent` of the main frame: the bytes the view loaded, with its
+# cookies, no second request); with `html-validate.source` = `rendered` the DOM after rendering,
+# serialized in the view's isolated world, its findings by selector. By default html-validate
+# (MIT, bundled, see NOTICE) validates it offline in the view's isolated world; with
+# `html-validate.engine` = `nu` the source is POSTed from there to the Nu HTML Checker at
+# `html-validate.nuAddress` (a user setting only, empty by default: nothing leaves the device
+# unless the person sets it). A trusted project's `.rbrowser/htmlvalidate.json` sets rule levels
+# and options (src/project.rs). The runner is embedded in the component (runner/dist/), so the
+# plugin has no page script.
+manifest_version = 1
+id = "html-validate"
+name = "HTML validation"
+version = "0.1.0"
+api_version = "0.1.0"
+# `check.run` answers findings; the command and the MCP tool need the `feature` export.
+kinds = ["check-plugin", "feature-plugin"]
+mcp_prefix = "html"
+# rBrowser's release key (docs/plugins.md, "Signing keys"); its public half, as in
+# crates/rb-plugin-host/src/sign/roots.rs. Development builds are unsigned
+# (`scripts/build-plugins.sh --unsigned`).
+key_id = "rbrowser-plugin-v1"
+public_key = "NUD3ef9GLk8/CfUz6W8+hZrflwlJO3ku9MmC8+7lk9g="
+description = "Validates the HTML source of the page in every view, like the W3C validator: offline with html-validate, or with a Nu HTML Checker you set."
+# Checks > HTML validation in the page's context menu (RB-080-43).
+context_menu = ["validate"]
+
+[metadata]
+author = "Alexander Herling / DEGOYA.digital"
+license = "GPL-3.0-or-later"
+
+[locales]
+en = "locales/en.json"
+
+# `views` for the views and breakpoints of a run over all of them; `cdp` (`Page` only:
+# `getFrameTree` and `getResourceContent` of the main frame, the host's allowlist) for the served
+# source; `evaluate` to serialize the rendered DOM and run the validation in the view's isolated
+# world; `project-read` for the project's rule file `.rbrowser/htmlvalidate.json` and the trust
+# probe on `.rbrowser/plugins/` (no globs: nothing outside `.rbrowser/`); `findings` for the
+# command, which reports into the findings panel. No `http`: the plugin itself sends nothing.
+[capabilities]
+views = true
+evaluate = true
+cdp = { domains = ["Page"] }
+project-read = true
+findings = true
+
+# html-validate takes seconds on a large page, a Nu checker as long as it needs (the runner gives
+# it 30 s); the host time is credited back. At most four views at once, so a Nu checker gets no
+# more than four requests at a time.
+[limits]
+memory_bytes = 134217728
+fuel = 4000000000
+timeout_milliseconds = 90000
+max_concurrent = 4
+
+[settings]
+schema = "settings.schema.json"
+
+# MCP `html_validate`: the findings of every view of `target` (or all), merged across the views.
+[[tools]]
+name = "validate"
+description = "plugin.html-validate.tools.validate"
+input = { type = "object", properties = { engine = { type = "string", enum = ["builtin", "nu"] }, source = { type = "string", enum = ["raw", "rendered"] } } }
+
+# plugin.html_validate.validate, Ctrl+Shift+Space K V: the same run over every view, reported into
+# the findings panel.
+[[commands]]
+id = "validate"
+title = "plugin.html-validate.commands.validate"
+shortcut = "Ctrl+Shift+Space K V"
+group = "checks"
+tool = "validate"

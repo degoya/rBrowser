@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use rb_config::{
     Breakpoint, ColorScheme, DeviceKind, DevicePreset, EmulationFields, Geolocation, MediaFeatures,
-    NetworkConditions, NetworkPreset, NetworkThrottle, Orientation, SafeAreaInsets,
+    NetworkConditions, NetworkPreset, NetworkThrottle, Orientation, SafeAreaInsets, TextDirection,
 };
 use serde::{Deserialize, Serialize};
 
@@ -77,6 +77,12 @@ pub struct Emulation {
     /// CPU throttling factor above 1 (`setCPUThrottlingRate`; RB-080-10).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cpu_throttling: Option<f64>,
+    /// The text direction forced on the page's `<html dir>` by the sync agent (RB-092-02).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dir: Option<TextDirection>,
+    /// The language forced on the page's `<html lang>` (BCP 47) by the sync agent (RB-092-02).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lang: Option<String>,
 }
 
 impl Default for Emulation {
@@ -102,6 +108,8 @@ impl Default for Emulation {
             geolocation: None,
             timezone: None,
             cpu_throttling: None,
+            dir: None,
+            lang: None,
         }
     }
 }
@@ -161,9 +169,9 @@ pub fn resolve_emulation(
     };
     let dpr = own.dpr.or(device.map(|device| device.dpr)).or(defaults.dpr);
     if let Some(dpr) = dpr
-        && !(dpr > 0.0 && dpr <= MAX_DPR)
+        && !(MIN_DPR..=MAX_DPR).contains(&dpr)
     {
-        return Err(invalid(breakpoint, "dpr", "is not in (0, 10]"));
+        return Err(invalid(breakpoint, "dpr", "is not in [0.25, 10]"));
     }
     let text_scale = own.text_scale.or(defaults.text_scale);
     if let Some(scale) = text_scale
@@ -205,6 +213,15 @@ pub fn resolve_emulation(
         .filter(|locale| !locale.is_empty());
     if locale.as_deref().is_some_and(|locale| !is_locale(locale)) {
         return Err(invalid(breakpoint, "locale", "is not a BCP 47 tag"));
+    }
+    // The page's `<html lang>` (RB-092-02): checked as the locale, so no markup reaches it.
+    let lang = own
+        .lang
+        .clone()
+        .or_else(|| defaults.lang.clone())
+        .filter(|lang| !lang.is_empty());
+    if lang.as_deref().is_some_and(|lang| !is_locale(lang)) {
+        return Err(invalid(breakpoint, "lang", "is not a BCP 47 tag"));
     }
     let mut headers = defaults.headers.clone();
     headers.extend(own.headers.clone());
@@ -261,11 +278,16 @@ pub fn resolve_emulation(
         geolocation: extras.geolocation,
         timezone: extras.timezone,
         cpu_throttling: extras.cpu_throttling,
+        dir: own.dir.or(defaults.dir),
+        lang,
     })
 }
 
 /// The DPR a breakpoint without one gets: `0`, the display's own.
 const DISPLAY_DPR: f64 = 0.0;
+/// The smallest DPR a breakpoint may set: below it a full-page capture would grow a view past any
+/// memory (security review w23).
+const MIN_DPR: f64 = 0.25;
 /// The largest DPR (as `ViewHost::set_size`).
 const MAX_DPR: f64 = 10.0;
 /// The largest text scale.
@@ -343,3 +365,7 @@ fn network_conditions(throttle: NetworkThrottle) -> NetworkConditions {
 #[cfg(test)]
 #[path = "emulation_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "emulation_page_locale_tests.rs"]
+mod page_locale_tests;

@@ -46,6 +46,8 @@ pub fn overlay(base: &EmulationFields, top: &EmulationFields) -> EmulationFields
         cpu_throttling: top.cpu_throttling.or(base.cpu_throttling),
         offline: top.offline.or(base.offline),
         paper: top.paper.or(base.paper),
+        dir: top.dir.or(base.dir),
+        lang: top.lang.clone().or_else(|| base.lang.clone()),
     }
 }
 
@@ -75,6 +77,7 @@ fn free_size(current: &Emulation) -> Breakpoint {
         height: Some(current.height),
         device: None,
         engine: rb_config::EngineKind::Chromium,
+        ios_device: None,
         session: None,
         sync_navigation: true,
         shortcut: None,

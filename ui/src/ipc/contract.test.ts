@@ -79,12 +79,16 @@ const SHELL_TYPES: Record<ShellToCore['type'], true> = {
   convertVideo: true,
   nativeMenu: true,
   ...RECORDING_SHELL_TYPES, activityBar: true, collapseActivity: true, // RB-090-67
+  getSitemapGallery: true, // RB-090-86
   setup: true, // RB-091-05
+  bugReport: true, // RB-093-04
+  mcpSetup: true, // RB-091-09
 };
 const CORE_TYPES: Record<CoreToShell['type'], true> = {
   ack: true,
   state: true,
   metrics: true,
+  pluginProgress: true, // RB-094-10
   settings: true,
   commands: true,
   notification: true,
@@ -122,7 +126,10 @@ const CORE_TYPES: Record<CoreToShell['type'], true> = {
   videosChanged: true,
   nativeMenuClosed: true,
   ...RECORDING_CORE_TYPES,
+  sitemapGallery: true, // RB-090-86
   setup: true, // RB-091-05
+  bugReport: true, // RB-093-04
+  mcpSetup: true, // RB-091-09
 };
 
 describe('the IPC contract fixtures', () => {

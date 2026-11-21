@@ -35,6 +35,7 @@ fn typed(seq: u64) -> EventMessage {
         frame: Some(vec!["main > iframe".into()]),
         seq,
         time: 0,
+        path: Vec::new(),
         event: SyncEvent::Input(InputData {
             input_type: "insertText".into(),
             data: Some("x".into()),

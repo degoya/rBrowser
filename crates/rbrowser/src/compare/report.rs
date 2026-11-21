@@ -4,6 +4,7 @@
 //! across every pair - pure, run on a blocking thread. The answer of `env_compare_result` is
 //! [`Summary`].
 
+use rb_visual::regions::Region;
 use rb_visual::sitemap::{RunBreakpoint, RunState};
 use rb_visual::{DiffOptions, DiffOutcome, decode_png, diff, encode_png};
 use serde::{Deserialize, Serialize};
@@ -92,6 +93,9 @@ pub struct PairDiff {
     /// The diff image, relative to the run's folder.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
+    /// The differing areas in pixels of the shots, largest first (RB-094-03).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regions: Vec<Region>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -189,6 +193,7 @@ impl EnvRun {
                     status: d.status,
                     percent: (d.ratio * 10_000.0).round() / 100.0,
                     image: d.image.clone(),
+                    regions: d.regions.clone(),
                     error: d.error.clone(),
                 })
                 .collect(),
@@ -227,6 +232,9 @@ pub struct SummaryPair {
     pub percent: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
+    /// The differing areas, largest first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regions: Vec<Region>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -241,6 +249,8 @@ pub struct GroupDiff {
     pub different_pixels: u64,
     pub total_pixels: u64,
     pub png: Option<Vec<u8>>,
+    /// The differing areas, largest first.
+    pub regions: Vec<Region>,
     pub error: Option<String>,
 }
 
@@ -270,6 +280,7 @@ pub fn diff_group(
                 different_pixels: 0,
                 total_pixels: 0,
                 png: None,
+                regions: Vec::new(),
                 error: Some(error),
             };
             let (Some(Some(Ok(left))), Some(Some(Ok(right)))) = (decoded.get(a), decoded.get(b))
@@ -294,6 +305,7 @@ pub fn diff_group(
                         png: (pixels.different > 0)
                             .then(|| encode_png(&pixels.image).ok())
                             .flatten(),
+                        regions: pixels.regions,
                         error: None,
                     }
                 }
@@ -305,6 +317,7 @@ pub fn diff_group(
                     different_pixels: 0,
                     total_pixels: 0,
                     png: None,
+                    regions: Vec::new(),
                     error: Some(format!(
                         "{}x{} against {}x{}",
                         baseline.width, baseline.height, actual.width, actual.height

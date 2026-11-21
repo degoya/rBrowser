@@ -72,3 +72,21 @@ fn the_analysis_fields_are_read_and_the_content_outside_capped() {
     assert_eq!(outline.outside[0].text, "Loose");
     assert_eq!(outline.outside[0].at.path, "html > body > p");
 }
+
+#[test]
+fn the_place_in_the_document_and_the_writing_direction_are_read() {
+    let answer = json!({
+        "dir": "rtl",
+        "headings": [{ "level": 1, "text": "Title", "order": 4 }],
+        "focus": [{ "tag": "a", "order": 7.6 }, { "tag": "a" }]
+    });
+    let outline = PageOutline::parse(&answer.to_string()).expect("an outline");
+    assert!(outline.is_rtl());
+    assert_eq!(outline.headings[0].order, 4);
+    assert_eq!(outline.focus[0].order, 8);
+    assert_eq!(outline.focus[1].order, 0, "a missing place is the default");
+    for dir in ["ltr", "", "RTL-ish", "sideways"] {
+        let outline = PageOutline::parse(&json!({ "dir": dir }).to_string()).expect("an outline");
+        assert!(!outline.is_rtl(), "{dir:?} reads left to right");
+    }
+}

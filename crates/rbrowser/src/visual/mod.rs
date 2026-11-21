@@ -211,6 +211,9 @@ fn targets(host: &Arc<Host>, target: Target) -> Result<Vec<ViewTarget>, VisualRu
                     EngineKind::Chromium => "chromium",
                     EngineKind::Firefox => "firefox",
                     EngineKind::Webkit => "webkit",
+                    EngineKind::Android => "android",
+                    EngineKind::Safari => "safari",
+                    EngineKind::Ios => "ios",
                 }
                 .to_owned(),
                 viewport: Viewport {

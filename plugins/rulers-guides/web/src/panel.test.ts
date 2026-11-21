@@ -274,6 +274,17 @@ describe('the panel', () => {
     expect(status().getAttribute('aria-live')).toBe('assertive');
   });
 
+  // RB-094-21: "Resume them in Settings > Plugins" links there; another failure links nowhere.
+  it('links a paused plugin to Settings > Plugins', async () => {
+    el('#reset').click();
+    await answer('plugins.error.suspended', false);
+    el('#status [data-testid="setting-link-plugins"]').click();
+    expect(sent).toContainEqual({ target: 'host', action: 'open_settings', key: 'plugins' });
+    el('#reset').click();
+    await answer('plugins.error.busy', false);
+    expect(document.querySelector('#status [data-testid="setting-link-plugins"]')).toBeNull();
+  });
+
   it('says a failed first read in a sentence too', async () => {
     unmount();
     sent = [];

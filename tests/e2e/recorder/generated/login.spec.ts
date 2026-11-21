@@ -39,7 +39,7 @@ test('login', async ({ page }) => {
   // Step 11: hover
   await page.getByTestId('help').hover();
   // Step 12: assert visible
-  await expect(page.getByText('We never share your email.', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('span').filter({ hasText: /^\s*We\s+never\s+share\s+your\s+email\.\s*$/ }).filter({ visible: true }).first()).toBeVisible();
   // Step 13: dblclick
   await page.getByTestId('counter').dblclick();
   // Step 14: assert text

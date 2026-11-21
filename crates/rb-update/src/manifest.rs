@@ -16,8 +16,8 @@
 //! Copied and adapted from rCommander's `crates/rc-update/src/manifest.rs` (RB-090-02):
 //! rBrowser's domain and names, `min_version` instead of a database schema change.
 
-use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use time::{OffsetDateTime, SignedDuration};
 
 use crate::{
     error::UpdateError,
@@ -111,16 +111,19 @@ pub struct UpdateManifest {
     /// The publisher's monotonic counter for this channel: the signing time in Unix seconds.
     pub sequence: u64,
     /// When the publisher says it signed this.
-    pub issued_at: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub issued_at: OffsetDateTime,
     /// After this instant the manifest is stale. Required: without it a first contact would
     /// accept a replay of any manifest ever published.
-    pub not_after: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub not_after: OffsetDateTime,
     /// The channel this manifest is published on.
     pub channel: Channel,
     /// The offered version, SemVer without a leading `v`; a pre-release on beta only.
     pub version: String,
     /// When the release was published.
-    pub released_at: DateTime<Utc>,
+    #[serde(with = "crate::utc")]
+    pub released_at: OffsetDateTime,
     /// Plain-text release notes, the version's section of `CHANGELOG.md`, at most
     /// [`MAX_NOTES_CHARS`] characters.
     #[serde(default)]
@@ -196,7 +199,7 @@ impl UpdateManifest {
         if self.not_after <= self.issued_at {
             return Err(invalid("not_after is not after issued_at"));
         }
-        if self.not_after - self.issued_at > Duration::days(MAX_VALIDITY_DAYS) {
+        if self.not_after - self.issued_at > SignedDuration::days(MAX_VALIDITY_DAYS) {
             return Err(invalid(format!(
                 "valid for longer than {MAX_VALIDITY_DAYS} days"
             )));
@@ -249,7 +252,7 @@ fn invalid(reason: impl Into<String>) -> UpdateError {
 /// # Errors
 ///
 /// `update.not_configured`, or `update.failed` for a malformed table.
-pub fn release_trust(now: DateTime<Utc>) -> Result<TrustStore, UpdateError> {
+pub fn release_trust(now: OffsetDateTime) -> Result<TrustStore, UpdateError> {
     if sign::keys_at(EMBEDDED_KEYS, now).is_empty() {
         return Err(UpdateError::NotConfigured);
     }
@@ -270,7 +273,7 @@ pub fn verify(
     bytes: &[u8],
     channel: Channel,
     floor: Option<u64>,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<UpdateManifest, UpdateError> {
     verify_with(bytes, &release_trust(now)?, channel, floor, now)
 }
@@ -286,7 +289,7 @@ pub fn verify_with(
     trust: &TrustStore,
     channel: Channel,
     floor: Option<u64>,
-    now: DateTime<Utc>,
+    now: OffsetDateTime,
 ) -> Result<UpdateManifest, UpdateError> {
     if bytes.len() > MAX_MANIFEST_BYTES {
         return Err(UpdateError::TooLarge);

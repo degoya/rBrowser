@@ -50,6 +50,9 @@ mod services;
 mod sign;
 mod sinks;
 
+/// The index's UTC instants as text (RB-090-77), for `rb-plugin-pack` too.
+pub mod utc;
+
 /// Test components, signed packages and a scripted service backend for the tests of this crate
 /// and the crates above; never in a shipped build.
 #[cfg(any(test, feature = "test-support"))]

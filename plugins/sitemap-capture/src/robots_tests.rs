@@ -1,4 +1,5 @@
 use super::*;
+use crate::url::Url;
 
 const FIXTURE: &str = include_str!("../../../tests/fixtures/sitemap/robots.txt");
 
@@ -12,7 +13,7 @@ fn url(path: &str) -> Url {
 
 #[test]
 fn the_fixture_names_its_index_and_keeps_private_pages_out() {
-    let robots = Robots::parse(FIXTURE, &base());
+    let robots = Robots::parse(FIXTURE, &base(), TOKEN);
     let sitemaps: Vec<String> = robots.sitemaps.iter().map(ToString::to_string).collect();
     assert_eq!(sitemaps, ["https://www.example.test/sitemap_index.xml"]);
     assert!(robots.allows(&url("/about")));
@@ -24,7 +25,7 @@ fn the_fixture_names_its_index_and_keeps_private_pages_out() {
 #[test]
 fn rbrowsers_own_group_wins_over_the_star_group() {
     let text = "User-agent: *\nDisallow: /\n\nUser-agent: Googlebot\nUser-agent: rBrowser\nDisallow: /admin\n";
-    let robots = Robots::parse(text, &base());
+    let robots = Robots::parse(text, &base(), TOKEN);
     assert!(robots.allows(&url("/about")));
     assert!(!robots.allows(&url("/admin/users")));
 }
@@ -32,7 +33,7 @@ fn rbrowsers_own_group_wins_over_the_star_group() {
 #[test]
 fn the_longest_pattern_wins_and_allow_wins_a_tie() {
     let text = "User-agent: *\nDisallow: /shop\nAllow: /shop/*.html$\nDisallow: /a\nAllow: /a\n";
-    let robots = Robots::parse(text, &base());
+    let robots = Robots::parse(text, &base(), TOKEN);
     assert!(!robots.allows(&url("/shop/cart")));
     assert!(robots.allows(&url("/shop/shoe.html")));
     assert!(!robots.allows(&url("/shop/shoe.html?x=1")));
@@ -41,7 +42,7 @@ fn the_longest_pattern_wins_and_allow_wins_a_tie() {
 
 #[test]
 fn an_empty_disallow_and_no_robots_allow_everything() {
-    let robots = Robots::parse("User-agent: *\nDisallow:\n", &base());
+    let robots = Robots::parse("User-agent: *\nDisallow:\n", &base(), TOKEN);
     assert!(robots.allows(&url("/anything")));
     assert!(Robots::default().allows(&url("/anything")));
 }
@@ -49,7 +50,7 @@ fn an_empty_disallow_and_no_robots_allow_everything() {
 #[test]
 fn sitemap_lines_resolve_and_only_http_urls_count() {
     let text = "Sitemap: /relative.xml\nsitemap: ftp://x.test/s.xml\nSITEMAP: https://cdn.test/s.xml # comment\n";
-    let robots = Robots::parse(text, &base());
+    let robots = Robots::parse(text, &base(), TOKEN);
     let sitemaps: Vec<String> = robots.sitemaps.iter().map(ToString::to_string).collect();
     assert_eq!(
         sitemaps,

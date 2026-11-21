@@ -6,7 +6,6 @@
 /** An sRGB colour, each channel gamma-encoded in 0..1. */
 export type Rgb = readonly [number, number, number];
 
-export const WHITE: Rgb = [1, 1, 1];
 
 /** `oklch(L% C H)` (Tailwind's palette) as sRGB, clipped to the gamut. */
 export function oklch(value: string): Rgb {

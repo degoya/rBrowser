@@ -65,7 +65,8 @@
         "world": {
           "isolated": "isolated world",
           "main": "page world"
-        }
+        },
+        "setting_link": "Open the setting"
       },
       "panels": {
         "snippets": "Snippets"
@@ -78,7 +79,7 @@
         },
         "defaultWorld": {
           "description": "Where a snippet runs unless its header says @world: the isolated world (the page's DOM, not its globals; the page cannot see the snippet) or the page's own world (its globals and frameworks).",
-          "help": "Where a snippet runs unless its header says @world: isolated sees the page's DOM but not its globals and stays invisible to the page; main sees the page's globals and frameworks.",
+          "help": "Where a snippet runs unless its header says @world: the Isolated world sees the page's DOM but not its globals and stays invisible to the page; the Page world sees the page's globals and frameworks.",
           "label": "Default world"
         },
         "library": {

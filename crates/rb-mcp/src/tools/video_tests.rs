@@ -68,10 +68,15 @@ async fn start_without_a_target_records_every_view() {
 }
 
 #[tokio::test]
-async fn stop_and_status_go_to_the_host_and_stop_takes_no_target() {
+async fn stop_pause_resume_and_status_go_to_the_host_and_stop_takes_no_target() {
     let fake = fake();
     let server = server(&fake);
-    for action in [VideoAction::Stop, VideoAction::Status] {
+    for action in [
+        VideoAction::Stop,
+        VideoAction::Pause,
+        VideoAction::Resume,
+        VideoAction::Status,
+    ] {
         server
             .record_video(Parameters(RecordVideoParams {
                 action,
@@ -90,10 +95,23 @@ async fn stop_and_status_go_to_the_host_and_stop_takes_no_target() {
             .expect("answer"),
     );
     assert!(error, "a target on stop is refused");
+    // RB-090-68: a pause holds the whole recording, never one view's file.
+    let (error, _) = answer_json(
+        &server
+            .record_video(Parameters(RecordVideoParams {
+                action: VideoAction::Pause,
+                target: Some(TargetArg::all()),
+            }))
+            .await
+            .expect("answer"),
+    );
+    assert!(error, "a target on pause is refused");
     assert_eq!(
         fake.calls(),
         [
             (host("record_video"), json!({ "action": "stop" })),
+            (host("record_video"), json!({ "action": "pause" })),
+            (host("record_video"), json!({ "action": "resume" })),
             (host("record_video"), json!({ "action": "status" })),
         ]
     );
@@ -124,7 +142,8 @@ async fn a_refusal_of_the_host_is_answered_as_an_error() {
 
 #[test]
 fn unknown_arguments_and_actions_are_refused() {
-    assert!(serde_json::from_value::<RecordVideoParams>(json!({ "action": "pause" })).is_err());
+    assert!(serde_json::from_value::<RecordVideoParams>(json!({ "action": "rewind" })).is_err());
+
     assert!(
         serde_json::from_value::<RecordVideoParams>(json!({ "action": "start", "x": 1 })).is_err()
     );

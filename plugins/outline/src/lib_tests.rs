@@ -49,3 +49,20 @@ fn the_tools_answer_json() {
 fn describe_lists_the_rules() {
     assert_eq!(Outline.describe().len(), rules::RULES.len());
 }
+
+#[test]
+fn the_breakpoint_commands_and_tools_are_served() {
+    let mut host = FakeHost::default();
+    host.view(1, "Desktop", "https://site.test/")
+        .page(1, &json!({ "url": "https://site.test/" }));
+    for command in ["breakpoint_diff", "reading_order"] {
+        let answer = Outline
+            .run_command(&mut host, command, "{}")
+            .expect("command");
+        let value: Value = serde_json::from_str(&answer).expect("json");
+        assert_eq!(value["$open"], json!({ "panel": "outline" }));
+        let answer = Outline.call_tool(&mut host, command, "{}").expect("tool");
+        let value: Value = serde_json::from_str(&answer).expect("json");
+        assert!(value["findings"].is_array());
+    }
+}

@@ -1,14 +1,16 @@
 // The always-visible main menu `≡` (RB-090-63): every function of rBrowser by name, so nothing is
 // reachable only by a shortcut. On top the command palette, what left the toolbar's row and the
 // bookmarks (the owner's word: directly, not in a submenu); then a submenu per area - View,
-// Layout, Sync, Emulation, Environments, Capture, Checks, Overlays, Tools, Flows, Panels,
-// Plugins & extensions, App - with check marks, radio choices and the shortcut beside each row.
+// Devices & engines, Layout, Sync, Emulation, Environments, Capture, Checks, Overlays, Tools,
+// Flows, Panels, Plugins & extensions, App - with check marks, radio choices and the shortcut
+// beside each row.
 // The rows are commands of the one registry (`menuModel.ts`); the split buttons' menus
 // (`buttonMenus.ts`) are submenus here too, so their rows have one definition.
 
 import { bookmarksOf, groupBookmarks, openMessage, ADD_COMMAND, OPEN_COMMAND } from '../bookmarks/bookmarks';
 import { THEME_CHOICES, THEME_CYCLE_COMMAND, THEME_SET_COMMAND, themeChoiceKey } from '../toolbar/themeToggle';
 import { CAPTURE_MENU, CHECKS_MENU, DEVTOOLS_MENU, VIDEO_MENU } from './buttonMenus';
+import { DEVICES_MENU } from './devicesMenu';
 import { commandMessage, settingOn, type MenuContext, type MenuNode } from './menuModel';
 
 /** The most bookmarks the main menu lists itself; "All bookmarks..." opens the rest. */
@@ -129,6 +131,7 @@ export const VIEW_MENU: readonly MenuNode[] = [
   cmd('view.back'),
   cmd('view.forward'),
   cmd('reload.all'),
+  cmd('views.restore_last'),
   sep,
   cmd('ui.view_footer.toggle', {
     labelKey: 'shell.toolbar.footer',
@@ -211,7 +214,14 @@ export const SYNC_MENU: readonly MenuNode[] = [
   setting('page_api.toggle_ua_suffix', 'pageApi.uaSuffix'),
   setting('bus.toggle', 'bus.enabled'),
   sep,
-  sub('shell.menu.portal', [cmd('portal.toggle'), cmd('portal.show_qr'), cmd('portal.devices'), cmd('portal.disconnect')]),
+  sub('shell.menu.portal', [
+    cmd('portal.toggle'),
+    cmd('portal.show_qr'),
+    cmd('portal.devices'),
+    cmd('portal.disconnect'),
+    // The presentation over the internet (RB-096-05); the command asks for the consent first.
+    cmd('portal.present.start'),
+  ]),
   { kind: 'plugins', group: 'sync' },
 ];
 
@@ -226,6 +236,12 @@ export const EMULATION_MENU: readonly MenuNode[] = [
   cmd('view.emulate.geolocation'),
   cmd('view.emulate.timezone'),
   cmd('view.emulate.cpu'),
+  // The views' clock and animation rates (RB-094-07).
+  cmd('emulation.clock', { checked: (ctx) => ctx.state?.timeControl?.clock !== undefined }),
+  cmd('overlays.animations'),
+  sep,
+  cmd('emulation.toggle_dir'),
+  cmd('overlays.pseudo_locale'),
   sep,
   cmd('emulation.reset_view'),
   cmd('emulation.reset_view', { labelKey: 'shell.menu.reset_all_views', args: { target: 'all' } }),
@@ -234,23 +250,38 @@ export const EMULATION_MENU: readonly MenuNode[] = [
 export const ENVIRONMENTS_MENU: readonly MenuNode[] = [
   { kind: 'list', covers: ['environments.select'], build: environmentRows },
   sep,
+  cmd('environment.auth'),
   sub('shell.menu.compare', [cmd('env.compare.live'), cmd('env.compare.run'), cmd('env.compare.report'), cmd('env.compare.cancel')]),
-  sub('shell.menu.sessions', [cmd('session.assign'), cmd('session.clear'), cmd('cookies.copy')]),
+  sub('shell.menu.sessions', [
+    cmd('session.assign'),
+    cmd('session.clear'),
+    cmd('cookies.copy'),
+    cmd('session.state_export'),
+    cmd('session.state_import'),
+  ]),
   { kind: 'plugins', group: 'environments' },
 ];
 
 export const CAPTURE_SUBMENU: readonly MenuNode[] = [
   sub('shell.menu.screenshot', CAPTURE_MENU),
   sub('shell.menu.video', VIDEO_MENU),
-  sub('shell.menu.visual', [cmd('visual.compare'), cmd('visual.baseline_update'), cmd('visual.lfs_setup')]),
+  sub('shell.menu.visual', [
+    cmd('visual.compare'),
+    cmd('visual.baseline_update'),
+    cmd('visual.lfs_setup'),
+    // RB-094-03: the active view's page at its breakpoint in Chromium, Firefox and WebKit.
+    cmd('compare.engines'),
+  ]),
   sub('shell.menu.sitemap', [
     cmd('sitemap.capture'),
     // Only while a capture runs: with none it failed with an empty message.
     cmd('sitemap.cancel', { enabled: (ctx) => ctx.state?.sitemap?.state === 'running' }),
-    // A window of its own, once the last run wrote its gallery (RB-090-83).
-    cmd('sitemap.gallery', { enabled: (ctx) => Boolean(ctx.state?.sitemap?.gallery) }),
+    // A window of its own (RB-090-83) for any run, also while it runs (RB-090-90).
+    cmd('sitemap.gallery', { enabled: (ctx) => Boolean(ctx.state?.sitemap) }),
     cmd('panels.sitemap'),
   ]),
+  // The bug report of the views (RB-093-04).
+  sub('shell.menu.bug_report', [cmd('report.create'), cmd('report.open_folder')]),
   { kind: 'plugins', group: 'capture' },
 ];
 
@@ -342,7 +373,8 @@ export const APP_MENU: readonly MenuNode[] = [
   cmd('app.reload_config'),
   // The setup wizard again (RB-091-05).
   cmd('app.setup_wizard'),
-  sub('shell.menu.mcp', [setting('mcp.toggle', 'mcp.enabled'), cmd('mcp.copy_config')]),
+  // The AI agent's setup (RB-094-20: no feature behind a shortcut alone).
+  sub('shell.menu.mcp', [cmd('mcp.setup'), setting('mcp.toggle', 'mcp.enabled'), cmd('mcp.copy_config')]),
   sub('shell.menu.cdp', [cmd('cdp.copy_endpoint'), cmd('cdp.rotate_token')]),
   sep,
   cmd('diagnostics.create'),
@@ -361,6 +393,8 @@ export const MAIN_MENU: readonly MenuNode[] = [
   cmd('bookmarks.make_relative'),
   sep,
   sub('shell.menu.view', VIEW_MENU),
+  // Android devices, the adb download, Safari and iOS (RB-094-20).
+  sub('shell.menu.devices', DEVICES_MENU),
   sub('shell.menu.layout', LAYOUT_MENU),
   sub('shell.menu.sync', SYNC_MENU),
   sub('shell.menu.emulation', EMULATION_MENU),

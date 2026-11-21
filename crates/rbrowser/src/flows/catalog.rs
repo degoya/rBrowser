@@ -51,6 +51,9 @@ pub struct Head {
     pub views: Vec<String>,
     /// `// @timeout`.
     pub timeout_ms: Option<u32>,
+    /// `// @storageState`: a login state file under `.rbrowser/out/`, loaded into the run's
+    /// sessions first (RB-094-08).
+    pub storage_state: Option<String>,
 }
 
 /// Whether `name` is a flow name: letters, digits, `-`, `_` and `.` inside, at most 64.
@@ -104,6 +107,7 @@ pub fn parse_head(source: &str) -> Head {
                     .collect();
             }
             "@timeout" => head.timeout_ms = value.parse().ok().filter(|ms| *ms > 0),
+            "@storageState" if !value.is_empty() => head.storage_state = Some(value.to_owned()),
             _ => {}
         }
     }

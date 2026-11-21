@@ -1,7 +1,9 @@
 //! The engine badge and its menu (RB-080-33): what the badge at the right end of a view's label
 //! strip says - the engine's name, dimmed with the reason while the engine cannot run - and the
-//! rows of the menu a click on it opens: Chromium, Firefox and WebKit, the view's engine
-//! checked, one that cannot run disabled with its reason. A choice runs `view.set_engine`
+//! rows of the menu a click on it opens: Chromium, Firefox, WebKit, Safari and iOS, the view's
+//! engine checked, one that cannot run disabled with its reason (Safari and iOS outside macOS,
+//! RB-095-03, RB-095-04), iOS followed by a row per simulator model and device of the Mac
+//! (`crate::engines::ios::commands::device_items`). A choice runs `view.set_engine`
 //! ([`crate::engines::set_engine`]); the canvas board draws the same badge and opens the same
 //! menu (`CanvasBoard.vue`, `canvasEnginePick`).
 
@@ -19,10 +21,14 @@ pub const BADGE_UNAVAILABLE: &str = "engines.badge.unavailable";
 pub const ROW_UNAVAILABLE: &str = "engines.pick.unavailable";
 
 /// The engines, in menu order.
-pub const ENGINES: [EngineKind; 3] = [
+pub const ENGINES: [EngineKind; 5] = [
     EngineKind::Chromium,
     EngineKind::Firefox,
     EngineKind::Webkit,
+    // Disabled with its reason outside macOS (RB-095-03).
+    EngineKind::Safari,
+    // The same; on a Mac its simulators and devices follow (RB-095-04).
+    EngineKind::Ios,
 ];
 
 /// One row of the engine menu.
@@ -36,6 +42,8 @@ pub struct EngineItem {
     pub checked: bool,
     /// Why the engine cannot run; `None` when it can (the row is enabled).
     pub reason: Option<String>,
+    /// An iOS row's model or device UDID (`iosDevice`, RB-095-04); `None` for an engine's row.
+    pub ios_device: Option<String>,
 }
 
 impl EngineItem {
@@ -97,6 +105,7 @@ pub fn items(
                 label,
                 checked: engine == current,
                 reason,
+                ios_device: None,
             }
         })
         .collect()
@@ -119,7 +128,12 @@ pub fn badge(engine: EngineKind, reason: Option<String>) -> Badge {
 
 /// The arguments `item` runs `view.set_engine` with for `view`.
 pub fn command_args(item: &EngineItem, view: ViewId) -> Value {
-    json!({ "view": view, "engine": config_name(item.engine) })
+    match &item.ios_device {
+        Some(device) => {
+            json!({ "view": view, "engine": config_name(item.engine), "iosDevice": device })
+        }
+        None => json!({ "view": view, "engine": config_name(item.engine) }),
+    }
 }
 
 /// Why the engine of `kind` cannot run in `core`'s window; `None` for Chromium, for an engine
@@ -144,7 +158,10 @@ pub fn badge_of(core: &Core, view: ViewId) -> Option<Badge> {
 /// The rows of the engine menu of `view`; `None` for a view that does not exist.
 pub fn engine_pick(core: &Core, view: ViewId) -> Option<Vec<EngineItem>> {
     let engine = core.host().view(view)?.engine;
-    Some(items(engine, |kind| unavailable_reason(core, kind)))
+    let items = items(engine, |kind| unavailable_reason(core, kind));
+    Some(crate::engines::ios::commands::with_device_rows(
+        core, view, items,
+    ))
 }
 
 /// A row of the engine menu was chosen for `view`: it runs `view.set_engine` off the calling

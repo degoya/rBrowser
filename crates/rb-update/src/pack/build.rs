@@ -8,12 +8,12 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail, ensure};
-use chrono::{Duration, SubsecRound as _, Utc};
 use clap::Args;
 use ed25519_dalek::{SigningKey, pkcs8::DecodePrivateKey as _};
 use rb_update::manifest::{self, Artifact, MAX_NOTES_CHARS, MAX_VALIDITY_DAYS, kind};
 use rb_update::sign::{self, EMBEDDED_KEYS, EmbeddedKey, TrustStore, UPDATE_KEY_ID};
 use rb_update::{Channel, UpdateManifest};
+use time::{OffsetDateTime, SignedDuration};
 
 #[derive(Args)]
 pub(crate) struct BuildArgs {
@@ -93,16 +93,16 @@ pub(crate) fn build_under(args: &BuildArgs, roots: &[EmbeddedKey]) -> Result<()>
         ),
         None => String::new(),
     };
-    let issued_at = Utc::now().trunc_subsecs(0);
+    let issued_at = OffsetDateTime::now_utc().truncate_to_second();
     let sequence = match args.sequence {
         Some(sequence) => sequence,
-        None => u64::try_from(issued_at.timestamp()).context("the clock is before 1970")?,
+        None => u64::try_from(issued_at.unix_timestamp()).context("the clock is before 1970")?,
     };
     let update = UpdateManifest {
         schema_version: manifest::UPDATE_MANIFEST_SCHEMA_VERSION,
         sequence,
         issued_at,
-        not_after: issued_at + Duration::days(args.valid_days),
+        not_after: issued_at + SignedDuration::days(args.valid_days),
         channel,
         version: version.to_string(),
         released_at: issued_at,
@@ -158,7 +158,7 @@ fn write_signed(key: &SigningKey, update: &UpdateManifest, out: &Path) -> Result
         update.artifacts.len(),
         update.sequence,
         out.display(),
-        update.not_after.to_rfc3339(),
+        rb_update::utc::rfc3339(update.not_after),
     );
     Ok(())
 }
@@ -166,7 +166,7 @@ fn write_signed(key: &SigningKey, update: &UpdateManifest, out: &Path) -> Result
 /// Refuses a key that is not the compiled-in root (the owner's, RB-090-14). A table without a
 /// root only warns: the manifest then verifies nowhere until the public key is pasted in.
 fn check_against_root(key: &SigningKey, table: &[EmbeddedKey]) -> Result<()> {
-    let roots = sign::keys_at(table, Utc::now());
+    let roots = sign::keys_at(table, OffsetDateTime::now_utc());
     match roots.iter().find(|root| root.key_id == UPDATE_KEY_ID) {
         Some(root) => ensure!(
             sign::decode_public_key(root.public_key)? == key.verifying_key(),

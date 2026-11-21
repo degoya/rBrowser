@@ -4,10 +4,15 @@ import { pluginFile } from '../../../web-common/src/load';
 
 export { pluginFile, writePluginFile } from '../../../web-common/src/load';
 
-/** The page script with `request` and the agent's `targetOf`, exactly as the component sends it (src/fill.rs `script`). */
+/**
+ * The page script with `request`, the agent's `targetOf` and the settle runner, exactly as the
+ * component sends it (src/fill.rs `script`); an `apply` with `settle` answers a promise.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- what the page script answers is the test's to check
 export const page = (request: Record<string, unknown>): any =>
-  (0, eval)(`(\n${pluginFile('src/page.js')}\n)(${JSON.stringify(request)}, (\n${pluginFile('src/target.js')}\n)())`);
+  (0, eval)(
+    `(\n${pluginFile('src/page.js')}\n)(${JSON.stringify(request)}, (\n${pluginFile('src/target.js')}\n)(), (\n${pluginFile('src/settle.js')}\n)())`,
+  );
 
 /** The fixture form as the document, without its script; returns its event log. */
 export function loadForm(): { events: { id: string; type: string; trusted: unknown }[]; submits: () => number } {

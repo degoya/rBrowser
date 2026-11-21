@@ -116,6 +116,40 @@ fn the_tab_order_settings_are_on_unless_set_and_reach_the_page_in_camel_case() {
 }
 
 #[test]
+fn the_reading_order_arrows_are_off_with_4_px_unless_set_to_a_choice_in_range() {
+    // RB-094-02: `tabOrder.readingOrder` and `tabOrder.readingTolerancePx`.
+    let mut host = MemoryHost::new();
+    let defaults = page_settings(&mut host);
+    assert_eq!(defaults.tab_order_reading_order, ReadingOrder::Off);
+    assert_eq!(defaults.tab_order_reading_tolerance_px, 4);
+    host.settings
+        .insert("tabOrder.readingOrder".to_owned(), "\"instead\"".to_owned());
+    host.settings
+        .insert("tabOrder.readingTolerancePx".to_owned(), "0".to_owned());
+    let page = serde_json::to_value(page_settings(&mut host)).expect("JSON");
+    assert_eq!(page["tabOrderReadingOrder"], serde_json::json!("instead"));
+    assert_eq!(page["tabOrderReadingTolerancePx"], serde_json::json!(0));
+    host.settings.insert(
+        "tabOrder.readingOrder".to_owned(),
+        "\"sideways\"".to_owned(),
+    );
+    host.settings
+        .insert("tabOrder.readingTolerancePx".to_owned(), "51".to_owned());
+    let broken = page_settings(&mut host);
+    assert_eq!(broken.tab_order_reading_order, ReadingOrder::Off);
+    assert_eq!(broken.tab_order_reading_tolerance_px, 4);
+    host.settings.insert(
+        "overlays.tabOrder.readingOrder".to_owned(),
+        "\"beside\"".to_owned(),
+    );
+    host.settings.remove("tabOrder.readingOrder");
+    assert_eq!(
+        page_settings(&mut host).tab_order_reading_order,
+        ReadingOrder::Beside
+    );
+}
+
+#[test]
 fn every_colour_setting_is_a_colour_field_with_a_hex_default() {
     // RB-090-58: `format: "color"` gives the key the settings window's colour picker.
     let schema: serde_json::Value =

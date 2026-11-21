@@ -33,6 +33,31 @@ pub fn respond<T: Serialize>(result: Result<T, ToolFailure>) -> ToolResult {
     }
 }
 
+/// A failure of a prompt or a resource (RB-095-01) as the JSON-RPC error of its request: a
+/// URI or run that is not there `resource_not_found` (-32002), a bad name or argument
+/// `invalid_params`, an internal one `internal_error`, every other refusal (switched off, too
+/// large) `invalid_request`; the stable code and the setting in `data`, as a tool's error has
+/// them.
+#[must_use]
+pub fn rpc_error(failure: &ToolFailure) -> rmcp::ErrorData {
+    let mut data = serde_json::json!({ "code": failure.code });
+    if let Some(key) = &failure.settings_key {
+        data["settingsKey"] = serde_json::Value::String(key.clone());
+    }
+    let message = failure.message.clone();
+    let data = Some(data);
+    match failure.code.as_str() {
+        crate::resources::NOT_FOUND
+        | crate::resources::NO_FINDINGS
+        | crate::resources::NO_SCREENSHOTS => rmcp::ErrorData::resource_not_found(message, data),
+        crate::prompts::NOT_FOUND | crate::prompts::INVALID => {
+            rmcp::ErrorData::invalid_params(message, data)
+        }
+        "internal" => rmcp::ErrorData::internal_error(message, data),
+        _ => rmcp::ErrorData::invalid_request(message, data),
+    }
+}
+
 /// `value` when its JSON has at most `max_bytes`; else `{truncated: true, bytes, preview}` with
 /// the first `max_bytes` of the JSON text (cut at a character boundary).
 #[must_use]

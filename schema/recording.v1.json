@@ -141,6 +141,28 @@
           "items": {
             "type": "string"
           }
+        },
+        "path": {
+          "description": "The pointer's way to the step (`automation.recorder.recordPointer`, RB-090-87): CSS px of\nthe viewport of the view it was recorded in, `t` ms after the way's first point, at most\n[`MAX_PATH_POINTS`]. Play and the export move the pointer along it before the step when\nthe view has that size. Absent in a recording made before, and for a step without one.\nA recording loaded from a file keeps only the last [`MAX_PATH_POINTS`] of a longer way,\nread one by one, so a file cannot make it hold more.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PathPoint"
+          },
+          "maxItems": 64
+        },
+        "disabled": {
+          "description": "Switched off in the editor (RB-092-01): kept in the recording, neither played nor\nexported. Written only when set.",
+          "type": "boolean"
+        },
+        "pauseMs": {
+          "description": "The pause before the step at the pace `recorded`, ms, set in the editor (RB-092-01): in\nplace of the one its `atMs` measures, at most [`MAX_PAUSE_MS`]. Absent: the measured one.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 10000
         }
       },
       "additionalProperties": false,
@@ -365,7 +387,7 @@
           ]
         },
         {
-          "description": "Move the pointer onto an element (kept only when a click into what it revealed\nfollows).",
+          "description": "Move the pointer onto an element: a menu's entry the pointer rested on, or with\n`recordHover: all` one that revealed what the next click hits.",
           "type": "object",
           "properties": {
             "type": {
@@ -456,6 +478,28 @@
           "required": [
             "type",
             "target"
+          ]
+        },
+        {
+          "description": "Wait a fixed time at every pace (RB-092-01, added in the editor), at most\n[`MAX_PAUSE_MS`].",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "wait"
+            },
+            "ms": {
+              "description": "How long, ms.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0,
+              "maximum": 10000
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "ms"
           ]
         },
         {
@@ -743,6 +787,34 @@
             "url"
           ]
         }
+      ]
+    },
+    "PathPoint": {
+      "description": "A point of the pointer's way to an event while a recording keeps it (RB-090-87): CSS px of\nthe viewport, rounded, `t` ms after the way's first point.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "description": "Horizontal, CSS px of the viewport.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "y": {
+          "description": "Vertical, CSS px of the viewport.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "t": {
+          "description": "Ms after the way's first point.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "t"
       ]
     }
   }

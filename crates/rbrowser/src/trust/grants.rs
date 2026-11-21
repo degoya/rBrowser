@@ -20,12 +20,19 @@ pub const RISKY_CDP_DOMAINS: &[&str] = &[
 /// Capabilities highlighted in the dialog, by id (review finding L3 of Charge 7): `network-rules`
 /// mocks, blocks or rewrites every request of the views, `console-logs` reads what the pages log,
 /// tokens and personal data included; `sidecar` runs Lighthouse and Playwright in Node, outside
-/// the sandbox (security review RB-090-06, finding 4).
+/// the sandbox (security review RB-090-06, finding 4); `consent-probe` has the core load any
+/// `http(s)` address the plugin names, intranet ones included, in a browser of its own
+/// (RB-094-09); `api-client` has the core send requests to the hosts a person allowed and
+/// write the project's `.rbrowser/api/` (RB-096-01); `load-test` has the core load a server with
+/// many virtual users (RB-096-07).
 pub const RISKY_CAPABILITIES: &[Capability] = &[
     Capability::NetworkRules,
     Capability::ConsoleLogs,
     Capability::Sidecar,
     Capability::ProjectWrite,
+    Capability::ConsentProbe,
+    Capability::ApiClient,
+    Capability::LoadTest,
 ];
 
 /// The grants each project plugin package among `blocked` declares, by its item's path; `None`

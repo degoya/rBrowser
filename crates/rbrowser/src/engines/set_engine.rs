@@ -11,6 +11,9 @@
 //! written beside it, so the view keeps its cell (the computed layout holds Chromium views
 //! only). An engine that cannot run (Firefox not found, WebKit not installed) is refused with
 //! the reason; the view stays. The user setting `ui.engineBadge` shows or hides the badge.
+//! With `engine: "ios"` an `iosDevice` (RB-095-04) is written too - always into
+//! `config.local.json`, as a device (a UDID above all) is the person's own, also when the engine
+//! goes into `config.json` (RB-095-05); a view on iOS already starts again on the new device.
 
 use std::sync::{Arc, Weak};
 
@@ -18,7 +21,7 @@ use rb_commands::{
     Binding, Chord, CommandDef, CommandError, CommandId, CommandRegistry, Group, Handler, Key,
     McpCoverage,
 };
-use rb_config::{EngineKind, Layout, PresetFile, ProjectConfig};
+use rb_config::{ConfigFile, EngineKind, Layout, PresetFile, ProjectConfig};
 use rb_engine::{ViewHost as _, ViewId, ViewInfo};
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use serde::Deserialize;
@@ -53,6 +56,10 @@ pub struct Args {
     /// `local` (the default) or `project`: the config file the engine is written to.
     #[serde(default)]
     pub file: Option<PresetFile>,
+    /// With `engine: "ios"`: the model, simulator or device (`breakpoints[].iosDevice`,
+    /// RB-095-04).
+    #[serde(default)]
+    pub ios_device: Option<String>,
 }
 
 /// Runs the command `id` when it is `view.set_engine`; `None` otherwise.
@@ -71,15 +78,24 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
             .map_err(|error| CommandError::InvalidArgs(error.to_string()))?
     };
     let host = core.host();
+    let device = args.ios_device.as_deref();
+    if let Some(device) = device
+        && (args.engine != Some(EngineKind::Ios) || !crate::engines::ios::valid_device(device))
+    {
+        return Err(CommandError::InvalidArgs(
+            "iosDevice goes with engine ios: a model or a UDID of at most 80 characters".to_owned(),
+        ));
+    }
     if !args.views.is_empty() {
         let engine = args
             .engine
             .ok_or_else(|| CommandError::InvalidArgs("`views` needs an `engine`".to_owned()))?;
-        return Ok(Value::Array(run_many(
+        return Ok(Value::Array(run_many_with(
             core,
             &args.views,
             engine,
             args.file.unwrap_or_default(),
+            device,
         )?));
     }
     // The menus' engine pick (no engine) takes the first view while none is active, as the other
@@ -100,7 +116,7 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
         }
         return Ok(Value::Null);
     };
-    let mut answers = run_many(core, &[view], engine, args.file.unwrap_or_default())?;
+    let mut answers = run_many_with(core, &[view], engine, args.file.unwrap_or_default(), device)?;
     let answer = answers.pop().unwrap_or(Value::Null);
     match answer.get("failed").and_then(Value::as_str) {
         Some(reason) => Err(CommandError::InvalidArgs(reason.to_owned())),
@@ -122,6 +138,28 @@ pub fn run_many(
     engine: EngineKind,
     file: PresetFile,
 ) -> Result<Vec<Value>, CommandError> {
+    run_many_with(core, views, engine, file, None)
+}
+
+/// [`run_many`] with the `iosDevice` written beside `engine: "ios"` (RB-095-04): it writes even
+/// when the view is on iOS already, and such a view starts again on the new device.
+///
+/// # Errors
+///
+/// The engine cannot run, or the write or the reload failed.
+pub fn run_many_with(
+    core: &Core,
+    views: &[ViewId],
+    engine: EngineKind,
+    file: PresetFile,
+    ios_device: Option<&str>,
+) -> Result<Vec<Value>, CommandError> {
+    if engine == EngineKind::Android {
+        return Err(CommandError::InvalidArgs(
+            "an Android device is not a breakpoint's engine: add it with view.add_android"
+                .to_owned(),
+        ));
+    }
     let host = core.host();
     let config = host.config();
     // What each view needs: its breakpoint, or why it has none.
@@ -144,7 +182,7 @@ pub fn run_many(
     let to_write: Vec<&String> = plan
         .iter()
         .filter_map(|(_, entry)| entry.as_ref().ok())
-        .filter(|(info, _)| info.engine != engine)
+        .filter(|(info, _)| info.engine != engine || ios_device.is_some())
         .map(|(_, breakpoint)| breakpoint)
         .collect();
     if !to_write.is_empty() {
@@ -157,11 +195,24 @@ pub fn run_many(
             .cells
             .is_empty()
             .then(|| crate::host::state::layout_for(&config));
-        crate::layout::store::write_into(core, Some(file.config_file()), &[], |document| {
+        let engine_file = file.config_file();
+        let local = engine_file == ConfigFile::Local;
+        crate::layout::store::write_into(core, Some(engine_file), &[], |document| {
             for breakpoint in &to_write {
                 patch_document(document, breakpoint, engine, cells.as_ref());
+                if let (true, Some(device)) = (local, ios_device) {
+                    patch_ios_device(document, breakpoint, device);
+                }
             }
         })?;
+        // The device is the person's own: never into the shared file.
+        if let (false, Some(device)) = (local, ios_device) {
+            crate::layout::store::write_into(core, Some(ConfigFile::Local), &[], |document| {
+                for breakpoint in &to_write {
+                    patch_ios_device(document, breakpoint, device);
+                }
+            })?;
+        }
         crate::commands::reload_config(host).map_err(CommandError::Failed)?;
         // The read config shows the grid; the preset or mode in effect comes back, as after the
         // watcher's reload.
@@ -178,9 +229,13 @@ pub fn run_many(
                 continue;
             }
         };
-        if info.engine == engine {
+        if info.engine == engine && ios_device.is_none() {
             answers.push(answer(view, &breakpoint, engine, file, false));
             continue;
+        }
+        if info.engine == engine {
+            // On iOS already: the view starts again on the new device.
+            restart_ios(core, view);
         }
         // A view set to another breakpoint of the config by the quick pick follows that
         // breakpoint's new definition only when it is applied again.
@@ -204,7 +259,10 @@ pub fn run_many(
                 %breakpoint,
                 "the engine written to config.local.json was not read back"
             );
-            answers.push(answer(view, &breakpoint, engine, file, changed));
+            answers.push(with_device(
+                answer(view, &breakpoint, engine, file, changed),
+                ios_device,
+            ));
             continue;
         };
         core.notify(CoreToShell::Notification(Notification {
@@ -221,9 +279,63 @@ pub fn run_many(
             .into(),
             settings_key: None,
         }));
-        answers.push(answer(view, &breakpoint, engine, file, changed));
+        answers.push(with_device(
+            answer(view, &breakpoint, engine, file, changed),
+            ios_device,
+        ));
     }
     Ok(answers)
+}
+
+/// Restarts the iOS view `view`, which reads its breakpoint's new `iosDevice` (RB-095-04).
+fn restart_ios(core: &Core, view: ViewId) {
+    // The external windows take the breakpoint as read now, then the view starts on it.
+    let restarted = crate::engines::for_host(core.host()).map(|engines| {
+        engines.views_changed();
+        engines.windows().restart(EngineKind::Ios, Some(view))
+    });
+    if let Some(Err(error)) = restarted {
+        tracing::debug!(%view, %error, "the iOS view did not start again");
+    }
+}
+
+/// `answer` with the `iosDevice` written, when one was.
+fn with_device(mut answer: Value, ios_device: Option<&str>) -> Value {
+    if let (Some(device), Some(object)) = (ios_device, answer.as_object_mut()) {
+        object.insert("iosDevice".to_owned(), Value::from(device));
+    }
+    answer
+}
+
+/// Writes `device` as the `iosDevice` of `breakpoint` into a config file's JSON `document`;
+/// a file without the breakpoint's entry gets one with only `id` and `iosDevice` (the merge
+/// joins it with the other file's entry by id).
+pub fn patch_ios_device(document: &mut Value, breakpoint: &str, device: &str) {
+    if !document.is_object() {
+        *document = json!({});
+    }
+    let Some(object) = document.as_object_mut() else {
+        return;
+    };
+    let breakpoints = object
+        .entry("breakpoints".to_owned())
+        .or_insert_with(|| json!([]));
+    if !breakpoints.is_array() {
+        *breakpoints = json!([]);
+    }
+    let Some(list) = breakpoints.as_array_mut() else {
+        return;
+    };
+    match list
+        .iter_mut()
+        .find(|item| item.get("id").and_then(Value::as_str) == Some(breakpoint))
+    {
+        Some(Value::Object(entry)) => {
+            entry.insert("iosDevice".to_owned(), Value::from(device));
+        }
+        Some(_) => {}
+        None => list.push(json!({ "id": breakpoint, "iosDevice": device })),
+    }
 }
 
 /// The breakpoint of the config that carries the engine of a view: the one it shows, else its

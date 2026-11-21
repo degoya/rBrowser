@@ -111,6 +111,16 @@ describe('the bundled binaries', () => {
       expect(byId(id)?.status, id).toBe('bundled');
     }
   });
+
+  it("carry the HTML validation plugin's html-validate at its locked version (RB-094-06)", () => {
+    const lock = JSON.parse(read('plugins/package-lock.json')) as {
+      packages: Record<string, { version?: string; license?: string }>;
+    };
+    const locked = lock.packages['node_modules/html-validate'];
+    expect(byId('html-validate')?.version).toBe(locked?.version);
+    expect(byId('html-validate')?.license).toBe(locked?.license);
+    expect(byId('html-validate')?.status).toBe('bundled');
+  });
 });
 
 describe('the filter', () => {

@@ -352,6 +352,23 @@ fn tokens_in_urls_are_recorded_masked() {
     );
 }
 
+/// RB-094-10: an address's user info (`user:password@`) never reaches a recording.
+#[test]
+fn the_user_info_of_an_address_is_not_recorded() {
+    let mut recorder = started(
+        RecorderOptions::default(),
+        Some("https://ann:pa55word@x.test/start"),
+    );
+    recorder.on_navigated(DESKTOP, "https://ann:pa55word@x.test/next", START + 60_000);
+    let recording = recorder.stop().expect("stops");
+    let file = to_json(&recording).expect("serialises");
+    assert!(
+        !file.contains("pa55word") && !file.contains("ann:"),
+        "{file}"
+    );
+    assert_eq!(recording.start_url.as_deref(), Some("https://x.test/start"));
+}
+
 /// RB-050-01 review: the finished recording can be taken without ending it, so a stop whose
 /// save fails loses nothing.
 #[test]

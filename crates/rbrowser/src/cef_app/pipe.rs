@@ -2,14 +2,14 @@
 //! Chromium ends go to `--remote-debugging-io-pipes=<read>,<write>` (valid in-process, no
 //! inheritance), our ends carry the NUL-framed JSON of the router. No TCP port is opened.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use rb_engine::EngineError;
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
 use windows_sys::Win32::Storage::FileSystem::{ReadFile, WriteFile};
 use windows_sys::Win32::System::Pipes::CreatePipe;
 
-use crate::cdp::{CdpRouter, CdpTransport, FrameDecoder, lock};
+use crate::cdp::{CdpRouter, FrameDecoder, ThreadWriter};
 
 /// The pipe buffer size.
 const BUFFER: u32 = 1 << 20;
@@ -71,48 +71,42 @@ pub fn create() -> Option<PipeEnds> {
     })
 }
 
-/// Writes the router's messages into the pipe.
-pub struct PipeWriter {
-    handle: Mutex<usize>,
-}
-
-impl CdpTransport for PipeWriter {
-    #[allow(
-        unsafe_code,
-        reason = "WriteFile has no safe wrapper; the buffer outlives the call"
-    )]
-    fn send(&self, frame: Vec<u8>) -> Result<(), EngineError> {
-        let handle = lock(&self.handle);
-        let mut offset = 0;
-        while offset < frame.len() {
-            let rest = &frame[offset..];
-            let length = u32::try_from(rest.len()).unwrap_or(u32::MAX);
-            let mut written = 0u32;
-            // SAFETY: `rest` is valid for `length` bytes; synchronous write, no OVERLAPPED.
-            let ok = unsafe {
-                WriteFile(
-                    *handle as HANDLE,
-                    rest.as_ptr(),
-                    length,
-                    &mut written,
-                    std::ptr::null_mut(),
-                )
-            };
-            if ok == 0 || written == 0 {
-                return Err(EngineError::Closed);
-            }
-            offset += written as usize;
+/// Writes one frame into the pipe `handle`, on the writer thread ([`ThreadWriter`]): a full
+/// pipe blocks that thread, never a tokio worker.
+#[allow(
+    unsafe_code,
+    reason = "WriteFile has no safe wrapper; the buffer outlives the call"
+)]
+fn write_frame(handle: usize, frame: &[u8]) -> Result<(), EngineError> {
+    let mut offset = 0;
+    while offset < frame.len() {
+        let rest = &frame[offset..];
+        let length = u32::try_from(rest.len()).unwrap_or(u32::MAX);
+        let mut written = 0u32;
+        // SAFETY: `rest` is valid for `length` bytes; synchronous write, no OVERLAPPED.
+        let ok = unsafe {
+            WriteFile(
+                handle as HANDLE,
+                rest.as_ptr(),
+                length,
+                &mut written,
+                std::ptr::null_mut(),
+            )
+        };
+        if ok == 0 || written == 0 {
+            return Err(EngineError::Closed);
         }
-        Ok(())
+        offset += written as usize;
     }
+    Ok(())
 }
 
-/// Connects `ends` to a new router: the writer goes into it, a reader thread feeds it every
-/// message and closes it when Chromium closes its end.
+/// Connects `ends` to a new router: a writer thread takes its messages, a reader thread feeds
+/// it every message and closes it when Chromium closes its end.
 pub fn connect(ends: PipeEnds) -> Arc<CdpRouter> {
-    let router = CdpRouter::new(Arc::new(PipeWriter {
-        handle: Mutex::new(ends.write),
-    }));
+    let write = ends.write;
+    let writer = ThreadWriter::spawn("rb-cdp-pipe-write", move |frame| write_frame(write, frame));
+    let router = CdpRouter::new(Arc::new(writer));
     let reader = router.clone();
     let spawned = std::thread::Builder::new()
         .name("rb-cdp-pipe".to_owned())

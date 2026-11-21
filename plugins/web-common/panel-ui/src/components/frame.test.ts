@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils';
 import ui from '@nuxt/ui/vue-plugin';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { h } from 'vue';
+import { PANEL_KEY } from '../mount';
+import type { Panel } from '../panel';
 import IconAction from './IconAction.vue';
 import PanelFrame from './PanelFrame.vue';
 
@@ -22,6 +24,23 @@ describe('the panel frame', () => {
     expect(wrapper.find('#body').text()).toBe('content');
     const run = wrapper.find('button[aria-label="Run"]');
     expect(run.text()).toBe('Run');
+  });
+
+  // RB-094-21: a status line that names a settings path carries the link to it.
+  it('shows the settings link of a status line beside its text', async () => {
+    const openSettings = vi.fn();
+    const wrapper = mount(PanelFrame, {
+      props: {
+        title: 'Lighthouse',
+        icon: 'i-lucide-gauge',
+        status: { tone: 'error', text: 'Check Settings > Engines > Node runtime.', setting: { key: 'engines.nodePath', label: 'Open the setting' } },
+      },
+      global: { plugins: [ui], provide: { [PANEL_KEY as symbol]: { openSettings } as unknown as Panel } },
+    });
+    const link = wrapper.get('#status [data-testid="setting-link-engines.nodePath"]');
+    expect(link.text()).toBe('Open the setting');
+    await link.trigger('click');
+    expect(openSettings).toHaveBeenCalledWith('engines.nodePath');
   });
 
   it('shows no status line without a text', () => {

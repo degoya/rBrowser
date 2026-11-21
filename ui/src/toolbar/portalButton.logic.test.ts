@@ -122,4 +122,20 @@ describe("the portal button's menu", () => {
       expect(portalChoice(id), id).toBeNull();
     }
   });
+
+  it('starts or ends the presentation over the internet where a person allowed it (RB-096-05)', () => {
+    const allowed: PortalState = {
+      ...running(),
+      presentation: { enabled: true, consented: false, phase: 'off', viewers: 0, maxViewers: 3 },
+    };
+    const ids = (rows: ReturnType<typeof portalRows>) =>
+      rows.filter((row) => row.kind === 'item').map((row) => (row.kind === 'item' ? row.id : ''));
+    expect(ids(portalRows(allowed, t))).toContain('present');
+    const live: PortalState = { ...allowed, presentation: { ...allowed.presentation!, phase: 'live' } };
+    expect(ids(portalRows(live, t))).toContain('present_stop');
+    const off: PortalState = { ...allowed, presentation: { ...allowed.presentation!, enabled: false } };
+    expect(ids(portalRows(off, t))).not.toContain('present');
+    expect(portalChoice('present')).toEqual({ type: 'runCommand', id: 'portal.present.start', args: {} });
+    expect(portalChoice('present_stop')).toEqual({ type: 'runCommand', id: 'portal.present.stop' });
+  });
 });

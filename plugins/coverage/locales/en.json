@@ -93,8 +93,8 @@
       },
       "settings": {
         "defaultMode": {
-          "description": "What coverage_get measures without a mode: load reloads every view and measures, interaction reads the running session.",
-          "help": "What coverage_get measures without a mode: load reloads every view and measures the fresh load, interaction reads what the running session has used so far.",
+          "description": "What coverage_get measures without a mode: Page load reloads every view and measures, Interaction reads the running session.",
+          "help": "What coverage_get measures without a mode: Page load reloads every view and measures the fresh load, Interaction reads what the running session has used so far.",
           "label": "Default mode"
         },
         "idleMs": {

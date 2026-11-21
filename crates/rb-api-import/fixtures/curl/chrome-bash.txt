@@ -1,0 +1,7 @@
+curl 'https://api.example.com/v1/items?sort=new' \
+  -H 'accept: application/json' \
+  -H 'authorization: Bearer tok.en.value' \
+  -H $'x-note: it\'s fine' \
+  -b 'session=s3ss10n' \
+  --data-raw '{"name":"Lamp","price":12}' \
+  --compressed

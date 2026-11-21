@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
 import UTabs from '@nuxt/ui/components/Tabs.vue';
 import { SETTINGS_ICONS } from './icons';
-import { overflowEdges, pageOffset, revealOffset, type Edges } from './tabScroll';
+import { overflowEdges, pageOffset, revealOffset, type Edges } from '../../../plugins/web-common/panel-ui/src/tabScroll';
 
 export interface TabStripItem {
   label: string;

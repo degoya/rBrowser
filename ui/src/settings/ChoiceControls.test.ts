@@ -36,7 +36,7 @@ function updates(wrapper: VueWrapper): unknown[] {
 }
 
 function menu(wrapper: VueWrapper) {
-  return wrapper.findComponent(USelectMenu);
+  return wrapper.findComponent(USelectMenu) as unknown as VueWrapper;
 }
 
 /** A prop of the select (its generic props type reads as `never` to `props()`). */

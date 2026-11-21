@@ -29,12 +29,23 @@ const ASK: PanelInfo = {
   url: 'rbrowser://plugin/hello-panel/panel/ask.html',
 };
 
-async function mounted(panels: PanelInfo[], routeKey: string | null = null, listed?: Promise<void>) {
+/** Mounted with `panels`, open; `keepFrames` hidden panels stay loaded (RB-090-38), none unless
+ * a test is about them. */
+async function mounted(panels: PanelInfo[], routeKey: string | null = null, listed?: Promise<void>, keepFrames = 0) {
   const asked: ShellToCore[] = [];
   const client = new IpcClient({
     send: async (message): Promise<CoreToShell> => {
       asked.push(message);
       await listed;
+      if (message.type === 'getSettings') {
+        return {
+          type: 'settings',
+          values: [
+            { key: 'panels.dockState', value: 'open', origin: 'user' },
+            { key: 'panels.keepFrames', value: keepFrames, origin: 'user' },
+          ],
+        };
+      }
       if (message.type === 'pluginPanel' && message.request.op === 'settings') {
         return { type: 'pluginPanel', message: { strings: { 'plugin.hello-panel.title': 'Hello' }, settings: {} } };
       }
@@ -240,6 +251,24 @@ describe('the plugin panels window', () => {
     expect(todo.isConnected).toBe(true);
     await click(MAIN);
     expect(shown()).toBe(todo);
+  });
+
+  // RB-090-38: switching between panels loaded each one again (0.5-0.8 MB a panel); the
+  // `panels.keepFrames` panels shown last stay in the page, hidden, the oldest goes beyond them.
+  it('switches back to a panel shown last without loading it again', async () => {
+    browserFrames();
+    const { click, shown } = await mounted([MAIN, LOG, ASK], null, undefined, 1);
+    const main = shown();
+    await click(LOG);
+    const log = shown();
+    expect(main.isConnected).toBe(true);
+    await click(MAIN);
+    expect(shown()).toBe(main);
+    expect(shown().getAttribute('src')).toBe(MAIN.url);
+    expect(log.isConnected).toBe(true);
+    await click(ASK);
+    expect(main.isConnected).toBe(true);
+    expect(log.isConnected).toBe(false);
   });
 
   it('takes away the frame of a panel without unsaved work when another is shown', async () => {

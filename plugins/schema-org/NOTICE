@@ -1,0 +1,13 @@
+schema-org - the schema.org readers and data rBrowser's first-party plugins share
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+data/vocabulary.json is derived from the schema.org vocabulary, release 30.1
+(schemaorg-current-https.jsonld, https://github.com/schemaorg/schemaorg, tag v30.1), compacted
+by scripts/schema-org-vocabulary.sh to the classes, data types, enumeration members and
+properties with their domains, ranges and successors. The schema.org vocabulary is licensed
+under the Creative Commons Attribution-ShareAlike 3.0 Unported licence (CC BY-SA 3.0,
+https://creativecommons.org/licenses/by-sa/3.0/); see https://schema.org/docs/terms.html.
+data/vocabulary.json is distributed under the same licence. schema.org is a collaborative
+project of its sponsors; rBrowser is not affiliated with it.

@@ -1,8 +1,9 @@
 //! The fill's report to the recorder (RB-090-78). The autofill sets values by script, and the
 //! sync agent records trusted input only - so a recording would lack the fill. The page script's
-//! `apply` therefore names, per field it set, what the recorder takes (`record`: the field's
+//! `apply` therefore names, per field it changed, what the recorder takes (`record`: the field's
 //! target in the shape the sync agent gives an element, what was done, the value set - a
-//! password's never). Each view's list leaves the answer and goes to the core as `host` posts
+//! password's never; a field that already held the value names nothing, RB-090-86). Each view's
+//! list leaves the answer and goes to the core as `host` posts
 //! `{"action": "record_fill", "view": <id>, "fields": [...]}`; the core turns them into steps
 //! while a recording runs with `automation.recorder.recordAutofill`, and does nothing otherwise.
 //! A post is held under the host's limit for one message; a view with many fields gets several.

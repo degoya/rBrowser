@@ -145,3 +145,7 @@ mod sequence_tests;
 #[cfg(test)]
 #[path = "canvas_resize_tests.rs"]
 mod canvas_resize_tests;
+
+#[cfg(test)]
+#[path = "canvas_drag_tests.rs"]
+mod canvas_drag_tests;

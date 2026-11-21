@@ -12,7 +12,7 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::sync::{Arc, Mutex, Weak};
 
-use rb_commands::{CommandError, Group, Handler};
+use rb_commands::{CommandError, CommandRegistry, Group, Handler};
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use rb_plugin_host::{LoadedEntry, plugin_command_defs, valid_plugin_id};
 use rb_plugin_types::{Failure, PluginKind, codes};
@@ -34,38 +34,80 @@ pub const COMMAND_STARTED_KEY: &str = "plugins.notice.command_started";
 /// Registers the commands of every feature plugin among `loaded` with `core`'s registry.
 pub fn register(core: &Arc<Core>, runtime: &Arc<PluginRuntime>, loaded: &[LoadedEntry]) {
     let me = Arc::downgrade(core);
+    core.register_late(|registry| register_into(registry, &me, runtime, loaded.iter()));
+}
+
+/// A live change (RB-092-06), as one change of the registry the shell hears of once: the
+/// commands of the plugins `gone` (removed or replaced) leave it with their shortcuts, then those
+/// of the feature plugins among `loaded` named in `came` (added or replaced) come in. A plugin
+/// that stayed keeps its commands and the chords the host gave them.
+pub fn follow(
+    core: &Arc<Core>,
+    runtime: &Arc<PluginRuntime>,
+    loaded: &[LoadedEntry],
+    gone: &BTreeSet<String>,
+    came: &BTreeSet<String>,
+) {
+    let me = Arc::downgrade(core);
     core.register_late(|registry| {
-        let mut refused = Vec::new();
-        for entry in loaded {
-            let manifest = entry.plugin.manifest();
-            if !manifest.is(PluginKind::Feature) {
-                continue;
-            }
-            let (defs, notices) = plugin_command_defs(manifest);
-            for notice in &notices {
-                tracing::info!(
+        for plugin in gone {
+            let removed = registry.unregister_plugin(plugin);
+            tracing::debug!(
+                plugin_id = plugin.as_str(),
+                removed = removed.len(),
+                "a plugin's commands left the registry"
+            );
+        }
+        let entries = loaded
+            .iter()
+            .filter(|entry| came.contains(&entry.plugin.manifest().id));
+        register_into(registry, &me, runtime, entries)
+    });
+}
+
+/// Adds the commands of the feature plugins among `entries` to `registry`; what it refused.
+fn register_into<'a>(
+    registry: &mut CommandRegistry,
+    me: &Weak<Core>,
+    runtime: &Arc<PluginRuntime>,
+    entries: impl Iterator<Item = &'a LoadedEntry>,
+) -> Vec<CommandError> {
+    let mut refused = Vec::new();
+    for entry in entries {
+        let manifest = entry.plugin.manifest();
+        if !manifest.is(PluginKind::Feature) {
+            continue;
+        }
+        let (defs, notices) = plugin_command_defs(manifest);
+        for notice in &notices {
+            tracing::info!(
+                plugin_id = manifest.id.as_str(),
+                code = notice.code().unwrap_or_default(),
+                "a plugin shortcut stays unbound"
+            );
+        }
+        for def in defs {
+            let command = def.id.as_str().rsplit('.').next().unwrap_or_default();
+            let handler = handler(
+                me.clone(),
+                Arc::downgrade(runtime),
+                &manifest.id,
+                command,
+                &def.title_key,
+                def.group,
+            );
+            if let Err(error) = registry.register_plugin(def, handler) {
+                // Never silent: a command left out on a live replace keeps an old handler.
+                tracing::warn!(
                     plugin_id = manifest.id.as_str(),
-                    code = notice.code().unwrap_or_default(),
-                    "a plugin shortcut stays unbound"
+                    %error,
+                    "a plugin command was not registered"
                 );
-            }
-            for def in defs {
-                let command = def.id.as_str().rsplit('.').next().unwrap_or_default();
-                let handler = handler(
-                    me.clone(),
-                    Arc::downgrade(runtime),
-                    &manifest.id,
-                    command,
-                    &def.title_key,
-                    def.group,
-                );
-                if let Err(error) = registry.register_plugin(def, handler) {
-                    refused.push(error);
-                }
+                refused.push(error);
             }
         }
-        refused
-    });
+    }
+    refused
 }
 
 fn handler(

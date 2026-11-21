@@ -23,6 +23,7 @@ pub fn agent_config() -> AgentConfig {
         hover_throttle_ms: 100,
         scroll_debounce_ms: rb_sync::message::DEFAULT_SCROLL_DEBOUNCE_MS,
         scroll_mode: rb_sync::AgentScrollMode::Anchor,
+        record: None,
     }
 }
 

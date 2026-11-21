@@ -5,7 +5,8 @@
 // An area link (a notice's settings target, RB-090-85) rings the card it opens.
 // The grid (`layout`) gets its preview beside it; the device presets list follows in the slot,
 // the plugin list stands above the keys in the slot `before`. The CDP proxy's and the MCP
-// server's commands stand under their switches (`AutomationActions`, RB-090-63).
+// server's commands stand under their switches (`AutomationActions`, RB-090-63); the MCP setup
+// under the client choice (`McpSettings`, RB-091-09).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -15,6 +16,7 @@ import type { JsonValue, PathKind, Scope } from '../ipc/protocol';
 import GridPreview from './GridPreview.vue';
 import WebStoreInstall from './WebStoreInstall.vue';
 import AutomationActions from './AutomationActions.vue';
+import McpSettings from '../mcpsetup/McpSettings.vue';
 import { automationActions } from './automationActions';
 import { SETTINGS_ICONS } from './icons';
 import { flagOf, SHOW_KEYS_KEY } from './flags';
@@ -30,6 +32,8 @@ const GRID_KEY = 'layout';
 /** The switch the Web Store field follows (RB-080-23). */
 const WEB_STORE_KEY = 'engines.chromium.extensions.allowWebStore';
 const BREAKPOINTS_KEY = 'breakpoints';
+/** The MCP setup stands under the client choice (RB-091-09). */
+const MCP_CLIENT_KEY = 'mcp.client';
 
 const props = defineProps<{
   client: IpcClient;
@@ -158,6 +162,7 @@ function pickerFor(def: SettingDef): (kind: PathKind) => Promise<string | null> 
           />
           <GridPreview v-if="def.key === GRID_KEY" class="px-2 py-3" :layout="valueOf(def)" :names="breakpointNames" />
           <WebStoreInstall v-if="def.key === WEB_STORE_KEY && valueOf(def) === true" class="basis-full px-2 pb-3" :client="client" />
+          <McpSettings v-if="def.key === MCP_CLIENT_KEY" class="basis-full px-2 pb-3" :client="client" :selected="valueOf(def)" />
           <!-- The service's commands under its switch: CDP endpoint, script, token; MCP line (RB-090-63). -->
           <AutomationActions
             v-if="automationActions(def.key).length > 0"

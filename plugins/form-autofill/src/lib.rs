@@ -23,6 +23,7 @@ pub mod classify;
 pub mod field;
 pub mod fill;
 pub mod invalid;
+pub mod passes;
 pub mod pattern;
 pub mod persona;
 pub mod plan;

@@ -129,7 +129,10 @@ impl Store {
                 let (vitals, soft) = if options.vitals {
                     let source = match facts.engine {
                         EngineKind::Chromium | EngineKind::Firefox => Source::Reports,
-                        EngineKind::Webkit => Source::None,
+                        EngineKind::Webkit
+                        | EngineKind::Android
+                        | EngineKind::Safari
+                        | EngineKind::Ios => Source::None,
                     };
                     let report = entry.and_then(|entry| entry.report.as_ref());
                     rating::readings(report, source, &options.thresholds)

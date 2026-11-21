@@ -30,10 +30,10 @@ describe('the network model', () => {
   });
 
   it('makes the list arguments from the filters', () => {
-    expect(M.listArgs({ search: '  api ', type: 'Image', status: 'error', differences: true })).toEqual({
+    expect(M.listArgs({ search: '  api ', type: 'Image', status: 'error', differences: true, endpoint: '' })).toEqual({
       limit: 150, search: 'api', types: ['Image'], status: 'error', differences: true,
     });
-    expect(M.listArgs({ search: '', type: '', status: 'all', differences: false })).toEqual({ limit: 150 });
+    expect(M.listArgs({ search: '', type: '', status: 'all', differences: false, endpoint: '' })).toEqual({ limit: 150 });
   });
 
   it('makes a mock from the editor or names the wrong field', () => {

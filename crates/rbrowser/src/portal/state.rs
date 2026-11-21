@@ -14,6 +14,7 @@ use tokio::sync::{mpsc, watch};
 use super::origin_map::OriginMap;
 use super::origins::{AssetOrigins, Upstream, assets_of, upstream_for};
 use super::pairing::{DeviceId, DeviceInfo, Pairings, Secret};
+use super::present::link::ViewerLinks;
 use super::relay::{Counts, Report, Skip, ToDevice, for_device, navigate};
 use super::server::{PAIR_PATH, PortalServer};
 use crate::cdp::lock;
@@ -48,6 +49,8 @@ pub struct Shared {
     revocations: HashMap<DeviceId, watch::Sender<bool>>,
     /// The pairing token last issued, as registered with the log mask.
     issued: Option<Secret>,
+    /// The presentation's viewer link (RB-096-05); none is ever issued on a LAN listener.
+    pub(super) link: ViewerLinks,
 }
 
 impl Shared {
@@ -109,6 +112,7 @@ impl Shared {
             next_socket: 1,
             revocations: HashMap::new(),
             issued: None,
+            link: ViewerLinks::new(pairing_ttl),
         }
     }
 }
@@ -260,16 +264,17 @@ impl PortalServer {
     /// The portal stops: every session and the token are revoked and leave the log mask, every
     /// forwarded connection ends.
     pub(super) fn forget_all(&self) {
-        let (sessions, issued, revocations) = {
+        let (sessions, issued, links, revocations) = {
             let mut shared = lock(&self.shared);
             shared.sockets.clear();
             (
                 shared.pairings.revoke_all(),
                 shared.issued.take(),
+                shared.link.revoke_all(),
                 std::mem::take(&mut shared.revocations),
             )
         };
-        for secret in sessions.iter().chain(issued.iter()) {
+        for secret in sessions.iter().chain(issued.iter()).chain(links.iter()) {
             rb_diag::unregister_secret(secret.expose());
         }
         for revocation in revocations.into_values() {
@@ -310,6 +315,15 @@ impl PortalServer {
                 .and_then(navigate)
                 .and_then(|message| serde_json::to_string(&message).ok())
             {
+                let _ = sender.try_send(text);
+            }
+            // A viewer of the presentation learns whether to flash the presenter's clicks.
+            if let Some(text) = self.public.as_ref().and_then(|public| {
+                serde_json::to_string(&ToDevice::Present {
+                    pointer: public.pointer(),
+                })
+                .ok()
+            }) {
                 let _ = sender.try_send(text);
             }
             shared

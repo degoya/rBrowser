@@ -64,6 +64,8 @@ pub struct Ctx {
     pub seed: u64,
     pub lang: Lang,
     pub persona: Persona,
+    /// A consent checkbox is ticked in a valid fill (the setting `tickConsent`).
+    pub tick_consent: bool,
 }
 
 impl Ctx {
@@ -73,6 +75,7 @@ impl Ctx {
             seed,
             lang,
             persona: Persona::new(seed, lang),
+            tick_consent: true,
         }
     }
 }
@@ -203,13 +206,56 @@ fn text_base(field: &Field, kind: Kind, ctx: &Ctx, rng: &mut Rng) -> String {
     }
 }
 
+/// Words of a checkbox's name, id or label that ask for consent (privacy, terms): a page that
+/// enables its submit button only once such a box is ticked often marks it not `required`.
+const CONSENT: [&str; 10] = [
+    "privacy",
+    "datenschutz",
+    "terms",
+    "agb",
+    "consent",
+    "einwillig",
+    "gdpr",
+    "dsgvo",
+    "accept",
+    "akzept",
+];
+
+/// Words that make a checkbox an offer rather than a consent the form needs: a newsletter or
+/// marketing box is left to the seed even when it says "accept" or "consent".
+const NOT_CONSENT: [&str; 8] = [
+    "newsletter",
+    "marketing",
+    "werbung",
+    "promo",
+    "offer",
+    "angebot",
+    "mailing",
+    "advert",
+];
+
+/// Whether the checkbox `field` asks for consent (RB-094-22): a consent word in its name, id or
+/// label, and no newsletter or marketing word in any of them.
+fn consent(field: &Field) -> bool {
+    let texts: Vec<String> = [&field.name, &field.id, &field.label]
+        .into_iter()
+        .map(|text| text.to_ascii_lowercase())
+        .collect();
+    let has = |words: &[&str]| {
+        texts
+            .iter()
+            .any(|text| words.iter().any(|word| text.contains(word)))
+    };
+    has(&CONSENT) && !has(&NOT_CONSENT)
+}
+
 /// The valid value of `field` of `kind`.
 #[must_use]
 pub fn valid(field: &Field, kind: Kind, ctx: &Ctx) -> Fill {
     let mut rng = Rng::keyed(ctx.seed, &["valid", &field.key, kind.id()]);
     if kind == Kind::Checkbox || field.control == "checkbox" {
         return Fill::Check {
-            checked: field.required || rng.below(2) == 0,
+            checked: field.required || (ctx.tick_consent && consent(field)) || rng.below(2) == 0,
         };
     }
     if field.control == "radio" {

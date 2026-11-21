@@ -31,6 +31,7 @@ pub mod report;
 pub mod robots;
 pub mod rules;
 pub mod run;
+pub mod serp;
 pub mod site;
 pub mod sitemap;
 pub mod social;

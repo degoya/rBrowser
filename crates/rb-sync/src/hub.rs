@@ -300,7 +300,15 @@ impl Hub {
 
     /// `view` committed a navigation to `url`: it is in sync again, and when it is the leader
     /// of an open follow, the followers load `url`.
+    /// The time from the load the hub gave to this commit is the counter `sync.navigation`
+    /// (RB-090-32).
     pub fn navigated(&mut self, view: ViewId, url: &str, now: Instant) -> Vec<Navigation> {
+        if let Some(given) = self.loading.given_at(view, now) {
+            rb_util::perf::record(
+                rb_util::perf::names::SYNC_NAVIGATION,
+                now.saturating_duration_since(given),
+            );
+        }
         self.loading.clear(view);
         self.desync.clear(view);
         self.next_epoch(view);

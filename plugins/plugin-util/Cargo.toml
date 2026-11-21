@@ -1,0 +1,38 @@
+[package]
+name = "plugin-util"
+description = "The helpers rBrowser's first-party plugins share instead of copying: an http(s) URL, robots.txt, base64, the rules' levels and the CDP mark of an element (RB-094-11)"
+# The library's own version, not the workspace's; no plugin of its own (no manifest.toml).
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A crate of its own, outside the app's workspace, like plugins/schema-org: a path dependency of
+# the plugins that use it, built for wasm32 with them, and `cargo test` here runs its own tests
+# natively (scripts/check.sh, plugin tests).
+[workspace]
+
+# `url`, `robots` and `base64` are `std` only; `levels` and `mark` are written against the plugin
+# contract, which builds for wasm32 too.
+[dependencies]
+rb-plugin-api = { path = "../../crates/rb-plugin-api" }
+serde_json = "1.0.154"
+
+[dev-dependencies]
+# `MemoryHost`: the native trait run against the host's rules, without WebAssembly.
+rb-plugin-api = { path = "../../crates/rb-plugin-api", features = ["test-support"] }
+
+[lib]
+name = "plugin_util"
+
+# The app's workspace lints, repeated: this crate is no member of that workspace.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+allow_attributes_without_reason = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "warn"

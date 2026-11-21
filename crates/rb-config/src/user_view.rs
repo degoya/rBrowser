@@ -16,6 +16,10 @@ pub struct StartupSettings {
     /// The window takes the focus when a project opens or a second call hands it a URL;
     /// `--background` overrides it for one call.
     pub focus_on_open: bool,
+    /// What the views open when the project opens (RB-092-04): `startUrl`, the project's start
+    /// URL, or `last`, the page each view showed when rBrowser last closed (kept only in the
+    /// project's browser profile). A URL on the command line always wins.
+    pub restore: StartupRestore,
 }
 
 impl Default for StartupSettings {
@@ -23,8 +27,20 @@ impl Default for StartupSettings {
         Self {
             open_last_project: false,
             focus_on_open: true,
+            restore: StartupRestore::StartUrl,
         }
     }
+}
+
+/// `startup.restore`: what the views open when the project opens (RB-092-04).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum StartupRestore {
+    /// The project's start URL (`startUrl`) in every view.
+    #[default]
+    StartUrl,
+    /// The page each view showed when rBrowser last closed, in the environment in effect.
+    Last,
 }
 
 /// `grid`: the zoom of the grid area (RB-010-12). Panning the grid with Space + drag comes with
@@ -116,3 +132,7 @@ impl Default for BookmarkSettings {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "user_view_tests.rs"]
+mod tests;

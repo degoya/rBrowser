@@ -65,6 +65,8 @@ describe('settings and state', () => {
     expect(isPageState(STATE)).toBe(true);
     expect(isPageState({ ...STATE, info: { ...STATE.info, label: 3 } })).toBe(false);
     expect(isPageState({ ...STATE, info: { ...STATE.info, engine: 'edge' } })).toBe(false);
+    // Mobile Safari on iOS (RB-095-04) is an engine of its own.
+    expect(isPageState({ ...STATE, info: { ...STATE.info, engine: 'ios' } })).toBe(true);
     expect(isPageState({ info: STATE.info })).toBe(false);
     expect(isPageState(null)).toBe(false);
   });

@@ -18,7 +18,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use rb_ipc::{CoreToShell, IpcErrorCode, ShellToCore, VideoFile, VideoList, VideoRecording};
+use rb_ipc::{
+    ConvertVideoRequest, CoreToShell, IpcErrorCode, ShellToCore, VideoFile, VideoFileRef,
+    VideoList, VideoRecording,
+};
 
 use super::convert::{ConvertError, mp4_encoder};
 use serde_json::Value;
@@ -143,17 +146,17 @@ pub fn ipc_in(
 ) -> Option<Result<CoreToShell, Failure>> {
     match message {
         ShellToCore::GetVideos => Some(Ok(CoreToShell::Videos(list_in(core, dir)))),
-        ShellToCore::DeleteVideo { recording, file } => {
+        ShellToCore::DeleteVideo(VideoFileRef { recording, file }) => {
             Some(delete(core, dir, recording, file.as_deref()))
         }
-        ShellToCore::RevealVideo { recording, file } => {
+        ShellToCore::RevealVideo(VideoFileRef { recording, file }) => {
             Some(reveal(core, dir, recording, file.as_deref()))
         }
-        ShellToCore::ConvertVideo {
+        ShellToCore::ConvertVideo(ConvertVideoRequest {
             recording,
             file,
             to,
-        } => Some(
+        }) => Some(
             super::convert_queue::enqueue(core, dir, recording, file, *to)
                 .map(|()| CoreToShell::Videos(list_in(core, dir)))
                 .map_err(|error| {

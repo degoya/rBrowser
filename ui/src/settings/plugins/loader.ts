@@ -2,10 +2,13 @@
 // while the core still loads its plugins it is asked again, once a second, up to a minute, and
 // then the page says so with Retry. One chain of requests at a time: a refresh or leaving the
 // page starts a new number, and an answer or a timer of an older chain does nothing. The page
-// holds one loader for its plugin tabs (RB-080-80), so the counts and the lists agree.
+// holds one loader for its plugin tabs (RB-080-80), so the counts and the lists agree. An
+// install, update or removal takes effect live (RB-092-06): the core's `pluginsChanged` asks for
+// a list shown already again ([`refreshOnChange`]).
 
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import type { IpcClient } from '../../ipc/client';
+import type { CoreToShell } from '../../ipc/protocol';
 import { type InstalledList, parseInstalled } from './installed';
 
 /** While the core still loads its plugins the page asks again, this often at most. */
@@ -84,4 +87,20 @@ export function createInstalledLoader(client: IpcClient): InstalledLoader {
     refresh,
     stop,
   };
+}
+
+/** Whether `message` says the installed plugins changed: an install, update or removal took
+ * effect live (RB-092-06). */
+export function isPluginsChanged(message: CoreToShell): boolean {
+  return message.type === 'pluginPanel' && 'pluginsChanged' in message.message;
+}
+
+/** Asks `loader` for its list again whenever the core says the installed plugins changed; a list
+ * never asked for stays unasked. Returns the function that stops listening. */
+export function refreshOnChange(client: Pick<IpcClient, 'on'>, loader: InstalledLoader): () => void {
+  return client.on((message) => {
+    if (isPluginsChanged(message) && loader.list.value !== null) {
+      loader.refresh();
+    }
+  });
 }

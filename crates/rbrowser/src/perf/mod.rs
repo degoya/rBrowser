@@ -10,12 +10,15 @@
 //! | The memory warning | [`memory`], [`glue`] |
 //! | The frozen-window log: how long the UI thread kept a task waiting | [`ui_stall`], `cef_app/ui_watchdog.rs` |
 //! | `performance.toggle_throttle` (`Leader V Q`, MCP `settings_set`) | [`commands`] |
+//! | The timing counters (RB-090-32): `debug.perf_counters` (`Leader D B`, MCP `app_perf`), `perf.json` of the diagnostics ZIP | [`counters`] |
 //!
 //! Settings: `performance.throttleHidden`, `performance.inactiveFps` (Layout > Grid),
-//! `performance.memoryWarningMb` (Advanced > Experimental flags).
+//! `performance.memoryWarningMb` (Advanced > Experimental flags), `performance.counters`
+//! (Advanced > Diagnostics).
 
 pub mod catchup;
 pub mod commands;
+pub mod counters;
 mod glue;
 pub mod memory;
 pub mod process;

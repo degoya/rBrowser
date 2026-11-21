@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use rb_config::{Environment, ProjectConfig};
 use rb_engine::chromium::batch::{BatchOptions, MAX_PARALLEL};
+use rb_util::url::is_web_url;
 use rb_visual::DiffOptions;
 
 use super::tool::CompareArgs;
@@ -51,12 +52,6 @@ impl PlanError {
             Self::Breakpoints(_) => "env_compare.error.breakpoints",
         }
     }
-}
-
-/// Whether `url` is an absolute http(s) URL.
-pub fn is_web_url(url: &str) -> bool {
-    let lower = url.get(..8).unwrap_or(url).to_ascii_lowercase();
-    lower.starts_with("http://") || lower.starts_with("https://")
 }
 
 /// The environments compared: `wanted` (the call's) in its order, else `preset`

@@ -1,0 +1,122 @@
+{
+  "plugin": {
+    "consent-check": {
+      "commands": {
+        "check": "Check what the page loads before consent"
+      },
+      "findings": {
+        "cookie": {
+          "after_reject": "After \"Reject all\" the cookie {name} ({domain}) is newly set and kept {days, plural, one {# day} other {# days}}.",
+          "after_reject_session": "After \"Reject all\" the cookie {name} ({domain}) is newly set for the browser session.",
+          "before_consent": "The cookie {name} ({domain}) is set before any consent and kept {days, plural, one {# day} other {# days}}.",
+          "before_consent_session": "The cookie {name} ({domain}) is set before any consent, for the browser session."
+        },
+        "request": {
+          "after_reject": "After \"Reject all\" the page still reaches {host} ({kind}, {count, plural, one {# request} other {# requests}}).",
+          "before_consent": "Before any consent the page reaches {host} ({kind}, {count, plural, one {# request} other {# requests}})."
+        }
+      },
+      "name": "Consent check",
+      "notice": "Technical pre-check, no legal advice: it shows what the page loads and stores before a choice and after \"Reject all\", not whether that is lawful.",
+      "panel": {
+        "allowed": "Allowed",
+        "banner": {
+          "hidden": "Consent banner found, not shown: {name}",
+          "none": "No known consent banner found.",
+          "rejected": "\"Reject all\" was clicked: {name}",
+          "shown": "Consent banner shown: {name}"
+        },
+        "caveat": {
+          "cookiesUnread": "The view's cookies could not be read.",
+          "firstPartyCookies": "Only the cookies sent to the page's own address are read; cookies of other sites are not.",
+          "noRejectStep": "\"Reject all\" is clicked only in a session of the check's own, so this run has no step after it.",
+          "notRejected": "No \"Reject all\" button was found, so there is no step after it.",
+          "sessionKept": "The check's session was not reported deleted.",
+          "viewSession": "This run reads the view in its own session: a consent given earlier there hides findings."
+        },
+        "check": "Check the page",
+        "cookieLifetime": "{days, plural, one {# day} other {# days}}",
+        "cookieSession": "Session",
+        "cookies": "Cookies",
+        "count": "{count, plural, one {# request} other {# requests}}",
+        "diff": {
+          "cookiesAdded": "Cookies set after \"Reject all\"",
+          "hostsAdded": "Loaded only after \"Reject all\"",
+          "hostsRemoved": "Not loaded again after \"Reject all\"",
+          "none": "Nothing changed after \"Reject all\"."
+        },
+        "empty": "Check the page to see which other sites it reaches and which cookies it sets before any consent.",
+        "essential": "Essential",
+        "export": "Write the result to the out folder",
+        "exported": "Written to {path}.",
+        "firstParty": "{count, plural, one {# request} other {# requests}} to the page's own site",
+        "hosts": "Requests to other sites",
+        "kind": {
+          "fetch": "fetch",
+          "font": "font",
+          "iframe": "iframe",
+          "media": "media file",
+          "other": "resource",
+          "pixel": "pixel",
+          "script": "script",
+          "style": "style sheet"
+        },
+        "loading": "Checking the page...",
+        "mode": {
+          "session": "A fresh session of the check's own, deleted afterwards.",
+          "view": "The view as it is, read only."
+        },
+        "noCookies": "No cookie.",
+        "noFindings": "No findings: nothing reaches another site and no cookie is set before consent.",
+        "noHosts": "No request to another site.",
+        "noStorage": "No localStorage key.",
+        "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
+        "sections": {
+          "after": "After \"Reject all\"",
+          "before": "Before consent",
+          "findings": "Findings"
+        },
+        "severity": {
+          "error": "Error",
+          "info": "Note",
+          "warning": "Warning"
+        },
+        "storage": "localStorage keys",
+        "thirdParty": "Other site"
+      },
+      "panels": {
+        "consent-check": "Consent check"
+      },
+      "rules": {
+        "cookie": {
+          "after_reject": "A cookie that is not essential is set after \"Reject all\"",
+          "before_consent": "A cookie that is not essential is set before consent"
+        },
+        "request": {
+          "after_reject": "Another site is reached after \"Reject all\"",
+          "before_consent": "Another site is reached before consent"
+        }
+      },
+      "settings": {
+        "allowHosts": {
+          "description": "Hosts counted as the page's own, such as your CDN: no finding. A host such as cdn.example.com, or *.example.com for a domain and its subdomains.",
+          "help": "Requests to these hosts count as the page's own and make no finding; they are still listed. Example: cdn.example.com, *.example-cdn.net for a domain and its subdomains.",
+          "label": "Hosts of your own"
+        },
+        "essentialCookies": {
+          "description": "Cookies of your own that are strictly necessary: no finding. A name such as cart_id, or a prefix such as pref_*.",
+          "help": "Session, CSRF and consent manager cookies are known already. Name your own strictly necessary cookies here; they are listed as essential and make no finding. Example: cart_id, pref_* for every cookie starting with pref_.",
+          "label": "Essential cookies"
+        },
+        "rejectStep": {
+          "description": "After the first capture, click the banner's \"Reject all\" in the check's own session and capture again.",
+          "help": "On, the check clicks the \"Reject all\" button of a known consent banner in its own session and records what the page still loads and sets; the differences are shown. Off, it records the page before consent only.",
+          "label": "Check after \"Reject all\""
+        }
+      },
+      "tools": {
+        "check": "Loads `url` or the page of the target view in a fresh session of its own, without consent, and lists the requests to other sites (host and kind: script, pixel, font, iframe), the cookies (name, domain, lifetime; never a value) and the localStorage keys; with the reject step on, clicks \"Reject all\" and lists them once more, with the differences and the findings. The session is deleted afterwards. `export` also writes the result to the out folder. A technical pre-check, no legal advice."
+      }
+    }
+  }
+}

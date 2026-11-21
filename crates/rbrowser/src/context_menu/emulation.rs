@@ -1,16 +1,25 @@
 //! The Emulation submenu of the page's context menu (RB-080-49): the toolbar's switches for the
 //! clicked view - colour scheme (one of light, dark, no override), reduced motion, offline,
+//! location, time zone, text direction and pseudo-localisation (RB-092-02), reset - each the
+//! toolbar's own command with `target`, the active state marked; "All views" repeats the
+//! switches the toolbar's Shift-click has, with `target: "all"`, marked by what every view has.
+//! No logic of its own: the commands are `emulation.set`, `emulation.reset_view`,
+//! `view.emulate.*` and `overlays.pseudo_locale`.
 //! location, time zone, reset - each the toolbar's own command with `target`, the active state
 //! marked; "All views" repeats the switches the toolbar's Shift-click has, with
 //! `target: "all"`, marked by what every view has. No logic of its own: the
-//! commands are `emulation.set`, `emulation.reset_view` and `view.emulate.*`.
+//! commands are `emulation.set`, `emulation.reset_view` and `view.emulate.*`; the Clock and
+//! Animations submenus are `super::time_control`'s (RB-094-07).
 
-use rb_config::{ColorScheme, EmulationUserSettings, TIMEZONES, geolocation_presets};
+use rb_config::{
+    ColorScheme, EmulationUserSettings, TIMEZONES, TextDirection, geolocation_presets,
+};
 use rb_engine::Emulation;
 use serde_json::{Value, json};
 
 use super::model::{Action, Builder, Item, Label, Mark};
 use crate::emulation::extras::{CPU, GEOLOCATION, OFFLINE, TIMEZONE};
+use crate::emulation::page_locale::PSEUDO_LOCALE;
 
 /// The CPU throttling factors offered: the toolbar's (`CPU_RATES`, `ui/src/emulation/extras.ts`).
 pub const CPU_RATES: [u32; 4] = [2, 4, 6, 20];
@@ -32,6 +41,11 @@ pub struct AllViews {
     pub color_scheme: Option<Option<ColorScheme>>,
     /// Every view emulates reduced motion.
     pub reduced_motion: bool,
+    /// Every view runs right to left (RB-092-02).
+    pub rtl: bool,
+    /// Every view is pseudo-localised (RB-092-02; the sync agents know, [`EmulationState::of`]
+    /// leaves it off).
+    pub pseudo: bool,
 }
 
 impl AllViews {
@@ -44,6 +58,11 @@ impl AllViews {
                 .filter(|scheme| views.iter().all(|view| view.color_scheme == *scheme)),
             reduced_motion: !views.is_empty()
                 && views.iter().all(|view| view.reduced_motion == Some(true)),
+            rtl: !views.is_empty()
+                && views
+                    .iter()
+                    .all(|view| view.dir == Some(TextDirection::Rtl)),
+            pseudo: false,
         }
     }
 }
@@ -67,8 +86,16 @@ pub struct EmulationState {
     pub cpu: Option<u32>,
     /// The presets offered: the built-in ones, then the user's.
     pub presets: Vec<Preset>,
+    /// The forced text direction of the page (RB-092-02).
+    pub dir: Option<TextDirection>,
+    /// The page is pseudo-localised (RB-092-02; the sync agents know, [`Self::of`] leaves it
+    /// off).
+    pub pseudo: bool,
     /// What all views have in common.
     pub all: AllViews,
+    /// The views' clock and the clicked view's animations (RB-094-07); the real time and 100 %
+    /// until the menu's state fills it.
+    pub time: super::time_control::TimeMenu,
 }
 
 impl EmulationState {
@@ -114,7 +141,10 @@ impl EmulationState {
                     label: preset.label,
                 })
                 .collect(),
+            dir: emulation.and_then(|emulation| emulation.dir),
+            pseudo: false,
             all: AllViews::of(views),
+            time: super::time_control::TimeMenu::default(),
         }
     }
 }
@@ -279,6 +309,63 @@ impl Builder<'_> {
         self.submenu(Label::Key("emulation.extras.cpu"), items)
     }
 
+    /// The text direction for `view`: the page's own or one forced (`dir: null` drops it).
+    fn direction(&mut self, dir: Option<TextDirection>, view: &Value) -> Item {
+        let choices = [
+            ("contextmenu.emulation.dir_none", None, Value::Null),
+            (
+                "contextmenu.emulation.dir_ltr",
+                Some(TextDirection::Ltr),
+                json!("ltr"),
+            ),
+            (
+                "contextmenu.emulation.dir_rtl",
+                Some(TextDirection::Rtl),
+                json!("rtl"),
+            ),
+            (
+                "contextmenu.emulation.dir_auto",
+                Some(TextDirection::Auto),
+                json!("auto"),
+            ),
+        ];
+        let items = choices
+            .into_iter()
+            .map(|(key, value, field)| {
+                self.set(
+                    key,
+                    Mark::Radio(dir == value),
+                    view,
+                    json!({ "dir": field }),
+                )
+            })
+            .collect();
+        self.submenu(Label::Key("contextmenu.emulation.dir"), items)
+    }
+
+    /// Right to left for `target`: checked when `on`, and the choice turns it the other way
+    /// (back to the page's own direction).
+    fn rtl(&mut self, on: bool, target: &Value) -> Item {
+        let dir = if on { Value::Null } else { json!("rtl") };
+        self.set(
+            "contextmenu.emulation.rtl",
+            Mark::Check(on),
+            target,
+            json!({ "dir": dir }),
+        )
+    }
+
+    /// The pseudo-localisation for `target`: checked when `on`, the choice turns it the other
+    /// way.
+    fn pseudo(&mut self, on: bool, target: &Value) -> Item {
+        self.marked(
+            Label::Key("contextmenu.emulation.pseudo"),
+            Mark::Check(on),
+            PSEUDO_LOCALE,
+            json!({ "target": target, "on": !on }),
+        )
+    }
+
     /// The Emulation submenu for the clicked view. "All views" is marked by what every view
     /// has, not by the clicked one: a mixed state is unmarked, and the choice then turns the
     /// switch on for all.
@@ -298,15 +385,22 @@ impl Builder<'_> {
         items.push(self.location(emulation, &view));
         items.push(self.timezone(emulation, &view));
         items.push(self.cpu(emulation, &view));
+        items.push(self.clock_menu(&emulation.time));
+        items.push(self.animations_menu(&emulation.time, &view));
+        items.push(Item::Separator);
+        items.push(self.direction(emulation.dir, &view));
+        items.push(self.pseudo(emulation.pseudo, &view));
         items.push(Item::Separator);
         items.push(self.reset(&view));
         let mut for_all = self.scheme(emulation.all.color_scheme, &all);
         for_all.push(Item::Separator);
         for_all.push(self.motion(emulation.all.reduced_motion, &all));
+        for_all.push(self.rtl(emulation.all.rtl, &all));
+        for_all.push(self.pseudo(emulation.all.pseudo, &all));
         for_all.push(Item::Separator);
         for_all.push(self.reset(&all));
         items.push(self.submenu(Label::Key("contextmenu.emulation.all_views"), for_all));
-        self.submenu(Label::Key("contextmenu.emulation.menu"), items)
+        self.submenu(Label::Key(super::model::KEY_EMULATION), items)
     }
 }
 
@@ -321,3 +415,11 @@ mod marks_tests;
 #[cfg(test)]
 #[path = "emulation_cpu_tests.rs"]
 mod cpu_tests;
+
+#[cfg(test)]
+#[path = "emulation_dir_tests.rs"]
+mod dir_tests;
+
+#[cfg(test)]
+#[path = "emulation_time_tests.rs"]
+mod time_tests;

@@ -95,6 +95,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
+name = "plugin-util"
+version = "0.1.0"
+dependencies = [
+ "rb-plugin-api",
+ "serde_json",
+]
+
+[[package]]
 name = "prettyplease"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -117,6 +125,7 @@ dependencies = [
 name = "pwa-check"
 version = "0.1.0"
 dependencies = [
+ "plugin-util",
  "rb-plugin-api",
  "serde",
  "serde_json",
@@ -134,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -142,7 +151,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.0-beta.2"
+version = "0.9.6"
 dependencies = [
  "serde",
  "serde_json",

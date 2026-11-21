@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOST_TAG } from '../constants';
 import { Controller } from '../controller';
 import { DEFAULT_SETTINGS, type State, toSettings } from '../types';
-import { createTabOrder, focused, shapes } from './tab-order';
-import { MARKER, REVERSE, WARNED } from './tab-order/colors';
+import { Layer } from '../layer';
+import { createTabOrder, focused, readingShapes, shapes } from './tab-order';
+import { MARKER, MISREAD, READING, REVERSE, WARNED } from './tab-order/colors';
 import type { TabItem } from './tab-order/list';
 
 const state = (all: State['all']): State => ({ version: 1, all, views: {} });
@@ -86,5 +87,60 @@ describe('the tab order overlay', () => {
     expect([DEFAULT_SETTINGS.tabOrderShowLines, DEFAULT_SETTINGS.tabOrderLive, DEFAULT_SETTINGS.tabOrderIncludeIframes]).toEqual([true, true, true]);
     const settings = toSettings({ tabOrderShowLines: false, tabOrderLive: 'no', tabOrderIncludeIframes: false });
     expect([settings.tabOrderShowLines, settings.tabOrderLive, settings.tabOrderIncludeIframes]).toEqual([false, true, false]);
+  });
+
+  it('reads the reading order settings: off and 4 px unless set to a choice and a tolerance in range', () => {
+    expect([DEFAULT_SETTINGS.tabOrderReadingOrder, DEFAULT_SETTINGS.tabOrderReadingTolerancePx]).toEqual(['off', 4]);
+    const set = toSettings({ tabOrderReadingOrder: 'instead', tabOrderReadingTolerancePx: 0 });
+    expect([set.tabOrderReadingOrder, set.tabOrderReadingTolerancePx]).toEqual(['instead', 0]);
+    const broken = toSettings({ tabOrderReadingOrder: 'sideways', tabOrderReadingTolerancePx: 51 });
+    expect([broken.tabOrderReadingOrder, broken.tabOrderReadingTolerancePx]).toEqual(['off', 4]);
+  });
+});
+
+/** Gives `element` the box `x, y, width, height` (happy-dom lays nothing out). */
+function place(element: Element, x: number, y: number, width = 80, height = 30): void {
+  const rect = { x, y, width, height, left: x, top: y, right: x + width, bottom: y + height };
+  (element as HTMLElement).getBoundingClientRect = () => ({ ...rect, toJSON: () => rect }) as DOMRect;
+}
+
+describe('the reading order arrows (RB-094-02)', () => {
+  const placed = (index: number, x: number): TabItem => ({ ...item(index), rect: { x, y: 0, width: 80, height: 30 } });
+
+  it('join the centres in source order with dashed arrows and frame an element read out of place', () => {
+    const [a, b, c] = [placed(1, 96), placed(2, 0), placed(3, 192)] as [TabItem, TabItem, TabItem];
+    const drawn = readingShapes([a, b, c], [a.rect, b.rect, c.rect], new Set([b]));
+    const lines = drawn.arrows.filter((shape) => shape.kind === 'line');
+    expect(lines).toEqual([
+      { kind: 'line', x1: 136, y1: 15, x2: 40, y2: 15, color: MISREAD, dashed: true },
+      { kind: 'line', x1: 40, y1: 15, x2: 232, y2: 15, color: READING, dashed: true },
+    ]);
+    expect(drawn.arrows.filter((shape) => shape.kind === 'head').map((shape) => shape.kind === 'head' && [shape.x, shape.y, shape.color])).toEqual([
+      [40, 15, MISREAD],
+      [232, 15, READING],
+    ]);
+    expect(drawn.marks).toEqual([{ rect: b.rect, color: MISREAD, border: 2, halo: true }]);
+  });
+
+  it('are drawn beside the tab order lines, instead of them, or not at all, as the setting says', () => {
+    document.body.innerHTML = '<button id="a">A</button><button id="b">B</button><button id="c">C</button>';
+    // order: -1 on the second button: B shows first, the source reads A, B, C.
+    place(document.getElementById('a') as Element, 96, 0);
+    place(document.getElementById('b') as Element, 0, 0);
+    place(document.getElementById('c') as Element, 192, 0);
+    const counts = (readingOrder: 'off' | 'beside' | 'instead'): number[] => {
+      const layer = new Layer(document);
+      const overlay = createTabOrder();
+      const context = { doc: document, win: window, layer, settings: { ...DEFAULT_SETTINGS, tabOrderReadingOrder: readingOrder }, ...sink() };
+      overlay.update(context, {});
+      const found = ['tab-order-lines', 'tab-order-reading', 'tab-order-misread'].map((group) => layer.count(group));
+      overlay.clear(context);
+      layer.destroy();
+      return found;
+    };
+    // Two tab order lines; two arrows of a line and a head each; one element framed.
+    expect(counts('beside')).toEqual([2, 4, 1]);
+    expect(counts('instead')).toEqual([0, 4, 1]);
+    expect(counts('off')).toEqual([2, 0, 0]);
   });
 });

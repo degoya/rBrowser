@@ -49,6 +49,7 @@ async fn the_cancel_reaches_the_run_in_progress_once_and_nothing_after_it() {
         None,
         Default::default(),
         Arc::clone(&cancel),
+        None,
     );
     assert_eq!(run(), json!({ "cancelled": true }));
     assert!(cancel.is_cancelled());

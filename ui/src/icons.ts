@@ -7,6 +7,7 @@ import { PANEL_BUNDLED_ICONS } from './panels/icons';
 import { PRESET_ICONS } from './presets/icons';
 import { RECORDER_ICONS } from './recorder/icons';
 import { STATUS_ICONS } from './statusbar/icons';
+import { GALLERY_ICONS } from './sitemap/gallery/icons';
 import { VIDEO_ICONS } from './videos/icons';
 
 export const ICONS = {
@@ -56,6 +57,8 @@ export const ICONS = {
   ...FINDINGS_ICONS,
   // The Videos panel (RB-110-12).
   ...VIDEO_ICONS,
+  // The sitemap gallery page (RB-090-86).
+  ...GALLERY_ICONS,
   // The Recorder and Flows panels (RB-090-60).
   ...RECORDER_ICONS,
   // The activity bar (RB-090-67).

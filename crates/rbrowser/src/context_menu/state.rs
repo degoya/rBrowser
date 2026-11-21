@@ -23,6 +23,7 @@ pub(super) const OPTIONAL_COMMANDS: &[&str] = &[
     crate::force_state::SET,
     crate::recorder::CHECK,
     crate::flows::RUN,
+    crate::bug_report::CREATE,
     super::view_entries::PEEK,
     super::view_entries::RAW_VIEW,
     super::view_entries::FILL_VALID,
@@ -52,7 +53,17 @@ pub fn state_for(core: &Core, view: ViewId, point: Option<(i32, i32)>) -> MenuSt
                 .iter()
                 .filter_map(|info| host.emulation(info.id))
                 .collect();
-            EmulationState::of(host.emulation(view).as_ref(), &views, &user.emulation)
+            let mut state =
+                EmulationState::of(host.emulation(view).as_ref(), &views, &user.emulation);
+            // The pseudo-localisation lives with the sync agents (RB-092-02).
+            let agents = host.sync_agents();
+            let pseudo = |view| agents.page_locale(view).pseudo.is_some();
+            state.pseudo = pseudo(view);
+            let ids: Vec<ViewId> = host.views().iter().map(|info| info.id).collect();
+            state.all.pseudo = !ids.is_empty() && ids.iter().all(|id| pseudo(*id));
+            // The clock and the animations (RB-094-07).
+            state.time = super::time_control::TimeMenu::of(view, &user.emulation);
+            state
         }),
         recording: crate::video::app::recording_views(),
         checks_busy: crate::checks::is_busy(),
@@ -85,14 +96,15 @@ pub fn state_for(core: &Core, view: ViewId, point: Option<(i32, i32)>) -> MenuSt
     }
 }
 
-/// Whether `view` is in sync and its navigation coupled (each once its sync runs), and the
-/// sessions with the view's own.
+/// Whether `view` is in sync and its navigation coupled (each once its sync runs), whether its
+/// address field is on (RB-092-03), and the sessions with the view's own.
 fn view_entries(core: &Core, view: ViewId) -> ViewEntries {
     let host = core.host();
     ViewEntries {
         synced: crate::sync_hub::for_host(host)
             .map(|sync| !sync.hub().with(|hub| hub.is_excluded(view))),
         navigation_coupled: crate::nav_sync::for_host(host).map(|nav| nav.is_coupled(view)),
+        address_editable: core.user_settings().ui.cell_label.address_editable,
         sessions: crate::sessions::known_sessions(&host.config()),
         session: host.view_session(view).ok(),
     }

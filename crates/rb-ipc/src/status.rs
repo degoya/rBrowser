@@ -1,6 +1,6 @@
 //! The status bar's messages (RB-080-15): every notification of the core, numbered and stamped
 //! as the core's message log keeps it (`rbrowser::status`), some with a button that runs a
-//! command (RB-090-71). Mirrored in `ui/src/ipc/notifications.ts`.
+//! command (RB-090-71) and a copy button (RB-093-04). Mirrored in `ui/src/ipc/notifications.ts`.
 
 use std::collections::BTreeMap;
 
@@ -29,6 +29,9 @@ pub struct StatusMessage {
     /// A button that runs a command of the registry (RB-090-71).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<StatusAction>,
+    /// A button that puts a saved bug report's Markdown on the clipboard (RB-093-04).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy: Option<StatusCopy>,
 }
 
 /// A status message's button: a click runs `command` with `args` through the registry, as the
@@ -48,6 +51,18 @@ pub struct StatusAction {
     pub args: serde_json::Value,
 }
 
+/// A status message's copy button (RB-093-04): the status bar asks the core for the masked
+/// `report.md` of `report` (`bugReport`, `getMarkdown`) and puts it on the clipboard itself - the
+/// core has no clipboard, and only the clicked document may write it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusCopy {
+    /// The i18n key of the button's label.
+    pub label_key: String,
+    /// The report's folder name.
+    pub report: String,
+}
+
 impl StatusMessage {
     /// `notification` as message `id`, taken at `at` (ms since the Unix epoch).
     #[must_use]
@@ -60,6 +75,7 @@ impl StatusMessage {
             args: notification.args,
             settings_key: notification.settings_key,
             action: None,
+            copy: None,
         }
     }
 
@@ -67,6 +83,13 @@ impl StatusMessage {
     #[must_use]
     pub fn with_action(mut self, action: Option<StatusAction>) -> Self {
         self.action = action;
+        self
+    }
+
+    /// The message with `copy`'s button (none for `None`).
+    #[must_use]
+    pub fn with_copy(mut self, copy: Option<StatusCopy>) -> Self {
+        self.copy = copy;
         self
     }
 

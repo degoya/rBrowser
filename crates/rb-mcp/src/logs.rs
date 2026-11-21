@@ -2,31 +2,38 @@
 //! CDP events (`Runtime.consoleAPICalled`, `Log.entryAdded`, `Network.*`,
 //! `Runtime.exceptionThrown`), and the issues buffer the plugins granted `console-logs` read
 //! (`Audits.issueAdded`: CSP violations, mixed content, deprecations; RB-080-09). Only what the tools answer is kept: for a request its URL,
-//! method, type, status, MIME type, timing, size and failure - never a header or a body - and
+//! method, type, status, MIME type, timing, size and failure, and the response's waiting time,
+//! caching and compression facts and decoded size (RB-096-06, [`response`]) - never a header or a
+//! body - and
 //! every text and URL with its credentials masked (`rb_diag::page_text`). The host feeds
 //! [`LogStore::record`] with each event of a view and sets the sizes from the settings
-//! (`mcp.consoleLogLimit`, `mcp.networkRequestLimit`, `mcp.errorLimit`).
+//! (`mcp.consoleLogLimit`, `mcp.networkRequestLimit`, `mcp.errorLimit`). `Network` is collected
+//! only once wanted (RB-090-34): the first read of the requests or `mcp.collectNetwork` switches
+//! it on ([`LogStore::network_wanted`]) for the store's life.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
 use rb_util::lock;
+use tokio::sync::watch;
 
 use rb_diag::page_text::redact_page_text;
 use rb_engine::ViewId;
-use serde::Serialize;
 use serde_json::Value;
 
 use crate::issues::issue;
 pub use crate::issues::{ISSUE_CODES, IssueEntry};
 
-/// The CDP domains the host enables on every view while the server runs.
-pub const DOMAINS: &[&str] = &[
-    "Runtime.enable",
-    "Log.enable",
-    "Network.enable",
-    "Audits.enable",
-];
+pub mod entries;
+pub mod response;
+
+pub use entries::{ConsoleEntry, ErrorEntry, NetworkEntry};
+pub use response::ResponseFacts;
+
+/// The CDP domains the host enables on every view while the buffers are fed.
+pub const DOMAINS: &[&str] = &["Runtime.enable", "Log.enable", "Audits.enable"];
+/// Enabled besides [`DOMAINS`] once the requests are wanted ([`LogStore::network_wanted`]).
+pub const NETWORK_DOMAIN: &str = "Network.enable";
 /// The longest text or URL kept; longer ones are cut with an ellipsis.
 pub const MAX_TEXT: usize = 2048;
 
@@ -49,95 +56,6 @@ impl Default for LogLimits {
             errors: 200,
         }
     }
-}
-
-/// One console message.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConsoleEntry {
-    /// `log`, `info`, `warning`, `error`, `debug`, ... (`console.*` or the browser's level).
-    pub level: String,
-    /// `console-api` for the page's `console.*`, else the browser's source (`network`,
-    /// `security`, `violation`, ...).
-    pub source: String,
-    /// The message.
-    pub text: String,
-    /// The script's URL, where known.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
-    /// The line (1-based), where known.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line: Option<u64>,
-    /// Milliseconds since the Unix epoch.
-    pub time: f64,
-}
-
-/// One network request.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NetworkEntry {
-    /// CDP's request id.
-    pub id: String,
-    /// The URL.
-    pub url: String,
-    /// `GET`, `POST`, ...
-    pub method: String,
-    /// `Document`, `Script`, `XHR`, `Fetch`, `Image`, ...
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub resource_type: Option<String>,
-    /// The HTTP status, once a response came.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<u64>,
-    /// The response's MIME type.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mime_type: Option<String>,
-    /// Served from a cache.
-    pub from_cache: bool,
-    /// The bytes received, once finished.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub size: Option<f64>,
-    /// When it started, milliseconds since the Unix epoch.
-    pub time: f64,
-    /// How long it took, in milliseconds, once finished or failed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<f64>,
-    /// Why it failed (`net::ERR_...`), when it did.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub failed: Option<String>,
-    /// CDP's monotonic start, for the duration.
-    #[serde(skip)]
-    started: f64,
-    /// The request's headers as sent, for a repeat (RB-080-37); never serialised: they carry
-    /// cookies and tokens.
-    #[serde(skip)]
-    request_headers: Vec<(String, String)>,
-}
-
-impl NetworkEntry {
-    /// The request's headers as sent (never part of the feed or an MCP answer).
-    #[must_use]
-    pub fn request_headers(&self) -> &[(String, String)] {
-        &self.request_headers
-    }
-}
-
-/// One uncaught exception.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorEntry {
-    /// The message (`Uncaught TypeError: ...`) with the exception's description.
-    pub text: String,
-    /// The script's URL, where known.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
-    /// The line (1-based), where known.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line: Option<u64>,
-    /// The column (1-based), where known.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub column: Option<u64>,
-    /// Milliseconds since the Unix epoch.
-    pub time: f64,
 }
 
 /// Which buffer.
@@ -173,10 +91,18 @@ impl ViewLogs {
 }
 
 /// The buffers of every view.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct LogStore {
     views: Mutex<HashMap<ViewId, ViewLogs>>,
     limits: Mutex<LogLimits>,
+    /// Whether the requests are wanted: `false` until the first read or [`Self::want_network`].
+    network: watch::Sender<bool>,
+}
+
+impl Default for LogStore {
+    fn default() -> Self {
+        Self::new(LogLimits::default())
+    }
 }
 
 fn push<T>(buffer: &mut VecDeque<T>, entry: T, limit: usize) {
@@ -221,7 +147,24 @@ impl LogStore {
         Self {
             views: Mutex::new(HashMap::new()),
             limits: Mutex::new(limits),
+            network: watch::Sender::new(false),
         }
+    }
+
+    /// Wants the requests collected from now on (`mcp.collectNetwork`, or a read of them); the
+    /// collector enables `Network` on every view. Once on, it stays on: switching the domain off
+    /// again could take it from another feature that enabled it on the same session.
+    pub fn want_network(&self) {
+        // `true` only for the switch itself; nothing to do with it here.
+        let _ = self
+            .network
+            .send_if_modified(|wanted| !std::mem::replace(wanted, true));
+    }
+
+    /// Whether the requests are wanted, changing once from `false` to `true`.
+    #[must_use]
+    pub fn network_wanted(&self) -> watch::Receiver<bool> {
+        self.network.subscribe()
     }
 
     /// Sets the sizes; longer buffers lose their oldest entries at the next record.
@@ -295,6 +238,8 @@ impl LogStore {
                     time: params["wallTime"].as_f64().unwrap_or_default() * 1000.0,
                     duration_ms: None,
                     failed: None,
+                    response: None,
+                    decoded_size: None,
                     started: params["timestamp"].as_f64().unwrap_or_default(),
                     request_headers: request["headers"]
                         .as_object()
@@ -321,6 +266,13 @@ impl LogStore {
                     if let Some(kind) = params["type"].as_str() {
                         entry.resource_type = Some(kind.to_owned());
                     }
+                    entry.response = Some(response::facts(response));
+                }
+            }
+            "Network.dataReceived" => {
+                if let Some(entry) = request_of(&mut logs.network, params) {
+                    let length = params["dataLength"].as_f64().unwrap_or(0.0);
+                    entry.decoded_size = Some(entry.decoded_size.unwrap_or(0.0) + length);
                 }
             }
             "Network.loadingFinished" => {
@@ -367,9 +319,10 @@ impl LogStore {
             .unwrap_or_default()
     }
 
-    /// The request `id` of `view`, as recorded.
+    /// The request `id` of `view`, as recorded; wants the requests from now on.
     #[must_use]
     pub fn request(&self, view: ViewId, id: &str) -> Option<NetworkEntry> {
+        self.want_network();
         let logs = lock(&self.views);
         logs.get(&view)?
             .network
@@ -379,9 +332,11 @@ impl LogStore {
             .cloned()
     }
 
-    /// The requests of `view`, oldest first, at most the last `limit`.
+    /// The requests of `view`, oldest first, at most the last `limit`; wants the requests from
+    /// now on, so the first read finds only what came since.
     #[must_use]
     pub fn network(&self, view: ViewId, limit: usize) -> Vec<NetworkEntry> {
+        self.want_network();
         lock(&self.views)
             .get(&view)
             .map(|logs| last(&logs.network, limit))

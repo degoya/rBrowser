@@ -55,7 +55,7 @@ pub enum LocatorPreference {
     Testid,
     /// `getByRole`.
     Role,
-    /// `getByText`.
+    /// The text: the elements of its tag with that whole text, else `getByText`.
     Text,
     /// `locator(css)`.
     Css,
@@ -143,6 +143,27 @@ pub struct Step {
     /// When it happened, ms after the recording started: the `recorded` pace waits by it.
     #[serde(default)]
     pub at_ms: u64,
+    /// The pointer's way to it (RB-090-87); absent in a recording made before.
+    #[serde(default)]
+    pub path: Vec<PathPoint>,
+    /// Switched off in the editor (RB-092-01): [`parse_request`] leaves it out.
+    #[serde(default)]
+    pub disabled: bool,
+    /// The pause before it at the `recorded` pace, set in the editor (RB-092-01), in place of
+    /// the measured one.
+    #[serde(default)]
+    pub pause_ms: Option<u64>,
+}
+
+/// A point of a step's way: CSS px of the viewport, `t` ms after the way's first point.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+pub struct PathPoint {
+    /// Horizontal.
+    pub x: i32,
+    /// Vertical.
+    pub y: i32,
+    /// Ms after the first point.
+    pub t: u32,
 }
 
 /// What a step does.
@@ -236,6 +257,11 @@ pub enum Action {
     WaitFor {
         /// The element.
         target: Locator,
+    },
+    /// Wait a fixed time at every pace (RB-092-01).
+    Wait {
+        /// How long, ms.
+        ms: u64,
     },
     /// Check something.
     Assert {
@@ -358,16 +384,19 @@ pub fn parse_request(input: &str) -> Result<ExportRequest, ParseError> {
         Some(version) => return Err(ParseError::Version(version)),
         None => return Err(ParseError::Invalid("no `version`".to_owned())),
     }
-    if wrapped {
-        serde_json::from_value(value).map_err(|error| ParseError::Invalid(error.to_string()))
+    let mut request: ExportRequest = if wrapped {
+        serde_json::from_value(value).map_err(|error| ParseError::Invalid(error.to_string()))?
     } else {
         let recording = serde_json::from_value(value)
             .map_err(|error| ParseError::Invalid(error.to_string()))?;
-        Ok(ExportRequest {
+        ExportRequest {
             recording,
             options: ExportOptions::default(),
-        })
-    }
+        }
+    };
+    // A step switched off in the editor is neither exported nor played (RB-092-01).
+    request.recording.steps.retain(|step| !step.disabled);
+    Ok(request)
 }
 
 /// Why the input is no request.

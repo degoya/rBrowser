@@ -6,6 +6,8 @@
 // few times with a growing pause; a disconnected device gets 403 and stops trying.
 
 import type { SyncEvent } from '../protocol';
+import { locate } from '../resolve';
+import { flashAt } from './flash';
 import { replayOnDevice, type DeviceStatus } from './replay';
 
 /** The device socket's path on the portal. */
@@ -16,8 +18,12 @@ export const MAX_FAILURES = 5;
 export const FIRST_PAUSE_MS = 1000;
 export const MAX_PAUSE_MS = 10_000;
 
-/** A message of the portal. */
-export type ToDevice = { kind: 'navigate'; path: string } | { kind: 'event'; event: SyncEvent };
+/** A message of the portal; `present` tells a viewer of the presentation over the internet
+ *  whether to flash the presenter's clicks (RB-096-05). */
+export type ToDevice =
+  | { kind: 'navigate'; path: string }
+  | { kind: 'event'; event: SyncEvent }
+  | { kind: 'present'; pointer: boolean };
 
 /** A message to the portal. */
 export type Report =
@@ -39,8 +45,12 @@ export function isToDevice(value: unknown): value is ToDevice {
     const event = message.event as Record<string, unknown> | null;
     return typeof event === 'object' && event !== null && typeof event.type === 'string';
   }
+  if (message.kind === 'present') return typeof message.pointer === 'boolean';
   return false;
 }
+
+/** The windows of a presentation's viewers that flash the presenter's clicks. */
+const flashing = new WeakSet<PortalWindow>();
 
 /** The socket's URL for the page at `location`. */
 export function socketUrl(location: Pick<Location, 'protocol' | 'host'>): string {
@@ -61,7 +71,17 @@ export function handle(message: ToDevice, win: PortalWindow): Report | null {
     if (here !== message.path) win.location.assign(message.path);
     return null;
   }
-  return { kind: 'replayed', status: replayOnDevice(message.event, win.document) };
+  if (message.kind === 'present') {
+    if (message.pointer) flashing.add(win);
+    else flashing.delete(win);
+    return null;
+  }
+  const event = message.event;
+  if (flashing.has(win) && (event.type === 'click' || event.type === 'dblclick')) {
+    const element = locate(event.target, win.document);
+    if (typeof element !== 'string') flashAt(element, win.document);
+  }
+  return { kind: 'replayed', status: replayOnDevice(event, win.document) };
 }
 
 /** The part of `WebSocket` used here. */

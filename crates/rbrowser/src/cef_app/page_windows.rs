@@ -303,6 +303,13 @@ wrap_window_delegate! {
             c_int::from(self.kind.resizable())
         }
 
+        // macOS draws the close, minimise and zoom buttons only on this answer; CEF's default
+        // is "not frameless", the cef crate's 0 - a window without them cannot be closed there
+        // (RB-090-98). Ignored on Windows.
+        fn with_standard_window_buttons(&self, _window: Option<&mut Window>) -> c_int {
+            c_int::from(!self.kind.is_popup())
+        }
+
         fn on_window_activation_changed(&self, window: Option<&mut Window>, active: c_int) {
             // The palette goes as soon as anything else has the focus.
             if self.kind.is_popup()

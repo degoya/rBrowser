@@ -3,6 +3,9 @@
 //! their severity are the host's `checks.rules`.
 
 use rb_plugin_api::PluginHost;
+/// `scheme://host[:port]` of an `http(s)` URL as the page gives it, the default port dropped:
+/// the app's own (RB-094-10).
+pub use rb_util::url::origin_of as origin;
 use serde_json::Value;
 
 use crate::model::Mode;
@@ -132,21 +135,6 @@ impl Settings {
         }
         !self.third_party && origin(url) != origin(page)
     }
-}
-
-/// `scheme://host:port` of an `http(s)` URL, lower case; none for anything else.
-#[must_use]
-pub fn origin(url: &str) -> Option<String> {
-    let (scheme, rest) = url.split_once("://")?;
-    let scheme = scheme.to_ascii_lowercase();
-    if scheme != "http" && scheme != "https" {
-        return None;
-    }
-    let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
-    let host = authority
-        .rsplit_once('@')
-        .map_or(authority, |(_, host)| host);
-    Some(format!("{scheme}://{}", host.to_ascii_lowercase()))
 }
 
 #[cfg(test)]

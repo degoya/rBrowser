@@ -10,6 +10,7 @@ import { nextTick } from 'vue';
 import { mountPanel } from '../../../../web-common/panel-ui/src/mount';
 import App from './App.vue';
 import type { Card, Preview } from './model';
+import type { Serp } from './serp';
 
 type Posted = { type?: string; id?: number; tool?: string; args?: Record<string, unknown>; action?: string; url?: string };
 
@@ -54,6 +55,13 @@ async function answer(value: unknown, ok = true): Promise<void> {
 function withCards(change: (cards: Card[]) => Card[]): Preview {
   return { ...ANSWER, cards: change(structuredClone(ANSWER.cards)) };
 }
+
+/** The fixture's answer with its search result changed. */
+function withSerp(change: Partial<Serp>): Preview {
+  return { ...ANSWER, serp: { ...(ANSWER.serp as Serp), ...change } };
+}
+
+const LONG = 'A title far longer than any search result line can hold, so the search has to cut it somewhere near the middle of the text';
 
 beforeEach(async () => {
   posted = [];
@@ -219,6 +227,73 @@ describe('the SEO panel', () => {
     await answer('plugins.error.busy', false);
     expect($('#status')?.textContent).toBe('The previews could not be built: The plugin could not do that.');
     expect($('#status')?.dataset.tone).toBe('error');
+  });
+
+  // RB-090-95: the page's search result above the cards, per device, cut by pixel width.
+  it('shows the search result for desktop and mobile above the cards', async () => {
+    await answer(ANSWER);
+    const serp = $('#serp') as HTMLElement;
+    expect(serp.querySelector('h2')?.textContent).toBe('Search result');
+    expect(serp.compareDocumentPosition($('#cards') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect([...serp.querySelectorAll<HTMLElement>('[data-device]')].map((one) => one.dataset.device)).toEqual(['desktop', 'mobile']);
+    const desktop = serp.querySelector('[data-device="desktop"]') as HTMLElement;
+    expect(desktop.querySelector('h3')?.textContent).toBe('Desktop (600 px)');
+    expect(desktop.querySelector('[data-site]')?.textContent).toBe('fixture.test');
+    expect(desktop.querySelector('[data-breadcrumb]')?.textContent).toBe('fixture.test › social-ok');
+    expect(desktop.querySelector('[data-title]')?.textContent).toBe('Social fixture: six platforms preview this page');
+    expect(desktop.querySelector<HTMLElement>('[data-title]')?.title).toContain('(from title)');
+    expect(desktop.querySelector('[data-measure="title"]')?.textContent).toMatch(/^Title: 47 characters, \d+ px of 600 px\.$/);
+    expect(desktop.querySelector('[data-cut]')).toBeNull();
+    expect(serp.querySelector('[data-device="mobile"] h3')?.textContent).toBe('Mobile (328 px on a 360 px phone)');
+    expect(serp.querySelector('[data-confidence]')?.textContent).toBe('Unverified');
+    expect(serp.querySelector('[data-noindex]')).toBeNull();
+    // The fixture site has no favicon: a globe, and a note why.
+    const placeholder = desktop.querySelector('[data-favicon]');
+    expect(placeholder?.querySelector('img')).toBeNull();
+    expect(placeholder?.querySelector('[title]')?.getAttribute('title')).toBe('The favicon could not be loaded (404); the search shows a neutral globe.');
+    expect(serp.querySelector('[data-favicon-note]')?.textContent).toBe('The favicon could not be loaded (404); the search shows a neutral globe.');
+  });
+
+  it('cuts a long title at a word end with an ellipsis, notes it and keeps the whole text as the tooltip', async () => {
+    await answer(withSerp({ title: { text: LONG, source: 'title' } }));
+    const desktop = $('#serp [data-device="desktop"]') as HTMLElement;
+    const title = desktop.querySelector<HTMLElement>('[data-title]');
+    expect(title?.textContent?.endsWith('…')).toBe(true);
+    expect(LONG.startsWith(title?.textContent?.slice(0, -1) ?? 'x')).toBe(true);
+    expect(title?.title).toContain(LONG);
+    expect(desktop.querySelector('[data-cut="title"]')?.textContent).toMatch(/^Cut: \d+ of 122 characters show; the whole text is in the tooltip\.$/);
+    const mobile = $('#serp [data-device="mobile"]') as HTMLElement;
+    expect(mobile.querySelectorAll('[data-title] span').length).toBe(2);
+  });
+
+  it('says what the search does without a title or a description, and when the page says noindex', async () => {
+    await answer(withSerp({ title: null, description: null, noindex: true }));
+    const desktop = $('#serp [data-device="desktop"]') as HTMLElement;
+    expect(desktop.querySelector('[data-title][data-missing]')?.textContent).toBe('No title: the search makes one from the page.');
+    expect(desktop.querySelector('[data-description][data-missing]')?.textContent).toBe('No meta description: the search shows a passage of the page instead.');
+    expect($('#serp [data-noindex]')?.textContent).toContain('it does not show in the search like this');
+  });
+
+  it('shows the favicon from its data: URI', async () => {
+    const favicon = { ...(ANSWER.serp as Serp).favicon, status: 200, format: 'image/x-icon', bytes: 4, dataUri: 'data:image/x-icon;base64,AAABAA==' } as Serp['favicon'];
+    await answer(withSerp({ favicon }));
+    expect($('#serp [data-favicon] img')?.getAttribute('src')).toBe('data:image/x-icon;base64,AAABAA==');
+    expect($('#serp [data-favicon-note]')).toBeNull();
+  });
+
+  it('shows the devices the setting serpPreview names, none when off', async () => {
+    await answer(ANSWER);
+    await fromHost({ type: 'settings', strings: STRINGS, settings: { 'seo.serpPreview': 'mobile' } });
+    expect([...document.querySelectorAll<HTMLElement>('#serp [data-device]')].map((one) => one.dataset.device)).toEqual(['mobile']);
+    await fromHost({ type: 'settings', strings: STRINGS, settings: { 'seo.serpPreview': 'off' } });
+    expect($('#serp')).toBeNull();
+    expect(document.querySelectorAll('#cards [data-platform]').length).toBe(7);
+  });
+
+  it('leaves the search result out of an answer whose serp is broken, the cards stay', async () => {
+    await answer({ ...ANSWER, serp: { title: 3 } });
+    expect($('#serp')).toBeNull();
+    expect(document.querySelectorAll('#cards [data-platform]').length).toBe(7);
   });
 
   it("takes the app's theme from its settings", async () => {

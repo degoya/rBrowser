@@ -7,8 +7,11 @@
 // second while it runs - and "Stop"; while it runs the Run buttons wait and say why (RB-090-71).
 // Then the last result: passed or failed per view, where a failed
 // view broke (its step and line, the message) and its screenshot's file, with "Open folder"
-// (`flows.open_results`). Every action is a command of the registry (`flows.*`), as the keys,
-// the palette and the page menu run them; the trust gate stays the core's.
+// (`flows.open_results`). "Delete" on each flow (RB-090-91, `flows.delete`) asks in the panel
+// first while `automation.flows.confirmDelete` is on (`DeleteEntry.vue`) and waits while that flow
+// runs; the core's notice says how it went and its `flowRunChanged` lists the flows again. Every
+// action is a command of the registry (`flows.*`), as the keys, the palette and the page menu run
+// them; the trust gate stays the core's.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
@@ -21,6 +24,8 @@ import { clock } from '../portal/portal';
 import { RECORDER_ICONS } from '../recorder/icons';
 import { useShell } from '../state/shell';
 import { windowEvents, type Subscribe } from '../whichkey/whichkey';
+import { FLOWS_CONFIRM_KEY, confirmsDelete } from './confirmDelete';
+import DeleteEntry from './DeleteEntry.vue';
 import { failurePlace, statusLook, viewLabel } from './flows';
 import { flowsChannel } from './host';
 
@@ -46,6 +51,8 @@ const state = ref<FlowRunState | null>(null);
 const error = ref<string | null>(null);
 /** Where "Run" runs: `all`, or a view's id. */
 const target = ref('all');
+/** "Delete" asks first (`automation.flows.confirmDelete`). */
+const confirmDelete = ref(true);
 
 const views = computed(() => shell.state.value?.views ?? []);
 const targets = computed(() => [
@@ -64,6 +71,11 @@ const elapsed = computed(() =>
 );
 /** Why Run and Run all wait: the run going on. */
 const busy = computed(() => (running.value === null ? null : t('flows.panel.busy', { flow: running.value.flow })));
+/** Why "Delete" of `flow` waits: it runs. */
+function deleteBlocked(flow: string): string | null {
+  const waits = running.value?.flow === flow || (running.value?.queued ?? []).includes(flow);
+  return waits ? t('flows.panel.delete_running', { flow }) : null;
+}
 
 function statusText(status: string): string {
   const key = `flows.panel.status.${status}`;
@@ -116,7 +128,13 @@ watch(running, (now) => {
   }
 });
 const stop = channel.onChanged(() => void load());
-onMounted(() => void load());
+onMounted(() => {
+  shell.loadCommands();
+  void load();
+  void confirmsDelete(props.client, FLOWS_CONFIRM_KEY).then((ask) => {
+    confirmDelete.value = ask;
+  });
+});
 onBeforeUnmount(() => {
   stop();
   clearInterval(timer);
@@ -175,7 +193,7 @@ onBeforeUnmount(() => {
         <li
           v-for="flow in flows ?? []"
           :key="flow.name"
-          class="flex items-center gap-2 border-b border-default px-3 py-2"
+          class="flex flex-wrap items-center gap-2 border-b border-default px-3 py-2"
           :data-testid="`flow-${flow.name}`"
         >
           <span class="flex min-w-0 flex-1 flex-col">
@@ -192,6 +210,14 @@ onBeforeUnmount(() => {
             :disabled="running !== null"
             data-testid="flow-run"
             @click="runFlow(flow.name)"
+          />
+          <DeleteEntry
+            :name="flow.name"
+            command="flows.delete"
+            :question="t('flows.panel.delete_question', { flow: flow.name })"
+            :confirm="confirmDelete"
+            :blocked="deleteBlocked(flow.name)"
+            @delete="run('flows.delete', { name: flow.name })"
           />
         </li>
       </ul>

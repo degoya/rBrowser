@@ -16,7 +16,7 @@ export interface PluginGrantDetails {
   httpRatePerSecond?: number;
   /**
    * What the dialog highlights: `evaluate`, `cdp:<Domain>`, `network-rules`, `console-logs`,
-   * `sidecar`, `project-write`.
+   * `sidecar`, `project-write`, `consent-probe`, `api-client`, `load-test`.
    */
   risky: string[];
 }

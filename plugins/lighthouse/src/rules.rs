@@ -6,8 +6,12 @@
 //!
 //! Lighthouse's audits run axe-core too, but Lighthouse names an element by its position among
 //! all child nodes (`1,HTML,1,BODY,3,P`), not by the tag path the seo and a11y-axe plugins share
-//! (`html > body > p:nth-of-type(2)`); so no rule claims a shared id, and the same missing alt
-//! text found by both plugins stays two findings.
+//! (`html > body > p:nth-of-type(2)`); so the axe rules claim no shared id, and the same missing
+//! alt text found by both plugins stays two findings. The exceptions are [`SHARED_IDS`]: the
+//! responsive-images plugin writes Lighthouse's own node path, so its oversized, undersized and
+//! LCP-discovery findings and Lighthouse's merge into one (RB-093-02), and the security-headers
+//! plugin's CSP, HSTS and framing findings, which name no element, merge with Lighthouse's
+//! (RB-093-03).
 
 use std::sync::LazyLock;
 
@@ -15,6 +19,18 @@ use rb_plugin_api::{RuleInfo, Severity};
 use serde::Deserialize;
 
 use crate::key;
+
+/// The audits whose findings share an id with another first-party plugin: responsive-images
+/// (RB-093-02) and security-headers (RB-093-03).
+pub const SHARED_IDS: &[(&str, &str)] = &[
+    ("image-delivery-insight", "image-oversized"),
+    ("image-size-responsive", "image-undersized"),
+    ("lcp-discovery-insight", "lcp-image-discovery"),
+    // The page's headers: the security-headers plugin's findings of these carry no element.
+    ("csp-xss", "csp-xss"),
+    ("has-hsts", "has-hsts"),
+    ("clickjacking-mitigation", "clickjacking-mitigation"),
+];
 
 /// The audit table.
 const RULES_JSON: &str = include_str!("../data/rules.json");
@@ -85,7 +101,10 @@ pub fn describe() -> Vec<RuleInfo> {
             id: audit.id.clone(),
             title: key("rules", &audit.id),
             severity: usual_severity(audit.weight),
-            shared_id: None,
+            shared_id: SHARED_IDS
+                .iter()
+                .find(|(audit_id, _)| *audit_id == audit.id)
+                .map(|(_, shared)| (*shared).to_owned()),
             help_url: None,
         })
         .collect()

@@ -2,10 +2,14 @@
 //! (`Backend::run_command`); every view tool takes `target`: `"all"`, a view id or a breakpoint
 //! id ([`crate::target`]).
 
+pub mod android;
 pub mod app;
 pub mod bookmarks;
+pub mod bug_report;
 pub mod capture;
 pub mod cdp;
+pub mod checks_export;
+pub mod compare_engines;
 pub mod config;
 pub mod cookies;
 pub mod devtools;
@@ -15,6 +19,7 @@ pub mod extensions;
 pub mod flows;
 pub mod force_state;
 pub mod forward;
+pub mod ios;
 pub mod layout;
 pub mod logs;
 pub mod metrics;
@@ -25,11 +30,16 @@ pub mod panels;
 pub mod plugin_catalogue;
 pub mod plugins;
 pub mod portal;
+pub mod portal_present;
 pub mod project;
+pub mod pseudo_locale;
 pub mod recorder;
+pub mod recorder_steps;
+pub mod restore_last;
 pub mod sitemap;
 pub mod status;
 pub mod sync;
+pub mod time_control;
 pub mod updates;
 pub mod video;
 pub mod views;

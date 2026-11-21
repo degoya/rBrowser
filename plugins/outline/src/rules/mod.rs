@@ -8,8 +8,9 @@
 //! `region`. A finding about the whole page sits at `html`, where axe reports it. Only elements
 //! that are exposed count (not `display: none`), as axe and the screen readers see the page.
 //!
-//! The groups live in their own modules: [`headings`], [`landmarks`], [`focus`] and the rules
-//! over the breakpoints, [`across`], which compare a view with the others on the same page.
+//! The groups live in their own modules: [`headings`], [`landmarks`], [`focus`], the reading
+//! order against the source order, [`reading`] (RB-094-02), and the rules over the breakpoints,
+//! [`across`], which compare a view with the others on the same page.
 
 use rb_plugin_api::{Finding, RuleInfo, Severity, ViewId};
 
@@ -22,10 +23,11 @@ mod across;
 mod focus;
 mod headings;
 mod landmarks;
+mod reading;
 #[cfg(test)]
 mod test_util;
 
-pub use across::{Peer, across};
+pub use across::{Difference, Peer, across, differences};
 
 /// One rule of `describe`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -65,6 +67,8 @@ pub const FORM_LABEL_MISSING: &str = "form-label-missing";
 pub const FOCUS_ORDER_JUMP: &str = "focus-order-jump";
 pub const HEADING_DIFFERS: &str = "heading-differs";
 pub const LANDMARK_DIFFERS: &str = "landmark-differs";
+pub const INTERACTIVE_DIFFERS: &str = "interactive-differs";
+pub const READING_ORDER: &str = "reading-order";
 
 use Severity::{Error, Info, Warning};
 
@@ -120,6 +124,8 @@ pub const RULES: &[Rule] = &[
     rule(FOCUS_ORDER_JUMP, Warning, None),
     rule(HEADING_DIFFERS, Info, None),
     rule(LANDMARK_DIFFERS, Info, None),
+    rule(INTERACTIVE_DIFFERS, Info, None),
+    rule(READING_ORDER, Warning, None),
 ];
 
 /// The rules as `check.describe` answers them.
@@ -162,6 +168,18 @@ impl<'a> Sink<'a> {
     }
 
     fn emit(&mut self, id: &str, page: Page<'_>, at: Option<&Located>, params: &[(&str, String)]) {
+        self.emit_with(id, page, at, params, None);
+    }
+
+    /// As `emit`, with `data` (JSON text) for the finding's details.
+    fn emit_with(
+        &mut self,
+        id: &str,
+        page: Page<'_>,
+        at: Option<&Located>,
+        params: &[(&str, String)],
+        data: Option<String>,
+    ) {
         let Some(rule) = RULES.iter().find(|rule| rule.id == id) else {
             return;
         };
@@ -180,7 +198,7 @@ impl<'a> Sink<'a> {
             url: Some(page.0.to_owned()),
             selector: at.map(|at| at.selector.clone()),
             path: at.map(|at| at.path.clone()),
-            data: None,
+            data,
         });
     }
 }
@@ -269,6 +287,9 @@ pub fn findings(
     }
     if has("focus") {
         focus::check(&mut sink, page, outline);
+    }
+    if has("headings") && has("focus") {
+        reading::check(&mut sink, page, outline, settings.tolerance_px);
     }
     sink.findings
 }

@@ -2,9 +2,11 @@
 // `available` answers - the installable first-party plugins with name, description, category,
 // size, recommended, origin and grants - read defensively, grouped by category, filtered by
 // category and search, the recommended and the installed ones ticked; what the choice installs
-// and removes, its size and grants, shown before the one confirmation; the progress and outcome.
-// The wizard only marks what gets loaded: at a fresh install the core keeps the choice pending
-// until the step answers (or `applyRecommended` when it is skipped).
+// and removes, its size and grants, shown in the step; the one action its button carries out
+// (RB-091-08), the progress and outcome. The wizard only marks what gets loaded: at a fresh
+// install the core keeps the choice pending - and the one load of the plugins waits - until the
+// step answers (or `applyRecommended` when the whole setup is skipped).
+import { isObject } from '../../../plugins/web-common/src/is-object';
 
 export type PluginCategory = 'checks' | 'devtools' | 'overlays' | 'capture' | 'tools';
 export type CategoryFilter = PluginCategory | 'all';
@@ -57,15 +59,19 @@ export type PluginsDone = InstallOutcome & { removed: string[] };
 
 export interface InstallOutcome {
   results: InstallResult[];
-  /** The plugins load at the next start. */
+  /** The plugins load at the next start; `false` when they were loaded live (RB-091-08: the
+   * first start's one load waits for the plugin step's answer). */
   restart: boolean;
 }
 
-type Json = Record<string, unknown>;
-
-function isObject(value: unknown): value is Json {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+/** What the step's one button does (RB-091-08): install the ticked plugins (and remove the
+ * unticked installed ones), remove only, answer a pending first choice with nothing, or go on
+ * when nothing changes. */
+export type PluginsAction =
+  | { kind: 'install'; count: number }
+  | { kind: 'remove'; count: number }
+  | { kind: 'without' }
+  | { kind: 'continue' };
 
 const isString = (value: unknown): value is string => typeof value === 'string';
 
@@ -126,6 +132,42 @@ export function changesOf(
   return {
     install: plugins.filter((plugin) => !plugin.installed && chosen.includes(plugin.id)).map((plugin) => plugin.id),
     remove: plugins.filter((plugin) => plugin.installed && !chosen.includes(plugin.id)).map((plugin) => plugin.id),
+  };
+}
+
+/** The step's one action for `chosen`: never the recommended set behind the ticks. */
+export function pluginsAction(available: Available | null, chosen: readonly string[]): PluginsAction {
+  if (available === null) return { kind: 'continue' };
+  const { install, remove } = changesOf(available.plugins, chosen);
+  if (install.length > 0) return { kind: 'install', count: install.length };
+  if (remove.length > 0) return { kind: 'remove', count: remove.length };
+  return available.choicePending ? { kind: 'without' } : { kind: 'continue' };
+}
+
+/** `available` after `done`: the choice answered, what installed marked installed and what was
+ * removed marked not installed - the real state, so the next action and Back show it. */
+export function markApplied(available: Available, done: PluginsDone): Available {
+  const installed = new Set(done.results.filter((result) => result.ok).map((result) => result.id));
+  const removed = new Set(done.removed);
+  return {
+    ...available,
+    choicePending: false,
+    plugins: available.plugins.map((plugin) =>
+      installed.has(plugin.id) || removed.has(plugin.id)
+        ? { ...plugin, installed: installed.has(plugin.id) && !removed.has(plugin.id) }
+        : plugin,
+    ),
+  };
+}
+
+/** `previous` with `next`'s results in place of the same plugins' (a retry), `next`'s restart. */
+export function mergeOutcome(previous: PluginsDone | null, next: PluginsDone): PluginsDone {
+  if (previous === null) return next;
+  const ids = new Set(next.results.map((result) => result.id));
+  return {
+    results: [...previous.results.filter((result) => !ids.has(result.id)), ...next.results],
+    restart: previous.restart || next.restart,
+    removed: [...new Set([...previous.removed, ...next.removed])],
   };
 }
 

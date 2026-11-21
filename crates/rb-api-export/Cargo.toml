@@ -1,0 +1,16 @@
+[package]
+name = "rb-api-export"
+description = "The API client's exporters and code generators (RB-096-03): a request of rb-api-model in, text out - a Postman v2.1 collection, a .http file, a curl script; a request as curl, HTTPie, fetch or a Playwright test. Pure, std + serde; a secret stays a variable, never resolved"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rb-api-model = { path = "../rb-api-model" }
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -5,18 +5,22 @@
 // top frame (`browsersync.ts`) and the SPA follow (`spa.ts`). Scroll sync `scroll/`
 // (RB-020-04); form and focus sync `forms/` (RB-020-05). The top frame's Web Vitals `vitals/`
 // (RB-060-10) and its frameworks, as the main-world probe reports them (`framework.ts`,
-// RB-080-24).
+// RB-080-24). The page's direction, language and pseudo-localisation `locale/` (RB-092-02).
 
 import { watchBrowsersync } from './browsersync';
 import { installCapture, type CaptureGroup } from './capture';
 import { applyChange, applyFocus, isChangeState } from './forms/apply';
 import { watchFrameworks } from './framework';
+import { isPageLocale } from './locale/check';
+import { PageLocaleController } from './locale/apply';
 import type {
   AgentCommand,
   AgentConfig,
   AgentMessage,
   CommandResult,
   ElementTarget,
+  PathPoint,
+  RecordConfig,
   ScrollData,
   SyncEvent,
 } from './protocol';
@@ -62,11 +66,23 @@ function framePath(win: Window): string[] | null {
 }
 
 
+/** Whether `value` is a running recording's `RecordConfig` (RB-090-87). */
+function isRecord(value: unknown): value is RecordConfig {
+  return (
+    isObject(value) &&
+    typeof value.menuHovers === 'boolean' &&
+    typeof value.hoverDwellMs === 'number' &&
+    value.hoverDwellMs >= 0 &&
+    (value.recordPointer === 'menu' || value.recordPointer === 'all' || value.recordPointer === 'off')
+  );
+}
+
 /** Whether `value` is a complete `AgentConfig`. */
 export function isConfig(value: unknown): value is AgentConfig {
   if (!isObject(value) || !isObject(value.capture)) return false;
   const capture = value.capture;
   return (
+    (value.record === undefined || isRecord(value.record)) &&
     typeof value.active === 'boolean' &&
     typeof value.hoverThrottleMs === 'number' &&
     value.hoverThrottleMs >= 0 &&
@@ -111,6 +127,8 @@ export class Agent {
   private unwatch: (() => void) | null = null;
   private unvitals: (() => void) | null = null;
   private unframeworks: (() => void) | null = null;
+  /** The page's direction, language and pseudo-localisation (RB-092-02). */
+  private readonly locale: PageLocaleController;
 
   constructor(options: AgentOptions) {
     this.win = options.win;
@@ -119,6 +137,7 @@ export class Agent {
     this.trusted = options.trusted ?? ((event) => event.isTrusted);
     this.top = this.win === this.win.top;
     this.frame = this.top ? null : framePath(this.win);
+    this.locale = new PageLocaleController(this.win);
     this.relay = new BusRelay(this.win, this.top, (bus) =>
       this.post({ kind: 'bus', v: PROTOCOL_VERSION, ...this.origin(), time: Date.now(), ...bus }),
     );
@@ -133,7 +152,9 @@ export class Agent {
       hoverThrottleMs: () => this.config.hoverThrottleMs,
       scrollDebounceMs: () => this.config.scrollDebounceMs ?? DEFAULT_SCROLL_DEBOUNCE_MS,
       wheel: () => this.config.scrollMode === 'wheel',
-      emit: (event) => this.emit(event),
+      record: () => this.config.record ?? null,
+      // The way only from the top frame: its points are the viewport's (RB-090-87).
+      emit: (event, path) => this.emit(event, this.top ? path : undefined),
     });
     const uninstallRelay = this.relay.start();
     this.refreshCapture = capture.refresh;
@@ -167,6 +188,7 @@ export class Agent {
     this.unvitals = null;
     this.unframeworks?.();
     this.unframeworks = null;
+    this.locale.stop();
   }
 
   /** Runs a command of the core; never throws. */
@@ -234,6 +256,14 @@ export class Agent {
         return this.relay.deliver(input);
       case 'navigate':
         return followRoute(this.win, command.url);
+      case 'locale':
+        if (!isPageLocale(command.locale)) return { status: 'error', message: 'invalid locale' };
+        try {
+          this.locale.apply(command.locale);
+          return { status: 'done' };
+        } catch {
+          return { status: 'error', message: 'locale failed' };
+        }
       default:
         return { status: 'error', message: 'unknown command' };
     }
@@ -247,7 +277,7 @@ export class Agent {
     return this.frame ? { top: this.top, frame: this.frame } : { top: this.top };
   }
 
-  private emit(event: SyncEvent): void {
+  private emit(event: SyncEvent, path?: PathPoint[]): void {
     this.seq += 1;
     this.post({
       kind: 'event',
@@ -256,6 +286,7 @@ export class Agent {
       seq: this.seq,
       time: Date.now(),
       event,
+      ...(path && path.length > 0 ? { path } : {}),
     });
   }
 

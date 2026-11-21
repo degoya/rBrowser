@@ -13,6 +13,32 @@
       "members": ["ffmpeg.exe", "LICENSE.txt"],
       "license": "LGPL-3.0-or-later",
       "source_url": "https://github.com/FFmpeg/FFmpeg/archive/7adfbe40dc.tar.gz"
+    },
+    {
+      "name": "adb",
+      "platform": "x86_64-pc-windows-msvc",
+      "version": "37.0.1",
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip",
+      "sha256": "45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99",
+      "size": 8044989,
+      "archive": "zip",
+      "executable": "adb.exe",
+      "members": ["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll", "libwinpthread-1.dll", "NOTICE.txt"],
+      "license": "LicenseRef-Android-SDK-License",
+      "source_url": "https://android.googlesource.com/platform/packages/modules/adb/"
+    },
+    {
+      "name": "cloudflared",
+      "platform": "x86_64-pc-windows-msvc",
+      "version": "2026.11.1",
+      "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
+      "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
+      "size": 55483112,
+      "archive": "exe",
+      "executable": "cloudflared.exe",
+      "members": ["cloudflared.exe"],
+      "license": "Apache-2.0",
+      "source_url": "https://github.com/cloudflare/cloudflared/archive/refs/tags/2026.11.1.tar.gz"
     }
   ]
 }

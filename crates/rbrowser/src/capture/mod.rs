@@ -16,6 +16,7 @@ pub mod cdp;
 pub mod chromium;
 pub mod clean;
 pub mod clean_defs;
+pub mod latest;
 pub mod pick;
 pub mod run;
 #[cfg(test)]
@@ -254,7 +255,9 @@ pub async fn screenshot(
         (true, None, Some(root)) => Some(settings.output_dir(&root)?),
         (true, None, None) => return Err(CaptureError::NoProject),
     };
-    let shooter = HostShooter::new(host.clone()).with_clean(clean_plan(core, request.clean));
+    let mut plan = clean_plan(core, request.clean);
+    plan.mask = request.mask_passwords;
+    let shooter = HostShooter::new(host.clone()).with_clean(plan);
     let shot = match (request.mode, &request.selector) {
         (CaptureMode::Viewport, _) => Shot::Viewport,
         (CaptureMode::FullPage, _) => Shot::FullPage,
@@ -309,7 +312,7 @@ pub async fn screenshot(
         folder,
         stamp: crate::local_time::stamp_now(),
     };
-    run::run(
+    let answer = run::run(
         &shooter,
         &views,
         &shot,
@@ -317,7 +320,14 @@ pub async fn screenshot(
         request.overview,
         &context,
     )
-    .await
+    .await?;
+    // MCP's `rbrowser://screenshots/latest` (RB-095-01): the project's screenshot folder only.
+    if request.folder.is_none()
+        && let Some(root) = host.project_root()
+    {
+        latest::remember(&root, &answer);
+    }
+    Ok(answer)
 }
 
 /// The ids `request` names: its views, else its target's.
@@ -353,6 +363,9 @@ fn metas(host: &Arc<Host>, ids: &[ViewId]) -> Vec<ViewMeta> {
                     EngineKind::Chromium => "chromium",
                     EngineKind::Firefox => "firefox",
                     EngineKind::Webkit => "webkit",
+                    EngineKind::Android => "android",
+                    EngineKind::Safari => "safari",
+                    EngineKind::Ios => "ios",
                 }
                 .to_owned(),
             }

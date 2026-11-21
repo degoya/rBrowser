@@ -315,3 +315,28 @@ fn an_address_grants_a_device_only_after_its_cookie_and_until_its_session_ends()
         "the portal stopped"
     );
 }
+
+/// RB-096-05: a viewer the presentation's link admitted is paired without a pairing token, up
+/// to the limit; the open pairing token stays as it was.
+#[test]
+fn a_viewer_is_admitted_up_to_the_limit() {
+    let mut pairings = pairings(2);
+    let now = Instant::now();
+    let loopback = IpAddr::V4(Ipv4Addr::LOCALHOST);
+    let (first, session) = pairings
+        .admit(loopback, "Customer", now, UNIX_EPOCH)
+        .expect("admitted");
+    assert_eq!(
+        pairings.authenticate(session.expose(), UNIX_EPOCH),
+        Some(first)
+    );
+    pairings
+        .admit(loopback, "Customer 2", now, UNIX_EPOCH)
+        .expect("admitted");
+    assert_eq!(
+        pairings.admit(loopback, "Customer 3", now, UNIX_EPOCH),
+        Err(PairError::Full)
+    );
+    assert_eq!(pairings.devices().len(), 2);
+    assert_eq!(pairings.token_expires(), None, "no pairing token involved");
+}

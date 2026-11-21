@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed (RB-094-10): the page of a run is checked as the app checks a web page - `http(s)`
+  with a host, nothing trimmed: `url` with a space in front or `https://` alone is refused.
+- The image audits `image-delivery-insight`, `image-size-responsive` and `lcp-discovery-insight`
+  share their findings' ids with the responsive-images plugin, so the same image problem is one
+  finding with both as sources (RB-093-02).
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

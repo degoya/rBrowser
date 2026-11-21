@@ -79,6 +79,26 @@ fn webkit_lists_what_playwright_cannot_emulate() {
     assert_eq!(report.unsupported(), ["platform", "network.throttling"]);
 }
 
+/// RB-095-02: an Android device is not emulated - its view has the device's own size (the
+/// breakpoint `view.add_android` writes), and everything else the emulation asks for is marked.
+#[test]
+fn android_takes_the_devices_size_and_emulates_nothing_else() {
+    let report = EmulationReport::for_engine(EngineKind::Android, &asking_for_much());
+    let unsupported = report.unsupported();
+    assert!(
+        !unsupported.contains(&"viewport".to_owned()),
+        "{unsupported:?}"
+    );
+    assert!(!unsupported.contains(&"dpr".to_owned()), "{unsupported:?}");
+    assert_eq!(
+        unsupported.len(),
+        report.fields.len() - 2,
+        "{unsupported:?}"
+    );
+    let plain = EmulationReport::for_engine(EngineKind::Android, &Emulation::default());
+    assert!(plain.unsupported().is_empty());
+}
+
 #[test]
 fn a_report_serializes_per_field() {
     let report = EmulationReport::for_engine(EngineKind::Firefox, &asking_for_much());
@@ -141,4 +161,94 @@ fn time_zone_position_and_cpu_are_reported_per_engine() {
         EmulationReport::for_engine(EngineKind::Firefox, &emulation).unsupported(),
         ["geolocation", "timezone", "cpuThrottling"]
     );
+}
+
+#[test]
+fn safari_applies_the_viewport_only_and_says_it_follows() {
+    let report = EmulationReport::for_engine(EngineKind::Safari, &Emulation::default());
+    let fields: Vec<&str> = report
+        .fields
+        .iter()
+        .map(|field| field.field.as_str())
+        .collect();
+    assert_eq!(fields, ["viewport", "dpr", LEADER_FIELD]);
+    assert_eq!(report.fields[0].support, FieldSupport::Applied);
+    assert!(matches!(
+        report.fields[1].support,
+        FieldSupport::Approximated(_)
+    ));
+    assert!(matches!(
+        &report.fields[2].support,
+        FieldSupport::Unsupported(reason) if reason.contains("follows")
+    ));
+    assert_eq!(report.unsupported(), ["dpr", LEADER_FIELD]);
+}
+
+#[test]
+fn safari_marks_every_other_field() {
+    let report = EmulationReport::for_engine(EngineKind::Safari, &asking_for_much());
+    let unsupported = report.unsupported();
+    for field in [
+        "mobile",
+        "touch",
+        "platform",
+        "reducedMotion",
+        "media.forcedColors",
+        "media.mediaType",
+        "network.offline",
+        "network.throttling",
+        "headers",
+    ] {
+        assert!(unsupported.iter().any(|found| found == field), "{field}");
+    }
+    assert!(!unsupported.iter().any(|found| found == "viewport"));
+}
+
+#[test]
+fn only_safari_carries_the_leader_marker() {
+    for engine in [
+        EngineKind::Chromium,
+        EngineKind::Firefox,
+        EngineKind::Webkit,
+    ] {
+        let report = EmulationReport::for_engine(engine, &Emulation::default());
+        assert!(
+            !report
+                .fields
+                .iter()
+                .any(|field| field.field == LEADER_FIELD),
+            "{engine:?}"
+        );
+    }
+}
+
+#[test]
+fn ios_shows_the_device_s_own_size_and_follows() {
+    let report = EmulationReport::for_engine(EngineKind::Ios, &asking_for_much());
+    let support = |name: &str| {
+        report
+            .fields
+            .iter()
+            .find(|field| field.field == name)
+            .map(|field| field.support.clone())
+    };
+    // Width and pixel ratio are the device's: marked, never emulated (RB-095-04).
+    assert!(matches!(
+        support("viewport"),
+        Some(FieldSupport::Unsupported(reason)) if reason.contains("device")
+    ));
+    assert!(matches!(support("dpr"), Some(FieldSupport::Unsupported(_))));
+    // A phone is mobile and takes touch by itself.
+    assert_eq!(support("mobile"), Some(FieldSupport::Applied));
+    assert_eq!(support("touch"), Some(FieldSupport::Applied));
+    for field in ["platform", "reducedMotion", "media.mediaType", "headers"] {
+        assert!(
+            matches!(support(field), Some(FieldSupport::Unsupported(_))),
+            "{field}"
+        );
+    }
+    assert!(matches!(
+        support(LEADER_FIELD),
+        Some(FieldSupport::Unsupported(reason)) if reason.contains("follows")
+    ));
 }
