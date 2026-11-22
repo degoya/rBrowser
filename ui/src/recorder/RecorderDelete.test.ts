@@ -138,6 +138,19 @@ describe('deleting a recording (RB-090-91)', () => {
     expect(commands(asked)).toEqual([{ type: 'runCommand', id: 'recorder.delete', args: { recordingId: 'login' } }]);
   });
 
+  // RB-094-23: a changed setting applies in the open panel, without opening it again.
+  it('follows a changed automation.recorder.confirmDelete at once', async () => {
+    const options: Options = { confirmDelete: true };
+    const { wrapper, asked, push } = await mounted(options);
+    options.confirmDelete = false;
+    push({ type: 'settingsChanged', keys: ['automation.recorder.confirmDelete'] });
+    await settle();
+    await wrapper.get('[data-testid="recording-entry-login"] [data-testid="delete"]').trigger('click');
+    await settle();
+    expect(wrapper.find('[data-testid="delete-confirm"]').exists()).toBe(false);
+    expect(commands(asked)).toEqual([{ type: 'runCommand', id: 'recorder.delete', args: { recordingId: 'login' } }]);
+  });
+
   it('keeps Delete waiting while the recording is being recorded or plays, and says why', async () => {
     const recordingNow = await mounted({ list: { ...LIST, recordingNow: 'login' } });
     const login = recordingNow.wrapper.get('[data-testid="recording-entry-login"] [data-testid="delete"]');

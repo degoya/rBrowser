@@ -19,7 +19,7 @@ fn the_shipped_list_parses() {
     let first = &list.entries[0];
     assert_eq!(first.combo, "Ctrl+T");
     assert_eq!(first.source, ReservedSource::Browser);
-    assert_eq!(first.platforms, [Platform::Windows]);
+    assert_eq!(first.platforms, [Platform::Windows, Platform::Linux]);
     assert!(
         list.entries
             .iter()
@@ -204,9 +204,75 @@ fn placeholders_match_their_keys() {
 }
 
 #[test]
-fn other_platforms_have_nothing_reserved_yet() {
+fn linux_reserves_the_browser_the_desktop_and_text_editing() {
+    // RB-097-05: the browsers and text editing as on Windows, the desktops' own combinations.
     let list = reserved_list().expect("parses");
-    assert!(list.find(&shortcut("Ctrl+T"), Platform::Linux).is_none());
+    let linux = |text: &str| list.find(&shortcut(text), Platform::Linux);
+    for (combo, source) in [
+        ("Ctrl+T", ReservedSource::Browser),
+        ("Ctrl+F8", ReservedSource::Devtools),
+        ("Ctrl+C", ReservedSource::TextEditing),
+        ("Alt+K", ReservedSource::Accesskey),
+        ("Ctrl+Alt+Q", ReservedSource::Altgr),
+        ("Win+A", ReservedSource::Os),
+        ("Shift+Win+S", ReservedSource::Os),
+        ("Ctrl+Shift+Alt+Win+J", ReservedSource::Os),
+        ("Alt+Tab", ReservedSource::Os),
+        ("Alt+F1", ReservedSource::Os),
+        ("Alt+F2", ReservedSource::Os),
+        ("Alt+F4", ReservedSource::Os),
+        ("Alt+F7", ReservedSource::Os),
+        ("Alt+F10", ReservedSource::Os),
+        ("Alt+Space", ReservedSource::Os),
+        ("Ctrl+Alt+T", ReservedSource::Os),
+        ("Ctrl+Alt+Left", ReservedSource::Os),
+        ("Ctrl+Alt+Down", ReservedSource::Os),
+        ("Ctrl+Shift+Alt+Right", ReservedSource::Os),
+        ("Ctrl+Alt+Delete", ReservedSource::Os),
+        ("Ctrl+F1", ReservedSource::Os),
+    ] {
+        let entry = linux(combo).unwrap_or_else(|| panic!("{combo} is not reserved on Linux"));
+        assert_eq!(entry.source, source, "{combo}: {}", entry.reason);
+    }
+    // The desktop's own entries speak of the Linux desktop, never of Windows.
+    for combo in ["Win+A", "Alt+Tab", "Alt+F4", "Ctrl+Alt+T", "Shift+F10"] {
+        let reason = &linux(combo).expect("reserved").reason;
+        assert!(reason.starts_with("Linux desktop: "), "{combo}: {reason}");
+    }
+    // The plain keys hold as everywhere.
+    for combo in ["A", "Enter", "Tab", "Escape", "Ctrl+Tab"] {
+        assert!(linux(combo).is_some(), "{combo} is not reserved on Linux");
+    }
+}
+
+#[test]
+fn linux_leaves_the_leader_and_the_breakpoint_keys_free() {
+    let list = reserved_list().expect("parses");
+    for combo in ["Ctrl+Shift+Space", "Ctrl+Shift+1", "Ctrl+Shift+9"] {
+        assert!(
+            list.find(&shortcut(combo), Platform::Linux).is_none(),
+            "{combo} is reserved on Linux"
+        );
+    }
+}
+
+#[test]
+fn linux_holds_every_windows_reservation_but_the_windows_systems_own() {
+    // What Windows reserves beyond the system keys holds on Linux too, so the defaults a
+    // Windows build may bind are the ones a Linux build may bind.
+    let list = reserved_list().expect("parses");
+    for entry in list
+        .entries
+        .iter()
+        .filter(|entry| entry.platforms.contains(&Platform::Windows))
+        .filter(|entry| entry.source != ReservedSource::Os)
+    {
+        assert!(
+            entry.platforms.contains(&Platform::Linux),
+            "{} is reserved on Windows only",
+            entry.combo
+        );
+    }
 }
 
 #[test]
@@ -238,10 +304,12 @@ fn ctrl_0_stays_reserved_but_is_the_canvas_boards_zoom_reset() {
 }
 
 #[test]
-fn the_platform_of_the_build_is_macos_only_on_macos() {
-    // The Windows list stands in on Linux (tests, phase 2 later); macOS has its own (RB-090-15).
+fn the_platform_of_the_build_is_its_own() {
+    // macOS (RB-090-15) and Linux (RB-097-05) have their own lists; Windows is the rest.
     let expected = if cfg!(target_os = "macos") {
         Platform::Macos
+    } else if cfg!(target_os = "linux") {
+        Platform::Linux
     } else {
         Platform::Windows
     };

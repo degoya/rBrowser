@@ -36,6 +36,49 @@ fn the_setting_wins_and_must_be_absolute() {
     ));
 }
 
+/// The environment `vars` as the lookup [`local_base`] takes.
+fn env(vars: &[(&str, &str)]) -> impl Fn(&str) -> Option<OsString> {
+    let vars: Vec<(String, OsString)> = vars
+        .iter()
+        .map(|(name, value)| ((*name).to_owned(), OsString::from(value)))
+        .collect();
+    move |name: &str| {
+        vars.iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.clone())
+    }
+}
+
+#[test]
+fn on_windows_the_base_is_local_app_data() {
+    let base = local_base(true, env(&[("LOCALAPPDATA", "C:\\L"), ("HOME", "/h")]));
+    assert_eq!(base, Some(OsString::from("C:\\L")));
+    assert_eq!(local_base(true, env(&[("HOME", "/h")])), None);
+    assert_eq!(local_base(true, env(&[("LOCALAPPDATA", "")])), None);
+}
+
+/// RB-097-01: macOS has no `LOCALAPPDATA`; the browsers go under the app's local folder there,
+/// `~/.local/state/rBrowser` (rb-config's `local_dir`, where the logs are too).
+#[test]
+fn elsewhere_the_base_is_the_state_folder() {
+    let home = local_base(
+        false,
+        env(&[("HOME", "/Users/a"), ("LOCALAPPDATA", "C:\\L")]),
+    );
+    let state = PathBuf::from("/Users/a").join(".local").join("state");
+    assert_eq!(home, Some(state.clone().into_os_string()));
+    let path = browsers_path(None, home).expect("path");
+    assert_eq!(path, state.join("rBrowser").join("ms-playwright"));
+    let xdg = local_base(
+        false,
+        env(&[("XDG_STATE_HOME", "/s"), ("HOME", "/Users/a")]),
+    );
+    assert_eq!(xdg, Some(OsString::from("/s")));
+    let empty = local_base(false, env(&[("XDG_STATE_HOME", ""), ("HOME", "/Users/a")]));
+    assert_eq!(empty, Some(state.into_os_string()));
+    assert_eq!(local_base(false, env(&[])), None);
+}
+
 #[test]
 fn without_setting_and_local_app_data_there_is_no_folder() {
     let error = browsers_path(Some(" "), None).expect_err("none");

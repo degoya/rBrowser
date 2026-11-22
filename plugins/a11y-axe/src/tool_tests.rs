@@ -28,7 +28,7 @@ fn entry<'a>(answer: &'a Value, rule: &str) -> &'a Value {
 fn findings_are_merged_across_views_with_their_breakpoints() {
     let mut host = three_views();
     let answer = answer(&mut host, r#"{"target": "all"}"#, false);
-    assert_eq!(answer["axeVersion"], "4.14.0");
+    assert_eq!(answer["axeVersion"], "4.14.1");
     assert_eq!(answer["tags"], json!(["wcag22aa"]));
     assert_eq!(answer["rules"], 64);
     assert_eq!(answer["findings"].as_array().map(Vec::len), Some(2));
@@ -147,7 +147,7 @@ fn the_command_reports_at_most_the_hosts_limit() {
     let node = json!({ "selector": "img", "path": "html > body > img", "impact": "minor" });
     let nodes: Vec<Value> = (0..4_000).map(|_| node.clone()).collect();
     let big = json!({
-        "axeVersion": "4.14.0",
+        "axeVersion": "4.14.1",
         "url": "http://localhost/",
         "violations": [{ "id": "image-alt", "impact": "minor", "nodes": nodes }],
     })

@@ -2026,7 +2026,8 @@
               "x-scope": [
                 "user"
               ],
-              "x-protected": true
+              "x-protected": true,
+              "x-restart": true
             },
             "extensions": {
               "type": "object",
@@ -2041,7 +2042,8 @@
                   "x-scope": [
                     "user"
                   ],
-                  "x-protected": true
+                  "x-protected": true,
+                  "x-restart": true
                 },
                 "offerProjectRecommendations": {
                   "type": "boolean",
@@ -2083,7 +2085,8 @@
                   "x-scope": [
                     "user"
                   ],
-                  "x-protected": true
+                  "x-protected": true,
+                  "x-restart": true
                 },
                 "allowWebStore": {
                   "type": "boolean",
@@ -4183,7 +4186,8 @@
           "x-scope": [
             "user"
           ],
-          "x-protected": true
+          "x-protected": true,
+          "x-restart": true
         },
         "stateExportAllDomains": {
           "type": "boolean",

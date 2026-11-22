@@ -13,6 +13,28 @@ describe('the settings store', () => {
     expect(core.sent[0]).toEqual({ type: 'getSettings', includeSchema: true });
   });
 
+  // RB-094-25: a refused write is said at the top of the window as well, not only under its
+  // field, which may lie below a long list.
+  it('keeps the last refusal for the notice at the top until the key is saved or it is closed', async () => {
+    const core = createFakeCore();
+    const store = createSettingsStore(core.client);
+    await store.start();
+    expect(store.refusal.value).toBeNull();
+    expect(await store.set('network.ignoreCertificateErrors', true, 'project')).toBe(false);
+    expect(store.refusal.value).toEqual({
+      key: 'network.ignoreCertificateErrors',
+      issues: [{ path: '', messageKey: 'settings.rejected.local_only' }],
+    });
+    expect(await store.set('sync.scroll', false, 'project')).toBe(true);
+    expect(store.refusal.value?.key).toBe('network.ignoreCertificateErrors');
+    expect(await store.set('network.ignoreCertificateErrors', true, 'local')).toBe(true);
+    expect(store.refusal.value).toBeNull();
+    await store.set('network.ignoreCertificateErrors', true, 'project');
+    store.dismissRefusal();
+    expect(store.refusal.value).toBeNull();
+    expect(store.issues.value['network.ignoreCertificateErrors']).toHaveLength(1);
+  });
+
   it('writes, keeps the reasons of a refusal at the key, and resets from the origin scope', async () => {
     const core = createFakeCore({ origins: { 'sync.scroll': 'local' } });
     const store = createSettingsStore(core.client);

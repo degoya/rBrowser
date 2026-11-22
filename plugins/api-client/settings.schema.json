@@ -30,7 +30,12 @@
       "x-order": 2,
       "x-scope": ["local"],
       "x-local-only": true,
-      "x-protected": true
+      "x-protected": true,
+      "x-secret": true,
+      "x-panel": {
+        "panel": "api-client",
+        "tab": "variables"
+      }
     },
     "historySize": {
       "type": "integer",

@@ -7,6 +7,9 @@
 //! The functions work on a config file's JSON as it is on disk, so the settings window
 //! (`setSetting`) and MCP's `breakpoint_remove` edit the very files they write; both call
 //! [`drop_removed`]. The UI's confirmation counts the same places (`ui/src/settings/breakpointRefs.ts`).
+//!
+//! The merge joins the two files' `breakpoints` by id, so a breakpoint is gone only when neither
+//! file defines it: [`remove_definitions`] takes its entry out of both (RB-094-25).
 
 use std::collections::BTreeSet;
 
@@ -53,6 +56,28 @@ pub fn defined_ids(project: &Value, local: Option<&Value>) -> BTreeSet<String> {
         .filter_map(|breakpoint| breakpoint.get("id").and_then(Value::as_str))
         .map(str::to_owned)
         .collect()
+}
+
+/// Removes the entries of the breakpoints `ids` from the `breakpoints` of `project` and `local`,
+/// wherever either defines them (RB-094-25): an entry left in one file brings the breakpoint
+/// back through the merge. Returns how many entries went.
+pub fn remove_definitions(
+    ids: &BTreeSet<String>,
+    project: &mut Value,
+    local: Option<&mut Value>,
+) -> usize {
+    [Some(project), local]
+        .into_iter()
+        .flatten()
+        .map(|document| {
+            retain(document.get_mut("breakpoints"), |entry| {
+                entry
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .is_none_or(|id| !ids.contains(id))
+            })
+        })
+        .sum()
 }
 
 /// Removes from `project` and `local` every reference to an id of `before` (the ids the two

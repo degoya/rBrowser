@@ -20,7 +20,7 @@ fn the_script_embeds_axe_the_runner_and_the_options() {
 
 #[test]
 fn the_bundled_axe_is_the_pinned_version() {
-    assert!(AXE_SOURCE.starts_with("/*! axe v4.14.0"));
+    assert!(AXE_SOURCE.starts_with("/*! axe v4.14.1"));
     assert!(AXE_SOURCE.len() > 100_000);
     assert!(RUNNER_SOURCE.contains("rbA11yAxe"));
 }

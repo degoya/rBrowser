@@ -53,9 +53,13 @@ export interface BenchRun {
   start(id: string, environment: string | undefined): Promise<void>;
 }
 
+/** Whether a failure asked the person - a host to allow, RB-096-13 - and `again` runs it once
+ * they did; `false` leaves the failure to be said. */
+export type AskFor = (failure: unknown, again: () => void) => boolean;
+
 /** The benchmark of a saved request (RB-096-04) in the chosen environment and, when one is
- * picked, a second one to compare. */
-export function createBenchRun(panel: Panel): BenchRun {
+ * picked, a second one to compare; a host not allowed yet is asked for (`askFor`). */
+export function createBenchRun(panel: Panel, askFor: AskFor = () => false): BenchRun {
   const run: BenchRun = reactive({
     compareWith: undefined,
     result: null,
@@ -75,7 +79,7 @@ export function createBenchRun(panel: Panel): BenchRun {
         run.result = (await panel.call({ tool: 'panel' }, { op: { op: 'bench', id, environments } })) as Bench;
       } catch (error) {
         run.result = null;
-        run.problem = panel.error(error);
+        run.problem = askFor(error, () => void run.start(id, environment)) ? null : panel.error(error);
       } finally {
         run.running = false;
       }

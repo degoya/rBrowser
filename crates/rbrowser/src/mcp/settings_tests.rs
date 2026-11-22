@@ -254,3 +254,37 @@ fn a_setting_value_is_masked_by_its_key() {
     let audit = audit_text("emulation.headers", &json!({ "X-Custom": "audit42secret" }));
     assert!(!audit.contains("audit42secret"), "{audit}");
 }
+
+/// RB-094-26: a key annotated `x-secret` is masked in `settings_get` by the annotation, whatever
+/// its name - the names inside stay, the values go.
+#[test]
+fn an_x_secret_value_is_masked_in_the_document_by_its_annotation() {
+    let (mut registry, _) = settings_registry();
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "vault": {
+                "type": "object",
+                "default": {},
+                "x-category": "network",
+                "x-section": "api-client",
+                "x-order": 90,
+                "x-scope": ["local"],
+                "x-local-only": true,
+                "x-protected": true,
+                "x-secret": true
+            }
+        }
+    });
+    registry
+        .register_plugin_schema("vault-plugin", &schema)
+        .expect("registers");
+    let values = [SettingValue {
+        key: "vault-plugin.vault".to_owned(),
+        value: json!({ "staging": { "PLAIN": "opensesame99" } }),
+        origin: Origin::Local,
+    }];
+    let text = document(&registry, &values, &|key| key.to_owned()).to_string();
+    assert!(!text.contains("opensesame99"), "{text}");
+    assert!(text.contains("PLAIN"), "{text}");
+}

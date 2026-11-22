@@ -5,7 +5,9 @@
 # broken rule fails with the key named - a key without x-category, an unknown section, a repeated
 # x-order in a section, a local-only key that allows Project, a missing i18n key (label or help
 # text), a path key without x-input or with a wrong one, and a plugin schema that adds a
-# top-level category. The repository itself passes too.
+# top-level category, and a key whose text says it applies at the next start without x-restart
+# (RB-094-23), a link to a secret key that names no panel (RB-094-27). The repository itself
+# passes too.
 #
 # Python only, compiles nothing: check.sh --preflight runs it.
 #
@@ -109,6 +111,25 @@ edit_json "$fixture/schema/config.v1.json" \
     'doc["properties"]["startUrl"]["x-input"] = "file"; doc["properties"]["startUrl"]["x-options"] = ["a", "b"]'
 run_status "$LINT" "$fixture"
 expect_status "a file input with suggestions on a string passes" 0
+
+# A secret's values never show (RB-094-26): `x-secret` is true or false, and only on a protected key.
+fixture="$(settings_fixture "$SCRATCH/secret")"
+edit_json "$fixture/schema/config.v1.json" 'doc["properties"]["startUrl"]["x-secret"] = "yes"'
+run_status "$LINT" "$fixture"
+expect_status "an x-secret that is no boolean fails" 1
+expect_output "the value is refused" "startUrl: x-secret is not true or false"
+
+fixture="$(settings_fixture "$SCRATCH/secret-open")"
+edit_json "$fixture/schema/config.v1.json" 'doc["properties"]["startUrl"]["x-secret"] = True'
+run_status "$LINT" "$fixture"
+expect_status "a secret MCP may write fails" 1
+expect_output "the rule is named" "startUrl: a secret key is x-protected"
+
+fixture="$(settings_fixture "$SCRATCH/secret-ok")"
+edit_json "$fixture/schema/config.v1.json" \
+    'doc["properties"]["startUrl"]["x-secret"] = True; doc["properties"]["startUrl"]["x-protected"] = True'
+run_status "$LINT" "$fixture"
+expect_status "a protected secret passes" 0
 
 fixture="$(settings_fixture "$SCRATCH/options")"
 edit_json "$fixture/schema/config.v1.json" 'doc["properties"]["startUrl"]["x-options"] = "a"'
@@ -362,5 +383,96 @@ printf '{ "links": ' > "$fixture/crates/rbrowser/data/settings-links.json"
 run_status "$LINT" "$fixture"
 expect_status "a table that is not JSON fails" 1
 expect_output "the table is named" "crates/rbrowser/data/settings-links.json: not JSON"
+
+# RB-094-27: a secret key is no setting of the window. Its `x-panel` names the panel of its plugin
+# that edits it; a link to it - in the table (its text names no settings path) or a notice's
+# target - opens that panel. A link to a secret key without one, an x-panel on another key, one
+# of no panel of the plugin or of another shape, and a panel link whose text names a settings
+# path fail.
+VAULT='doc["properties"]["vault"] = {"type": "object", "default": {},
+  "x-category": "checks", "x-section": "seo", "x-order": 2, "x-scope": ["local"],
+  "x-local-only": True, "x-protected": True, "x-secret": True,
+  "x-panel": {"panel": "seo", "tab": "vault"}}'
+VAULT_TEXTS='doc["plugin"]["seo"]["settings"]["vault"] = {"label": "Vault", "description": "Kept here.", "help": "Kept on this machine."}
+doc["plugin"]["seo"]["panel"] = {"vaultGone": "The vault (SEO › Vault) does not read."}'
+vault_fixture() {
+    local fixture
+    fixture="$(settings_fixture "$1")"
+    edit_json "$fixture/plugins/seo/settings.schema.json" "$VAULT"
+    edit_json "$fixture/plugins/seo/locales/en.json" "$VAULT_TEXTS"
+    printf '\n[[panels]]\nid = "seo"\ntitle = "plugin.seo.panel.title"\nentry = "panel/index.html"\n' \
+        >> "$fixture/plugins/seo/manifest.toml"
+    mkdir -p "$fixture/crates/rbrowser/data" "$fixture/plugins/seo/web/src/panel"
+    printf '%s\n' '{"links": {"plugin.seo.panel.vaultGone": "seo.vault"}, "unlinked": {}}' \
+        > "$fixture/crates/rbrowser/data/settings-links.json"
+    printf "const line = { tone: 'error', text, setting: { key: 'seo.vault', label } };\n" \
+        > "$fixture/plugins/seo/web/src/panel/line.ts"
+    printf '%s\n' "$fixture"
+}
+
+fixture="$(vault_fixture "$SCRATCH/vault-ok")"
+run_status "$LINT" "$fixture"
+expect_status "a secret key linked to the panel that edits it passes" 0
+expect_output "its status line's link is a target" "1 notice targets"
+
+fixture="$(vault_fixture "$SCRATCH/vault-no-panel")"
+edit_json "$fixture/plugins/seo/settings.schema.json" 'del doc["properties"]["vault"]["x-panel"]'
+run_status "$LINT" "$fixture"
+expect_status "a link to a secret key without its panel fails" 1
+expect_output "the table's link is refused" \
+    "settings-links.json: \`plugin.seo.panel.vaultGone\` links to \`seo.vault\`, a secret key: it is not in the settings window and names no panel (x-panel)"
+expect_output "the notice's target is refused" \
+    "plugins/seo/web/src/panel/line.ts:1: settings target \`seo.vault\` is a secret key: it is not in the settings window and names no panel (x-panel)"
+
+fixture="$(vault_fixture "$SCRATCH/vault-unknown-panel")"
+edit_json "$fixture/plugins/seo/settings.schema.json" 'doc["properties"]["vault"]["x-panel"]["panel"] = "keys"'
+run_status "$LINT" "$fixture"
+expect_status "an x-panel of no panel of the plugin fails" 1
+expect_output "the panel is named" "seo.vault: x-panel names \`keys\`, no panel of plugin seo"
+
+fixture="$(vault_fixture "$SCRATCH/vault-shape")"
+edit_json "$fixture/plugins/seo/settings.schema.json" 'doc["properties"]["vault"]["x-panel"] = "seo"'
+run_status "$LINT" "$fixture"
+expect_status "an x-panel of another shape fails" 1
+expect_output "the shape is named" 'seo.vault: x-panel is not {"panel": <id>, "tab": <id>}'
+
+fixture="$(vault_fixture "$SCRATCH/vault-not-secret")"
+edit_json "$fixture/plugins/seo/settings.schema.json" \
+    'doc["properties"]["titleLength"]["x-panel"] = {"panel": "seo"}'
+run_status "$LINT" "$fixture"
+expect_status "an x-panel on a key that is no secret fails" 1
+expect_output "the rule is named" "seo.titleLength: x-panel is only on an x-secret key"
+
+fixture="$(vault_fixture "$SCRATCH/vault-settings-text")"
+edit_json "$fixture/plugins/seo/locales/en.json" \
+    'doc["plugin"]["seo"]["panel"]["vaultGone"] = "The vault (Settings > Checks > SEO) does not read."'
+run_status "$LINT" "$fixture"
+expect_status "a panel link whose text names a settings path fails" 1
+expect_output "the text is named" \
+    "settings-links.json: \`plugin.seo.panel.vaultGone\` opens the panel seo.seo#vault but its text names a settings path"
+
+# RB-094-23: a key applies at once, or carries x-restart; a text that says the next start needs it.
+fixture="$(settings_fixture "$SCRATCH/restart-text")"
+edit_json "$fixture/locales/en.json" \
+    'doc["settings"]["key"]["sync"]["scroll"]["help"] = "Syncs the scroll position. Applies at the next start."'
+run_status "$LINT" "$fixture"
+expect_status "a key whose text says the next start fails without x-restart" 1
+expect_output "the key and the rule are named" \
+    "sync.scroll: its text says it applies at the next start but it has no x-restart"
+edit_json "$fixture/schema/config.v1.json" 'doc["$defs"]["Sync"]["properties"]["scroll"]["x-restart"] = True'
+run_status "$LINT" "$fixture"
+expect_status "the same key with x-restart passes" 0
+
+fixture="$(settings_fixture "$SCRATCH/restart-value")"
+edit_json "$fixture/schema/config.v1.json" 'doc["$defs"]["Sync"]["properties"]["scroll"]["x-restart"] = "yes"'
+run_status "$LINT" "$fixture"
+expect_status "an x-restart that is not true fails" 1
+expect_output "the value is named" "sync.scroll: x-restart is not true"
+
+fixture="$(settings_fixture "$SCRATCH/restart-other")"
+edit_json "$fixture/locales/en.json" \
+    'doc["settings"]["key"]["sync"]["scroll"]["help"] = "Applies after the Node sidecar restarts; loads at the next start."'
+run_status "$LINT" "$fixture"
+expect_status "a process of its own starting again is no restart of rBrowser" 0
 
 finish_tests settings-lint

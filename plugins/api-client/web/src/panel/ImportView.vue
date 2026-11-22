@@ -8,7 +8,7 @@
 // the side column's Import tab (RB-096-11), no window over the editor.
 import { computed, ref } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
-import SettingsText from './SettingsText.vue';
+import VariablesText from './VariablesText.vue';
 import {
   ACCEPT,
   FORMATS,
@@ -137,7 +137,7 @@ async function ask(preview: boolean): Promise<void> {
       <section v-if="answer.report.secrets.length > 0" id="import-secrets" class="flex flex-col gap-0.5">
         <p class="font-medium">{{ t('panel.import.secrets') }}</p>
         <p v-for="secret in answer.report.secrets" :key="`${secret.at}/${secret.name}`" class="text-xs" data-secret>
-          <SettingsText text="panel.import.secretItem" :params="{ at: secret.at, name: secret.name, variable: secret.variable }" setting-key="api-client.secrets" />
+          <VariablesText text="panel.import.secretItem" :params="{ at: secret.at, name: secret.name, variable: secret.variable }" />
         </p>
       </section>
       <section v-if="notes.reported.length > 0" id="import-reported" class="flex flex-col gap-0.5">

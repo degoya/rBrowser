@@ -104,28 +104,30 @@ async fn plugins_panels_selects_the_panel_in_a_window_already_open() {
 
 /// RB-080-97: the panels page asked for the list while the plugins loaded, got
 /// `plugins.error.not_available` and never asked again - the dock showed Findings alone. The
-/// start tells every shell page once the panels are there; a settings change that changes no
-/// panel says nothing.
+/// start tells every shell page once the panels are there, and then that the plugins are in
+/// (`pluginsChanged`, RB-094-26: the settings pages read the plugins' keys again); a settings
+/// change that changes no panel says nothing.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_start_tells_the_panels_pages_that_the_list_is_there() {
     let (ui, core) = core();
     let changed = panel_list::changed_message();
+    let plugins = live::changed_message();
     on_start(&core);
     for _ in 0..400 {
-        if panel_messages(&ui).contains(&changed) {
+        if panel_messages(&ui).contains(&plugins) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
-    assert_eq!(panel_messages(&ui), vec![changed.clone()]);
+    assert_eq!(panel_messages(&ui), vec![changed.clone(), plugins.clone()]);
     on_user_settings_changed(&core);
     on_config_changed(&core);
-    assert_eq!(panel_messages(&ui), vec![changed.clone()]);
+    assert_eq!(panel_messages(&ui), vec![changed.clone(), plugins.clone()]);
     // A panel hidden (`plugins.panelsHidden`) is news.
     let mut user = core.user_settings();
     user.plugins.panels_hidden = vec![rb_config::PluginId("console".to_owned())];
     core.replace_user_settings(user);
-    assert_eq!(panel_messages(&ui), vec![changed.clone(), changed]);
+    assert_eq!(panel_messages(&ui), vec![changed.clone(), plugins, changed]);
 }
 
 #[tokio::test(flavor = "multi_thread")]

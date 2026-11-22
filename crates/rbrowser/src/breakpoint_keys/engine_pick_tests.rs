@@ -24,7 +24,40 @@ fn engine_badge_lists_the_engines_with_the_current_one_checked() {
     assert!(items.iter().all(EngineItem::available));
     assert_eq!(items[0].label, "Chromium");
     assert_eq!(items[1].label, "Firefox");
-    assert!(items[2].label.starts_with("WebKit"), "{}", items[2].label);
+    // The text comes with the wave's locale part; until it is merged `t` answers the key.
+    assert!(
+        items[2].label.starts_with("WebKit") || items[2].label == WEBKIT_ROW,
+        "{}",
+        items[2].label
+    );
+}
+
+#[test]
+fn the_menu_names_webkit_by_playwright_beside_safari_and_the_badge_says_it_is_not_safari() {
+    // RB-097-02: on a Mac both rows can be chosen; they must not read alike.
+    let items = items(EngineKind::Chromium, |_| None);
+    assert!(
+        items[2].label == "WebKit (Playwright)" || items[2].label == WEBKIT_ROW,
+        "{}",
+        items[2].label
+    );
+    assert_eq!(items[3].label, "Safari");
+    let webkit = badge(EngineKind::Webkit, None);
+    assert_eq!(webkit.text, "WebKit");
+    assert!(webkit.tooltip.contains("not Safari"), "{}", webkit.tooltip);
+    let unavailable = items_with_webkit_reason();
+    assert!(
+        unavailable.label.contains("Playwright") || unavailable.label.contains(WEBKIT_ROW),
+        "{}",
+        unavailable.label
+    );
+}
+
+fn items_with_webkit_reason() -> EngineItem {
+    items(EngineKind::Chromium, |engine| {
+        (engine == EngineKind::Webkit).then(|| "WebKit is not installed".to_owned())
+    })
+    .swap_remove(2)
 }
 
 #[test]

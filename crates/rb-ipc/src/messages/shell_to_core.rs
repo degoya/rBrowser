@@ -489,4 +489,7 @@ pub enum ShellToCore {
         /// The request.
         request: crate::McpSetupRequest,
     },
+    /// Per environment whether a Basic auth credential is stored, and its user - never the
+    /// password (RB-094-29); answered with `basicAuthStatus`.
+    GetBasicAuthStatus,
 }

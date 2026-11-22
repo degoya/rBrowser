@@ -162,3 +162,25 @@ fn a_panic_lands_in_the_log_with_its_backtrace() {
     assert!(log.contains("boom 4711"), "{log}");
     assert!(log.contains("backtrace:"), "{log}");
 }
+
+/// RB-094-28: `logs.maxFileSizeMb` and `logs.maxFiles` apply to the running logger.
+#[test]
+fn the_rotation_changes_at_runtime() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (dispatch, guard) =
+        build(&config(dir.path(), LogLevel::Info, 1 << 20), None).expect("build");
+    let handle = guard.handle();
+    handle.set_rotation(RotationPolicy {
+        max_bytes: 300,
+        max_files: 2,
+    });
+    tracing::dispatcher::with_default(&dispatch, || {
+        for index in 0..20 {
+            tracing::info!(target: target::SYNC, "scroll event number {index}");
+        }
+    });
+    drop(guard);
+    assert!(dir.path().join("rbrowser.1.log").is_file());
+    assert!(!dir.path().join("rbrowser.2.log").exists());
+    assert!(log_of(dir.path()).contains("scroll event number 19"));
+}

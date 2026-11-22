@@ -3,7 +3,7 @@
 # The gates of the release's channel jobs (RB-090-13, RB-110-04) against a local origin with tags:
 # scripts/release-channels.sh names the newest plain vX.Y.Z tag (v1.10.0 after v1.9.0, a
 # pre-release never), moves a channel only for that tag and with its secret, and `push` of a
-# channel the release rendered nothing for (the Homebrew tap before RB-110-01/02) ends with a
+# channel the release rendered nothing for (the Homebrew tap before RB-097-05/02) ends with a
 # notice; scripts/release-repositories.sh gates the apt and dnf repository on the tag and both of
 # its secrets. Nothing here reaches GitHub.
 #

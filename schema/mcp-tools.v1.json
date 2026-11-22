@@ -223,7 +223,7 @@
     {
       "name": "breakpoint_remove",
       "area": "config",
-      "description": "Remove a breakpoint from the project config by id, with every reference to it in both project files (layout cells, hidden views, split and canvas fields, a preset's focus, envCompare.breakpoints). Checked before it is written; the answer counts the references removed.",
+      "description": "Remove a breakpoint from the project config by id: from both project files where either defines it, with every reference to it in both (layout cells, hidden views, split and canvas fields, a preset's focus, envCompare.breakpoints). Checked before it is written; the answer counts the references removed.",
       "target": "none",
       "actsOn": "the project config",
       "withoutCommand": "edits the project config as the settings window does; no command removes a breakpoint",
@@ -256,7 +256,7 @@
             "type": "string"
           },
           "scope": {
-            "description": "`project` (default) or `local`.",
+            "description": "`project` (default) or `local`: the file read first; the breakpoint leaves both files.",
             "$ref": "#/$defs/ConfigScope",
             "default": "project"
           }
@@ -1041,11 +1041,11 @@
     {
       "name": "config_set",
       "area": "config",
-      "description": "Change one key of the project config (.rbrowser/config.json, or config.local.json with scope local): key dotted, value (null removes). The result is checked as the settings window checks it. Keys guarded by workspace trust (headers, network, plugins, extensions) are refused with code config_key_protected.",
+      "description": "Change one key of the project config (.rbrowser/config.json, or config.local.json with scope local): key dotted, value (null removes). The result is checked as the settings window checks it. Keys guarded by workspace trust (headers, network, plugins, extensions), protected keys (of the core and of every installed plugin) and a write at a parent key that would remove or change one are refused with code config_key_protected.",
       "target": "none",
       "actsOn": "the project config",
       "guard": {
-        "note": "Keys guarded by workspace trust (headers, network, plugins, extensions) are refused with code config_key_protected."
+        "note": "Keys guarded by workspace trust (headers, network, plugins, extensions), the protected keys of the core and of every installed plugin, and a write at a parent key that would remove or change one are refused with code config_key_protected."
       },
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",

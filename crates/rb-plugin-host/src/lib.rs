@@ -90,7 +90,7 @@ pub use compile_cache::sha256_hex;
 pub use conformance::{ConformanceCheck, ConformanceReport, run_conformance};
 pub use contents::{check_locale, check_settings_schema};
 pub use context::PluginContext;
-pub use engine::configure_compile_cache;
+pub use engine::set_compile_cache;
 pub use failure::readable;
 pub use health::{
     DEFAULT_CRASH_LIMIT, FAILURE_WINDOW, MAX_CRASH_LIMIT, MIN_CRASH_LIMIT, PluginHealth,

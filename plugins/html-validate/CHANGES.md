@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Changed: html-validate 11.21.1 (bundled).
 - Fixed (RB-094-13): a view without its source names the browser's reason, not only the
   host's code.
 - Added (RB-094-06): the rendered DOM as a second source - `html-validate.source` (`raw`, the

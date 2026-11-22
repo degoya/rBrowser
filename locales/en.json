@@ -82,6 +82,16 @@
       "notListed": "The Basic auth credentials of \"{environment}\" are stored. rBrowser answers its sign-in prompt once the environment is listed under Project > Environments > Basic auth.",
       "removed": "The Basic auth credentials of \"{environment}\" were removed.",
       "saved": "The Basic auth credentials of \"{environment}\" are stored; the views reload and sign in."
+    },
+    "settings": {
+      "failed": "Not stored: the credential store refused it. The status bar says why.",
+      "removed": "The stored user and password were removed.",
+      "row": "Basic auth of {environment}",
+      "saved": "Stored in the Windows Credential Manager; the views sign in."
+    },
+    "status": {
+      "none": "No credentials stored",
+      "stored": "Credentials stored for {user}"
     }
   },
   "bookmarks": {
@@ -237,6 +247,7 @@
       "command_palette": "Command palette",
       "open_link": "Open a link (the handbook when none is given)",
       "reload_config": "Reload the project config",
+      "restart": "Restart rBrowser",
       "setup_wizard": "Set up rBrowser..."
     },
     "bookmarks": {
@@ -990,6 +1001,7 @@
         "embedded": "This view runs in its {engine} window inside its cell. Keyboard shortcuts of rBrowser work from the toolbar and the Chromium views; in this window the keys go to the page.",
         "exited": "The {engine} engine stopped. Restart opens it again with its last page.",
         "failed": "The {engine} window could not be started: {reason}",
+        "ownWindowMacos": "This view runs in its own {engine} window: macOS does not let rBrowser show another app's window inside its cell.",
         "restarting": "The {engine} window is starting again.",
         "running": "This view runs in its own {engine} window.",
         "starting": "The {engine} window is starting.",
@@ -1055,7 +1067,8 @@
       "webkit": "WebKit (not Safari)"
     },
     "pick": {
-      "unavailable": "{engine} - {reason}"
+      "unavailable": "{engine} - {reason}",
+      "webkit": "WebKit (Playwright)"
     },
     "safari": {
       "disabled": "Safari is switched off (Engines > Safari)",
@@ -1935,6 +1948,7 @@
     },
     "panel": {
       "call_failed": "The plugin could not do that.",
+      "not_sent": "The panel could not send this to rBrowser.",
       "tabs_back": "Show earlier tabs",
       "tabs_forward": "Show more tabs",
       "waiting": "Waiting for the plugin: a check run or another of its calls is still running..."
@@ -3344,8 +3358,8 @@
           "label": "Node request timeout"
         },
         "playwrightBrowsersPath": {
-          "description": "The folder WebKit is downloaded to. Empty: %LOCALAPPDATA%\\rBrowser\\ms-playwright.",
-          "help": "The folder Playwright downloads WebKit into. Example: D:\\browsers to keep it off the system drive. Empty uses %LOCALAPPDATA%\\rBrowser\\ms-playwright.",
+          "description": "The folder WebKit is downloaded to. Empty: %LOCALAPPDATA%\\rBrowser\\ms-playwright on Windows, ~/.local/state/rBrowser/ms-playwright on macOS.",
+          "help": "The folder Playwright downloads WebKit into. Example: D:\\browsers to keep it off the system drive. Empty uses %LOCALAPPDATA%\\rBrowser\\ms-playwright on Windows and ~/.local/state/rBrowser/ms-playwright on macOS.",
           "label": "Playwright browsers folder"
         },
         "safari": {
@@ -4631,6 +4645,12 @@
       }
     },
     "key_copied": "Key copied",
+    "link": {
+      "close": "Close",
+      "not_found": "The link names \"{key}\", and no setting has that key.",
+      "not_found_unnamed": "The link names no setting.",
+      "waiting": "Looking for \"{key}\": it opens as soon as the plugins have loaded."
+    },
     "list": {
       "add": "Add",
       "cancel_remove": "Keep entry {n}",
@@ -5262,6 +5282,11 @@
       },
       "version": "Version {version}"
     },
+    "refused": {
+      "close": "Close the notice",
+      "show": "Show the setting",
+      "title": "{label} was not saved"
+    },
     "rejected": {
       "enum": "Not one of the allowed values.",
       "failed": "rBrowser did not take the change; try again.",
@@ -5283,6 +5308,10 @@
     },
     "reset_field": "Reset {label}",
     "reset_section": "Reset section",
+    "restart": {
+      "notice": "Applies after a restart of rBrowser.",
+      "now": "Restart now"
+    },
     "scope": {
       "legend": "Where {label} is saved",
       "local": "This machine only (config.local.json)",
@@ -5799,6 +5828,7 @@
       "open_setting_key": "Open the setting {key}"
     },
     "toast": {
+      "apiVariables": "API client › Variables",
       "close": "Close",
       "download": "Download",
       "retry": "Retry",
@@ -6029,6 +6059,23 @@
       "devtools_style_editor": "DevTools: style editor (Firefox)",
       "devtools_toggle": "DevTools: toggle (Firefox)",
       "devtools_toggle_comment": "DevTools: toggle comment in the source editor (Chrome, Firefox)",
+      "linux_activities": "Linux desktop: the activities overview or the application menu (GNOME, KDE)",
+      "linux_close_window": "Linux desktop: close the window",
+      "linux_context_menu": "Linux desktop: context menu",
+      "linux_cycle_windows": "Linux desktop: cycle the windows directly",
+      "linux_lock_screen": "Linux desktop: lock the screen",
+      "linux_log_out": "Linux desktop: log out or power off",
+      "linux_maximize": "Linux desktop: maximise or restore the window",
+      "linux_move_resize": "Linux desktop: move or resize the window",
+      "linux_move_to_workspace": "Linux desktop: move the window to another workspace",
+      "linux_run_command": "Linux desktop: run a command (GNOME, KDE)",
+      "linux_super_key": "Linux desktop: the Super key belongs to the desktop",
+      "linux_switch_desktop": "Linux desktop: switch to a virtual desktop (KDE)",
+      "linux_switch_window": "Linux desktop: switch windows",
+      "linux_system_activity": "Linux desktop: system activity (KDE)",
+      "linux_terminal": "Linux desktop: open a terminal",
+      "linux_window_menu": "Linux desktop: the window menu",
+      "linux_workspaces": "Linux desktop: switch workspaces",
       "macos_accesskey": "macOS: page accesskey (Ctrl+Option with a key)",
       "macos_command_key": "macOS: Command with any key belongs to the menus, the browser and the system",
       "macos_cycle_windows": "macOS: cycle the app's windows",
@@ -6228,6 +6275,9 @@
       "profileInUse": "Another rBrowser still uses the profile {profile}. If one is closing, wait a moment and start again.",
       "sandbox": "The Chromium sandbox could not start. Run rbrowser.exe from a local folder, or switch engines.chromium.sandbox off in the settings.",
       "title": "rBrowser could not start"
+    },
+    "linuxSandbox": {
+      "unavailable": "No Chromium sandbox can start: this system allows no unprivileged user namespaces, and {helper} is not owned by root with the setuid bit. Install the deb or rpm package, which sets it up, or run `sudo chown root:root {helper} && sudo chmod 4755 {helper}`. To start without the sandbox, at your own risk, use `rbrowser --no-sandbox` or switch engines.chromium.sandbox off in the settings."
     }
   },
   "status": {

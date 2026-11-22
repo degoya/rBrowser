@@ -3,14 +3,16 @@
 // unpacked into a temporary folder beside the build's, moved into place and marked with
 // Playwright's `INSTALLATION_COMPLETE` - the layout playwright-core's launcher expects - and, last,
 // rBrowser's `RBROWSER_PIN` naming the archive's SHA-256, the only marker rBrowser trusts.
-// Playwright's own installer, which verifies nothing, is never run.
+// Playwright's own installer, which verifies nothing, is never run. On macOS (RB-097-02) the archive
+// is the one of the host's macOS version and CPU (pin.ts `pinFor`), unpacked with its permissions
+// and framework links (zip_unix.ts).
 
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { ErrorCode, RpcError } from '../rpc.ts';
-import { MARKER, PIN_MARKER, type Pin, WEBKIT_PIN, archiveUrls, buildDirName } from './pin.ts';
+import { MARKER, NO_BUILD, PIN_MARKER, type Pin, WEBKIT_PIN, archiveUrls, buildDirName, currentHost, pinFor } from './pin.ts';
 import { extractAll } from './zip.ts';
 
 /** The part of a fetch `Response` the download reads. */
@@ -26,10 +28,12 @@ export interface DownloadResponse {
 export interface InstallDeps {
   fetch(url: string, signal: AbortSignal): Promise<DownloadResponse>;
   platform: NodeJS.Platform;
-  arch: string;
-  /** The archive to install ([`WEBKIT_PIN`]; tests pin archives of their own). */
-  pin: Pin;
+  /** This system's archive (`pinFor`; tests pin archives of their own); null: none here. */
+  pin: Pin | null;
 }
+
+/** Deps whose archive is pinned. */
+type PinnedDeps = InstallDeps & { pin: Pin };
 
 /** What a download got: the bytes and their SHA-256. */
 interface Downloaded {
@@ -44,7 +48,7 @@ export function progressLine(percent: number, bytes: number = WEBKIT_PIN.bytes):
 }
 
 async function download(
-  deps: InstallDeps,
+  deps: PinnedDeps,
   url: string,
   signal: AbortSignal,
   onLine: (line: string) => void,
@@ -79,7 +83,7 @@ async function download(
 }
 
 /** Downloads the pinned archive from the first mirror that delivers it with the pinned SHA-256. */
-export async function fetchVerified(deps: InstallDeps, signal: AbortSignal, onLine: (line: string) => void): Promise<Buffer> {
+export async function fetchVerified(deps: PinnedDeps, signal: AbortSignal, onLine: (line: string) => void): Promise<Buffer> {
   let mismatch = false;
   let lastError = 'no mirror';
   for (const url of archiveUrls(deps.pin)) {
@@ -110,28 +114,29 @@ export async function installWebkit(
   signal: AbortSignal,
   onLine: (line: string) => void,
 ): Promise<void> {
-  if (deps.platform !== 'win32' || deps.arch !== 'x64') {
-    throw new RpcError(ErrorCode.InstallFailed, 'the pinned WebKit build is for Windows x64 only');
+  const pin = deps.pin;
+  if (pin === null) {
+    throw new RpcError(ErrorCode.InstallFailed, NO_BUILD);
   }
-  if (revision !== deps.pin.revision) {
+  if (revision !== pin.revision) {
     throw new RpcError(
       ErrorCode.InstallFailed,
-      `playwright-core wants WebKit ${revision}, the pin is ${deps.pin.revision}: pin the new archive (sidecar/src/webkit/pin.ts)`,
+      `playwright-core wants WebKit ${revision}, the pin is ${pin.revision}: pin the new archive (sidecar/src/webkit/pin.ts)`,
     );
   }
-  const archive = await fetchVerified(deps, signal, onLine);
+  const archive = await fetchVerified({ ...deps, pin }, signal, onLine);
   await mkdir(browsersPath, { recursive: true });
   const staging = join(browsersPath, `.rb-webkit-${randomBytes(8).toString('hex')}`);
   const target = join(browsersPath, buildDirName(revision));
   try {
     await mkdir(staging);
-    await extractAll(archive, staging, signal);
+    await extractAll(archive, staging, signal, { unix: deps.platform !== 'win32' });
     await rm(target, { recursive: true, force: true });
     await rename(staging, target);
     await writeFile(join(target, MARKER), '');
     // Last: only now is the build the pinned one.
-    await writeFile(join(target, PIN_MARKER), deps.pin.sha256);
-    onLine(progressLine(100, deps.pin.bytes));
+    await writeFile(join(target, PIN_MARKER), pin.sha256);
+    onLine(progressLine(100, pin.bytes));
   } finally {
     await rm(staging, { recursive: true, force: true });
   }
@@ -151,7 +156,6 @@ export function realInstallDeps(): InstallDeps {
       };
     },
     platform: process.platform,
-    arch: process.arch,
-    pin: WEBKIT_PIN,
+    pin: pinFor(currentHost()),
   };
 }

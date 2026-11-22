@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use rb_ipc::{CoreToShell, Notification, NotificationLevel, SettingValue, ShellToCore};
+use rb_ipc::{CoreToShell, Notification, NotificationLevel, SettingValue};
 use rb_mcp::SettingScope;
 use rb_settings::{Category, SettingsRegistry};
 use serde_json::{Value, json};
@@ -20,7 +20,7 @@ pub const CHANGED_KEY: &str = "mcp.notice.setting_changed";
 /// The most characters of a value the audit line shows.
 const AUDIT_CHARS: usize = 200;
 
-/// The settings document over `registry` and the `values` the settings window reads, its texts
+/// The settings document over `registry` and the `values` MCP reads ([`values`]), its texts
 /// from `text` (an i18n key to English).
 pub fn document(
     registry: &SettingsRegistry,
@@ -47,12 +47,18 @@ pub fn document(
             let def = registry.get(&value.key)?;
             let protected = def.protected_from_mcp
                 || rb_mcp::config_edit::write_refusal(&def.key, &Value::Null).is_some();
+            // A secret by its annotation (RB-094-26), else by its name and the headers' rule.
+            let shown = if def.is_secret() {
+                rb_settings::mask_secret(&value.value)
+            } else {
+                masked_setting(&def.key, &value.value)
+            };
             let mut entry = json!({
                 "key": def.key,
                 "category": def.category.id(),
                 "section": def.section,
                 "type": def.schema.get("type").cloned().unwrap_or(Value::Null),
-                "value": masked_setting(&def.key, &value.value),
+                "value": shown,
                 "origin": value.origin,
                 "default": masked_setting(&def.key, &def.default_value()),
                 "label": text(&def.label_key),
@@ -89,20 +95,15 @@ pub fn masked_setting(key: &str, value: &Value) -> Value {
     }
 }
 
-/// The values the settings window reads now, in its order.
+/// Every key's value now, in the window's order - a secret key (`x-secret`) included, which the
+/// window does not list, its values masked (RB-094-27).
 pub fn values(core: &Core) -> Vec<SettingValue> {
-    let asked = ShellToCore::GetSettings {
-        include_schema: false,
-    };
-    match crate::settings_window::ipc(core, &asked) {
-        Some(Ok(CoreToShell::Settings { values, .. })) => values,
-        _ => Vec::new(),
-    }
+    crate::settings_window::mcp_values(core)
 }
 
 /// The settings document of `core`.
 pub fn read(core: &Core) -> Value {
-    document(core.settings_registry(), &values(core), &|key| {
+    document(&core.settings_registry(), &values(core), &|key| {
         rb_i18n::t(key)
     })
 }

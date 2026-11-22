@@ -6,15 +6,17 @@
 // environment picker, which is always there. The editor's header (method, URL, Send; title,
 // collection, Save, Save as new, Delete, Copy as code, Benchmark) stands fixed above the
 // request's tabs, so a tab switch moves nothing; the code, the answer and the benchmark follow
-// below them. A send to a host the project has not allowed fails with `host_not_allowed`; the
-// panel then asks the person, and only their Allow sends `allow` and the request again. A
+// below them. A send, a collection run or a benchmark to a host the project has not allowed fails
+// with `host_not_allowed`; the panel then asks the person ("Allow <host> for this project?"), and
+// only their Allow sends `allow` and runs it again (RB-096-13) - MCP has no `allow`. A
 // `{{$secret name}}` without a value is said before the send, with "Set value". The command
 // `send` posts `{send: true}`, `run_collection` `{runCollection: true}`; a request the network
-// panel opened (RB-096-08) comes as the state's `draft` and waits over unsaved edits.
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+// panel opened (RB-096-08) comes as the state's `draft` and waits over unsaved edits. A link to
+// the private values from outside (RB-094-27) comes as the state's `tab`, the event `{tab: true}`
+// asking an open panel for its state; a link inside the panel shows the tab itself.
+import { computed, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { onPanelEvent } from '../../../../web-common/panel-ui/src/events';
-import type { CallError } from '../../../../web-common/panel-ui/src/panel';
 import type { StatusLine, Tone } from '../../../../web-common/panel-ui/src/status';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
@@ -39,7 +41,8 @@ import SecretsAlert from './SecretsAlert.vue';
 import SettingsText from './SettingsText.vue';
 import TreeDialog from './TreeDialog.vue';
 import type { Report } from './checks';
-import { type Answer, type ApiRequest, type HistoryEntry, type State, HOST_NOT_ALLOWED, emptyRequest, folderOf, settingOf } from './model';
+import { type Answer, type ApiRequest, type HistoryEntry, type State, blockedHost, emptyRequest, folderOf, linkOf } from './model';
+import { SHOW_SIDE_TAB, SIDE_TABS, isSideTab } from './sideTabs';
 import VariableHints from './VariableHints.vue';
 import VariablesView from './VariablesView.vue';
 import { type SaveOp, type VariablesAnswer, blocksOf, references } from './variables';
@@ -56,7 +59,8 @@ const answer = ref<Answer | null>(null);
 const history = ref<HistoryEntry[]>([]);
 /** The status line; `setting` is the place its text names (RB-094-21's `StatusLine.setting`). */
 const note = ref<{ tone: Tone; text: string; setting?: { key: string; label: string } } | null>(null);
-const asking = ref<string | null>(null);
+/** The host the person is asked to allow, and what runs again after their Allow. */
+const asking = ref<{ host: string; kind: 'send' | 'run'; again: () => Promise<void> | void } | null>(null);
 const busy = ref(false);
 const report = ref<Report | null>(null);
 const running = ref(false);
@@ -66,7 +70,7 @@ const variables = ref<VariablesAnswer | null>(null);
 const variablesProblem = ref<string | null>(null);
 const missingSecrets = ref<string[]>([]);
 const code = createCodeRun(panel);
-const bench = createBenchRun(panel);
+const bench = createBenchRun(panel, (failure, again) => askFor(failure, 'run', again));
 /** The editor content as last loaded, saved or emptied: what unsaved edits are measured against. */
 const baseline = ref(snapshotOf(request.value));
 const waitingDraft = ref<CapturedDraft | null>(null);
@@ -81,8 +85,11 @@ const line = computed<StatusLine | null>(() => {
   if (panel.waiting.value) return { tone: 'busy', text: t('panel.waiting') };
   return note.value;
 });
-const SIDE_TABS = ['requests', 'variables', 'import', 'export'] as const;
-const sideTabs = computed(() => SIDE_TABS.map((name) => ({ label: t(`panel.side.${name}`), value: name, slot: name })));
+/** The side column's tabs as icons, each named by its label and tooltip, so the four fit a
+ * narrow column without a scroll (RB-096-13). */
+const sideTabs = computed(() =>
+  SIDE_TABS.map(({ name, icon }) => ({ label: t(`panel.side.${name}`), icon, value: name, slot: name, ui: { label: 'sr-only', trigger: 'px-2.5' } })),
+);
 const environmentItems = computed(() => (state.value?.environments ?? []).map((name) => ({ label: name, value: name })));
 const folders = computed(() => foldersWith(state.value?.requests ?? [], state.value?.folders ?? []));
 const blocks = computed(() => (variables.value ? blocksOf(variables.value) : []));
@@ -93,8 +100,21 @@ async function op<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 function fail(error: unknown): void {
-  const key = settingOf(error);
-  note.value = key ? { tone: 'error', text: panel.error(error), setting: { key, label: t('panel.openSetting') } } : { tone: 'error', text: panel.error(error) };
+  const link = linkOf(error);
+  note.value = link ? { tone: 'error', text: panel.error(error), setting: { key: link.key, label: t(link.label) } } : { tone: 'error', text: panel.error(error) };
+}
+
+provide(SHOW_SIDE_TAB, (tab) => {
+  side.value = tab;
+});
+
+/** Asks to allow the host of a `host_not_allowed` failure; `false` for any other failure. */
+function askFor(failure: unknown, kind: 'send' | 'run', again: () => Promise<void> | void): boolean {
+  const host = blockedHost(failure);
+  if (host === null) return false;
+  asking.value = { host, kind, again };
+  note.value = null;
+  return true;
 }
 
 function say(tone: Tone, text: string): void {
@@ -103,16 +123,31 @@ function say(tone: Tone, text: string): void {
 
 async function refresh(): Promise<void> {
   try {
-    const next = await op<State>({ op: 'state' });
-    state.value = next;
-    if (environment.value === undefined) environment.value = next.environment ?? undefined;
-    const draft = draftOf(next);
-    if (draft) offerDraft(draft);
+    await readState();
     history.value = (await op<{ entries: HistoryEntry[] }>({ op: 'history' })).entries;
   } catch (error) {
     fail(error);
   }
   await loadVariables();
+}
+
+/** The state, with what it carries once: a request the network panel opened, the tab a link asked for. */
+async function readState(): Promise<void> {
+  const next = await op<State>({ op: 'state' });
+  state.value = next;
+  if (environment.value === undefined) environment.value = next.environment ?? undefined;
+  const draft = draftOf(next);
+  if (draft) offerDraft(draft);
+  if (isSideTab(next.tab)) side.value = next.tab;
+}
+
+/** A link from outside asked for a tab: only the state is read, so unsaved variables stay. */
+async function takeTab(): Promise<void> {
+  try {
+    await readState();
+  } catch (error) {
+    fail(error);
+  }
 }
 
 async function loadVariables(): Promise<void> {
@@ -219,13 +254,7 @@ async function send(): Promise<void> {
     answer.value = await op<Answer>({ op: 'send', request: request.value, environment: environment.value ?? null, id: id.value });
     note.value = null;
   } catch (error) {
-    const host = (error as CallError).params?.host;
-    if (error instanceof Error && error.message === HOST_NOT_ALLOWED && typeof host === 'string') {
-      asking.value = host;
-      note.value = null;
-    } else {
-      fail(error);
-    }
+    if (!askFor(error, 'send', send)) fail(error);
   } finally {
     busy.value = false;
   }
@@ -240,14 +269,14 @@ async function refreshHistory(): Promise<void> {
   }
 }
 
-/** The person's Allow: the host is kept for the project, then the request goes out. */
+/** The person's Allow: the host is kept for the project, then what asked runs again. */
 async function allow(): Promise<void> {
-  const host = asking.value;
-  if (!host) return;
+  const asked = asking.value;
+  if (!asked) return;
   try {
-    await op({ op: 'allow', host });
+    await op({ op: 'allow', host: asked.host });
     asking.value = null;
-    await send();
+    await asked.again();
     await refresh();
   } catch (error) {
     fail(error);
@@ -317,7 +346,7 @@ async function runCollection(): Promise<void> {
     report.value = await op<Report>({ op: 'runCollection', environment: environment.value ?? null });
     note.value = null;
   } catch (error) {
-    fail(error);
+    if (!askFor(error, 'run', runCollection)) fail(error);
   } finally {
     running.value = false;
   }
@@ -345,6 +374,7 @@ const stopEvents = onPanelEvent((message) => {
   if (message && typeof message === 'object' && (message as { send?: unknown }).send === true) void send();
   if (message && typeof message === 'object' && (message as { runCollection?: unknown }).runCollection === true) void runCollection();
   if (message && typeof message === 'object' && (message as { draft?: unknown }).draft === true) void refresh();
+  if (message && typeof message === 'object' && (message as { tab?: unknown }).tab === true) void takeTab();
 });
 
 panel.onSettings((first) => {
@@ -395,6 +425,11 @@ onBeforeUnmount(stopEvents);
         />
         <TreeDialog v-if="collections.dialog.value" :dialog="collections.dialog.value" @answer="collections.answer" @cancel="collections.cancel" />
         <PanelTabs id="side-tabs" v-model="side" :items="sideTabs" :unmount-on-hide="false" variant="link" size="sm">
+          <template #leading="{ item }">
+            <UTooltip :text="item.label">
+              <span data-side-icon class="inline-flex"><UIcon :name="item.icon ?? ''" class="size-4" /></span>
+            </UTooltip>
+          </template>
           <template #requests>
             <div class="flex flex-col gap-3 pt-2">
               <RequestTree :requests="state?.requests ?? []" :folders="folders" :selected="id" @act="collections.act" />
@@ -438,13 +473,13 @@ onBeforeUnmount(stopEvents);
           color="warning"
           variant="subtle"
           icon="i-lucide-shield-question"
-          :title="t('panel.allow.title', { host: asking })"
+          :title="t('panel.allow.title', { host: asking?.host ?? '' })"
         >
           <template #description>
             <SettingsText text="panel.allow.description" setting-key="api-client.allowedHosts" />
           </template>
           <template #actions>
-            <UButton id="allow" size="xs" :label="t('panel.allow.yes')" @click="allow" />
+            <UButton id="allow" size="xs" :label="asking?.kind === 'send' ? t('panel.allow.yes') : t('panel.allow.yesRun')" @click="allow" />
             <UButton id="not-now" size="xs" color="neutral" variant="outline" :label="t('panel.allow.no')" @click="asking = null" />
           </template>
         </UAlert>

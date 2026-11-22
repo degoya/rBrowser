@@ -10,16 +10,21 @@
 #   five helper apps, rbrowser Helper (GPU|Renderer|Plugin|Alerts).app (the crate's
 #   rbrowser-helper), each with its Info.plist;
 #   Contents/Resources/ ui/ (the shell, built here), rbrowser.icns, plugins/ (the bundled
-#   plugins), README.txt (start, Gatekeeper), LICENSE, NOTICE, CHANGELOG.md, VERSION.txt and
-#   licenses/ (Chromium's credits, CEF's licence);
+#   plugins), node/ (bin/node and LICENSE: the Node runtime of .nvmrc, the official darwin-arm64
+#   or darwin-x64 tarball held to its SHA-256 pin, RB-097-01), sidecar/ (dist/main.js and
+#   dist/flow-worker.js built from sidecar/, its package.json and the production node_modules, as
+#   the Windows package has them: scripts/lib/package-stage.sh), README.txt (start, Gatekeeper),
+#   LICENSE, NOTICE, CHANGELOG.md, VERSION.txt and licenses/ (Chromium's credits, CEF's licence);
 # signed ad hoc (`codesign --sign -`, inside out: the framework's libraries, the framework, the
-# helpers, the app), not notarised: Gatekeeper asks once (README.txt, the wiki's installation
-# page); Developer ID signing and notarisation are RB-110-06. The structure test
-# (rb_macos_check) and `codesign --verify --deep --strict` run before anything is packed.
+# helpers, the Node runtime, the app), not notarised: Gatekeeper asks once (README.txt, the wiki's
+# installation page); Developer ID signing and notarisation are RB-110-06. The structure test
+# (rb_macos_check), `codesign --verify --deep --strict` and the sidecar smoke (the signed runtime
+# starts the bundled sidecar, which answers `sidecar.versions`) run before anything is packed; a
+# size report per part closes the run.
 #
-# Not in the test build yet: the Node runtime and the sidecar (WebKit, flows, Lighthouse), the
-# CEF sandbox of the helpers. One bundle per architecture: CEF ships one distribution per
-# architecture, so a universal app would be twice the size (docs/adr/0001-cef-and-engines.md).
+# Not in the test build yet: the CEF sandbox of the helpers. One bundle per architecture: CEF
+# ships one distribution per architecture, so a universal app would be twice the size
+# (docs/adr/0001-cef-and-engines.md).
 #
 # Usage:
 #   scripts/package-macos.sh                          # the release profile, this Mac's architecture
@@ -112,10 +117,16 @@ if [[ -n "$prebuilt" || -x scripts/build-plugins.sh ]]; then
     while IFS= read -r package; do [[ -z "$package" ]] || plugins+=("$package"); done <<< "$plugin_list"
 fi
 
-# The shell and the sync agent (embedded by build.rs), with the node .nvmrc pins.
+# The shell, the sync agent (embedded by build.rs) and the sidecar, with the node .nvmrc pins.
 rb_use_pinned_node "$ROOT"
-for dir in ui agent; do rb_build_frontend "$ROOT/$dir"; done
-for built in ui/dist/index.html agent/dist/rb-agent.js agent/dist/rb-page-api.js; do
+# The pinned Node runtime first, so a missing network or a changed file stops the run before the
+# long build; it moves into the bundle later.
+CACHE="$(rb_package_cache)"
+NODE_STAGE="$OUT/node-stage-$arch"
+rm -rf "$NODE_STAGE"
+rb_stage_node_macos "$ROOT" "$CACHE" "$arch" "$NODE_STAGE"
+for dir in ui agent sidecar; do rb_build_frontend "$ROOT/$dir"; done
+for built in ui/dist/index.html agent/dist/rb-agent.js agent/dist/rb-page-api.js sidecar/dist/main.js; do
     [[ -s "$built" ]] || { echo "!! $built is missing after the build" >&2; exit 1; }
 done
 
@@ -156,9 +167,17 @@ if ((${#plugins[@]})); then
     mkdir -p "$resources/plugins"
     install -m 644 "${plugins[@]}" "$resources/plugins/"
 fi
+# The Node runtime and the sidecar (RB-097-01), where rb-sidecar finds them in the bundle.
+mv "$NODE_STAGE/node" "$resources/node"
+rm -rf "$NODE_STAGE"
+rb_stage_sidecar "$ROOT/sidecar" "$resources/sidecar"
+node_version="$(rb_node_version "$ROOT")"
+node_pin="$RB_NODE_DARWIN_ARM64_SHA256"
+[[ "$arch" == aarch64 ]] || node_pin="$RB_NODE_DARWIN_X64_SHA256"
 cef_build="${cef_archive#cef_binary_}"
 printf '%s\n' "rBrowser $version" "commit $RB_BUILD_COMMIT" "built $RB_BUILD_TIME" \
     "target $TARGET, profile $profile" "cef ${cef_build%_macos*}" \
+    "node $node_version (tar.gz SHA-256 $node_pin)" \
     > "$resources/VERSION.txt"
 
 echo "==> checking the bundle"
@@ -178,8 +197,15 @@ codesign --force --sign - "$framework"
 for suffix in "${RB_MACOS_HELPERS[@]}"; do
     codesign --force --sign - "$APP/Contents/Frameworks/$RB_MACOS_EXECUTABLE Helper$suffix.app"
 done
+# Node's own Developer ID signature gives way to the bundle's ad hoc one, so the app's seal
+# covers the binary it starts (RB-097-01).
+codesign --force --sign - "$resources/node/bin/node"
 codesign --force --sign - "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
+codesign --verify --strict --verbose=2 "$resources/node/bin/node"
+
+echo "==> starting the bundled sidecar"
+rb_macos_sidecar_smoke "$APP" "$node_version"
 
 echo "==> writing $ZIP and $DMG"
 (cd "$STAGE" && ditto -c -k --keepParent rBrowser.app "$ZIP")
@@ -199,6 +225,6 @@ for try in 1 2 3; do
     echo "==> hdiutil failed (try $try of 3); again in 10 s"
     sleep 10
 done
-du -sh "$APP" "$ZIP" "$DMG"
+rb_macos_sizes "$APP" "$ZIP" "$DMG"
 rm -rf "$STAGE"
 echo "==> done"

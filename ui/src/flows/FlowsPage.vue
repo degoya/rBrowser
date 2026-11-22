@@ -128,15 +128,25 @@ watch(running, (now) => {
   }
 });
 const stop = channel.onChanged(() => void load());
-onMounted(() => {
-  shell.loadCommands();
-  void load();
+function loadConfirm(): void {
   void confirmsDelete(props.client, FLOWS_CONFIRM_KEY).then((ask) => {
     confirmDelete.value = ask;
   });
+}
+// A changed `automation.flows.confirmDelete` applies in the open panel at once (RB-094-23).
+const stopSettings = (props.subscribe ?? windowEvents)((message) => {
+  if (message.type === 'settingsChanged' && message.keys.includes(FLOWS_CONFIRM_KEY)) {
+    loadConfirm();
+  }
+});
+onMounted(() => {
+  shell.loadCommands();
+  void load();
+  loadConfirm();
 });
 onBeforeUnmount(() => {
   stop();
+  stopSettings();
   clearInterval(timer);
 });
 </script>

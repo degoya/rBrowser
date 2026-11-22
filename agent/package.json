@@ -1,7 +1,7 @@
 {
   "name": "rbrowser-sync-agent",
   "private": true,
-  "version": "0.9.6",
+  "version": "0.9.7-pre.1",
   "description": "The rBrowser sync agent: injected into every view's isolated world, captures input and resolves selectors (RB-020-01).",
   "license": "GPL-3.0-or-later",
   "type": "module",
@@ -20,7 +20,7 @@
     "happy-dom": "21.0.4",
     "playwright-core": "1.65.1",
     "typescript": "7.0.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.1"
   },
   "dependencies": {
     "@vue/devtools-kit": "8.2.1",

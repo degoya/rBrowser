@@ -19,7 +19,7 @@ use crate::host::Host;
 use crate::host::state::default_config;
 use crate::host::ui::UiBackend;
 use crate::watch::{ConfigWatch, watch_config};
-use crate::{commands, features, ipc};
+use crate::{features, ipc};
 
 /// What the launch prepared before CEF started.
 pub struct Launch {
@@ -117,12 +117,9 @@ fn start() {
             let Some(core) = weak.upgrade() else {
                 return;
             };
-            match commands::reload_config(core.host()) {
-                Ok(()) => {
-                    features::on_config_changed(&core);
-                    crate::reload::on_config_changed(&core);
-                }
-                Err(error) => tracing::warn!(%error, "the changed config was not applied"),
+            // The files the app wrote and applied itself are not applied twice (RB-094-23).
+            if let Err(error) = crate::project_reload::apply_from_disk(&core) {
+                tracing::warn!(%error, "the changed config was not applied");
             }
         }) {
             Ok(watch) => *lock(&WATCH) = Some(watch),

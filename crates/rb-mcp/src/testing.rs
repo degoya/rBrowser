@@ -9,38 +9,25 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use rb_commands::CommandError;
-use rb_engine::{EngineKind, Target, ViewId, ViewInfo};
+use rb_engine::{Target, ViewId, ViewInfo};
 use serde_json::{Value, json};
 
 use crate::backend::{Backend, ConfigScope, McpOptions, SettingScope, ToolFailure};
 use crate::logs::LogStore;
 
 mod latest;
+mod views;
 pub use latest::FakeLatest;
+pub use views::view;
 
 /// The keys the fake refuses, as the app refuses its `x-protected` ones.
 pub const PROTECTED: &[&str] = &["mcp.enabled", "mcp.allowEvaluate", "plugins.enabled"];
-
-/// A view for a test: id, breakpoint, URL.
-#[must_use]
-pub fn view(id: u32, breakpoint: &str, url: &str) -> ViewInfo {
-    ViewInfo {
-        id: ViewId(id),
-        label: breakpoint.to_owned(),
-        breakpoint: Some(breakpoint.to_owned()),
-        cell_breakpoint: Some(breakpoint.to_owned()),
-        engine: EngineKind::Chromium,
-        width: 375,
-        height: 812,
-        dpr: 3.0,
-        scale: 1.0,
-        url: url.to_owned(),
-        title: String::new(),
-        loading: false,
-        session: "default".to_owned(),
-        cell: None,
-    }
-}
+/// The plugin keys protected from MCP, as with the API client and the load test loaded.
+pub const PLUGIN_PROTECTED: &[&str] = &[
+    "api-client.allowedHosts",
+    "api-client.secrets",
+    "load-test.allowedHosts",
+];
 
 /// A command error the fake keeps (`CommandError` is not `Clone`).
 #[derive(Clone, Debug)]
@@ -343,7 +330,21 @@ impl Backend for FakeBackend {
     }
 
     fn config_document(&self, scope: ConfigScope) -> Result<Value, ToolFailure> {
-        Ok(self.document(scope))
+        // A `null` document stands for no project open or an unreadable file.
+        match self.document(scope) {
+            Value::Null => Err(ToolFailure::new(
+                "settings.rejected.no_project",
+                "no project",
+            )),
+            document => Ok(document),
+        }
+    }
+
+    fn mcp_protected_keys(&self) -> Vec<String> {
+        PLUGIN_PROTECTED
+            .iter()
+            .map(|key| (*key).to_owned())
+            .collect()
     }
 
     async fn cdp_endpoint(&self, view: Option<ViewId>) -> Result<Value, ToolFailure> {

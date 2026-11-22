@@ -14,7 +14,10 @@ names an option by its id instead of its name (RB-090-29);
 a notice's settings target or an `openSettings` key that opens no place in the window - no key,
 category, section or key prefix (RB-090-85, settings_targets.py); a UI text that names a
 settings path ("Settings > ...") without its link in crates/rbrowser/data/settings-links.json
-(RB-094-21, settings_links.py). It reads the core schemas (schema/*.json, schema/parts/*.json) and the settings schemas
+(RB-094-21, settings_links.py); an `x-restart` that is not true, or a key whose text says it
+applies at the next start without `x-restart` (RB-094-23, settings_restart.py); an `x-panel` on a
+key that is no plugin's secret, of another shape or of no panel of its plugin, and a link to a
+secret key that names no panel - a secret key is no place of the window (RB-094-27). It reads the core schemas (schema/*.json, schema/parts/*.json) and the settings schemas
 of the bundled plugins (plugins/*/manifest.toml); the rules are crates/rb-settings's
 (settings_schema.py). Exit 2 when the categories do not read. Compiles nothing: it runs in
 scripts/check.sh --preflight through scripts/check-settings.sh.
@@ -26,6 +29,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_options  # noqa: E402
+import settings_restart  # noqa: E402
 import settings_schema  # noqa: E402
 import settings_links  # noqa: E402
 import settings_targets  # noqa: E402
@@ -55,6 +59,8 @@ def lint(root: Path) -> tuple[list[str], str]:
             if i18n_key not in known:
                 problems.append(f"{setting.source}: {setting.key}: missing i18n key {i18n_key}")
         for problem in settings_options.problems(setting, setting.root, known):
+            problems.append(f"{setting.source}: {setting.key}: {problem}")
+        for problem in settings_restart.problems(setting, known):
             problems.append(f"{setting.source}: {setting.key}: {problem}")
     target_problems, target_count = settings_targets.problems(root, settings, cats)
     problems += target_problems

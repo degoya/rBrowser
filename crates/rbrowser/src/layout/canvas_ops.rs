@@ -214,8 +214,13 @@ pub(super) fn camera_limit(host: &Host) -> f64 {
 /// The user settings changed: a canvas already shown follows `layoutModes.showPartialViews`
 /// at once, its views placed again (RB-080-55).
 pub fn on_user_settings_changed(core: &Core) {
-    let wanted = core.user_settings().layout_modes.show_partial_views;
+    let modes = core.user_settings().layout_modes;
+    let wanted = modes.show_partial_views;
     let host = core.host();
+    // The mode shown keeps the settings it was entered with; a change applies at once - the
+    // minimap, its corner, the space-bar pan (RB-094-23).
+    let settings = modes.clamped();
+    host.update_shell_state(|shell| shell.modes.settings = settings);
     let stale = host.mode_spec().is_some_and(
         |spec| matches!(spec.kind, ModeKind::Canvas { partial, .. } if partial != wanted),
     );

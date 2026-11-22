@@ -11,7 +11,7 @@
           "secrets_not_saved": "The captured values could not be kept in the project's local settings; the requests hold variables without values.",
           "untrusted": "Requests are saved in a trusted workspace only: trust this workspace first."
         },
-        "missing": "{count, plural, one {# variable has} other {# variables have}} no value yet: {names}. Set them in Settings > Network > API client.",
+        "missing": "{count, plural, one {# variable has} other {# variables have}} no value yet: {names}. Set them in API client › Variables.",
         "noSelection": "Select a request first.",
         "nothingShown": "The list shows no request to save.",
         "open": "Open in API client",
@@ -23,7 +23,7 @@
         "saved": "{saved, plural, =0 {No request saved} one {# request saved} other {# requests saved}} below .rbrowser/api; {skipped, plural, =0 {none skipped} one {# skipped (saved before, the same method and path, or gone)} other {# skipped (saved before, the same method and path, or gone)}}.",
         "template": "{count, plural, one {# request holds} other {# requests hold}} variable placeholders (double braces) the page wrote and {count, plural, one {is} other {are}} not saved, so sending can never fill in a secret.",
         "tooMany": "Only the newest {most} of the shown requests are saved; filter the list to save the others.",
-        "setting_link": "Open the setting"
+        "setting_link": "Open API client › Variables"
       },
       "breakpoints": {
         "abort": "Abort",

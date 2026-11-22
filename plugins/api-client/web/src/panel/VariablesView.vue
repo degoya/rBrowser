@@ -1,16 +1,18 @@
 <script setup lang="ts">
 // The Variables tab (RB-096-11): .rbrowser/api/http-client.env.json as tables - `$shared` for
 // every environment, then each environment -, a row a name and its value. A row marked private
-// goes to the private values in config.local.json (Settings > Network > API client > Private
-// values), never into the checked-in file; one already kept shows no value, and typing one
-// replaces it. Environments are added (the project's rBrowser environments offered first),
-// renamed and removed here; nothing is written until Save (`saveVariables`), which the core
-// refuses when the file changed since it was read.
+// goes to the private values in config.local.json - edited here only, no setting of the
+// settings window (RB-094-27) -, never into the checked-in file; one already kept shows no value, and typing one
+// replaces it. A new environment has one way (RB-096-13): its name and Create - or one click on
+// one of the project's rBrowser environments the file does not have yet; renaming one is its own
+// action at the environment (Rename, the new name, OK). Nothing is written until Save
+// (`saveVariables`), which the core refuses when the file changed since it was read. No form
+// element: the frame's sandbox blocks a submission.
 import { computed, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
-import SettingsText from './SettingsText.vue';
-import { type SaveOp, SHARED, type VarBlock, type VarRow, type VariablesAnswer, blocksOf, saveOf } from './variables';
+import PanelForm from '../../../../web-common/panel-ui/src/components/PanelForm.vue';
+import { type SaveOp, SHARED, type VarBlock, type VarRow, type VariablesAnswer, blocksOf, environmentNameProblem, saveOf } from './variables';
 
 const props = defineProps<{ answer: VariablesAnswer | null; problem: string | null; known: string[] }>();
 const emit = defineEmits<{ save: [op: SaveOp]; reload: [] }>();
@@ -19,24 +21,26 @@ const t = usePanel().t;
 const blocks = ref<VarBlock[]>([]);
 const dirty = ref(false);
 const added = ref('');
+/** The environment being renamed and the name typed for it. */
+const renaming = ref<VarBlock | null>(null);
+const renameText = ref('');
 watch(
   () => props.answer,
   (answer) => {
     blocks.value = answer ? blocksOf(answer) : [];
     dirty.value = false;
+    renaming.value = null;
   },
   { immediate: true },
 );
 
-/** "Another name" as a select item: an item's value cannot be empty. */
-const OTHER = '/';
-const offered = computed(() => [
-  ...props.known.filter((name) => !blocks.value.some((block) => block.name === name)).map((name) => ({ label: name, value: name })),
-  { label: t('panel.variables.otherName'), value: OTHER },
-]);
-const choice = ref(OTHER);
-const newName = computed(() => (choice.value === OTHER ? added.value.trim() : choice.value));
-const nameTaken = computed(() => blocks.value.some((block) => block.name === newName.value));
+const names = computed(() => blocks.value.map((block) => block.name));
+/** The project's rBrowser environments the file does not have yet. */
+const suggested = computed(() => props.known.filter((name) => !names.value.includes(name)));
+const newProblem = computed(() => environmentNameProblem(added.value, names.value));
+const renameProblem = computed(() =>
+  renaming.value ? environmentNameProblem(renameText.value, names.value.filter((name) => name !== renaming.value?.name)) : null,
+);
 
 function changed(): void {
   dirty.value = true;
@@ -64,16 +68,29 @@ function removeRow(block: VarBlock, index: number): void {
   changed();
 }
 
-function addBlock(): void {
-  if (!newName.value || nameTaken.value) return;
-  blocks.value = [...blocks.value, { name: newName.value, original: null, rows: [] }];
-  added.value = '';
-  choice.value = OTHER;
+/** A new, empty environment `name` (its rows follow with Add). */
+function create(name: string): void {
+  if (environmentNameProblem(name, names.value) !== null) return;
+  blocks.value = [...blocks.value, { name: name.trim(), original: null, rows: [] }];
   changed();
 }
 
-function renameBlock(block: VarBlock, name: string): void {
-  block.name = name;
+function createTyped(): void {
+  if (newProblem.value !== null) return;
+  create(added.value);
+  added.value = '';
+}
+
+function startRename(block: VarBlock): void {
+  renaming.value = block;
+  renameText.value = block.name;
+}
+
+function rename(): void {
+  const block = renaming.value;
+  if (!block || renameProblem.value !== null) return;
+  block.name = renameText.value.trim();
+  renaming.value = null;
   changed();
 }
 
@@ -89,9 +106,7 @@ function save(): void {
 
 <template>
   <section id="variables" class="flex flex-col gap-3" :aria-label="t('panel.variables.title')">
-    <p class="text-xs text-muted">
-      <SettingsText text="panel.variables.description" setting-key="api-client.secrets" />
-    </p>
+    <p class="text-xs text-muted">{{ t('panel.variables.description') }}</p>
     <p v-if="problem" id="variables-problem" role="alert" class="text-xs text-error">{{ problem }}</p>
     <div class="flex flex-wrap gap-1.5">
       <UButton id="variables-save" size="sm" icon="i-lucide-save" :label="t('panel.save')" :disabled="!dirty || !answer" @click="save" />
@@ -101,16 +116,33 @@ function save(): void {
       <div class="flex items-center gap-1.5">
         <UIcon :name="block.name === SHARED ? 'i-lucide-layers' : 'i-lucide-globe'" class="size-4 text-muted" />
         <p v-if="block.name === SHARED" class="flex-1 text-sm font-medium">{{ t('panel.variables.shared') }}</p>
-        <UInput
-          v-else
-          :model-value="block.name"
-          size="xs"
-          class="min-w-0 flex-1 font-mono"
-          :aria-label="t('panel.variables.environmentName')"
-          @update:model-value="(name) => renameBlock(block, String(name))"
-        />
+        <PanelForm
+          v-else-if="renaming === block"
+          class="flex min-w-0 flex-1 items-center gap-1.5"
+          :aria-label="t('panel.variables.renameTo', { name: block.original ?? block.name })"
+          :disabled="renameProblem !== null"
+          @submit="rename"
+          @keydown.escape.prevent="renaming = null"
+        >
+          <UInput
+            id="variables-rename-name"
+            v-model="renameText"
+            size="xs"
+            class="min-w-0 flex-1 font-mono"
+            autofocus
+            :aria-label="t('panel.variables.renameTo', { name: block.original ?? block.name })"
+            :aria-invalid="renameProblem && renameProblem !== 'empty' ? 'true' : undefined"
+          />
+          <UButton id="variables-rename-ok" size="xs" :label="t('panel.dialog.ok')" :disabled="renameProblem !== null" @click="rename" />
+          <UButton id="variables-rename-cancel" size="xs" color="neutral" variant="ghost" :label="t('panel.dialog.cancel')" @click="renaming = null" />
+        </PanelForm>
+        <template v-else>
+          <p class="min-w-0 flex-1 truncate font-mono text-sm">{{ block.name }}</p>
+          <IconAction data-rename icon="i-lucide-pencil" :label="t('panel.variables.rename', { name: block.name })" @click="startRename(block)" />
+        </template>
         <IconAction v-if="block.name !== SHARED" icon="i-lucide-trash" :label="t('panel.variables.removeEnvironment', { name: block.name })" @click="removeBlock(block)" />
       </div>
+      <p v-if="renaming === block && renameProblem && renameProblem !== 'empty'" class="text-xs text-error">{{ t(`panel.variables.nameProblem.${renameProblem}`, { name: renameText.trim() }) }}</p>
       <div v-for="(row, index) in block.rows" :key="index" data-variable class="flex items-center gap-1.5">
         <UInput
           :model-value="row.name"
@@ -146,10 +178,39 @@ function save(): void {
         <UButton data-add size="xs" color="neutral" variant="ghost" icon="i-lucide-plus" :label="t('panel.table.add')" @click="addRow(block)" />
       </div>
     </section>
-    <form id="variables-add" class="flex flex-wrap items-center gap-1.5" @submit.prevent="addBlock">
-      <USelect id="variables-add-choice" v-model="choice" :items="offered" value-key="value" size="xs" class="w-40" :aria-label="t('panel.variables.addEnvironment')" />
-      <UInput v-if="choice === OTHER" id="variables-add-name" v-model="added" size="xs" class="w-32 font-mono" :aria-label="t('panel.variables.environmentName')" :placeholder="t('panel.variables.environmentName')" />
-      <UButton id="variables-add-run" type="submit" size="xs" color="neutral" variant="outline" icon="i-lucide-plus" :label="t('panel.variables.addEnvironment')" :disabled="!newName || nameTaken" />
-    </form>
+    <section id="variables-new" class="flex flex-col gap-1.5" :aria-label="t('panel.variables.newEnvironment')">
+      <p class="text-sm font-medium">{{ t('panel.variables.newEnvironment') }}</p>
+      <PanelForm class="flex flex-wrap items-center gap-1.5" :aria-label="t('panel.variables.newEnvironment')" :disabled="newProblem !== null" @submit="createTyped">
+        <UInput
+          id="variables-new-name"
+          v-model="added"
+          size="xs"
+          class="min-w-0 flex-1 font-mono"
+          spellcheck="false"
+          autocomplete="off"
+          :placeholder="t('panel.variables.newName')"
+          :aria-label="t('panel.variables.newName')"
+          :aria-invalid="newProblem && newProblem !== 'empty' ? 'true' : undefined"
+        />
+        <UButton id="variables-new-create" size="xs" icon="i-lucide-plus" :label="t('panel.variables.create')" :disabled="newProblem !== null" @click="createTyped" />
+      </PanelForm>
+      <p v-if="newProblem && newProblem !== 'empty'" id="variables-new-problem" class="text-xs text-error">{{ t(`panel.variables.nameProblem.${newProblem}`, { name: added.trim() }) }}</p>
+      <div v-if="suggested.length > 0" id="variables-suggested" class="flex flex-wrap items-center gap-1.5">
+        <span class="text-xs text-muted">{{ t('panel.variables.fromProject') }}</span>
+        <UButton
+          v-for="name in suggested"
+          :key="name"
+          :data-suggested="name"
+          size="xs"
+          color="neutral"
+          variant="soft"
+          icon="i-lucide-plus"
+          class="font-mono"
+          :label="name"
+          :aria-label="t('panel.variables.createNamed', { name })"
+          @click="create(name)"
+        />
+      </div>
+    </section>
   </section>
 </template>

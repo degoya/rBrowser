@@ -5,6 +5,7 @@
 
 import type { JsonValue, Scope } from '../ipc/protocol';
 import { isObject } from '../../../plugins/web-common/src/is-object';
+import { isSecret } from './secret';
 
 export type JsonSchema = { [key: string]: JsonValue };
 
@@ -111,7 +112,8 @@ export function parseSchema(value: JsonValue | undefined): SettingsSchema {
   return {
     version: 1,
     categories: parsedCategories,
-    defs: defs as unknown as SettingDef[],
+    // A secret key is no setting of the window (RB-094-27).
+    defs: (defs as unknown as SettingDef[]).filter((def) => !isSecret(def)),
     project: parsedProject,
   };
 }

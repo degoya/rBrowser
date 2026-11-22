@@ -141,9 +141,15 @@ fn no_parent() -> sys::cef_window_handle_t {
 }
 
 /// No window handle: a null `HWND` on Windows, a null `NSView` on macOS.
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
 fn no_parent() -> sys::cef_window_handle_t {
     std::ptr::null_mut()
+}
+
+/// No window handle: X11 window 0 on Linux (RB-097-05).
+#[cfg(target_os = "linux")]
+fn no_parent() -> sys::cef_window_handle_t {
+    0
 }
 
 /// A side in DIP as CEF takes it: at least 1.

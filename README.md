@@ -39,8 +39,8 @@ longer goes unnoticed while you look at another.
 **Before 1.0.** rBrowser is young: expect rough edges and changes between releases. What each
 release changed is in [CHANGELOG.md](CHANGELOG.md).
 
-rBrowser runs on **Windows 10 and 11 (x64)** and on **macOS 13 or later** (Apple Silicon and
-Intel). Linux follows later.
+rBrowser runs on **Windows 10 and 11 (x64)**, on **macOS 13 or later** (Apple Silicon and
+Intel) and on **Linux x64**.
 
 ## Download
 
@@ -63,8 +63,13 @@ earlier, a right-click on the app and *Open* does the same), or remove the quara
 xattr -dr com.apple.quarantine /Applications/rBrowser.app
 ```
 
-The macOS app does not carry WebKit views, flows and Lighthouse yet, and it updates by download:
-it shows a new release and opens its page.
+The macOS app updates by download: it shows a new release and opens its page.
+
+**Linux.** `rbrowser-<version>-linux-x64.deb` (Debian, Ubuntu) or `rbrowser-<version>-linux-x64.rpm`
+(Fedora) installs rBrowser into `/usr/lib/rbrowser` with a menu entry and the Chromium sandbox set
+up. `rbrowser-<version>-linux-x64.tar.gz` unpacks anywhere; start `./rbrowser` in a graphical
+session. Its `README.txt` names the system libraries and how to set up the sandbox helper
+(`chrome-sandbox`) on Ubuntu 23.10 and later.
 
 Firefox (version 140 or newer) is optional and only needed for Firefox views.
 

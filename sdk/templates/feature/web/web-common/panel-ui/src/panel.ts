@@ -2,8 +2,10 @@
 // panel (docs/plugins.md, "Panels"): it asks for its texts with `{ type: 'settings' }` through
 // texts.js (`PanelTexts`, again every second until they arrive), takes `settings` (the texts,
 // the plugin's settings and `ui.theme`), `result` (the answer to a `call`) and the host's
-// `event`s, and posts `call`s. Only the panels window - `window.parent` - is listened to. The
-// state is reactive, so a component re-renders when the texts arrive or change.
+// `event`s, and posts `call`s - their arguments as plain data, a call it could not post failed
+// with `plugins.panel.not_sent` and its reason (RB-096-13). Only the panels window -
+// `window.parent` - is listened to. The state is reactive, so a component re-renders when the
+// texts arrive or change.
 
 import { ref, type Ref } from 'vue';
 import { errorText, format, type Params, type Strings } from './format';
@@ -47,6 +49,26 @@ interface TextsOf {
 
 type Waiting = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 
+/** The code of a call the frame could not post (RB-096-13): its `reason` says why. */
+export const NOT_SENT = 'plugins.panel.not_sent';
+/** The host's sentence for a failure without a text of its own. */
+const CALL_FAILED_KEY = 'plugins.panel.call_failed';
+/** A failure's code as the host writes it (`plugins.error.busy`, `plugin.<id>.errors.<name>`). */
+const CODE = /^[a-z][a-z0-9_-]*(\.[a-z0-9_-]+)+$/;
+
+/** A call's arguments as plain JSON data (RB-096-13). The frame's `postMessage` clones its
+ * message, and a Vue reactive value - the editor's request, an answer kept in a `ref` - is a
+ * Proxy, which the structured clone refuses with a `DataCloneError`; the core reads JSON anyway. */
+export function plain(args: unknown): unknown {
+  return args === undefined ? {} : (JSON.parse(JSON.stringify(args)) as unknown);
+}
+
+/** What went wrong, in words: the exception's name and message. */
+function reasonOf(failure: unknown): string {
+  const text = failure instanceof Error ? `${failure.name}: ${failure.message}` : String(failure);
+  return text.slice(0, 200);
+}
+
 export interface PanelOptions {
   /** The plugin's text prefix, `plugin.<id>.`. */
   prefix: string;
@@ -80,15 +102,30 @@ export function createPanel(options: PanelOptions): Panel & { start(): () => voi
   }
 
   function error(failure: unknown): string {
-    if (failure instanceof Error) return errorText(strings.value, failure.message, (failure as CallError).params);
-    return errorText(strings.value, String(failure));
+    const params = failure instanceof Error ? (failure as CallError).params : undefined;
+    const text = failure instanceof Error ? failure.message : String(failure);
+    if (params || CODE.test(text.split(' ', 1)[0] ?? '')) return errorText(strings.value, text, params);
+    // An exception of the panel itself (RB-096-13): the generic sentence and what went wrong.
+    const reason = reasonOf(failure);
+    console.warn(`${options.name}: ${CALL_FAILED_KEY} reason=${reason}`);
+    return errorText(strings.value, CALL_FAILED_KEY, { reason });
   }
 
   function call(target: CallTarget, args: unknown = {}): Promise<unknown> {
     const id = next++;
     return new Promise((resolve, reject) => {
       pending.set(id, { resolve, reject });
-      win.parent.postMessage({ type: 'call', id, ...target, args }, '*');
+      try {
+        win.parent.postMessage({ type: 'call', id, ...target, args: plain(args) }, '*');
+      } catch (failure) {
+        // RB-096-13: what never left the frame never reaches the core's log: said here.
+        pending.delete(id);
+        const reason = reasonOf(failure);
+        console.warn(`${options.name}: ${target.tool ?? target.command} was not sent: ${NOT_SENT} reason=${reason}`);
+        const unsent: CallError = new Error(NOT_SENT);
+        unsent.params = { reason };
+        reject(unsent);
+      }
     });
   }
 

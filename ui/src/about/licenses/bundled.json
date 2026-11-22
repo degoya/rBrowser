@@ -58,14 +58,14 @@
   {
     "id": "axe-core",
     "name": "axe-core",
-    "version": "4.14.0",
+    "version": "4.14.1",
     "license": "MPL-2.0",
     "status": "bundled"
   },
   {
     "id": "html-validate",
     "name": "html-validate (the HTML validation plugin's runner, with the packages it bundles; the plugin's NOTICE)",
-    "version": "11.18.0",
+    "version": "11.21.1",
     "license": "MIT",
     "status": "bundled"
   },

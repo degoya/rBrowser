@@ -2,10 +2,10 @@
 //! the instance file once it does, and answers up to [`MAX_CONCURRENT`] connections at once (a
 //! screenshot can take minutes; an open must not wait for it) - per connection one line in, checked
 //! by [`protocol::check`], handed to the [`Handler`], one line out (at most
-//! [`protocol::MAX_REPLY`] bytes).
+//! [`protocol::MAX_REPLY`] bytes). [`Listening::stop`] ends it before a restart (RB-094-23).
 
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -26,10 +26,40 @@ pub type Handler = Arc<dyn Fn(Request) -> Result<Option<Value>, String> + Send +
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 /// The most connections answered at once; the next waits for a free slot.
 const MAX_CONCURRENT: usize = 4;
+/// How long [`Listening::stop`] waits for the channel to close.
+const STOP_WAIT: Duration = Duration::from_secs(2);
+
+/// The running listener. Dropped, it keeps listening as long as the process runs.
+pub struct Listening {
+    local: PathBuf,
+    path: PathBuf,
+    nonce: String,
+    stop: Arc<tokio::sync::Notify>,
+    closed: std::sync::mpsc::Receiver<()>,
+}
+
+impl Listening {
+    /// Stops listening, so no further call reaches this process: removes the instance file
+    /// while it is still this one's, ends the listener and its open connections, and waits up
+    /// to [`STOP_WAIT`] for the channel to close. The quit of `app.restart` runs it before the
+    /// next start, which would otherwise hand its start over to this ending process.
+    pub fn stop(self) {
+        if file::read(&self.path, &self.local).is_some_and(|written| written.nonce == self.nonce)
+            && let Err(error) = std::fs::remove_file(&self.path)
+        {
+            tracing::warn!(%error, "the instance file was not removed");
+        }
+        self.stop.notify_one();
+        if self.closed.recv_timeout(STOP_WAIT).is_err() {
+            tracing::warn!("the instance channel did not close in time");
+        }
+    }
+}
 
 /// Starts listening for the project at `root` and writes its instance file under `local`;
-/// returns once both are done (or failed). The listener runs as long as the process.
-pub fn start(local: &Path, root: &Path, handler: Handler) -> io::Result<()> {
+/// returns once both are done (or failed). The listener runs as long as the process, or until
+/// [`Listening::stop`].
+pub fn start(local: &Path, root: &Path, handler: Handler) -> io::Result<Listening> {
     let dir = file::instances_dir(local);
     let path = file::file_path(local, root);
     let nonce = protocol::new_nonce()?;
@@ -40,6 +70,9 @@ pub fn start(local: &Path, root: &Path, handler: Handler) -> io::Result<()> {
         nonce: nonce.clone(),
         project: root.to_string_lossy().into_owned(),
     };
+    let stop = Arc::new(tokio::sync::Notify::new());
+    let (written, kept, serving) = (path.clone(), nonce.clone(), stop.clone());
+    let (closing, closed) = std::sync::mpsc::channel();
     let (ready, started) = std::sync::mpsc::channel();
     std::thread::Builder::new()
         .name("rb-instance".to_owned())
@@ -54,34 +87,61 @@ pub fn start(local: &Path, root: &Path, handler: Handler) -> io::Result<()> {
                     return;
                 }
             };
-            runtime.block_on(async move {
+            let served = runtime.block_on(async move {
                 let listener = match channel::bind(&instance.endpoint)
-                    .and_then(|listener| file::write(&path, &instance).map(|()| listener))
+                    .and_then(|listener| file::write(&written, &instance).map(|()| listener))
                 {
                     Ok(listener) => listener,
                     Err(error) => {
                         let _ = ready.send(Err(error));
-                        return;
+                        return false;
                     }
                 };
                 let _ = ready.send(Ok(()));
-                serve(listener, nonce, handler).await;
+                serve(listener, nonce, handler, &serving).await;
+                true
             });
+            if served {
+                // Stopped: the connections still open end with their tasks; a handler still
+                // running finishes on its own thread.
+                runtime.shutdown_timeout(Duration::ZERO);
+                let _ = closing.send(());
+            }
         })?;
     started
         .recv()
-        .unwrap_or_else(|_| Err(io::Error::other("the instance thread ended")))
+        .unwrap_or_else(|_| Err(io::Error::other("the instance thread ended")))?;
+    Ok(Listening {
+        local: local.to_path_buf(),
+        path,
+        nonce: kept,
+        stop,
+        closed,
+    })
 }
 
-/// Answers connections until the process ends, each in a task of its own.
-async fn serve(mut listener: channel::Listener, nonce: String, handler: Handler) {
+/// Answers connections, each in a task of its own, until `stop` is notified.
+async fn serve(
+    mut listener: channel::Listener,
+    nonce: String,
+    handler: Handler,
+    stop: &tokio::sync::Notify,
+) {
     let nonce: Arc<str> = nonce.into();
     let slots = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT));
     loop {
-        let Ok(slot) = slots.clone().acquire_owned().await else {
+        let slot = tokio::select! {
+            () = stop.notified() => return,
+            slot = slots.clone().acquire_owned() => slot,
+        };
+        let Ok(slot) = slot else {
             return;
         };
-        match listener.accept().await {
+        let accepted = tokio::select! {
+            () = stop.notified() => return,
+            accepted = listener.accept() => accepted,
+        };
+        match accepted {
             Ok(conn) => {
                 let (nonce, handler) = (nonce.clone(), handler.clone());
                 tokio::spawn(async move {

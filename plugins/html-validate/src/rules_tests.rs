@@ -11,7 +11,7 @@ fn every() -> Vec<String> {
 
 #[test]
 fn the_table_holds_the_standard_rules_and_the_nu_types() {
-    assert_eq!(html_validate_version(), "11.18.0");
+    assert_eq!(html_validate_version(), "11.21.1");
     assert!(all().len() > 30 && all().len() <= MAX_RULES);
     for id in [
         "no-dup-id",

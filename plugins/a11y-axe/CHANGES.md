@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Changed: axe-core 4.14.1 (bundled).
 - Changed (RB-091-03): eleven more rules share their ids with the outline plugin (and the seo
   plugin for the headings), so the same problem is one finding: `page-has-heading-one`,
   `heading-order`, `empty-heading`, `landmark-one-main`, `landmark-no-duplicate-main`,

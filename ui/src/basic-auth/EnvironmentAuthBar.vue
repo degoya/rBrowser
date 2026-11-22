@@ -6,18 +6,36 @@
 // the bar closes; nothing here keeps or shows a stored password. Settings opens the list of
 // environments whose challenge is answered (`basicAuth.environments`, a person's choice). Escape
 // closes; the focus goes back to its opener (`returnFocus.ts`, RB-090-23). Mounted in `App.vue`.
-// Nuxt UI: `UButton`s for the environments (a select's popover would be cut off by the strip),
-// `UInput`s for user and password.
-import { computed, nextTick, onScopeDispose, ref, useId } from 'vue';
+// The bar says whether a credential is stored for the chosen environment and for which user -
+// asked each time it opens, and followed when the core pushes a change (RB-094-29); Remove is off
+// without one. Nuxt UI: `UButton`s for the environments (a select's popover would be cut off by
+// the strip), `UInput`s for user and password.
+import { computed, inject, nextTick, onScopeDispose, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
 import UInput from '@nuxt/ui/components/Input.vue';
 import { returnFocus } from '../focus/returnFocus';
 import { useShell } from '../state/shell';
 import { windowEvents, type Subscribe } from '../whichkey/whichkey';
-import { AUTH_COMMAND, draftProblem, removeMessage, saveMessage, settingsMessage } from './basicAuth';
+import {
+  AUTH_COMMAND,
+  AUTH_STATUS_QUERY_KEY,
+  canRemove,
+  draftProblem,
+  removeMessage,
+  saveMessage,
+  settingsMessage,
+  storedText,
+  storedUsers,
+  usersOf,
+  type AuthStatusQuery,
+  type StoredUsers,
+} from './basicAuth';
 
-const props = withDefaults(defineProps<{ subscribe?: Subscribe }>(), { subscribe: undefined });
+const props = withDefaults(defineProps<{ subscribe?: Subscribe; query?: AuthStatusQuery }>(), {
+  subscribe: undefined,
+  query: undefined,
+});
 const shell = useShell();
 const { t } = useI18n();
 const id = useId();
@@ -31,8 +49,43 @@ const busy = ref(false);
 const userField = ref<{ inputRef?: HTMLInputElement | null } | null>(null);
 const focus = returnFocus();
 const environments = computed(() => shell.state.value?.environments ?? []);
+const query = props.query ?? inject(AUTH_STATUS_QUERY_KEY, null);
+/** The stored users by environment; `null` until the core said. */
+const users = ref<StoredUsers | null>(null);
+const stored = computed(() => {
+  const text = storedText(users.value, environment.value);
+  return text === null ? '' : t(text.key, text.params);
+});
+const removable = computed(() => canRemove(users.value, environment.value));
+
+/** Counts every question and push: an answer older than the last of them is dropped. */
+let latest = 0;
+
+/** Asks the core what is stored; a core that cannot say leaves the line empty and Remove on. */
+async function refresh(): Promise<void> {
+  if (query === null) {
+    return;
+  }
+  latest += 1;
+  const asked = latest;
+  let answer: StoredUsers | null;
+  try {
+    answer = storedUsers(await query());
+  } catch {
+    answer = null;
+  }
+  if (asked === latest) {
+    users.value = answer;
+  }
+}
 
 const stop = (props.subscribe ?? windowEvents)((message) => {
+  const pushed = usersOf(message);
+  if (pushed !== null) {
+    latest += 1;
+    users.value = pushed;
+    return;
+  }
   if (message.type !== 'uiCommand' || message.id !== AUTH_COMMAND) {
     return;
   }
@@ -41,6 +94,8 @@ const stop = (props.subscribe ?? windowEvents)((message) => {
   user.value = '';
   password.value = '';
   problem.value = null;
+  users.value = null;
+  void refresh();
   focus.remember();
   open.value = true;
   void nextTick(() => userField.value?.inputRef?.focus());
@@ -150,12 +205,13 @@ async function openSettings(): Promise<void> {
       color="error"
       variant="outline"
       class="shrink-0"
-      :disabled="busy"
+      :disabled="busy || !removable"
       data-testid="basic-auth-remove"
       @click="remove"
     >
       {{ t('auth.bar.remove') }}
     </UButton>
+    <span class="shrink-0 text-xs text-default" aria-live="polite" data-testid="basic-auth-stored">{{ stored }}</span>
     <span
       class="min-w-0 truncate text-xs"
       :class="problem ? 'text-error' : 'text-muted'"

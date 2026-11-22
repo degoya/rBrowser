@@ -54,6 +54,15 @@ fn status_id(status: ExternalStatus) -> &'static str {
     }
 }
 
+/// The tooltip's id under `engines.external.hint` for a window in `status` outside its cell; on
+/// `macos` a running one says that macOS keeps it a window of its own (RB-097-02).
+fn hint_id(status: ExternalStatus, macos: bool) -> &'static str {
+    if macos && status == ExternalStatus::Running {
+        return "ownWindowMacos";
+    }
+    status_id(status)
+}
+
 /// What a click on the engine's state does and the words for it: restart a stopped engine, try
 /// a failed start again, open a closed window again, bring a window of its own to the front; `None` while there is nothing
 /// to do (a window in its cell, one starting). The engine badge's menu offers it too.
@@ -143,7 +152,10 @@ pub fn engine_piece(external: &ExternalView, in_badge: bool) -> Piece {
             t_with("engines.external.hint.embedded", &[("engine", &engine)])
         } else {
             t_with(
-                &format!("engines.external.hint.{}", status_id(external.status)),
+                &format!(
+                    "engines.external.hint.{}",
+                    hint_id(external.status, cfg!(target_os = "macos"))
+                ),
                 &[
                     ("engine", &engine),
                     ("reason", external.reason.as_deref().unwrap_or_default()),

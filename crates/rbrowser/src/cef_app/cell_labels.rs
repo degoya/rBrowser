@@ -72,10 +72,10 @@ pub fn strip_of(view: ViewId) -> Option<LabelButton> {
 /// rectangle in screen DIP and its window: what a right-click can hit (RB-080-46). A strip the
 /// grid built before and took out again (the canvas board draws its own) is in no window.
 #[cfg_attr(
-    target_os = "macos",
+    any(target_os = "macos", target_os = "linux"),
     allow(
         dead_code,
-        reason = "used by the Windows-only strip right-click; its macOS twin is a no-op"
+        reason = "used by the Windows-only strip right-click; the macOS and Linux twins are no-ops"
     )
 )]
 pub fn strips() -> Vec<(Strip, ScreenRect, Window)> {

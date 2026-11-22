@@ -68,12 +68,13 @@ expect_output "the failure names the version" "no section ## [2.0.0]"
 # --- complete: every package of the release, RB-090-80 ---
 release="$SCRATCH/release"
 mkdir -p "$release"
-for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip macos-x86_64.dmg; do
+for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip macos-x86_64.dmg \
+    linux-x64.tar.gz linux-x64.deb linux-x64.rpm; do
     echo package > "$release/rbrowser-1.1.0-$name"
 done
 run_status "$SCRIPT" complete "$release" 1.1.0
 expect_status "a release with every package is complete" 0
-expect_output "the packages are counted" "5 package(s) of rBrowser 1.1.0"
+expect_output "the packages are counted" "8 package(s) of rBrowser 1.1.0"
 rm "$release/rbrowser-1.1.0-macos-x86_64.dmg"
 run_status "$SCRIPT" complete "$release" 1.1.0
 expect_status "a release without a macOS DMG is refused" 1
@@ -93,6 +94,8 @@ expect_output "the Windows ZIP" "\`rbrowser-1.1.0-windows-x64.zip\`"
 expect_output "Apple Silicon" "\`rbrowser-1.1.0-macos-aarch64.dmg\`"
 expect_output "Intel" "\`rbrowser-1.1.0-macos-x86_64.dmg\`"
 expect_output "how Gatekeeper lets the app start" "xattr -dr com.apple.quarantine /Applications/rBrowser.app"
+expect_output "the Linux deb" "\`rbrowser-1.1.0-linux-x64.deb\`"
+expect_output "the Linux tarball" "\`rbrowser-1.1.0-linux-x64.tar.gz\`"
 expect_output "Open Anyway" "Open Anyway"
 expect_output "the checksums" "sha256sum -c SHA256SUMS"
 run_status "$SCRIPT" downloads

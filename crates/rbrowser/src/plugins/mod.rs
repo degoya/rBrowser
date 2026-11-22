@@ -49,6 +49,7 @@ pub mod panels;
 pub mod resume;
 pub mod runtime;
 pub mod services;
+pub mod settings_live;
 pub mod settings_post;
 pub mod status;
 
@@ -174,6 +175,12 @@ fn start(core: &Arc<Core>) {
     bundle::notice_missing(core);
     // RB-094-13: the bundled plugins new in this version are named once.
     bundle::notice_new(core);
+    // RB-094-26: the plugins' settings keys are in the settings registry now
+    // (`crate::control::plugin_keys`): a settings page open since before reads its schema again,
+    // and a link that waited for the plugins is asked for again.
+    core.send(&CoreToShell::PluginPanel {
+        message: live::changed_message(),
+    });
     follow_views(core, runtime.pages());
     follow_network(core, runtime);
 }

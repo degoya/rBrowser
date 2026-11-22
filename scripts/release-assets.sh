@@ -12,7 +12,8 @@
 # `## [<version>] - <date>`; a pre-release (`1.1.0-beta.2`) without a section of its own takes its
 # release's (`1.1.0`). A version without either fails: a release says what it brings.
 # `complete` refuses a folder without one of the release's packages - the Windows ZIP and, per
-# macOS architecture, the ZIP and the DMG of scripts/package-macos.sh (RB-090-80) - so a release
+# macOS architecture, the ZIP and the DMG of scripts/package-macos.sh (RB-090-80), and the Linux
+# tarball, deb and rpm of scripts/package-linux.sh (RB-097-05) - so a release
 # never goes out with a platform missing. `downloads` is the release text's last part: which
 # package is whose, and how macOS lets an app start that is signed ad hoc and not notarised.
 set -euo pipefail
@@ -62,7 +63,7 @@ notes() {
 packages() {
     local name
     for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip \
-        macos-x86_64.dmg; do
+        macos-x86_64.dmg linux-x64.tar.gz linux-x64.deb linux-x64.rpm; do
         printf 'rbrowser-%s-%s\n' "$1" "$name"
     done
 }
@@ -95,6 +96,9 @@ downloads() {
   it under System Settings > Privacy & Security > Open Anyway (on macOS 14 and earlier a
   right-click on the app and Open does the same), or remove the quarantine flag once with
   \`xattr -dr com.apple.quarantine /Applications/rBrowser.app\`.
+- **Linux** (x64): \`rbrowser-$version-linux-x64.deb\` or \`.rpm\` installs into /usr/lib/rbrowser with
+  a menu entry and the Chromium sandbox set up; \`rbrowser-$version-linux-x64.tar.gz\` unpacks
+  anywhere (\`./rbrowser\`; see its README.txt for the sandbox helper and the libraries).
 - \`SHA256SUMS\` lists every file's checksum (\`sha256sum -c SHA256SUMS\`); its Sigstore signature
   is \`SHA256SUMS.sigstore.json\`.
 TEXT

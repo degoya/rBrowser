@@ -3,6 +3,7 @@
 // started with the sidecar's own Node, without a console window.
 
 import { spawn } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { cp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -37,5 +38,7 @@ export function realFlowsDeps(mainUrl: string): FlowsDeps {
     copyDir: (from, to) => cp(from, to, { recursive: true, force: true }),
     platform: process.platform,
     systemTmp: tmpdir(),
+    // The worker's folders exist when it starts (its temp folder is made first).
+    realPath: (path) => realpathSync.native(path),
   };
 }

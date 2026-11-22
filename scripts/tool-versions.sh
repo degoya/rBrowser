@@ -2,9 +2,10 @@
 #
 # The development tools' pins, one source each (RB-000-02): Rust in rust-toolchain.toml, Node in
 # .nvmrc, cargo-nextest, cargo-xwin, cargo-deny, cargo-edit, shellcheck, gitleaks and actionlint
-# (and the packaged Node runtime's SHA-256, rcedit) in scripts/lib/tool-versions.sh. Scripts read
-# those; a document, a package.json or a workflow cannot, so `--check` holds every copy to its
-# source, as `scripts/set-version.sh --check` does for the application's version.
+# (and the packaged Node runtime's SHA-256s for Windows and macOS, rcedit) in
+# scripts/lib/tool-versions.sh. Scripts read those; a document, a package.json or a workflow
+# cannot, so `--check` holds every copy to its source, as `scripts/set-version.sh --check` does
+# for the application's version.
 #
 # A copy is a line one of the rules below matches. A `required` rule that matches nothing fails:
 # the copy moved, and the rule has to follow it.
@@ -28,7 +29,7 @@ while [[ $# -gt 0 ]]; do
         --check) mode=check ;;
         --installed) mode=installed ;;
         --root) tree="${2:?--root needs a directory}"; shift ;;
-        -h | --help) sed -n '2,16p' "$0"; exit 0 ;;
+        -h | --help) sed -n '2,17p' "$0"; exit 0 ;;
         *) usage ;;
     esac
     shift
@@ -80,6 +81,12 @@ case "$mode" in
             "$RB_CEF_RELEASE_DATE" "$RB_CEF_ARCHIVE_SHA256"
         printf '%-14s %s (packaged runtime, ZIP SHA-256 %s)\n' node-win-x64 "$RB_NODE_WIN_X64_VERSION" \
             "$RB_NODE_WIN_X64_SHA256"
+        printf '%-14s %s (macOS bundle, tar.gz SHA-256 arm64 %s, x64 %s)\n' node-darwin \
+            "$RB_NODE_DARWIN_VERSION" "$RB_NODE_DARWIN_ARM64_SHA256" "$RB_NODE_DARWIN_X64_SHA256"
+        printf '%-14s %s (packaged runtime, tarball SHA-256 %s)\n' node-linux-x64 \
+            "$RB_NODE_LINUX_X64_VERSION" "$RB_NODE_LINUX_X64_SHA256"
+        printf '%-14s %s (linux64 archive SHA-256 %s)\n' cef-linux "$RB_CEF_VERSION" \
+            "$RB_CEF_ARCHIVE_LINUX_X64_SHA256"
         printf '%-14s %s (package step, SHA-256 %s)\n' rcedit "$RB_RCEDIT_VERSION" "$RB_RCEDIT_SHA256"
         printf '%-14s %s (playwright-core %s, win64 archive SHA-256 %s)\n' webkit "$RB_WEBKIT_REVISION" \
             "$RB_WEBKIT_PLAYWRIGHT_VERSION" "$RB_WEBKIT_ARCHIVE_SHA256"
@@ -164,10 +171,40 @@ copies_of webkit-playwright required "\"playwright-core\": \"$V\"" sidecar/packa
 copies_of webkit-revision required "^  revision: '([0-9]+)',$" "$WEBKIT_PIN_TS"
 copies_of webkit-sha256 required "^  sha256: '([0-9a-f]{64})',$" "$WEBKIT_PIN_TS"
 copies_of webkit-bytes required "^  bytes: ([0-9_]+),$" "$WEBKIT_PIN_TS"
+# The macOS archives (RB-097-02), one line per host in `MAC_PINS`.
+copies_of webkit-playwright required "^  '?mac[0-9]+(-arm64)?'?: \\{ playwright: '$V'," "$WEBKIT_PIN_TS"
+for host in mac14 mac14-arm64 mac15 mac15-arm64 mac26 mac26-arm64; do
+    var="RB_WEBKIT_${host^^}"
+    var="${var//-/_}"
+    sha="${var}_SHA256"
+    bytes="${var}_BYTES"
+    pin[webkit-$host-sha256]="${!sha:-}"
+    pin[webkit-$host-bytes]="${!bytes:-}"
+    line="^  '?${host}'?: \\{ playwright: '[0-9.]+', revision: '[0-9]+', archive: 'webkit-${host/mac/mac-}\\.zip', "
+    copies_of "webkit-$host-sha256" required "${line}sha256: '([0-9a-f]{64})'," "$WEBKIT_PIN_TS"
+    copies_of "webkit-$host-bytes" required "${line}sha256: '[0-9a-f]{64}', bytes: ([0-9_]+) \\}" "$WEBKIT_PIN_TS"
+done
 
 # The packaged Node runtime's SHA-256 belongs to one version, which has to be .nvmrc's.
 if [[ "${RB_NODE_WIN_X64_VERSION:-}" != "${pin[node]}" ]]; then
     echo "!! scripts/lib/tool-versions.sh: RB_NODE_WIN_X64_SHA256 is for node ${RB_NODE_WIN_X64_VERSION:-(none)}, .nvmrc says ${pin[node]} - pin the new ZIP's SHA-256" >&2
+    wrong=$((wrong + 1))
+fi
+# The same for the macOS bundle's runtime (RB-097-01): one version for both architectures, and
+# each pin a SHA-256, never a placeholder.
+if [[ "${RB_NODE_DARWIN_VERSION:-}" != "${pin[node]}" ]]; then
+    echo "!! scripts/lib/tool-versions.sh: RB_NODE_DARWIN_ARM64_SHA256 and RB_NODE_DARWIN_X64_SHA256 are for node ${RB_NODE_DARWIN_VERSION:-(none)}, .nvmrc says ${pin[node]} - pin the new tarballs' SHA-256s" >&2
+    wrong=$((wrong + 1))
+fi
+for name in RB_NODE_DARWIN_ARM64_SHA256 RB_NODE_DARWIN_X64_SHA256; do
+    if [[ ! "${!name:-}" =~ ^[0-9a-f]{64}$ ]]; then
+        echo "!! scripts/lib/tool-versions.sh: $name is no SHA-256 (${!name:-empty}) - take it from https://nodejs.org/dist/v${pin[node]}/SHASUMS256.txt" >&2
+        wrong=$((wrong + 1))
+    fi
+done
+# The same for the Linux package's runtime (RB-097-05).
+if [[ "${RB_NODE_LINUX_X64_VERSION:-}" != "${pin[node]}" ]]; then
+    echo "!! scripts/lib/tool-versions.sh: RB_NODE_LINUX_X64_SHA256 is for node ${RB_NODE_LINUX_X64_VERSION:-(none)}, .nvmrc says ${pin[node]} - pin the new tarball's SHA-256" >&2
     wrong=$((wrong + 1))
 fi
 

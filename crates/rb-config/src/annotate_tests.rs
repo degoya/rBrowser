@@ -247,3 +247,70 @@ fn every_path_named_key_has_an_input() {
         }
     }
 }
+
+/// RB-094-23: a key that applies only at the next start says so (`x-restart`); every other key
+/// applies at once and carries nothing.
+#[test]
+fn restart_keys_are_keys_and_carry_x_restart() {
+    for key in RESTART_KEYS {
+        assert!(
+            PROJECT_KEYS
+                .iter()
+                .chain(USER_KEYS)
+                .any(|def| def.key == *key),
+            "{key} is no settings key"
+        );
+    }
+    let mut project = json!({ "properties": {
+        "network": { "properties": {
+            "hostResolverRules": {}, "proxy": {}, "ignoreCertificateErrors": {}
+        } },
+        "startUrl": {}
+    } });
+    let _ = annotate(&mut project, SchemaKind::Project, &mut OrderCounters::new());
+    let network = &project["properties"]["network"]["properties"];
+    for key in ["hostResolverRules", "proxy", "ignoreCertificateErrors"] {
+        assert_eq!(network[key][X_RESTART], true, "{key}");
+    }
+    assert!(project["properties"]["startUrl"].get(X_RESTART).is_none());
+    let mut user = json!({ "properties": {
+        "engines": { "properties": { "chromium": { "properties": {
+            "sandbox": {},
+            "extensions": { "properties": { "enabled": {}, "unpacked": {}, "allowWebStore": {} } }
+        } } } },
+        "sessions": { "properties": { "persistSessionCookies": {}, "stateExportAllDomains": {} } },
+        "ui": { "properties": { "theme": {} } }
+    } });
+    let _ = annotate(&mut user, SchemaKind::User, &mut OrderCounters::new());
+    let chromium = &user["properties"]["engines"]["properties"]["chromium"]["properties"];
+    assert_eq!(chromium["sandbox"][X_RESTART], true);
+    let extensions = &chromium["extensions"]["properties"];
+    assert_eq!(extensions["enabled"][X_RESTART], true);
+    assert_eq!(extensions["unpacked"][X_RESTART], true);
+    assert!(extensions["allowWebStore"].get(X_RESTART).is_none());
+    let sessions = &user["properties"]["sessions"]["properties"];
+    assert_eq!(sessions["persistSessionCookies"][X_RESTART], true);
+    assert!(sessions["stateExportAllDomains"].get(X_RESTART).is_none());
+    assert!(
+        user["properties"]["ui"]["properties"]["theme"]
+            .get(X_RESTART)
+            .is_none()
+    );
+}
+
+/// RB-094-28: the log rotation applies to the running logger (`rb_diag::LogHandle::set_rotation`),
+/// so its keys carry no `x-restart`.
+#[test]
+fn the_log_rotation_applies_at_once() {
+    for key in ["logs.maxFileSizeMb", "logs.maxFiles", "logs.level"] {
+        assert!(!RESTART_KEYS.contains(&key), "{key} needs no restart");
+    }
+    let mut user = json!({ "properties": {
+        "logs": { "properties": { "level": {}, "maxFileSizeMb": {}, "maxFiles": {} } }
+    } });
+    let _ = annotate(&mut user, SchemaKind::User, &mut OrderCounters::new());
+    let logs = &user["properties"]["logs"]["properties"];
+    for key in ["level", "maxFileSizeMb", "maxFiles"] {
+        assert!(logs[key].get(X_RESTART).is_none(), "{key}");
+    }
+}

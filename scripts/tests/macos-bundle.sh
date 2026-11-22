@@ -2,7 +2,8 @@
 #
 # scripts/lib/macos-bundle.sh without a Mac (RB-090-15): rBrowser.app assembled from stand-in
 # binaries and a stand-in CEF framework, its structure test, the Info.plists of the app and the
-# five helpers, and the structure test failing on a bundle that lacks a part.
+# five helpers, and the structure test failing on a bundle that lacks a part - the Node runtime
+# and the sidecar included (RB-097-01), whose smoke and the size report run on stand-ins too.
 #
 #   scripts/tests/macos-bundle.sh
 # shellcheck disable=SC2016  # the conditions are single-quoted on purpose: expect_true evaluates them
@@ -41,7 +42,55 @@ APP="$SCRATCH/out/rBrowser.app"
 run_status rb_macos_stage "$CEF" "$BUILD" "$APP" "0.9.0-beta.1+build" "$UI"
 expect_status "the bundle is assembled" 0
 run_status rb_macos_check "$APP"
+expect_status "the structure test fails without the Node runtime and the sidecar" 1
+expect_output "naming the runtime" "Contents/Resources/node/bin/node"
+expect_output "and the sidecar" "Contents/Resources/sidecar/dist/main.js"
+
+# Stand-ins for what scripts/package-macos.sh stages into Resources (RB-097-01): the runtime
+# (a script that answers one request as the sidecar would, reading the version from $NODE_ANSWER
+# beside it) and the sidecar.
+RES="$APP/Contents/Resources"
+mkdir -p "$RES/node/bin" "$RES/sidecar/dist" "$RES/sidecar/node_modules/playwright-core"
+printf 'MIT\n' > "$RES/node/LICENSE"
+cat > "$RES/node/bin/node" << 'SH'
+#!/usr/bin/env bash
+here="$(cd "$(dirname "$0")" && pwd)"
+answer="$(cat "$here/answer")"
+[[ "$answer" == none ]] && exit 3
+IFS= read -r line
+[[ "$line" == *'"method":"sidecar.versions"'* ]] || { echo "unexpected: $line" >&2; exit 4; }
+printf '%s\n' "$answer"
+cat > /dev/null
+SH
+chmod 755 "$RES/node/bin/node"
+printf '%s' '{"jsonrpc":"2.0","id":1,"result":{"node":"9.9.9","playwright":"1.65.1","browsers":[]}}' \
+    > "$RES/node/bin/answer"
+for file in dist/main.js dist/flow-worker.js package.json node_modules/playwright-core/package.json; do
+    printf '{}\n' > "$RES/sidecar/$file"
+done
+run_status rb_macos_check "$APP"
 expect_status "the structure test passes" 0
+
+# --- the sidecar smoke: the bundled runtime starts the bundled sidecar, which answers.
+run_status rb_macos_sidecar_smoke "$APP" 9.9.9
+expect_status "the bundled sidecar answers with the pinned Node" 0
+expect_output "and names both versions" "node 9.9.9, playwright-core 1.65.1"
+run_status rb_macos_sidecar_smoke "$APP" 9.9.8
+expect_status "another Node version fails the smoke" 1
+expect_output "and is named" "9.9.8"
+printf 'none' > "$RES/node/bin/answer"
+run_status rb_macos_sidecar_smoke "$APP" 9.9.9
+expect_status "a sidecar that ends without an answer fails the smoke" 1
+expect_output "and says so" "no answer"
+rm "$RES/node/bin/answer"
+
+# --- the size report names the parts, the runtime and the sidecar among them.
+printf 'zip' > "$SCRATCH/out/rb.zip"
+run_status rb_macos_sizes "$APP" "$SCRATCH/out/rb.zip"
+expect_status "the size report runs" 0
+for part in "rbrowser" "CEF framework" "helper apps" "shell UI" "Node runtime" "sidecar" "total, unpacked" "ZIP"; do
+    expect_output "it names $part" "$part"
+done
 expect "the app is the crate's plain binary" "app" "$(cat "$APP/Contents/MacOS/rbrowser")"
 expect_true "the app is executable" '[[ -x $APP/Contents/MacOS/rbrowser ]]'
 expect_true "the framework and its libraries are in Frameworks" \
@@ -67,6 +116,17 @@ if command -v python3 > /dev/null; then
     expect_true "every Info.plist is a well-formed property list" \
         'find "$APP" -name Info.plist -path "*Contents/Info.plist" -print0 | xargs -0 -n1 python3 -I -c "import plistlib, sys; plistlib.load(open(sys.argv[1], \"rb\"))"'
 fi
+
+chmod 644 "$RES/node/bin/node"
+run_status rb_macos_check "$APP"
+expect_status "a runtime that is not executable fails the structure test" 1
+expect_output "the failure names it" "no executable Contents/Resources/node/bin/node"
+chmod 755 "$RES/node/bin/node"
+rm "$RES/sidecar/node_modules/playwright-core/package.json"
+run_status rb_macos_check "$APP"
+expect_status "a sidecar without playwright-core fails the structure test" 1
+expect_output "the failure names it" "sidecar/node_modules/playwright-core/package.json"
+printf '{}\n' > "$RES/sidecar/node_modules/playwright-core/package.json"
 
 rm "$APP/Contents/Frameworks/rbrowser Helper (Plugin).app/Contents/MacOS/rbrowser Helper (Plugin)"
 run_status rb_macos_check "$APP"

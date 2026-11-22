@@ -177,3 +177,44 @@ fn a_long_screenshot_does_not_hold_up_other_calls() {
     release.send(()).expect("sends");
     assert!(matches!(shot.join().expect("joins"), Outcome::Answered(_)));
 }
+
+/// `app.restart` (RB-094-23): the quitting instance stops listening before the next start, so
+/// the relaunched process finds nobody, opens its own window and listens on the same channel.
+#[test]
+fn a_stopped_instance_is_no_running_instance_and_the_next_one_listens_again() {
+    let local = tempfile::tempdir().expect("temp dir");
+    let root = local.path().join("site");
+    let (handler, seen) = recording();
+    let listening = start(local.path(), &root, handler).expect("listens");
+    let path = file::file_path(local.path(), &root);
+    let endpoint = file::read(&path, local.path())
+        .expect("the instance file")
+        .endpoint;
+    listening.stop();
+
+    assert!(!path.exists(), "the instance file is gone");
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("runtime");
+    assert!(
+        runtime.block_on(channel::connect(&endpoint)).is_err(),
+        "nobody listens on the channel"
+    );
+    let reload = Request::Reload {
+        ignore_cache: false,
+    };
+    assert_eq!(
+        hand_over(local.path(), &root, reload.clone()),
+        Outcome::NotRunning
+    );
+    assert!(seen.lock().expect("lock").is_empty());
+
+    let (next, next_seen) = recording();
+    start(local.path(), &root, next).expect("the next start listens");
+    assert_eq!(
+        hand_over(local.path(), &root, reload.clone()),
+        Outcome::Handed
+    );
+    assert_eq!(*next_seen.lock().expect("lock"), vec![reload]);
+}

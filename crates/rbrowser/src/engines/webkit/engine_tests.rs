@@ -34,12 +34,18 @@ async fn a_view_opens_with_its_options_url_agent_and_config() {
     let spec = sample_spec(EngineKind::Webkit, 7);
     let handle = webkit.create_view(&spec).await.expect("opens");
     assert_eq!(handle.id(), ViewId(7));
-    // The window is found by the view's own process (RB-080-39, RB-080-40).
-    let window = handle.native_window().expect("a window hint");
-    assert_eq!(
-        (window.process_id, window.window_class),
-        (FakeSidecar::pid_of(7), None)
-    );
+    // The window is found by the view's own process (RB-080-39, RB-080-40); on macOS it stays
+    // a window of its own (RB-097-02).
+    let window = handle.native_window();
+    if crate::engines::webkit::view::EMBEDDABLE {
+        let window = window.expect("a window hint");
+        assert_eq!(
+            (window.process_id, window.window_class),
+            (FakeSidecar::pid_of(7), None)
+        );
+    } else {
+        assert!(window.is_none());
+    }
     assert_eq!(
         fake.calls_of(rpc::LAUNCH),
         [json!({ "agent": "/* agent */" })]

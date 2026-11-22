@@ -132,6 +132,8 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
                 NotificationLevel::Warning
             };
             core.notify(notice(level, key, &environment));
+            // Both surfaces show the stored user at once (RB-094-29).
+            super::status::push(core);
             // The views behind the challenge load now (Chromium asks again on the reload).
             if listed && let Err(error) = host.reload(Target::All, false) {
                 tracing::debug!(%error, "the views were not reloaded after the credential");
@@ -143,6 +145,7 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
                 .remove(&project, &config, &environment)
                 .map_err(failed)?;
             core.notify(notice(NotificationLevel::Info, REMOVED_KEY, &environment));
+            super::status::push(core);
             Ok(json!({ "environment": environment, "removed": removed }))
         }
         Action::Open => Ok(Value::Null),

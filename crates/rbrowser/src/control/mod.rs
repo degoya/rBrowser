@@ -10,6 +10,7 @@ pub mod diag_save;
 mod handlers;
 mod keys;
 mod notify;
+pub mod plugin_keys;
 pub mod settings;
 #[cfg(test)]
 pub(crate) mod test_support;
@@ -69,7 +70,8 @@ pub struct Core {
     skipped: Mutex<BTreeMap<String, Vec<String>>>,
     /// The default bindings the registry left unbound, by command (`droppedDefaults`).
     dropped: Mutex<BTreeMap<String, Vec<String>>>,
-    settings: SettingsRegistry,
+    /// The core's settings keys and the loaded plugins' (RB-094-26).
+    settings: plugin_keys::LiveRegistry,
     /// Notifications raised before the shell could show them.
     pending: Mutex<Vec<CoreToShell>>,
     shell_ready: AtomicBool,
@@ -107,7 +109,7 @@ impl Core {
             user_load_failed: setup.user_load_failed,
             skipped: Mutex::new(BTreeMap::new()),
             dropped: Mutex::new(BTreeMap::new()),
-            settings,
+            settings: plugin_keys::LiveRegistry::new(settings),
             pending: Mutex::new(Vec::new()),
             shell_ready: AtomicBool::new(false),
             status: crate::status::StatusLog::for_settings(&setup.user.ui.status_bar),
@@ -150,9 +152,12 @@ impl Core {
         &self.runtime
     }
 
-    /// Every known setting, core keys from the schemas.
-    pub fn settings_registry(&self) -> &SettingsRegistry {
-        &self.settings
+    /// Every known setting: the core's keys from the schemas and the keys of the plugins loaded
+    /// now (RB-094-26), so the settings window shows, writes and links to a plugin key as to a
+    /// core key. One registry per plugin load, shared by every caller until the next.
+    pub fn settings_registry(&self) -> Arc<SettingsRegistry> {
+        self.settings
+            .current(crate::plugins::services::shared().schemas())
     }
 
     /// The user settings in effect.
@@ -194,6 +199,8 @@ impl Core {
         // The Framework DevTools modes (RB-080-24).
         crate::sync_agent::framework_tasks::on_user_settings_changed(self);
         crate::plugins::on_user_settings_changed(self);
+        // `plugins.crashLimit`, and a plugin switched off or on, at once (RB-094-23).
+        crate::plugins::settings_live::on_user_settings_changed(self, &before.plugins);
         // The status bar's history size and visibility (RB-080-15).
         crate::status::on_user_settings_changed(self);
         // The active view's label strip (RB-080-04).
@@ -251,7 +258,7 @@ impl Core {
             ));
         }
         Ok(CoreToShell::Settings {
-            values: settings::user_values(&self.settings, &lock(&self.user)),
+            values: settings::user_values(&self.settings_registry(), &lock(&self.user)),
             schema: None,
         })
     }

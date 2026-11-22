@@ -296,3 +296,11 @@ fn a_failed_start_names_its_reason_and_retries() {
     let bare = engine_piece(&external(json!({ "status": "failed" })), false);
     assert_eq!(bare.text, "Firefox: failed to start");
 }
+
+#[test]
+fn on_macos_a_window_of_its_own_says_why_it_is_not_in_its_cell() {
+    // RB-097-02: macOS lets no app take another app's window into its cell.
+    assert_eq!(hint_id(ExternalStatus::Running, true), "ownWindowMacos");
+    assert_eq!(hint_id(ExternalStatus::Running, false), "running");
+    assert_eq!(hint_id(ExternalStatus::Closed, true), "closed");
+}

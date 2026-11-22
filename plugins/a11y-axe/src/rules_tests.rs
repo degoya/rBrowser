@@ -25,7 +25,7 @@ fn snapshot(name: &str) -> Vec<String> {
 
 #[test]
 fn the_table_is_the_pinned_axe_core_with_valid_ids() {
-    assert_eq!(axe_version(), "4.14.0");
+    assert_eq!(axe_version(), "4.14.1");
     assert_eq!(all().len(), 105);
     assert!(all().len() <= MAX_RULES);
     for rule in all() {

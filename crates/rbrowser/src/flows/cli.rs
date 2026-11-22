@@ -90,7 +90,7 @@ pub fn main(cli: &Cli, args: &FlowArgs, env: &Env, user: &UserSettings) -> i32 {
                 run_id: id.clone(),
             };
             let Some(local) = rb_config::local_dir() else {
-                eprintln!("rbrowser flow run: no local folder (LOCALAPPDATA is not set)");
+                eprintln!("{}", no_local_folder(cfg!(windows)));
                 return exit::FAILED;
             };
             if let Some(code) = handed(hand_over(&local, &root, request), &root) {
@@ -110,6 +110,16 @@ pub fn main(cli: &Cli, args: &FlowArgs, env: &Env, user: &UserSettings) -> i32 {
                 }
             }
         }
+    }
+}
+
+/// The message when [`rb_config::local_dir`] finds no folder: the variables it comes from on
+/// Windows, else on macOS and Linux (RB-097-03).
+fn no_local_folder(windows: bool) -> &'static str {
+    if windows {
+        "rbrowser flow run: no local folder (LOCALAPPDATA is not set)"
+    } else {
+        "rbrowser flow run: no local folder (neither XDG_STATE_HOME nor HOME is set)"
     }
 }
 

@@ -6,6 +6,9 @@
 #   scripts/ci-tools.sh linters [--dest DIR]   # shellcheck, gitleaks, actionlint at their pins
 #   scripts/ci-tools.sh cross                  # the packages of docs/development.md for the
 #                                              # cargo-xwin and musl builds (runner only)
+#   scripts/ci-tools.sh linux                  # the native Linux build's (RB-097-05): CEF's
+#                                              # run-time libraries, Xvfb, strip and
+#                                              # rsvg-convert for the packages (runner only)
 #
 # `linters` checks each download against its SHA-256 from scripts/lib/tool-versions.sh before it
 # is unpacked, so `scripts/check.sh --preflight` runs those stages instead of skipping them. On a
@@ -17,7 +20,7 @@ set -euo pipefail
 # shellcheck source=lib/tool-versions.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/tool-versions.sh"
 
-usage() { echo "usage: scripts/ci-tools.sh linters [--dest DIR] | cross" >&2; exit 2; }
+usage() { echo "usage: scripts/ci-tools.sh linters [--dest DIR] | cross | linux" >&2; exit 2; }
 
 # Downloads URL $1 to file $2 and holds it to SHA-256 $3.
 fetch() {
@@ -61,9 +64,24 @@ cross() {
     echo "/usr/lib/llvm-$llvm/bin" >> "${GITHUB_PATH:?set by the runner}"
 }
 
+# The libraries CEF's libcef.so needs (its NEEDED entries, the deb's dependencies in
+# packaging/linux/nfpm.yaml.in under their ubuntu-24.04 names): the tests' binaries link it, the
+# package smoke starts it. Xvfb for a start without a display, binutils' strip and librsvg's
+# rsvg-convert for scripts/package-linux.sh and scripts/package-deb-rpm.sh.
+linux() {
+    local apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+    timeout 300 sudo apt-get "${apt_opts[@]}" update -q
+    timeout 600 sudo apt-get "${apt_opts[@]}" install -y -q --no-install-recommends \
+        libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 libcups2t64 \
+        libdbus-1-3 libx11-6 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 \
+        libxkbcommon0 libgbm1 libexpat1 libcairo2 libpango-1.0-0 libudev1 libasound2t64 \
+        libglib2.0-0t64 xvfb xauth binutils librsvg2-bin
+}
+
 case "${1:-}" in
     linters) shift ;;
     cross) [[ $# -eq 1 ]] || usage; cross; exit 0 ;;
+    linux) [[ $# -eq 1 ]] || usage; linux; exit 0 ;;
     *) usage ;;
 esac
 dest=""

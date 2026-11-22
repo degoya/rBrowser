@@ -11,6 +11,9 @@ export interface FixtureEntry {
   flags?: number;
   /** A CRC-32 to write instead of the right one. */
   crc?: number;
+  /** A Unix `st_mode` (0o100755 a script, 0o120755 a link whose data is its target): the entry
+   *  is then made on Unix, as the macOS archives are (RB-097-02). */
+  mode?: number;
 }
 
 /** A ZIP of `entries`. */
@@ -36,7 +39,7 @@ export function makeZip(entries: FixtureEntry[]): Buffer {
     locals.push(local, name, packed);
     const central = Buffer.alloc(46);
     central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(entry.mode === undefined ? 20 : (3 << 8) | 21, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(entry.flags ?? 0, 8);
     central.writeUInt16LE(method, 10);
@@ -44,6 +47,7 @@ export function makeZip(entries: FixtureEntry[]): Buffer {
     central.writeUInt32LE(packed.length, 20);
     central.writeUInt32LE(data.length, 24);
     central.writeUInt16LE(name.length, 28);
+    if (entry.mode !== undefined) central.writeUInt32LE((entry.mode << 16) >>> 0, 38);
     central.writeUInt32LE(offset, 42);
     centrals.push(central, name);
     offset += local.length + name.length + packed.length;

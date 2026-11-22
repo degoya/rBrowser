@@ -136,7 +136,8 @@
     {
       "type": "mcpSetup",
       "request": { "op": "write", "requestId": 4, "client": "cursor", "root": "C:/work/shop", "project": true, "user": false }
-    }
+    },
+    { "type": "getBasicAuthStatus" }
   ],
   "coreToShell": [
     { "type": "ack" },
@@ -772,6 +773,13 @@
           }
         ]
       }
+    },
+    {
+      "type": "basicAuthStatus",
+      "environments": [
+        { "environment": "local", "stored": false },
+        { "environment": "staging", "stored": true, "user": "ada" }
+      ]
     }
   ]
 }

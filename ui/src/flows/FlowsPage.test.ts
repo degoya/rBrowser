@@ -68,6 +68,7 @@ async function mounted(
   const asked: ShellToCore[] = [];
   let answer = state;
   let listed = flows;
+  let confirm = confirmDelete;
   const client = new IpcClient({
     send: async (message) => {
       asked.push(message);
@@ -75,12 +76,12 @@ async function mounted(
         case 'listFlows':
           return { type: 'flows', items: listed };
         case 'getSettings':
-          if (confirmDelete === undefined) {
+          if (confirm === undefined) {
             return { type: 'ack' };
           }
           return {
             type: 'settings',
-            values: [{ key: 'automation.flows.confirmDelete', value: confirmDelete, origin: 'user' }],
+            values: [{ key: 'automation.flows.confirmDelete', value: confirm, origin: 'user' }],
           };
         case 'getFlowRun':
           return { type: 'flowRun', ...answer };
@@ -105,6 +106,9 @@ async function mounted(
     },
     listNext: (next: FlowSummary[]) => {
       listed = next;
+    },
+    confirmNext: (next: boolean) => {
+      confirm = next;
     },
   };
 }
@@ -265,6 +269,18 @@ describe('deleting a flow in the Flows panel (RB-090-91)', () => {
 
   it('deletes at once when automation.flows.confirmDelete is off', async () => {
     const { wrapper, asked } = await mounted({ project: true }, FLOWS, 1000, false);
+    await wrapper.get('[data-testid="flow-login"] [data-testid="delete"]').trigger('click');
+    await settle();
+    expect(wrapper.find('[data-testid="delete-confirm"]').exists()).toBe(false);
+    expect(commands(asked)).toEqual([{ type: 'runCommand', id: 'flows.delete', args: { name: 'login' } }]);
+  });
+
+  // RB-094-23: a changed setting applies in the open panel, without opening it again.
+  it('follows a changed automation.flows.confirmDelete at once', async () => {
+    const { wrapper, asked, push, confirmNext } = await mounted({ project: true }, FLOWS, 1000, true);
+    confirmNext(false);
+    push({ type: 'settingsChanged', keys: ['automation.flows.confirmDelete'] });
+    await settle();
     await wrapper.get('[data-testid="flow-login"] [data-testid="delete"]').trigger('click');
     await settle();
     expect(wrapper.find('[data-testid="delete-confirm"]').exists()).toBe(false);

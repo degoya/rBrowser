@@ -46,3 +46,32 @@ fn the_benchmark_settings_stay_small() {
     })));
     assert_eq!((low.bench_repeats, low.bench_concurrency), (1, 1));
 }
+
+/// RB-096-13: `secrets_not_saved` and `grant_not_saved` carry the core's reason - the text of the
+/// refusal and its key - where 0.9.6 sent the code alone. The owner's refusal was
+/// `settings.rejected.unknown_key`: the registry the write planned over held no plugin key.
+#[test]
+fn a_refused_write_names_the_core_s_reason() {
+    let refused = rb_ipc::CoreToShell::SettingRejected {
+        key: SECRETS_KEY.to_owned(),
+        issues: vec![rb_ipc::SettingIssue {
+            path: String::new(),
+            message_key: "settings.rejected.unknown_key".to_owned(),
+        }],
+    };
+    let failure = refusal("secrets_not_saved", &refused).expect("a refusal");
+    assert_eq!(
+        failure.code(),
+        Some("plugin.api-client.errors.secrets_not_saved")
+    );
+    assert_eq!(
+        failure.params.get("issue").map(String::as_str),
+        Some("settings.rejected.unknown_key")
+    );
+    let reason = failure.params.get("reason").expect("a reason");
+    assert!(
+        !reason.is_empty() && !reason.starts_with("settings."),
+        "{reason}"
+    );
+    assert!(refusal("grant_not_saved", &rb_ipc::CoreToShell::Ack).is_none());
+}

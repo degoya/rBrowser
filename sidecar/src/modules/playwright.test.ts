@@ -11,7 +11,7 @@ import {
   parseProgress,
   registerPlaywright,
 } from './playwright.ts';
-import { PIN_MARKER, WEBKIT_PIN } from '../webkit/pin.ts';
+import { MAC_PINS, PIN_MARKER, WEBKIT_PIN } from '../webkit/pin.ts';
 
 const BROWSERS_JSON = JSON.stringify({
   browsers: [
@@ -47,6 +47,18 @@ describe('parseBrowsersJson', () => {
     expect(parseBrowsersJson(BROWSERS_JSON)[1]).toEqual({ name: 'webkit', revision: '2388', version: '27.2' });
   });
 
+  it('takes the revision of the host when browsers.json overrides it (RB-097-02)', () => {
+    const json = JSON.stringify({
+      browsers: [{ name: 'webkit', revision: '2388', revisionOverrides: { mac14: '2251', 'mac14-arm64': '2251' } }],
+    });
+    expect(parseBrowsersJson(json, 'mac14-arm64')[0]?.revision).toBe('2251');
+    expect(parseBrowsersJson(json, 'mac15')[0]?.revision).toBe('2388');
+    expect(parseBrowsersJson(json, null)[0]?.revision).toBe('2388');
+    expect(parseBrowsersJson(json)[0]?.revision).toBe('2388');
+    const odd = JSON.stringify({ browsers: [{ name: 'webkit', revision: '2388', revisionOverrides: { mac14: 7 } }] });
+    expect(parseBrowsersJson(odd, 'mac14')[0]?.revision).toBe('2388');
+  });
+
   it('refuses a file without a browsers list', () => {
     expect(() => parseBrowsersJson('{}')).toThrow('browsers.json has no browsers list');
   });
@@ -75,6 +87,17 @@ describe('browserStates', () => {
       { name: 'chromium', revision: '1254', version: '158.0.8127.18', installed: false, path: join('/pw', 'chromium-1254') },
       { name: 'webkit', revision: '2388', version: '27.2', installed: true, path: WEBKIT_DIR },
     ]);
+  });
+
+  it('holds WebKit to this system\'s pin: a macOS build by its own archive, none without a pin (RB-097-02)', () => {
+    const mac = deps({ webkitPin: MAC_PINS['mac15-arm64'] });
+    mac.marker.set(WEBKIT_MARKER, WEBKIT_PIN.sha256);
+    expect(browserStates(mac)[1]?.installed).toBe(false);
+    mac.marker.set(WEBKIT_MARKER, MAC_PINS['mac15-arm64'].sha256);
+    expect(browserStates(mac)[1]?.installed).toBe(true);
+    const none = deps({ webkitPin: null });
+    none.marker.set(WEBKIT_MARKER, WEBKIT_PIN.sha256);
+    expect(browserStates(none)[1]?.installed).toBe(false);
   });
 
   it('reports nothing installed without a browsers path', () => {

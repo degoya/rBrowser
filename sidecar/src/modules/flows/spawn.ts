@@ -65,6 +65,8 @@ export interface FlowsDeps {
   platform: NodeJS.Platform;
   /** The sidecar's temp folder (`os.tmpdir()`), for the fallback of `tmp.ts`. */
   systemTmp: string;
+  /** A folder's real path, for the second grant on macOS (`grants.ts`); throws when absent. */
+  realPath?: (path: string) => string;
 }
 
 /**
@@ -86,12 +88,13 @@ export const LINUX_WSL_PROBES = ['/proc/sys/fs/binfmt_misc/WSLInterop', '/run/WS
 
 /** The Node arguments of a worker for `projectRoot` writing only into its local folder `tmpDir`. */
 export function nodeArgs(
-  deps: Pick<FlowsDeps, 'sidecarDir' | 'workerScript' | 'netFlag'>,
+  deps: Pick<FlowsDeps, 'sidecarDir' | 'workerScript' | 'netFlag' | 'realPath'>,
   projectRoot: string,
   tmpDir: string,
   platform: NodeJS.Platform = process.platform,
 ): string[] {
-  const grant = (flag: string, path: string) => grantForms(path, platform).map((form) => `${flag}=${form}`);
+  const grant = (flag: string, path: string) =>
+    grantForms(path, platform, deps.realPath).map((form) => `${flag}=${form}`);
   return [
     '--permission',
     ...grant('--allow-fs-read', deps.sidecarDir),

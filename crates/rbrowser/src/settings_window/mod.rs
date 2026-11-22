@@ -13,6 +13,7 @@ mod apply;
 mod deepcheck;
 mod docedit;
 mod dynamic;
+mod env_rename;
 pub mod guard;
 mod lane;
 mod program;
@@ -22,6 +23,7 @@ pub mod target;
 pub mod user_file;
 mod values;
 pub mod write;
+mod write_order;
 
 use rb_commands::CommandError;
 use rb_commands::builtin::SHORTCUTS_EDIT_COMMAND;
@@ -98,6 +100,12 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
     Some(Ok(answer))
 }
 
+/// Every key's value and origin now, a secret key included and masked: what MCP's
+/// `settings_get` and its audit read (RB-094-27); the window's `getSettings` lists no secret.
+pub fn mcp_values(core: &Core) -> Vec<rb_ipc::SettingValue> {
+    values::all_values(&core.settings_registry(), &apply::documents(core))
+}
+
 /// The project config was read again after a change: every page reads the project's settings
 /// again (wired in `crate::features::on_config_changed`).
 pub fn on_config_changed(core: &Core) {
@@ -105,10 +113,60 @@ pub fn on_config_changed(core: &Core) {
 }
 
 /// Opens the settings window at `key` (a setting, a category, a section or a key prefix,
-/// [`target`]), else at its start.
+/// [`target`]; a plugin's key once its plugin is loaded, RB-094-26), else at its start - with
+/// the key named when it opens nothing: `pending` while an installed plugin of its prefix still
+/// loads (the page asks again once they are in), else `missing` ([`target::not_found_query`]).
+/// A secret key is no setting of the window: it opens the panel that edits it instead
+/// ([`target::panel_of`], RB-094-27 - `api-client.secrets` the API client at Variables).
 pub fn open(core: &Core, key: Option<&str>) {
-    let route = route(core.settings_registry(), key);
+    let registry = core.settings_registry();
+    if let Some(panel) = key.and_then(|link| target::panel_of(&registry, link)) {
+        crate::plugins::open::open_at(core, panel.plugin, panel.panel, panel.tab);
+        return;
+    }
+    let route = match key {
+        Some(link) if target::resolve(&registry, link).is_none() => {
+            let loading =
+                crate::analyzer::plugins::loaded().is_none() && !crate::analyzer::plugins::held();
+            target::not_found_route(
+                target::not_found_query(link, plugin_package_present, loading),
+                link,
+            )
+        }
+        _ => route(&registry, key),
+    };
     core.ui().open_settings_window(page_url(&route));
+}
+
+/// Whether a package of plugin `id` lies in a folder this process loads plugins from (bundled,
+/// the person's, the project's): `<id>.rbplugin` as an install names it, or
+/// `<id>-<version>.rbplugin` as a release does. Read before the load, so by its name only.
+fn plugin_package_present(id: &str) -> bool {
+    let folders = [
+        crate::analyzer::plugins::bundled_dir(),
+        crate::analyzer::plugins::user_dir(),
+        crate::analyzer::plugins::project_root()
+            .map(|root| rb_plugin_host::project_plugins_dir(&root)),
+    ];
+    let versioned = format!("{id}-");
+    folders.into_iter().flatten().any(|folder| {
+        std::fs::read_dir(folder).is_ok_and(|entries| {
+            entries.flatten().any(|entry| {
+                let path = entry.path();
+                path.extension()
+                    .is_some_and(|ext| ext == rb_plugin_host::PACKAGE_EXTENSION)
+                    && path
+                        .file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .is_some_and(|stem| {
+                            stem == id
+                                || stem.strip_prefix(&versioned).is_some_and(|version| {
+                                    version.starts_with(|c: char| c.is_ascii_digit())
+                                })
+                        })
+            })
+        })
+    })
 }
 
 /// The pages window's route for `key` ([`target::route_of`]); `settings` without one.

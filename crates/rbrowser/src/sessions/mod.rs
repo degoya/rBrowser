@@ -29,7 +29,7 @@ pub mod model;
 pub mod paths;
 pub mod policy;
 
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(any(windows, target_os = "macos", target_os = "linux"))]
 pub mod cef;
 
 use std::path::{Path, PathBuf};

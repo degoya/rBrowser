@@ -8,7 +8,7 @@
 # sees it: rb-update reads the `install-kind` marker beside the program (crates/rb-update), which
 # the Scoop manifest writes as `scoop`. rBrowser has no `install-kind` subcommand, so the marker
 # file is read directly. winget cannot write a marker (a path rule in install_kind is still open),
-# and Homebrew has no package until RB-110-01/02: for those the marker is reported, not required.
+# and Homebrew has no package until RB-097-05/02: for those the marker is reported, not required.
 # CI only; Git Bash on Windows, where rbrowser.exe is a GUI program whose output a pipe carries
 # and rbrowser.com its console twin.
 #

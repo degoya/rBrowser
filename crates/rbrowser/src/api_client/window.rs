@@ -11,7 +11,8 @@
 //! go to `api-client.secrets` the same way (and so do the Variables tab's private rows and a value
 //! set for a `$secret`, RB-096-11) - when that write fails the answer stands and says so
 //! ([`capture_ops::not_kept`]) -, and an open's draft waits for the panel's next `state` while
-//! the panels show the API client.
+//! the panels show the API client; so does the tab a link asked for (RB-094-27, a link to
+//! `api-client.secrets` opens Variables: `crate::plugins::open::take_tab`).
 
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -129,6 +130,29 @@ fn context(core: &Core) -> Context {
     }
 }
 
+/// The failure `code` for a write the settings refused (RB-096-13), with the core's reason: the
+/// text of its first issue as `reason` (the panel says it after its own sentence) and the issue's
+/// key as `issue` (the log names it). `None` for a write that was taken. On 0.9.6 the code came
+/// alone, and the owner's `secrets_not_saved` said nothing of why: the settings registry the
+/// write plans over held no plugin key (`settings.rejected.unknown_key`, fixed by RB-094-26).
+fn refusal(code: &str, answer: &rb_ipc::CoreToShell) -> Option<Failure> {
+    let rb_ipc::CoreToShell::SettingRejected { issues, .. } = answer else {
+        return None;
+    };
+    let failure = error(FailureKind::Io, code);
+    let Some(issue) = issues.first() else {
+        return Some(failure);
+    };
+    Some(
+        failure
+            .with_param(
+                "reason",
+                rb_util::text::cut(&rb_i18n::t(&issue.message_key), 200),
+            )
+            .with_param("issue", &issue.message_key),
+    )
+}
+
 /// Writes `hosts` as the project's grants, as the settings window does.
 fn keep_hosts(core: &Core, hosts: &[String]) -> Result<(), Failure> {
     let answer = crate::settings_window::set_setting(
@@ -138,8 +162,8 @@ fn keep_hosts(core: &Core, hosts: &[String]) -> Result<(), Failure> {
         rb_settings::Scope::Local,
         crate::settings_window::Caller::Shell,
     );
-    if matches!(answer, rb_ipc::CoreToShell::SettingRejected { .. }) {
-        return Err(error(FailureKind::Io, "grant_not_saved"));
+    if let Some(refused) = refusal("grant_not_saved", &answer) {
+        return Err(refused);
     }
     crate::plugins::services::shared().settings_changed();
     tracing::info!("a host was allowed for the API client");
@@ -155,8 +179,8 @@ fn keep_secrets(core: &Core, secrets: &Value) -> Result<(), Failure> {
         rb_settings::Scope::Local,
         crate::settings_window::Caller::Shell,
     );
-    if matches!(answer, rb_ipc::CoreToShell::SettingRejected { .. }) {
-        return Err(error(FailureKind::Io, "secrets_not_saved"));
+    if let Some(refused) = refusal("secrets_not_saved", &answer) {
+        return Err(refused);
     }
     crate::plugins::services::shared().settings_changed();
     tracing::info!("private values were kept for the API client");
@@ -265,7 +289,7 @@ impl ApiHost for WindowApi {
             } => return capture(core, requests, save, open, origin).await,
             other => other,
         };
-        // The panel's `state` takes the draft an open left for it (RB-096-08).
+        // The panel's `state` takes the draft an open left for it (RB-096-08), and its tab.
         let draft = origin == Origin::Panel && matches!(op, Op::State);
         let mut answer = tokio::task::spawn_blocking(move || {
             let ctx = context(&core);
@@ -294,11 +318,14 @@ impl ApiHost for WindowApi {
         })
         .await
         .map_err(|_| Failure::coded(FailureKind::Other, codes::HOST_FAILED))??;
-        if draft
-            && let Value::Object(fields) = &mut answer
-            && let Some(waiting) = capture_ops::take_draft()
-        {
-            fields.insert("draft".to_owned(), waiting);
+        if draft && let Value::Object(fields) = &mut answer {
+            if let Some(waiting) = capture_ops::take_draft() {
+                fields.insert("draft".to_owned(), waiting);
+            }
+            // RB-094-27: the tab a link asked for - `api-client.secrets` opens Variables.
+            if let Some(tab) = crate::plugins::open::take_tab(PLUGIN_ID) {
+                fields.insert("tab".to_owned(), Value::String(tab));
+            }
         }
         Ok(answer)
     }

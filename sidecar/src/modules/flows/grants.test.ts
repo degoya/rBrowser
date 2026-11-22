@@ -59,3 +59,38 @@ describe('nodeArgs on Windows', () => {
     expect(writes.some((w) => w.includes('wsl.localhost'))).toBe(false);
   });
 });
+
+// RB-097-03: macOS's own folders are symbolic links (`/tmp`, `/var` into `/private`), and Node's
+// permission model compares a path as given, so a realpath'd access would miss a plain grant.
+describe('grants on macOS', () => {
+  const real = (path: string) => path.replace(/^\/(tmp|var)(?=\/|$)/, '/private/$1');
+
+  it('grants a folder also under its real path when that differs', () => {
+    expect(grantForms('/var/folders/x/T/rbrowser-flows-tmp/r', 'darwin', real)).toEqual([
+      '/var/folders/x/T/rbrowser-flows-tmp/r',
+      '/private/var/folders/x/T/rbrowser-flows-tmp/r',
+    ]);
+    expect(grantForms('/Users/me/site', 'darwin', real)).toEqual(['/Users/me/site']);
+  });
+
+  it('resolves only on macOS', () => {
+    expect(grantForms('/tmp/site', 'linux', real)).toEqual(['/tmp/site']);
+    expect(grantForms('C:\\site', 'win32', real)).toEqual(['C:\\site', '\\\\?\\C:\\site']);
+  });
+
+  it('keeps the plain grant when the real path cannot be found', () => {
+    const fails = () => {
+      throw new Error('ENOENT');
+    };
+    expect(grantForms('/tmp/site', 'darwin', fails)).toEqual(['/tmp/site']);
+  });
+
+  it('grants the project, the sidecar and the temp folder in both forms, writing only the temp folder', () => {
+    const deps = { sidecarDir: '/Applications/rBrowser.app/Contents/Resources/sidecar', workerScript: '/w.js', netFlag: true, realPath: real };
+    const args = nodeArgs(deps, '/tmp/site', '/var/t/r', 'darwin');
+    const reads = args.filter((a) => a.startsWith('--allow-fs-read=')).map((a) => a.slice('--allow-fs-read='.length));
+    const writes = args.filter((a) => a.startsWith('--allow-fs-write=')).map((a) => a.slice('--allow-fs-write='.length));
+    expect(reads).toEqual([deps.sidecarDir, '/tmp/site', '/private/tmp/site', '/var/t/r', '/private/var/t/r']);
+    expect(writes).toEqual(['/var/t/r', '/private/var/t/r']);
+  });
+});

@@ -3,14 +3,17 @@
 //! Firefox, sync, MCP and screenshots never need it, and nothing here starts Node before the first
 //! request.
 //!
-//! - [`node`]: which runtime - `engines.nodePath`, else the bundled `<install>/node/node.exe` -
-//!   and its major version against `.nvmrc`.
+//! - [`node`]: which runtime - `engines.nodePath`, else the bundled `<install>/node/node.exe`
+//!   (`node/bin/node` on macOS) - and its major version against `.nvmrc`.
+//! - [`layout`]: where the package keeps the runtime and the sidecar - beside the executable, or
+//!   in `rBrowser.app/Contents/Resources` on macOS (RB-097-01).
 //! - [`rpc`] and [`client`]: JSON-RPC 2.0 over stdio, one message per line; requests with a
 //!   timeout, `$/progress` notifications, `$/cancel` when a request is dropped or times out.
 //! - [`supervisor`]: the process' life - start on first need, health ping, restart with backoff
 //!   after a crash, clean shutdown; [`process`] starts the real one (`NoConsoleWindow`, stderr
 //!   into `tracing` with secrets masked).
-//! - [`playwright`]: the browser download into `%LOCALAPPDATA%\rBrowser\ms-playwright`.
+//! - [`playwright`]: the browser download into `%LOCALAPPDATA%\rBrowser\ms-playwright`
+//!   (`~/.local/state/rBrowser/ms-playwright` on macOS).
 //! - [`command`]: the commands `sidecar.restart` and `engines.update`.
 
 pub mod backoff;
@@ -18,6 +21,7 @@ pub mod client;
 pub mod command;
 pub mod error;
 pub mod framing;
+pub mod layout;
 pub mod node;
 pub mod playwright;
 pub mod process;

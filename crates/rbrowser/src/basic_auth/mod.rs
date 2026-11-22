@@ -10,6 +10,7 @@
 //! | The credential and its store: the Credential Manager per project and origin | [`store`], `store_windows` |
 //! | The process's service: answer, set, remove; the password registered with `rb_diag` | [`service`] |
 //! | `environment.auth` (`Leader E A`, `omitted(secrets)`) | [`defs`], [`command`] |
+//! | Whether a credential is stored, and its user - never the password (`getBasicAuthStatus`) | [`status`] |
 //! | The answer to CEF's `GetAuthCredentials` (IO thread) | `cef_app/auth.rs` |
 //! | The shell's bar: environment, user, password; save or remove | `ui/src/basic-auth/` |
 //!
@@ -27,6 +28,7 @@ pub mod decide;
 pub mod defs;
 pub mod origin;
 pub mod service;
+pub mod status;
 pub mod store;
 #[cfg(windows)]
 mod store_windows;

@@ -6,7 +6,7 @@ name: Package repository
 # scripts/tests/package-repo.sh. Fixture packages and a throwaway key, no secret, nothing
 # published (adapted from rCommander's packages-repo.yml). rCommander's install jobs - real
 # packages of two releases installed and upgraded with apt and dnf in containers - join once
-# RB-110-01 ships the deb and rpm packages and scripts/ci-package-repo.sh.
+# RB-097-05 ships the deb and rpm packages and scripts/ci-package-repo.sh.
 on:
   push:
     branches: ["**", "!dependabot/**"]

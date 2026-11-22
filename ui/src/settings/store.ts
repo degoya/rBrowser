@@ -4,6 +4,8 @@
 // (another window, a file change; read again when it carries none, RB-090-36). The values of the `x-options` sources (RB-080-72: plugins, rules,
 // breakpoints) come apart from the schema and are read again on `settingsChanged` and
 // `settingSourcesChanged`, so a pick list follows the project while the window is open.
+// The last refusal is kept apart for the notice at the top of the window (RB-094-25): the
+// reasons under a field may lie below a long list, out of sight.
 
 import { ref, shallowRef } from 'vue';
 import type { IpcClient } from '../ipc/client';
@@ -24,11 +26,20 @@ export const WRITE_FAILED_KEY = 'settings.rejected.failed';
 
 export type SettingsStore = ReturnType<typeof createSettingsStore>;
 
+/** A write the core refused: the key and its reasons. */
+export interface Refusal {
+  key: string;
+  issues: SettingIssue[];
+}
+
 export function createSettingsStore(client: IpcClient) {
   const schema = shallowRef<SettingsSchema | null>(null);
   const values = shallowRef<ReadonlyMap<string, SettingValue>>(new Map());
   const issues = ref<Record<string, SettingIssue[]>>({});
   const loadError = ref<string | null>(null);
+  /** The last write refused, for the notice at the top; `null` once the key is saved or the
+   * notice closed. */
+  const refusal = shallowRef<Refusal | null>(null);
   /** Per source its values; a source not listed has none known (free entry). */
   const sources = shallowRef<Readonly<Record<string, DynamicData>>>({});
   const stops: (() => void)[] = [];
@@ -50,6 +61,14 @@ export function createSettingsStore(client: IpcClient) {
 
   async function refresh(): Promise<void> {
     const answer = await client.expect({ type: 'getSettings' }, 'settings');
+    take(answer.values);
+  }
+
+  /** Reads the schema again with the values: the plugins in effect changed, and their keys with
+   * them (RB-094-26). A failure keeps the schema shown. */
+  async function reloadSchema(): Promise<void> {
+    const answer = await client.expect({ type: 'getSettings', includeSchema: true }, 'settings');
+    schema.value = parseSchema(answer.schema);
     take(answer.values);
   }
 
@@ -89,10 +108,17 @@ export function createSettingsStore(client: IpcClient) {
     const next = { ...issues.value };
     if (list === null) {
       delete next[key];
+      if (refusal.value?.key === key) refusal.value = null;
     } else {
       next[key] = list;
+      refusal.value = { key, issues: list };
     }
     issues.value = next;
+  }
+
+  /** Closes the notice at the top; the reasons stay at the field. */
+  function dismissRefusal(): void {
+    refusal.value = null;
   }
 
   /** Writes `value` (`null`: reset) to `scope`; `false` with the reasons at the key when refused. */
@@ -175,11 +201,14 @@ export function createSettingsStore(client: IpcClient) {
     values,
     sources,
     issues,
+    refusal,
+    dismissRefusal,
     loadError,
     start,
     stop,
     refresh,
     refreshSources,
+    reloadSchema,
     withSource,
     set,
     reset,

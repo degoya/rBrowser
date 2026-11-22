@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// The request's tabs (RB-096-01): the parameters (the URL's query as rows, both kept in step),
+// The request's tabs (RB-096-01): the parameters (the URL's query as rows, both kept in step; a
+// row added stays until it has a name, RB-096-13),
 // the headers, the body, the auth, the checks and the options. The method, the URL and Send are
 // the fixed header's above the tabs (`RequestHeader.vue`, RB-096-11).
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import PanelTabs from '../../../../web-common/panel-ui/src/components/PanelTabs.vue';
 import AuthEditor from './AuthEditor.vue';
@@ -10,7 +11,7 @@ import BodyEditor from './BodyEditor.vue';
 import ChecksEditor from './ChecksEditor.vue';
 import KeyValueTable from './KeyValueTable.vue';
 import type { ApiRequest, Entry } from './model';
-import { joinUrl, splitUrl } from './query';
+import { joinUrl, rowsFor, splitUrl } from './query';
 
 const request = defineModel<ApiRequest>({ required: true });
 const t = usePanel().t;
@@ -34,11 +35,22 @@ function patch(next: Partial<ApiRequest>): void {
   request.value = { ...request.value, ...next };
 }
 
+/** The parameter table's rows: its own while they make the URL, the URL's when it changed. */
+const rows = ref<Entry[]>([]);
+watch(
+  () => request.value.url,
+  (url) => {
+    const next = rowsFor(url, rows.value);
+    if (next !== rows.value) rows.value = next.map((param) => ({ ...param, enabled: true }));
+  },
+  { immediate: true },
+);
 const params = computed<Entry[]>({
-  get: () => splitUrl(request.value.url).params.map((param) => ({ ...param, enabled: true })),
-  set: (rows) => {
+  get: () => rows.value,
+  set: (next) => {
+    rows.value = next;
     const split = splitUrl(request.value.url);
-    patch({ url: joinUrl(split.base, rows, split.hash) });
+    patch({ url: joinUrl(split.base, next, split.hash) });
   },
 });
 

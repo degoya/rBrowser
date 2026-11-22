@@ -18,7 +18,7 @@ author = "Your name"
 license = "MIT"
 # The first rBrowser release this plugin runs on; scripts/set-version.sh keeps the template's at the
 # release the SDK comes with.
-min_app_version = "0.9.6"
+min_app_version = "0.9.7-pre.1"
 
 [locales]
 en = "locales/en.json"

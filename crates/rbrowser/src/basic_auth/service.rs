@@ -124,6 +124,44 @@ impl BasicAuth {
         rb_util::lock(&self.attempts).reset();
         Ok(removed)
     }
+
+    /// Per environment of `config`, in its order, whether a credential is stored for its address
+    /// in the project `project`, and its user - never the password (RB-094-29). Without a
+    /// project, for an address that may not carry one, or when the store cannot be read: none.
+    #[must_use]
+    pub fn statuses(
+        &self,
+        project: Option<&str>,
+        config: &ProjectConfig,
+    ) -> Vec<rb_ipc::EnvironmentAuthStatus> {
+        config
+            .environments
+            .iter()
+            .map(|environment| {
+                let user =
+                    project.and_then(|project| self.stored_user(project, config, &environment.id));
+                match user {
+                    Some(user) => rb_ipc::EnvironmentAuthStatus::stored(&environment.id, &user),
+                    None => rb_ipc::EnvironmentAuthStatus::none(&environment.id),
+                }
+            })
+            .collect()
+    }
+
+    /// The user of the credential stored for the environment `id`; the password read with it is
+    /// registered with `rb_diag` and dropped.
+    fn stored_user(&self, project: &str, config: &ProjectConfig, id: &str) -> Option<String> {
+        let origin = origin_of(config, id).ok()?;
+        let credential = self
+            .store
+            .read(&target_name(project, &origin))
+            .inspect_err(|error| {
+                tracing::warn!(%error, "the Basic auth credential could not be read");
+            })
+            .ok()??;
+        rb_diag::register_secret(credential.password());
+        Some(credential.user().to_owned())
+    }
 }
 
 fn origin_of(config: &ProjectConfig, id: &str) -> Result<AuthOrigin, AuthError> {

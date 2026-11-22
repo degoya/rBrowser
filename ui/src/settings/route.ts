@@ -5,7 +5,9 @@
 // RB-080-13); with a tab the key names the category. A link to an area of the settings (a
 // notice's settings target that is a section or a key prefix, RB-090-85) names its section as
 // `?section=<id>` (`#/settings/capture?section=sitemap`): the page opens the section's tab and
-// highlights the section.
+// highlights the section. A link that opened nothing names its key (RB-094-26):
+// `#/settings?missing=<key>`, or `?pending=<key>` while the plugins still load, so the page says
+// which setting it did not find instead of silently showing another.
 
 import { onScopeDispose, ref, type Ref } from 'vue';
 
@@ -19,12 +21,37 @@ export interface PageRoute {
   /** The section of the category the page opens at and highlights (`?section=`); absent
    * without one. */
   section?: string;
+  /** The link that opened nothing (`?missing=`, `?pending=`); absent when the route opens a
+   * place. `key` is empty when the link named no setting at all. */
+  missing?: MissingLink;
+}
+
+/** A settings link that opened nothing (RB-094-26). */
+export interface MissingLink {
+  /** The link as the core named it; empty when it was no key at all. */
+  key: string;
+  /** The plugins still load: the page asks again once they are in. */
+  waiting: boolean;
 }
 
 export const DEFAULT_PAGE = 'settings';
 
 const PAGE = /^[a-z][a-z0-9-]*$/;
 const KEY = /^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)*$/;
+/** What a missing link may name: the characters of a key, a category or a section. */
+const NAMED = /^[A-Za-z0-9._-]{0,200}$/;
+
+/** The missing link of `params`, when the route opens no key. */
+function missingOf(params: URLSearchParams): MissingLink | undefined {
+  for (const [name, waiting] of [
+    ['pending', true],
+    ['missing', false],
+  ] as const) {
+    const key = params.get(name);
+    if (key !== null && NAMED.test(key)) return { key, waiting };
+  }
+  return undefined;
+}
 
 /** The route of `hash` (`#/settings/sync.scroll`); anything malformed opens the settings. */
 export function parseRoute(hash: string): PageRoute {
@@ -45,13 +72,20 @@ export function parseRoute(hash: string): PageRoute {
   if (parsedKey !== null && section !== null && PAGE.test(section)) {
     route.section = section;
   }
+  const missing = parsedKey === null ? missingOf(params) : undefined;
+  if (missing !== undefined) {
+    route.missing = missing;
+  }
   return route;
 }
 
 /** The hash of `route`. */
 export function routeHash(route: PageRoute): string {
   if (route.key === null) {
-    return `#/${route.page}`;
+    const missing = route.missing;
+    return missing === undefined
+      ? `#/${route.page}`
+      : `#/${route.page}?${missing.waiting ? 'pending' : 'missing'}=${missing.key}`;
   }
   const query = new URLSearchParams();
   if (route.tab !== null) query.set('tab', route.tab);

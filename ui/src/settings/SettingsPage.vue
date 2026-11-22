@@ -16,6 +16,9 @@
 // The search is a `UInput`, the categories a vertical `UNavigationMenu` and the sandbox warning a
 // `UAlert` (Nuxt UI, RB-080-88); in a narrow window the categories are a select above the content
 // (`SettingsNav.vue`, RB-080-96).
+// A link that opens no setting names its key at the top (`MissingLinkNotice`, RB-094-26), never
+// silently another page; the schema is read again when the plugins change, so their keys are
+// there, and a link that waited for the plugins is asked for again once they are in.
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UAlert from '@nuxt/ui/components/Alert.vue';
@@ -31,11 +34,14 @@ import DiagnosticsSave from './DiagnosticsSave.vue';
 import TrustPage from '../trust/TrustPage.vue';
 import { SETTINGS_ICONS } from './icons';
 import JsonPanel from './JsonPanel.vue';
-import { createInstalledLoader, refreshOnChange } from './plugins/loader';
+import RefusalNotice from './RefusalNotice.vue';
+import MissingLinkNotice from './MissingLinkNotice.vue';
+import { createInstalledLoader, isPluginsChanged, refreshOnChange } from './plugins/loader';
 import CatalogPanel from './plugins/CatalogPanel.vue';
 import PluginsList from './plugins/PluginsList.vue';
 import { CATALOG_TAB, countTabs, disabledIds, type PluginListTab, showBundled } from './plugins/pluginTabs';
-import { routeHash } from './route';
+import { type MissingLink, routeHash } from './route';
+import { shownValues } from './secret';
 import { type CategoryView, findDef, layoutOf } from './schema';
 import { filterOf } from './search';
 import SectionCard from './SectionCard.vue';
@@ -54,6 +60,8 @@ const props = defineProps<{
   routeTab?: string | null;
   /** The section the route opens and highlights (`?section=`), RB-090-85. */
   routeSection?: string | null;
+  /** The link that opened nothing (`?missing=`, `?pending=`), RB-094-26. */
+  routeMissing?: MissingLink | null;
   /** Whether the open project is trusted (Project > workspace trust shows it). */
   trusted?: boolean | null;
   /** The page width, for tests; the window's own width otherwise (RB-080-96). */
@@ -77,21 +85,29 @@ const highlightedSection = ref<string | null>(null);
 const showJson = ref(false);
 /** The wanted sub-tab of the selected category; `null` for its first. */
 const tab = ref<string | null>(null);
+/** The link that opened no setting, said at the top (RB-094-26); `null` once a place opened. */
+const notFound = ref<MissingLink | null>(null);
 
 // The installed plugins, for the plugin tabs and their counts (RB-080-80); asked for when
 // Plugins opens, so the list is fresh there.
 const plugins = createInstalledLoader(props.client);
 // RB-092-06: an install, update or removal takes effect live; a list shown follows it.
 let stopFollowing: (() => void) | null = null;
+// RB-094-26: the plugins changed - their keys come with the schema read again.
+let stopPlugins: (() => void) | null = null;
 
 onMounted(() => {
   void store.start();
   stopFollowing = refreshOnChange(props.client, plugins);
+  stopPlugins = props.client.on((message) => {
+    if (isPluginsChanged(message)) void followPlugins();
+  });
 });
 onUnmounted(() => {
   store.stop();
   plugins.stop();
   stopFollowing?.();
+  stopPlugins?.();
 });
 watch(selected, (id) => {
   if (id === PLUGINS_CATEGORY) plugins.refresh();
@@ -109,6 +125,14 @@ watch(selected, (id) => {
 
 const schema = computed(() => store.schema.value);
 const hasProject = computed(() => schema.value?.project !== null && schema.value !== null);
+/** The label of the setting a refused write was for; its key when the schema has none. */
+const refusalLabel = computed(() => {
+  const key = store.refusal.value?.key ?? '';
+  const def = schema.value === null ? undefined : findDef(schema.value, key);
+  return def === undefined ? key : t(def.labelKey);
+});
+/** The values of the JSON view: the shown keys' only, never a secret key's (RB-094-27). */
+const jsonValues = computed(() => shownValues(store.values.value.values(), schema.value?.defs ?? []));
 const searching = computed(() => query.value.trim() !== '' || onlyChanged.value);
 const allCategories = computed(() => (schema.value === null ? [] : layoutOf(schema.value)));
 /** The categories as navigation entries; the open one is the current page unless a search lists hits. */
@@ -199,6 +223,7 @@ function select(id: string, wantedTab: string | null = rememberedTab(id)): void 
   onlyChanged.value = false;
   highlighted.value = null;
   highlightedSection.value = null;
+  notFound.value = null;
 }
 
 /** Shows sub-tab `id` and puts it in the address, so back and forward walk the tabs and a copied
@@ -219,10 +244,15 @@ async function openSection(category: string, section: string): Promise<void> {
   document.querySelector(`[data-section="${category}.${section}"]`)?.scrollIntoView?.({ block: 'start' });
 }
 
-async function openAt(key: string | null, wantedTab: string | null = null, wantedSection: string | null = null): Promise<void> {
+/** Opens `key` (a setting or a category, with its tab or section); `false` when the schema
+ * holds no such place. */
+async function openAt(key: string | null, wantedTab: string | null = null, wantedSection: string | null = null): Promise<boolean> {
   const current = schema.value;
-  if (key === null || current === null) {
-    return;
+  if (current === null) {
+    return false;
+  }
+  if (key === null) {
+    return true;
   }
   const category = current.categories.find((each) => each.id === key);
   // With a tab or a section the address names the category, also where a key has the same
@@ -236,7 +266,7 @@ async function openAt(key: string | null, wantedTab: string | null = null, wante
       // opens the plugin list).
       select(key, wantedTab);
     }
-    return;
+    return category !== undefined;
   }
   // A key's tab is its section (`tabs.ts`), in Plugins the Settings tab; a category without
   // tabs ignores it.
@@ -249,12 +279,57 @@ async function openAt(key: string | null, wantedTab: string | null = null, wante
     document.getElementById(`setting-${def.key.replace(/\./g, '-')}`) ??
     field?.querySelector<HTMLElement>('input:not([disabled]), select, textarea, [tabindex="0"]');
   control?.focus();
+  return true;
+}
+
+/** The route opened last: a schema read again (the plugins changed, RB-094-26) opens the route
+ * only while it has found nothing yet, never back from where the person went since. */
+let opened: string | null = null;
+
+/** Opens the route's place, or names the link that opened nothing (RB-094-26). */
+async function openRoute(): Promise<void> {
+  if (schema.value === null) return;
+  const missing = props.routeMissing ?? null;
+  const key = props.routeKey;
+  const route = JSON.stringify([key, props.routeTab ?? null, props.routeSection ?? null, missing]);
+  if (route === opened) return;
+  if (missing !== null) {
+    opened = route;
+    notFound.value = missing;
+    // Asked until the plugins are in; then the link is asked for again (`followPlugins`).
+    if (missing.waiting) plugins.refresh();
+    return;
+  }
+  if (await openAt(key, props.routeTab ?? null, props.routeSection ?? null)) {
+    opened = route;
+  } else if (key !== null) {
+    // A key this page's schema does not hold (yet): said, and opened once a schema read again
+    // holds it.
+    notFound.value = { key, waiting: false };
+  }
+}
+
+/** The plugins changed or came in: the schema with their keys is read again, and a link that
+ * waited for them is asked for again - the core opens its place now, or names it missing. */
+async function followPlugins(): Promise<void> {
+  await store.reloadSchema().catch(() => undefined);
+  const waiting = notFound.value?.waiting === true ? notFound.value.key : '';
+  if (waiting !== '') {
+    await props.client.request({ type: 'openSettings', key: waiting }).catch(() => undefined);
+  }
 }
 
 watch(
-  [() => props.routeKey, () => props.routeTab, () => props.routeSection, schema],
-  ([key, routeTab, routeSection]) => void openAt(key, routeTab ?? null, routeSection ?? null),
+  [() => props.routeKey, () => props.routeTab, () => props.routeSection, () => props.routeMissing, schema],
+  () => void openRoute(),
   { immediate: true },
+);
+// A link waiting for the plugins: once the list says they are loaded, it is asked for again.
+watch(
+  () => plugins.list.value,
+  (list) => {
+    if (list !== null && !list.loading && notFound.value?.waiting === true) void followPlugins();
+  },
 );
 </script>
 
@@ -279,6 +354,14 @@ watch(
       <p v-if="store.loadError.value" class="text-sm text-error" role="alert">
         {{ t('settings.load_failed', { reason: store.loadError.value }) }}
       </p>
+      <!-- A refused write at the top as well (RB-094-25): its field may lie out of sight. -->
+      <RefusalNotice
+        v-if="store.refusal.value"
+        :refusal="store.refusal.value"
+        :label="refusalLabel"
+        @show="(key) => openAt(key)"
+        @dismiss="store.dismissRefusal()"
+      />
       <header class="flex flex-wrap items-end justify-between gap-2">
         <SectionHeader
           level="page"
@@ -300,7 +383,9 @@ watch(
       <p class="sr-only" role="status" data-testid="search-status">
         {{ searching ? t('settings.search.results', { n: resultCount }) : '' }}
       </p>
-      <JsonPanel v-if="showJson" :values="[...store.values.value.values()]" />
+      <!-- A link that opened no setting names its key (RB-094-26), never silently another page. -->
+      <MissingLinkNotice v-if="notFound" :link="notFound" @dismiss="notFound = null" />
+      <JsonPanel v-if="showJson" :values="jsonValues" />
 
       <p
         v-if="!searching && selected === 'project' && hasProject"

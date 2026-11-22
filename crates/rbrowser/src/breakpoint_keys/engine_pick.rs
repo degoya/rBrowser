@@ -1,6 +1,7 @@
 //! The engine badge and its menu (RB-080-33): what the badge at the right end of a view's label
 //! strip says - the engine's name, dimmed with the reason while the engine cannot run - and the
-//! rows of the menu a click on it opens: Chromium, Firefox, WebKit, Safari and iOS, the view's
+//! rows of the menu a click on it opens: Chromium, Firefox, WebKit (Playwright, RB-097-02),
+//! Safari and iOS, the view's
 //! engine checked, one that cannot run disabled with its reason (Safari and iOS outside macOS,
 //! RB-095-03, RB-095-04), iOS followed by a row per simulator model and device of the Mac
 //! (`crate::engines::ios::commands::device_items`). A choice runs `view.set_engine`
@@ -19,6 +20,9 @@ pub const BADGE_TOOLTIP: &str = "engines.badge.tooltip";
 pub const BADGE_UNAVAILABLE: &str = "engines.badge.unavailable";
 /// The i18n key of a menu row whose engine cannot run; `{engine}`, `{reason}`.
 pub const ROW_UNAVAILABLE: &str = "engines.pick.unavailable";
+/// The i18n key of WebKit's row: "WebKit (Playwright)", apart from Safari's row (RB-097-02); the
+/// badge's tooltip keeps "WebKit (not Safari)".
+pub const WEBKIT_ROW: &str = "engines.pick.webkit";
 
 /// The engines, in menu order.
 pub const ENGINES: [EngineKind; 5] = [
@@ -92,7 +96,7 @@ pub fn items(
     ENGINES
         .into_iter()
         .map(|engine| {
-            let name = rb_i18n::t(&name_key(engine));
+            let name = row_name(engine);
             let reason = reason(engine);
             let label = match &reason {
                 Some(reason) => {
@@ -111,12 +115,25 @@ pub fn items(
         .collect()
 }
 
-/// The badge of a view on `engine`; `reason` when the engine cannot run.
+/// The name of `engine`'s menu row: WebKit by its builder, Playwright, every other engine by
+/// its full name.
+fn row_name(engine: EngineKind) -> String {
+    match engine {
+        EngineKind::Webkit => rb_i18n::t(WEBKIT_ROW),
+        other => rb_i18n::t(&name_key(other)),
+    }
+}
+
+/// The badge of a view on `engine`; `reason` when the engine cannot run. The tooltip has the
+/// engine's full name ("WebKit (not Safari)").
 pub fn badge(engine: EngineKind, reason: Option<String>) -> Badge {
     let name = engine_name(engine);
+    let full = rb_i18n::t(&name_key(engine));
     let tooltip = match &reason {
-        Some(reason) => rb_i18n::t_with(BADGE_UNAVAILABLE, &[("engine", name), ("reason", reason)]),
-        None => rb_i18n::t_with(BADGE_TOOLTIP, &[("engine", name)]),
+        Some(reason) => {
+            rb_i18n::t_with(BADGE_UNAVAILABLE, &[("engine", &full), ("reason", reason)])
+        }
+        None => rb_i18n::t_with(BADGE_TOOLTIP, &[("engine", &full)]),
     };
     Badge {
         engine,

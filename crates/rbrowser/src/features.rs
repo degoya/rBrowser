@@ -95,6 +95,7 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
         .or_else(|| crate::first_run::ipc(core, message))
         .or_else(|| crate::bug_report::preview::ipc(core, message))
         .or_else(|| crate::mcp::setup::ipc(core, message))
+        .or_else(|| crate::basic_auth::status::ipc(core, message))
 }
 
 /// The core is up and the project's grid is built: each module starts what it needs (the

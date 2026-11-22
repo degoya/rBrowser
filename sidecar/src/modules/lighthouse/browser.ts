@@ -12,7 +12,9 @@
 // 3. an installed Google Chrome, then Microsoft Edge (part of every Windows 10 and 11), in the
 //    per-user and the machine-wide program folders. The folders come from the environment and,
 //    because that environment is an allowlist that once left `ProgramFiles` out (RB-080-58: no
-//    machine-wide Chrome or Edge was ever found), also from the system drive itself.
+//    machine-wide Chrome or Edge was ever found), also from the system drive itself. On macOS
+//    (RB-097-04) Chrome, Edge, then Chromium in `/Applications`, then in `~/Applications`; there
+//    an app bundle set as `CHROME_PATH` stands for the executable inside it.
 //
 // `searchBrowser` also answers every path it looked at; `describeSearch` makes the log line,
 // the profile folders masked (`%LOCALAPPDATA%`, `~`) so no Windows user name reaches the log.
@@ -47,11 +49,17 @@ const SHELL_DIRS: Partial<Record<NodeJS.Platform, string[]>> = {
 const CHROMIUM_DIRS: Partial<Record<NodeJS.Platform, string[]>> = {
   win32: ['chrome-win64/chrome.exe', 'chrome-win/chrome.exe'],
   linux: ['chrome-linux64/chrome', 'chrome-linux/chrome'],
+  // Chrome for Testing since Playwright 1.49 (RB-097-04), Chromium.app before.
   darwin: [
+    'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+    'chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
     'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium',
     'chrome-mac/Chromium.app/Contents/MacOS/Chromium',
   ],
 };
+
+/** The macOS apps Lighthouse runs in, in this order, each machine-wide before per-user. */
+const MAC_APPS = ['Google Chrome', 'Microsoft Edge', 'Chromium'];
 
 function pathApi(platform: NodeJS.Platform) {
   return platform === 'win32' ? win32 : posix;
@@ -127,12 +135,24 @@ function installed(deps: BrowserDeps): string[] {
     return [...chrome, ...edge];
   }
   if (deps.platform === 'darwin') {
-    return [
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-    ];
+    const roots = ['/Applications', path.join(deps.home, 'Applications')];
+    return MAC_APPS.flatMap((name) => roots.map((root) => appExecutable(path.join(root, `${name}.app`))));
   }
   return ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/microsoft-edge'];
+}
+
+/** The executable of the macOS app bundle `app`: `<app>/Contents/MacOS/<its name>`. */
+function appExecutable(app: string): string {
+  const bundle = app.replace(/\/+$/, '');
+  return posix.join(bundle, 'Contents', 'MacOS', posix.basename(bundle, '.app'));
+}
+
+/**
+ * The file `CHROME_PATH` names: on macOS an app bundle (what a file picker hands over, a folder)
+ * stands for its executable; everywhere else the path as it is.
+ */
+function chromePathFile(set: string, platform: NodeJS.Platform): string {
+  return platform === 'darwin' && /\.app\/*$/.test(set) ? appExecutable(set) : set;
 }
 
 /** What a search found and every path it looked at, in order. */
@@ -148,9 +168,10 @@ export function searchBrowser(deps: BrowserDeps): Search {
   const probed: string[] = [];
   const set = deps.env.CHROME_PATH;
   if (set !== undefined && set !== '') {
-    probed.push(set);
-    if (deps.isFile(set)) {
-      return { browser: { path: set, headless: true, source: 'CHROME_PATH' }, probed };
+    const file = chromePathFile(set, deps.platform);
+    probed.push(file);
+    if (deps.isFile(file)) {
+      return { browser: { path: file, headless: true, source: 'CHROME_PATH' }, probed };
     }
     return { browser: null, missing: set, probed };
   }

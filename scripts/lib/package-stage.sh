@@ -2,14 +2,18 @@
 #
 # What the Windows package carries beyond the app folder of scripts/lib/cef.sh (RB-010-15): the
 # front ends built, the pinned Node runtime, the sidecar, the console twin rbrowser.com,
-# rbrowser.exe's icon and version resource, crash_reporter.cfg, and the size report. Every download is held to its SHA-256 pin in scripts/lib/tool-versions.sh and cached in
-# the build cache, so a second package downloads nothing.
+# rbrowser.exe's icon and version resource, crash_reporter.cfg, and the size report; the macOS
+# bundle takes the front ends, its own Node runtime and the sidecar from here too (RB-097-01).
+# Every download is held to its SHA-256 pin in scripts/lib/tool-versions.sh and cached in the
+# build cache, so a second package downloads nothing.
 #
 #   source "$ROOT/scripts/lib/package-stage.sh"
 #   cache="$(rb_package_cache)"                           # ~/.cache/rbrowser/package
 #   rb_fetch_pinned <url> <file> <sha256>                 # download once, keep only the pin
 #   rb_build_frontend "$ROOT/agent"                       # npm ci --ignore-scripts, npm run build
 #   rb_stage_node "$ROOT" "$cache" "$STAGE"               # node\node.exe and node\LICENSE
+#   rb_stage_node_macos "$ROOT" "$cache" aarch64|x86_64 "$APP/Contents/Resources"
+#                                                         # node/bin/node, node/LICENSE (RB-097-01)
 #   rb_stage_sidecar "$ROOT/sidecar" "$STAGE/sidecar"     # dist\{main,flow-worker}.js, node_modules
 #   rb_sidecar_packages "$ROOT/sidecar/package-lock.json" # what it stages (a dry listing)
 #   rb_prune_sidecar_extras "$STAGE/sidecar/node_modules" # no *.map, *.d.ts, *.md, *.txt
@@ -20,7 +24,7 @@
 #   rb_package_sizes "$STAGE" "$ZIP"                      # MB per part
 #
 # Tests: scripts/tests/package-stage.sh (fakes for curl and rcedit), scripts/tests/package.sh
-# (a fake npm).
+# (a fake npm), scripts/tests/macos-node.sh (the macOS runtime).
 
 # shellcheck source=scripts/lib/tool-versions.sh
 source "$(dirname "${BASH_SOURCE[0]}")/tool-versions.sh"
@@ -37,7 +41,7 @@ rb_package_cache() {
 rb_fetch_pinned() {
     local url="$1" file="$2" pin="$3" actual
     if [[ -f "$file" ]]; then
-        actual="$(sha256sum "$file" | cut -d ' ' -f 1)"
+        actual="$(rb_sha256 "$file")"
         [[ "$actual" == "$pin" ]] && return 0
         echo "!! $file has SHA-256 $actual; the pin (scripts/lib/tool-versions.sh) is $pin." >&2
         echo "   remove $file and run again; if the source changed the file, check it first." >&2
@@ -50,7 +54,7 @@ rb_fetch_pinned() {
         echo "!! could not download $url" >&2
         return 1
     fi
-    actual="$(sha256sum "$file.part" | cut -d ' ' -f 1)"
+    actual="$(rb_sha256 "$file.part")"
     if [[ "$actual" != "$pin" ]]; then
         rm -f "$file.part"
         echo "!! $url has SHA-256 $actual; the pin (scripts/lib/tool-versions.sh) is $pin. Nothing was kept." >&2
@@ -88,6 +92,60 @@ with zipfile.ZipFile(archive) as package:
             out.write(source.read())
 PY
     echo "==> node $version staged (ZIP SHA-256 $RB_NODE_WIN_X64_SHA256)" >&2
+}
+
+# Stages the Node runtime of checkout $1 for the macOS app bundle (RB-097-01) into $4/node
+# (Contents/Resources/node: bin/node, executable, and LICENSE), where rb-sidecar looks for it: the
+# official tarball of .nvmrc's version for architecture $3 (aarch64: darwin-arm64, x86_64:
+# darwin-x64), held to its pin in scripts/lib/tool-versions.sh and cached in $2. A pin for another
+# version, or one that is no SHA-256, stops the run before any download.
+rb_stage_node_macos() {
+    local root="$1" cache="$2" arch="$3" resources="$4" version platform pin_name pin name archive
+    version="$(rb_node_version "$root")"
+    case "$arch" in
+        aarch64) platform=darwin-arm64 pin_name=RB_NODE_DARWIN_ARM64_SHA256 ;;
+        x86_64) platform=darwin-x64 pin_name=RB_NODE_DARWIN_X64_SHA256 ;;
+        *) echo "!! no Node runtime for the macOS architecture '$arch' (aarch64 or x86_64)" >&2; return 1 ;;
+    esac
+    pin="${!pin_name:-}"
+    if [[ -z "$version" || "${RB_NODE_DARWIN_VERSION:-}" != "$version" ]]; then
+        echo "!! the macOS pins are for node ${RB_NODE_DARWIN_VERSION:-(none)}, .nvmrc says ${version:-nothing}:" >&2
+        echo "   pin RB_NODE_DARWIN_VERSION, _ARM64_SHA256 and _X64_SHA256 in scripts/lib/tool-versions.sh" >&2
+        echo "   (https://nodejs.org/dist/v$version/SHASUMS256.txt)" >&2
+        return 1
+    fi
+    if [[ ! "$pin" =~ ^[0-9a-f]{64}$ ]]; then
+        echo "!! $pin_name is no SHA-256 ($pin): take it from https://nodejs.org/dist/v$version/SHASUMS256.txt" >&2
+        return 1
+    fi
+    name="node-v$version-$platform"
+    archive="$cache/$name.tar.gz"
+    rb_fetch_pinned "https://nodejs.org/dist/v$version/$name.tar.gz" "$archive" "$pin" || return 1
+    rm -rf "$resources/node"
+    mkdir -p "$resources/node/bin"
+    if ! python3 -I - "$archive" "$name" "$resources/node" << 'PY'; then
+import os
+import sys
+import tarfile
+
+archive, top, target = sys.argv[1], sys.argv[2], sys.argv[3]
+with tarfile.open(archive, "r:gz") as package:
+    for member, mode in (("bin/node", 0o755), ("LICENSE", 0o644)):
+        try:
+            source = package.extractfile(f"{top}/{member}")
+        except KeyError:
+            source = None
+        if source is None:
+            sys.exit(f"!! {archive} has no {top}/{member}")
+        path = os.path.join(target, member)
+        with source, open(path, "wb") as out:
+            out.write(source.read())
+        os.chmod(path, mode)
+PY
+        rm -rf "$resources/node"
+        return 1
+    fi
+    echo "==> node $version ($platform) staged (tar.gz SHA-256 $pin)" >&2
 }
 
 # Builds the front end in folder $1 from its lock file: `npm ci` without the packages' install

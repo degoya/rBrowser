@@ -4,7 +4,7 @@
 # the repository <owner>/rbrowser-packages, the tree of the signed apt and dnf repository. The
 # filing, pruning and signing is scripts/package-repo.sh; this is the gate, the clone and the push
 # around it. CI only, from the checkout root of the tag; the newest plain vX.Y.Z tag alone moves
-# the repository. Adapted from rCommander's scripts/release-repositories.sh. Until RB-110-01
+# the repository. Adapted from rCommander's scripts/release-repositories.sh. Until RB-097-05
 # brings the deb and rpm packages, `download` finds none and the job ends there with a notice.
 #
 #   scripts/release-repositories.sh gate       # output publish: true|false
@@ -49,7 +49,7 @@ download() {
     gh release download "${REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
         --pattern '*.deb' --pattern '*.rpm' --dir incoming || true
     if ! compgen -G 'incoming/*.deb' > /dev/null && ! compgen -G 'incoming/*.rpm' > /dev/null; then
-        echo "::notice::${REF_NAME} carries no .deb or .rpm (none before RB-110-01); the apt and dnf repository stays on its last release"
+        echo "::notice::${REF_NAME} carries no .deb or .rpm (none before RB-097-05); the apt and dnf repository stays on its last release"
         echo "found=false" >> "${GITHUB_OUTPUT}"
         exit 0
     fi

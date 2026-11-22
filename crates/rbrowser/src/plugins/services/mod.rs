@@ -60,8 +60,9 @@ pub struct AppServices {
     window: RwLock<Weak<Core>>,
     agent: ureq::Agent,
     local: LocalOrigins,
-    /// The settings schemas of the loaded plugins, by plugin id.
-    schemas: RwLock<Vec<(String, Value)>>,
+    /// The settings schemas of the loaded plugins, by plugin id; a new list for every load, so
+    /// the settings registry tells a change by the pointer (RB-094-26).
+    schemas: RwLock<Arc<Vec<(String, Value)>>>,
     /// The ids of the loaded project plugins.
     project_plugins: RwLock<BTreeSet<String>>,
     /// Every plugin's settings values, resolved once per change.
@@ -81,7 +82,7 @@ impl AppServices {
             window: RwLock::new(Weak::new()),
             agent: http::agent(Arc::clone(&local)),
             local,
-            schemas: RwLock::new(Vec::new()),
+            schemas: RwLock::new(Arc::default()),
             project_plugins: RwLock::new(BTreeSet::new()),
             values: settings::SettingsCache::default(),
             resets: resets::CdpResets::default(),
@@ -186,9 +187,18 @@ impl AppServices {
     /// The settings schemas the loaded plugins declare.
     pub fn set_schemas(&self, schemas: Vec<(String, Value)>) {
         if let Ok(mut held) = self.schemas.write() {
-            *held = schemas;
+            *held = Arc::new(schemas);
         }
         self.settings_changed();
+    }
+
+    /// The settings schemas the loaded plugins declare, as one shared list: the settings
+    /// registry of the window takes their keys (`crate::control::Core::settings_registry`).
+    pub fn schemas(&self) -> Arc<Vec<(String, Value)>> {
+        self.schemas
+            .read()
+            .map(|schemas| Arc::clone(&schemas))
+            .unwrap_or_default()
     }
 
     /// The settings schema plugin `plugin_id` declares, while it is loaded.
@@ -210,12 +220,7 @@ impl AppServices {
     fn values(&self) -> Arc<settings::PluginValues> {
         self.values.get_or_build(|| {
             let layers = self.layers();
-            let schemas = self
-                .schemas
-                .read()
-                .map(|schemas| schemas.clone())
-                .unwrap_or_default();
-            schemas
+            self.schemas()
                 .iter()
                 .map(|(id, schema)| (id.clone(), settings::plugin_values(id, schema, &layers)))
                 .collect()

@@ -3215,7 +3215,8 @@
             "project",
             "local"
           ],
-          "x-protected": true
+          "x-protected": true,
+          "x-restart": true
         },
         "ignoreCertificateErrors": {
           "type": "boolean",
@@ -3228,7 +3229,8 @@
             "local"
           ],
           "x-local-only": true,
-          "x-protected": true
+          "x-protected": true,
+          "x-restart": true
         },
         "proxy": {
           "type": [
@@ -3243,7 +3245,8 @@
             "local"
           ],
           "x-local-only": true,
-          "x-protected": true
+          "x-protected": true,
+          "x-restart": true
         }
       },
       "description": "Process-wide network settings; two keys are local-only ([`crate::LOCAL_ONLY_KEYS`]).",

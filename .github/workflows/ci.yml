@@ -66,7 +66,7 @@ jobs:
           node-version-file: .nvmrc
       - name: Install shellcheck, gitleaks and actionlint
         run: scripts/ci-tools.sh linters
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: cargo-deny@0.20.2
       # The preflight's `cargo deny --offline check` reads the advisory database fetched here.
@@ -84,9 +84,12 @@ jobs:
           path: ${{ runner.temp }}/check
           retention-days: 14
 
-  # Clippy (-D warnings) and every test on Linux (scripts/check.sh --rust), then the first-party
-  # plugins built for wasm32 as development packages with their conformance check
-  # (scripts/build-plugins.sh --unsigned; no key on a CI run).
+  # Clippy (-D warnings) and every test on Linux (scripts/check.sh --rust, the native app linked
+  # against CEF among them), then the first-party plugins built for wasm32 as development
+  # packages with their conformance check (scripts/build-plugins.sh --unsigned; no key on a CI
+  # run), then the Linux x64 test package (RB-097-05): the tarball, the deb and the rpm
+  # (scripts/package-linux.sh), the tarball's program started, the deb installed, started and
+  # removed again. The packages stay a week as artifacts of the run.
   linux:
     needs: preflight
     if: inputs.platforms != 'windows' && inputs.platforms != 'macos'
@@ -99,19 +102,61 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # CEF's run-time libraries (the tests link libcef.so), Xvfb, strip, rsvg-convert.
+      - name: Install the native Linux build's packages
+        run: scripts/ci-tools.sh linux
       - uses: ./.github/actions/setup-rust
         with:
           targets: wasm32-unknown-unknown
           cache-key: linux
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: nextest@0.9.151,wasm-tools@1.261.0
       - name: scripts/check.sh --rust
         env:
           RB_CHECK_LOGS: ${{ runner.temp }}/check
         run: scripts/check.sh --rust
+      # Into artifacts/plugins/, which the package takes them from.
       - name: The plugins, unsigned, with their conformance check
-        run: scripts/build-plugins.sh --unsigned
+        run: mkdir -p artifacts/plugins && scripts/build-plugins.sh --unsigned
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install nfpm (pinned)
+        run: scripts/release-channels.sh install-nfpm
+      # Builds the front ends it ships, then the app natively, and packs the tarball, the deb
+      # and the rpm.
+      - name: scripts/package-linux.sh --profile release-test --deb --rpm
+        run: scripts/package-linux.sh --profile release-test --plugins artifacts/plugins --deb --rpm
+      # The tarball's program answers without a display; the deb installs with chrome-sandbox
+      # root's and setuid, its program answers, and its removal leaves no folder behind.
+      - name: The package smoke
+        run: |
+          set -euo pipefail
+          tarballs=(artifacts/linux/rbrowser-*-linux-x64.tar.gz)
+          debs=(artifacts/linux/rbrowser-*-linux-x64.deb)
+          name="$(basename "${tarballs[0]}" .tar.gz)"
+          mkdir -p "${RUNNER_TEMP}/unpacked"
+          tar -xzf "${tarballs[0]}" -C "${RUNNER_TEMP}/unpacked"
+          "${RUNNER_TEMP}/unpacked/${name}/rbrowser" --version
+          sudo apt-get install -y -q "./${debs[0]}"
+          test -u /usr/lib/rbrowser/chrome-sandbox
+          test "$(stat -c %U /usr/lib/rbrowser/chrome-sandbox)" = root
+          test -f /usr/share/applications/rbrowser.desktop
+          test "$(cat /usr/lib/rbrowser/install-kind)" = deb
+          rbrowser --version
+          sudo apt-get remove -y -q rbrowser
+          test ! -e /usr/lib/rbrowser
+          test ! -e /usr/bin/rbrowser
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-x64-release-test
+          path: |
+            artifacts/linux/*.tar.gz
+            artifacts/linux/*.deb
+            artifacts/linux/*.rpm
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload the test report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -152,7 +197,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: cargo-xwin@0.23.1,wasm-tools@1.261.0
       - name: scripts/check.sh --windows
@@ -199,7 +244,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: windows
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: nextest@0.9.151
       - name: scripts/check.sh --rust
@@ -223,10 +268,12 @@ jobs:
           retention-days: 14
 
   # The macOS test build (RB-090-15): rBrowser.app for Apple Silicon and for Intel, each built
-  # natively, ad hoc signed and checked (scripts/package-macos.sh: the structure test and
-  # `codesign --verify --deep --strict`), kept a week as a ZIP and a DMG; then the app crate under
-  # clippy on macOS, where its cfg(target_os = "macos") code compiles - after the upload, so a
-  # lint never withholds a bundle. Only on a push to a `ci/*` branch or when asked for:
+  # natively with the pinned Node runtime and the sidecar in Contents/Resources (RB-097-01), ad hoc
+  # signed and checked (scripts/package-macos.sh: the structure test, `codesign --verify --deep
+  # --strict`, the bundled sidecar started once, a size report), kept a week as a ZIP and a DMG;
+  # then the app crate and rb-sidecar under clippy on macOS, where their cfg(target_os = "macos")
+  # code compiles, and rb-sidecar's tests (its bundle path search) - after the upload, so a lint
+  # never withholds a bundle. Only on a push to a `ci/*` branch or when asked for:
   #   gh workflow run ci.yml --ref ci/<name> -f platforms=macos
   macos:
     needs: preflight
@@ -259,7 +306,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: wasm-tools@1.261.0
       - name: The plugins, unsigned
@@ -277,4 +324,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Clippy on the app for macOS
-        run: cargo clippy --locked -p rbrowser --all-targets -- -D warnings
+        run: cargo clippy --locked -p rbrowser -p rb-sidecar --all-targets -- -D warnings
+      # rb-sidecar's bundle path search (layout_tests) and the rest of its tests on macOS.
+      - name: rb-sidecar's tests on macOS
+        run: cargo test --locked -p rb-sidecar

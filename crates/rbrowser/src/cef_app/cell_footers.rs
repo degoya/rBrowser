@@ -81,10 +81,10 @@ thread_local! {
 /// The footers drawn in the grid or on the canvas, as rectangles in screen DIP: where Ctrl +
 /// wheel zooms the canvas though no page hears it (RB-080-50, `board_pan.rs`).
 #[cfg_attr(
-    target_os = "macos",
+    any(target_os = "macos", target_os = "linux"),
     allow(
         dead_code,
-        reason = "used by the Windows-only canvas pan; its macOS twin is a no-op"
+        reason = "used by the Windows-only canvas pan; the macOS and Linux twins are no-ops"
     )
 )]
 pub fn drawn_rects() -> Vec<Rect> {

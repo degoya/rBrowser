@@ -160,3 +160,30 @@ fn defined_ids_reads_both_files() {
         vec!["a".to_owned(), "b".to_owned(), "c".to_owned()]
     );
 }
+
+/// RB-094-25: the merge joins the two files' `breakpoints` by id, so a breakpoint goes only when
+/// no file defines it any more - its entry leaves both.
+#[test]
+fn a_definition_leaves_both_files() {
+    let mut project_file = project();
+    let mut local = json!({
+        "breakpoints": [
+            { "id": "tablet", "width": 800, "height": 1000 },
+            { "id": "local-only", "width": 1600, "height": 1000 }
+        ]
+    });
+    let gone: BTreeSet<String> = ["tablet".to_owned()].into_iter().collect();
+    assert_eq!(
+        remove_definitions(&gone, &mut project_file, Some(&mut local)),
+        2
+    );
+    let after = defined_ids(&project_file, Some(&local));
+    assert!(!after.contains("tablet"), "{after:?}");
+    assert!(after.contains("local-only"));
+    assert!(after.contains("mobile"));
+    assert_eq!(
+        local["breakpoints"],
+        json!([{ "id": "local-only", "width": 1600, "height": 1000 }])
+    );
+    assert_eq!(remove_definitions(&gone, &mut project_file, None), 0);
+}

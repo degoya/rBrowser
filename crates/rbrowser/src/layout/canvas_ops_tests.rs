@@ -138,3 +138,20 @@ async fn the_partial_views_switch_holds_for_the_canvas_shown() {
     core.replace_user_settings(user);
     assert!(partial(core));
 }
+
+/// RB-094-23: the mode shown takes a changed `layoutModes.*` at once - the minimap and the
+/// space-bar pan of an open canvas follow without entering the mode again.
+#[tokio::test]
+async fn the_mode_shown_takes_the_changed_mode_settings_at_once() {
+    let setup = setup(config());
+    let core = &setup.core;
+    select_board(core);
+    let mut user = core.user_settings();
+    user.layout_modes.minimap = !user.layout_modes.minimap;
+    user.layout_modes.space_pan = !user.layout_modes.space_pan;
+    core.replace_user_settings(user.clone());
+    assert_eq!(
+        core.host().shell_state().modes.settings,
+        user.layout_modes.clamped()
+    );
+}

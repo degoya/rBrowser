@@ -103,7 +103,41 @@ export interface FakeCore {
   sources: Record<string, JsonValue>;
   commands: CommandInfo[];
   emit(message: CoreToShell): void;
+  /** Adds definitions to the schema the core answers from now on - a plugin loaded (RB-094-26). */
+  addDefs(more: SettingDef[]): void;
 }
+
+/** The API client's `secrets`, a key annotated `x-secret` (RB-094-26). */
+export const SECRETS: SettingDef = {
+  key: 'api-client.secrets',
+  category: 'network',
+  section: 'api-client',
+  order: 2,
+  scopeAllowed: ['local'],
+  localOnly: true,
+  protectedFromMcp: true,
+  labelKey: 'plugin.api-client.settings.secrets.label',
+  descriptionKey: 'plugin.api-client.settings.secrets.description',
+  helpKey: 'plugin.api-client.settings.secrets.help',
+  schema: { type: 'object', default: {}, 'x-secret': true },
+  plugin: 'api-client',
+};
+
+/** The API client's `benchRepeats`, as the core sends a plugin key once its plugin is loaded. */
+export const BENCH_REPEATS: SettingDef = {
+  key: 'api-client.benchRepeats',
+  category: 'network',
+  section: 'api-client',
+  order: 5,
+  scopeAllowed: ['user', 'project', 'local'],
+  localOnly: false,
+  protectedFromMcp: false,
+  labelKey: 'plugin.api-client.settings.benchRepeats.label',
+  descriptionKey: 'plugin.api-client.settings.benchRepeats.description',
+  helpKey: 'plugin.api-client.settings.benchRepeats.help',
+  schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+  plugin: 'api-client',
+};
 
 export const SAMPLE_COMMANDS: CommandInfo[] = [
   {
@@ -218,6 +252,8 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       }
       case 'runCommand':
         return { type: 'ack' };
+      case 'openSettings':
+        return { type: 'ack' };
       case 'revealDiagnostics':
         return { type: 'ack' };
       case 'getSettingSources':
@@ -289,5 +325,11 @@ export function createFakeCore(options: FakeCoreOptions = {}): FakeCore {
       return () => listeners.delete(listener);
     },
   };
-  return { client: new IpcClient(transport), sent, values, sources, commands, emit };
+  const addDefs = (more: SettingDef[]): void => {
+    for (const def of more) {
+      defs.push(def);
+      values.set(def.key, { key: def.key, value: def.schema.default ?? null, origin: 'default' });
+    }
+  };
+  return { client: new IpcClient(transport), sent, values, sources, commands, emit, addDefs };
 }

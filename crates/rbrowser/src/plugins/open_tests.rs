@@ -89,3 +89,25 @@ fn the_select_event_names_plugin_and_panel() {
         json!({ "select": { "plugin": "console", "panel": "console" } })
     );
 }
+
+/// RB-094-27: a tab asked for waits for the panel's next read, once, per plugin; a later ask
+/// replaces it.
+#[test]
+fn an_asked_tab_is_taken_once_by_its_plugin() {
+    ask_tab("tab-test-a", "variables");
+    ask_tab("tab-test-b", "import");
+    ask_tab("tab-test-a", "export");
+    assert_eq!(take_tab("tab-test-a").as_deref(), Some("export"));
+    assert_eq!(take_tab("tab-test-a"), None);
+    assert_eq!(take_tab("tab-test-b").as_deref(), Some("import"));
+    assert_eq!(take_tab("tab-test-c"), None);
+}
+
+/// The event an open panel reads its asked tab on: no tab in it, the panel asks for its state.
+#[test]
+fn the_tab_event_names_no_tab() {
+    assert_eq!(
+        tab_event("api-client"),
+        json!({ "event": { "plugin": "api-client", "message": { "tab": true } } })
+    );
+}

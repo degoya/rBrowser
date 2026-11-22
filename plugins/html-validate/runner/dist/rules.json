@@ -1,5 +1,5 @@
 {
-  "htmlValidateVersion": "11.18.0",
+  "htmlValidateVersion": "11.21.1",
   "preset": "html-validate:standard",
   "rules": [
     {

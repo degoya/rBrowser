@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { VueWrapper } from '@vue/test-utils';
-import type { CoreToShell } from '../ipc/protocol';
+import type { CoreToShell, EnvironmentAuthStatus } from '../ipc/protocol';
 import { mountWithShell, settle } from '../test/mountShell';
 import EnvironmentAuthBar from './EnvironmentAuthBar.vue';
 
@@ -10,13 +10,13 @@ afterEach(() => {
   current = null;
 });
 
-async function mounted() {
+async function mounted(query?: () => Promise<EnvironmentAuthStatus[]>) {
   let push: (message: CoreToShell) => void = () => undefined;
   const subscribe = (listener: (message: CoreToShell) => void) => {
     push = listener;
     return () => undefined;
   };
-  const result = await mountWithShell(EnvironmentAuthBar, { mount: { props: { subscribe } } });
+  const result = await mountWithShell(EnvironmentAuthBar, { mount: { props: { subscribe, query } } });
   current = result.wrapper;
   return { ...result, push: (message: CoreToShell) => push(message) };
 }
@@ -91,5 +91,88 @@ describe('the Basic auth bar', () => {
     push({ type: 'uiCommand', id: 'environment.auth' });
     await settle();
     expect(passwordOf(wrapper)).toBe('');
+  });
+});
+
+// RB-094-29: the bar says whether a credential is stored for the chosen environment, and for whom.
+describe('the Basic auth bar and the stored credentials', () => {
+  const STATUSES: EnvironmentAuthStatus[] = [
+    { environment: 'local', stored: false },
+    { environment: 'staging', stored: true, user: 'ada' },
+  ];
+
+  function stored(wrapper: VueWrapper): string {
+    return wrapper.get('[data-testid="basic-auth-stored"]').text();
+  }
+
+  function removeDisabled(wrapper: VueWrapper): boolean {
+    return wrapper.get('[data-testid="basic-auth-remove"]').attributes('disabled') !== undefined;
+  }
+
+  it('names the stored user of the chosen environment and offers Remove only then', async () => {
+    let asked = 0;
+    const { wrapper, push } = await mounted(() => {
+      asked += 1;
+      return Promise.resolve(structuredClone(STATUSES));
+    });
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    expect(asked).toBe(1);
+    expect(stored(wrapper)).toBe('No credentials stored');
+    expect(removeDisabled(wrapper)).toBe(true);
+    await wrapper.get('[data-testid="basic-auth-env-staging"]').trigger('click');
+    await settle();
+    expect(stored(wrapper)).toBe('Credentials stored for ada');
+    expect(removeDisabled(wrapper)).toBe(false);
+  });
+
+  it('follows a status the core pushes after a save or a removal elsewhere', async () => {
+    const { wrapper, push } = await mounted(() => Promise.resolve(structuredClone(STATUSES)));
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    push({ type: 'basicAuthStatus', environments: [{ environment: 'local', stored: true, user: 'grace' }] });
+    await settle();
+    expect(stored(wrapper)).toBe('Credentials stored for grace');
+    expect(removeDisabled(wrapper)).toBe(false);
+  });
+
+  it('keeps a pushed status over an answer the core sent before it', async () => {
+    let answer: (statuses: EnvironmentAuthStatus[]) => void = () => undefined;
+    const { wrapper, push } = await mounted(
+      () =>
+        new Promise<EnvironmentAuthStatus[]>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    push({ type: 'basicAuthStatus', environments: [{ environment: 'local', stored: true, user: 'grace' }] });
+    await settle();
+    answer(structuredClone(STATUSES));
+    await settle();
+    expect(stored(wrapper)).toBe('Credentials stored for grace');
+    expect(removeDisabled(wrapper)).toBe(false);
+  });
+
+  it('asks again each time it opens', async () => {
+    let asked = 0;
+    const { wrapper, push } = await mounted(() => {
+      asked += 1;
+      return Promise.resolve(structuredClone(STATUSES));
+    });
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    await wrapper.get('[data-testid="basic-auth-bar"]').trigger('keydown', { key: 'Escape' });
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    expect(asked).toBe(2);
+  });
+
+  it('shows nothing and keeps Remove when the core cannot say', async () => {
+    const { wrapper, push } = await mounted(() => Promise.reject(new Error('501')));
+    push({ type: 'uiCommand', id: 'environment.auth' });
+    await settle();
+    expect(stored(wrapper)).toBe('');
+    expect(removeDisabled(wrapper)).toBe(false);
   });
 });

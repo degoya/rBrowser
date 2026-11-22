@@ -138,7 +138,7 @@ describe('the todo panel', () => {
     await settle();
     expect(lastCall()).toMatchObject({
       tool: 'toggle',
-      args: { file: 'TODO.todo', rev: 'aaaaaaaaaaaaaaaa', line: 2, utcOffset: -new Date().getTimezoneOffset() },
+      args: { file: 'TODO.todo', rev: 'aaaaaaaaaaaaaaaa', line: 2, utcOffset: 0 - new Date().getTimezoneOffset() },
     });
     const done = { ...FILE, rev: 'bbbbbbbbbbbbbbbb', items: FILE.items.map((item) => (item.line === 2 ? { ...item, state: 'done' } : item)) };
     await answer({ line: 2, state: 'done', file: done });

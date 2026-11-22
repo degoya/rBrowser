@@ -2,6 +2,9 @@
 //! grid cell (RB-080-40) the view's context renders the breakpoint's width at the cell's factor
 //! (`set_cell`); a factor WebKit cannot change live means a new context and a new window, which
 //! the app binds to the cell again (`CellApplied::window_replaced`, `HandleEvent::WindowReplaced`).
+//! On macOS the window always stays a window of its own (RB-097-02, [`EMBEDDABLE`]): macOS lets
+//! no app take another app's window into its own (RB-110-10), so the view names no window to
+//! embed and its cell says why (`cell_info::text`).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -25,6 +28,18 @@ use crate::cdp::lock;
 
 /// Events buffered per view before the oldest are dropped.
 const EVENT_CAPACITY: usize = 64;
+
+/// Whether a WebKit window can be shown in its grid cell here: not on macOS (RB-097-02).
+pub const EMBEDDABLE: bool = !cfg!(target_os = "macos");
+
+/// The window the cell embeds: the top-level window of the view's own WebKit process
+/// (`process_id`), where windows can be [`EMBEDDABLE`] and the process is known.
+pub fn window_hint(process_id: Option<u32>, embeddable: bool) -> Option<NativeWindow> {
+    Some(NativeWindow {
+        process_id: process_id.filter(|_| embeddable)?,
+        window_class: None,
+    })
+}
 
 /// One WebKit view.
 pub struct WebkitView {
@@ -301,12 +316,9 @@ impl ViewHandle for WebkitView {
     }
 
     /// The window is the top-level window of the view's own WebKit process (RB-080-40); the
-    /// class of the shell's window is not relied on.
+    /// class of the shell's window is not relied on. None on macOS ([`window_hint`]).
     fn native_window(&self) -> Option<NativeWindow> {
-        Some(NativeWindow {
-            process_id: (*lock(&self.process_id))?,
-            window_class: None,
-        })
+        window_hint(*lock(&self.process_id), EMBEDDABLE)
     }
 
     fn events(&self) -> HandleEvents {

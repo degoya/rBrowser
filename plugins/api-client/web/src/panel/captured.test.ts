@@ -26,7 +26,7 @@ describe('a captured draft', () => {
     expect(open && draftNote(open, t)).toEqual({
       tone: 'warn',
       text: 'panel.capture.opened{"name":"GET /v1/me"} panel.capture.missing{"names":"a-test-cookie"} panel.capture.body.tooLong{} panel.capture.incomplete{}',
-      setting: { key: 'api-client.secrets', label: 'panel.openSetting{}' },
+      setting: { key: 'api-client.secrets', label: 'panel.openVariables{}' },
     });
   });
 

@@ -83,6 +83,7 @@ const SHELL_TYPES: Record<ShellToCore['type'], true> = {
   setup: true, // RB-091-05
   bugReport: true, // RB-093-04
   mcpSetup: true, // RB-091-09
+  getBasicAuthStatus: true, // RB-094-29
 };
 const CORE_TYPES: Record<CoreToShell['type'], true> = {
   ack: true,
@@ -130,6 +131,7 @@ const CORE_TYPES: Record<CoreToShell['type'], true> = {
   setup: true, // RB-091-05
   bugReport: true, // RB-093-04
   mcpSetup: true, // RB-091-09
+  basicAuthStatus: true, // RB-094-29
 };
 
 describe('the IPC contract fixtures', () => {

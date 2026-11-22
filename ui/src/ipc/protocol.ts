@@ -52,6 +52,8 @@ export type * from './bugReport';
 import type { BugReportCoreMessage, BugReportShellMessage } from './bugReport';
 export type * from './mcpSetup';
 import type { McpSetupCoreMessage, McpSetupShellMessage } from './mcpSetup';
+export type * from './basicAuth';
+import type { BasicAuthCoreMessage, BasicAuthShellMessage } from './basicAuth';
 import type { ExtensionEvent, ExtensionRequest } from './extensions';
 import type { SettingsEvent, SettingsRequest } from './settingsMessages';
 import type { NativeMenuEvent, NativeMenuRequest } from './nativeMenu';
@@ -290,7 +292,8 @@ export type ShellToCore =
   | SitemapGalleryRequest // `./sitemapGallery.ts` (RB-090-86)
   | SetupShellMessage // `./setup.ts` (RB-091-05)
   | BugReportShellMessage // `./bugReport.ts` (RB-093-04)
-  | McpSetupShellMessage; // `./mcpSetup.ts` (RB-091-09)
+  | McpSetupShellMessage // `./mcpSetup.ts` (RB-091-09)
+  | BasicAuthShellMessage; // `./basicAuth.ts` (RB-094-29)
 
 // ---- core -> shell ------------------------------------------------------------------------
 
@@ -475,4 +478,5 @@ export type CoreToShell =
   | SitemapGalleryEvent // `./sitemapGallery.ts` (RB-090-86)
   | SetupCoreMessage // `./setup.ts` (RB-091-05)
   | BugReportCoreMessage // `./bugReport.ts` (RB-093-04)
-  | McpSetupCoreMessage; // `./mcpSetup.ts` (RB-091-09)
+  | McpSetupCoreMessage // `./mcpSetup.ts` (RB-091-09)
+  | BasicAuthCoreMessage; // `./basicAuth.ts` (RB-094-29)

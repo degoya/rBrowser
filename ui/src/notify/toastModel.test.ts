@@ -32,6 +32,19 @@ describe('the error toast', () => {
     expect(other?.buttons.map((button) => button.kind)).toEqual(['settings']);
   });
 
+  it('names the panel place for a link to the private values, which opens no settings (RB-094-27)', () => {
+    const toast = toastOf(
+      failed({ messageKey: 'plugin.api-client.errors.secrets_unreadable', settingsKey: 'api-client.secrets' }),
+      { at: 1_000 },
+      2_000,
+    );
+    expect(toast?.buttons).toEqual([
+      { kind: 'settings', labelKey: 'shell.toast.apiVariables', message: { type: 'openSettings', key: 'api-client.secrets' } },
+    ]);
+    const setting = toastOf(failed({ settingsKey: 'engines.android.enabled' }), { at: 1_000 }, 2_000);
+    expect(setting?.buttons[0]?.labelKey).toBe('shell.toast.settings');
+  });
+
   it('leaves warnings, infos and errors nobody started to the status bar', () => {
     expect(toastOf(failed({ level: 'warning' }), { at: 1_000 }, 2_000)).toBeNull();
     expect(toastOf(failed({ level: 'info' }), { at: 1_000 }, 2_000)).toBeNull();

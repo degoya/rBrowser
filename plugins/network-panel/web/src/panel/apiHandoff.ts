@@ -87,11 +87,12 @@ function warningsOf(variables: readonly CapturedVariable[], bodiesMissing: numbe
   return parts;
 }
 
-/** Where the variables without a value get one: the API client's private values (RB-094-21). */
+/** Where the variables without a value get one: the API client's private values (RB-094-21). A
+ * link to this key opens the API client at its Variables tab, no setting (RB-094-27). */
 const SECRETS_SETTING = 'api-client.secrets';
 
 /** `line` linked to the private values while `variables` has one without a value: its text says
- * "Set them in Settings > Network > API client" (RB-094-21). */
+ * "Set them in API client › Variables" (RB-094-27). */
 function linked(line: StatusLine, variables: readonly CapturedVariable[], t: T): StatusLine {
   return missingOf(variables).length ? { ...line, setting: { key: SECRETS_SETTING, label: t('api.setting_link') } } : line;
 }

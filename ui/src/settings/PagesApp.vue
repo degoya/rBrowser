@@ -20,6 +20,6 @@ const projectOpen = computed(() => (shell.state.value === null ? null : shell.st
 
 <template>
   <UApp>
-    <component :is="page" :client="client" :route-key="route.key" :route-tab="route.tab" :route-section="route.section ?? null" :trusted="trusted" :project-open="projectOpen" />
+    <component :is="page" :client="client" :route-key="route.key" :route-tab="route.tab" :route-section="route.section ?? null" :route-missing="route.missing ?? null" :trusted="trusted" :project-open="projectOpen" />
   </UApp>
 </template>

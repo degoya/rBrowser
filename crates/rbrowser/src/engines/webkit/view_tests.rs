@@ -221,3 +221,29 @@ async fn in_a_cell_the_report_marks_the_pixel_ratio_as_approximated() {
     let report = view.apply_emulation(&emulation).await.expect("applied");
     assert!(!report.unsupported().contains(&"dpr".to_owned()));
 }
+
+#[test]
+fn the_window_is_named_by_its_process_where_it_can_sit_in_its_cell() {
+    let named = super::window_hint(Some(4242), true).expect("a window hint");
+    assert_eq!((named.process_id, named.window_class), (4242, None));
+    assert!(super::window_hint(None, true).is_none());
+}
+
+#[test]
+fn on_macos_the_window_stays_its_own_and_is_never_asked_into_its_cell() {
+    // RB-097-02: macOS lets no app take another app's window (RB-110-10), so the cell is never
+    // asked to embed it - no ten-second search, no failed embedding.
+    assert!(super::window_hint(Some(4242), false).is_none());
+    assert_eq!(super::EMBEDDABLE, !cfg!(target_os = "macos"));
+}
+
+#[tokio::test]
+async fn the_view_names_its_window_by_the_platform_rule() {
+    let fake = FakeSidecar::new();
+    let view = open(&fake).await;
+    assert_eq!(
+        view.native_window().map(|window| window.process_id),
+        super::window_hint(Some(FakeSidecar::pid_of(5)), super::EMBEDDABLE)
+            .map(|window| window.process_id)
+    );
+}

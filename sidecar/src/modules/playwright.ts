@@ -9,7 +9,7 @@ import { join } from 'node:path';
 
 import { ErrorCode, RpcError } from '../rpc.ts';
 import type { CallContext, Router } from '../router.ts';
-import { isPinnedBuild } from '../webkit/pin.ts';
+import { type Pin, WEBKIT_PIN, isPinnedBuild } from '../webkit/pin.ts';
 
 /** The browsers this method installs: Chromium is CEF and Firefox the installed one (BiDi). */
 export const INSTALLABLE = ['webkit'] as const;
@@ -32,12 +32,17 @@ export interface PlaywrightDeps {
   entries(): BrowserEntry[];
   /** A small file's text; null when it cannot be read. */
   readText(path: string): string | null;
+  /** This system's pinned WebKit archive (webkit/pin.ts `pinFor`, RB-097-02); undefined is the
+   *  Windows one, null none - WebKit is never installed then. */
+  webkitPin?: Pin | null;
   /** Runs the download; `onLine` gets every output line. Rejects on failure. */
   runInstall(browser: string, signal: AbortSignal, onLine: (line: string) => void): Promise<void>;
 }
 
-/** Reads playwright-core's `browsers.json`. */
-export function parseBrowsersJson(text: string): BrowserEntry[] {
+/** Reads playwright-core's `browsers.json`; `host` is Playwright's name of this system
+ *  (`mac14-arm64`, webkit/pin.ts `hostPlatform`), whose `revisionOverrides` entry wins
+ *  (RB-097-02: macOS 14 keeps an older WebKit). */
+export function parseBrowsersJson(text: string, host: string | null = null): BrowserEntry[] {
   const data = JSON.parse(text) as { browsers?: unknown };
   if (!Array.isArray(data.browsers)) {
     throw new Error('browsers.json has no browsers list');
@@ -48,8 +53,15 @@ export function parseBrowsersJson(text: string): BrowserEntry[] {
       return [];
     }
     const version = typeof e.browserVersion === 'string' ? e.browserVersion : null;
-    return [{ name: e.name, revision: e.revision, version }];
+    return [{ name: e.name, revision: overridden(e.revisionOverrides, host) ?? e.revision, version }];
   });
+}
+
+/** The revision `overrides` give `host`, when they give it one as text. */
+function overridden(overrides: unknown, host: string | null): string | null {
+  if (host === null || typeof overrides !== 'object' || overrides === null) return null;
+  const revision = (overrides as Record<string, unknown>)[host];
+  return typeof revision === 'string' ? revision : null;
 }
 
 /** The percentage of a Playwright progress line (`|■■■   | 42% of 55.3 MiB`), else null. */
@@ -63,7 +75,10 @@ function directory(browsersPath: string, entry: BrowserEntry): string {
 }
 
 function isInstalled(deps: PlaywrightDeps, entry: BrowserEntry, dir: string): boolean {
-  if (entry.name === 'webkit') return isPinnedBuild(dir, (path) => deps.readText(path));
+  if (entry.name === 'webkit') {
+    const pin = deps.webkitPin === undefined ? WEBKIT_PIN : deps.webkitPin;
+    return pin !== null && isPinnedBuild(dir, (path) => deps.readText(path), pin);
+  }
   return deps.readText(join(dir, 'INSTALLATION_COMPLETE')) !== null;
 }
 
