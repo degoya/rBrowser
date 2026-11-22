@@ -55,6 +55,16 @@ describe('the message history', () => {
     expect(items[0]?.text()).toContain('Setting');
   });
 
+  it('names the panel, not a setting, for a notice about a key that opens a panel (RB-094-27)', async () => {
+    const { wrapper } = await setup([
+      { id: 1, at: AT, level: 'error', messageKey: 'shell.error.no_answer', settingsKey: 'api-client.secrets' },
+    ]);
+    const item = wrapper.get('[data-testid="status-history-item"]');
+    expect(item.text()).toContain('API client › Variables');
+    expect(item.text()).not.toContain('Setting');
+    expect(item.find('button[aria-label="API client › Variables"]').exists()).toBe(true);
+  });
+
   it('takes a new message as it comes', async () => {
     const { wrapper, mock } = await setup();
     mock.emit({ type: 'statusMessage', id: 4, at: AT, level: 'success', messageKey: 'diagnostics.created' });

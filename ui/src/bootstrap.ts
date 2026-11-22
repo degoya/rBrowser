@@ -8,6 +8,7 @@ import { IpcClient, measureRoundtrip } from './ipc/client';
 import { createMockTransport } from './ipc/mockTransport';
 import { createCefTransport, hasCefQuery, type Transport } from './ipc/transport';
 import { EMULATION_QUERY_KEY } from './emulation/emulation';
+import { AUTH_STATUS_QUERY_KEY } from './basic-auth/basicAuth';
 import { createShellI18n } from './i18n';
 import { PALETTE_CLIENT_KEY } from './palette/palette';
 import { createShell, SHELL_KEY, type Shell } from './state/shell';
@@ -64,6 +65,10 @@ export function mountShell(root: Component, selector = '#app'): Shell {
     .provide(ACTIVITIES_KEY, createActivities(shell, activitySource(client)))
     .provide(EMULATION_QUERY_KEY, (view) =>
       client.expect({ type: 'getEmulation', view }, 'emulation').then((a) => a.emulation),
+    )
+    // The Basic auth bar's stored credentials, never a password (RB-094-29).
+    .provide(AUTH_STATUS_QUERY_KEY, () =>
+      client.expect({ type: 'getBasicAuthStatus' }, 'basicAuthStatus').then((a) => a.environments),
     )
     .use(createShellI18n())
     .use(ui)

@@ -48,6 +48,8 @@ pub use sinks::{I18nLocales, SchemaSink};
 
 /// The folder of the bundled plugins beside the executable.
 pub const BUNDLED_DIR: &str = "plugins";
+/// The folder of the compiled plugin code in the local folder (`plugins.compileCache`).
+pub const COMPILE_CACHE_DIR: &str = "plugin-cache";
 
 /// The plugins of this process in effect now, replaced whole by a live change (RB-092-06).
 static PLUGINS: snapshot::Snapshots<LoadedPlugins> = snapshot::Snapshots::new();
@@ -268,9 +270,30 @@ pub fn bundled() -> Arc<LoadedPlugins> {
     loaded
 }
 
+/// Where the compiled plugin code is kept while `plugins.compileCache` is on: `plugin-cache` in
+/// the local folder (`%LOCALAPPDATA%\rBrowser`, the portable `data\local`); `None` when it is off
+/// or there is no local folder - then nothing is read from or written to a cache (RB-094-30).
+#[must_use]
+pub fn compile_cache_dir(plugins: &rb_config::PluginSettings) -> Option<PathBuf> {
+    compile_cache_dir_in(plugins, rb_config::local_dir())
+}
+
+fn compile_cache_dir_in(
+    plugins: &rb_config::PluginSettings,
+    local: Option<PathBuf>,
+) -> Option<PathBuf> {
+    plugins
+        .compile_cache
+        .then_some(local)
+        .flatten()
+        .map(|dir| dir.join(COMPILE_CACHE_DIR))
+}
+
 /// The process's load: its folders under the user settings in effect now.
 fn load_process() -> LoadedPlugins {
     let user = crate::control::settings::load_user().settings;
+    // `plugins.compileCache` as it is now, for this load's compiles (RB-094-30).
+    rb_plugin_host::set_compile_cache(compile_cache_dir(&user.plugins).as_deref());
     let sources = process_sources();
     if sources.bundled.is_none() && sources.user.is_none() && sources.project_root.is_none() {
         return empty();

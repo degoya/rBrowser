@@ -18,7 +18,7 @@
 # the winget manifests as a pull request to microsoft/winget-pkgs.
 #
 # Unlike rCommander, a channel is rendered only when the release carries its archives: phase 1
-# ships the Windows ZIP alone, the Linux tarball and the macOS ZIPs arrive with RB-110-01 and
+# ships the Windows ZIP alone, the Linux tarball and the macOS ZIPs arrive with RB-097-05 and
 # RB-110-02. The Windows ZIP is required (Scoop and winget); the cask needs both macOS ZIPs and
 # the formula the Linux tarball, and one that is missing is skipped with a note. A channel with
 # only part of its archives (one macOS ZIP of two) is an incomplete release and refused.
@@ -200,7 +200,7 @@ fi
 if [[ "$formula" -eq 1 ]]; then
     render "$packaging/homebrew/rbrowser.rb.in" "$outdir/homebrew/Formula/rbrowser.rb"
 else
-    echo "skip the Homebrew formula: the release has no Linux archive (RB-110-01)"
+    echo "skip the Homebrew formula: the release has no Linux archive (RB-097-05)"
 fi
 if [[ "$cask" -eq 1 || "$formula" -eq 1 ]]; then
     render "$packaging/homebrew/README.md.in" "$outdir/homebrew/README.md"

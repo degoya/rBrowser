@@ -41,6 +41,30 @@ describe('the pages router', () => {
     );
   });
 
+  it('reads the link that opened nothing, named or not (RB-094-26)', () => {
+    expect(parseRoute('#/settings?missing=api-client.noSuch')).toEqual({
+      page: 'settings',
+      key: null,
+      tab: null,
+      missing: { key: 'api-client.noSuch', waiting: false },
+    });
+    expect(parseRoute('#/settings?pending=api-client.benchRepeats').missing).toEqual({
+      key: 'api-client.benchRepeats',
+      waiting: true,
+    });
+    // The core names no link that is no key; the page then says the link named none.
+    expect(parseRoute('#/settings?missing=').missing).toEqual({ key: '', waiting: false });
+    // What is not a key's characters is never shown, nor beside a key that opened.
+    expect(parseRoute('#/settings?missing=<b>x</b>').missing).toBeUndefined();
+    expect(parseRoute('#/settings/sync.scroll?missing=a').missing).toBeUndefined();
+    expect(routeHash({ page: 'settings', key: null, tab: null, missing: { key: 'no.such', waiting: false } })).toBe(
+      '#/settings?missing=no.such',
+    );
+    expect(routeHash({ page: 'settings', key: null, tab: null, missing: { key: 'a.b', waiting: true } })).toBe(
+      '#/settings?pending=a.b',
+    );
+  });
+
   it('drops anything that is no key', () => {
     expect(parseRoute('#/settings/<img onerror=x>')).toEqual({ page: 'settings', key: null, tab: null });
     expect(parseRoute('#/settings/a/b')).toEqual({ page: 'settings', key: null, tab: null });

@@ -213,6 +213,27 @@ fn every_default_binding_passes_the_macos_list() {
     );
 }
 
+/// The same defaults against the Linux reservations (RB-097-05): the leader and the direct
+/// shortcuts stay free of the Super key, the window manager's Alt and Ctrl+Alt keys and the
+/// workspaces.
+#[test]
+fn every_default_binding_passes_the_linux_list() {
+    let (plugins, problems) = bundled_plugin_defs();
+    let (mut defs, app_problems) = app_defs();
+    defs.extend(plugins);
+    let problems: Vec<String> = problems.into_iter().chain(app_problems).collect();
+    let issues: Vec<String> = lint_defaults(&defs, builtin_reserved(), Platform::Linux)
+        .iter()
+        .map(ToString::to_string)
+        .chain(problems)
+        .collect();
+    assert!(
+        issues.is_empty(),
+        "shortcut lint (Linux):\n{}",
+        issues.join("\n")
+    );
+}
+
 #[test]
 fn the_lint_reads_every_bundled_manifest() {
     let (defs, problems) = bundled_plugin_defs();

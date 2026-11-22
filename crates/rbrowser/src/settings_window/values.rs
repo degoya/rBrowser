@@ -98,6 +98,13 @@ pub fn resolve(def: &SettingDef, documents: &Documents) -> SettingValue {
         }
         None => (effective, Origin::Default),
     };
+    // A secret's values never leave for a page (RB-094-26), only their shape - should one ever
+    // reach a `settingsChanged`; the window lists no secret key ([`ordered`]).
+    let value = if def.is_secret() {
+        rb_settings::mask_secret(&value)
+    } else {
+        value
+    };
     SettingValue {
         key: def.key.clone(),
         value,
@@ -113,12 +120,25 @@ pub fn values(registry: &SettingsRegistry, documents: &Documents) -> Vec<Setting
         .collect()
 }
 
-/// Every definition, by category, then section, then `x-order`.
+/// Every key's value and origin in the window's order, a secret key (`x-secret`) included with
+/// its values masked: what MCP's `settings_get` reads (RB-094-27), not the window.
+pub fn all_values(registry: &SettingsRegistry, documents: &Documents) -> Vec<SettingValue> {
+    every_def(registry)
+        .map(|def| resolve(def, documents))
+        .collect()
+}
+
+/// Every definition the window shows, by category, then section, then `x-order`: a secret key
+/// (`x-secret`) is none of them (RB-094-27) - it stays in the registry for its plugin and MCP.
 pub fn ordered(registry: &SettingsRegistry) -> Vec<&SettingDef> {
+    every_def(registry).filter(|def| !def.is_secret()).collect()
+}
+
+/// Every definition by category, then section, then `x-order`, secrets included.
+fn every_def(registry: &SettingsRegistry) -> impl Iterator<Item = &SettingDef> {
     Category::ALL
         .into_iter()
         .flat_map(|category| registry.iter_category(category))
-        .collect()
 }
 
 /// The schema the settings window renders from: `{ version, categories: [{ id, sections }],

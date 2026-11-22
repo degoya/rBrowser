@@ -104,6 +104,20 @@ export function saveOf(blocks: readonly VarBlock[], answer: VariablesAnswer): Sa
   return { op: 'saveVariables', file, base: answer.file ?? null, private: patch, renamed, deleted };
 }
 
+/** Why `name` cannot be a new environment's name beside `taken` (RB-096-13), or `null`: `empty`,
+ * `taken`, or `bad` - longer than the core's 80 bytes or with a control character. */
+export type NameProblem = 'empty' | 'taken' | 'bad';
+
+const CONTROL = /[\u0000-\u001f\u007f]/;
+
+export function environmentNameProblem(name: string, taken: readonly string[]): NameProblem | null {
+  const trimmed = name.trim();
+  if (trimmed === '') return 'empty';
+  if (taken.includes(trimmed)) return 'taken';
+  if (new TextEncoder().encode(trimmed).length > 80 || CONTROL.test(trimmed)) return 'bad';
+  return null;
+}
+
 const VARIABLE = /\{\{\s*(\$?[A-Za-z_][A-Za-z0-9_.-]*)(?:\s+([^}]*?))?\s*\}\}/g;
 
 function textsOf(request: ApiRequest): string[] {

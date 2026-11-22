@@ -25,7 +25,7 @@ env:
   # The rBrowser release the plugin is checked against (scripts/set-version.sh keeps it at the
   # release the SDK comes with); its `rb-plugin-pack conformance` is the check to run once the
   # release ships the tool.
-  RBROWSER_VERSION: 0.9.6
+  RBROWSER_VERSION: 0.9.7
   # The commit of that release in github.com/degoya/rBrowser (`git ls-remote` its tag): the
   # packer is built from it, so a moved tag cannot change what runs with your key.
   RBROWSER_REV: REPLACE_WITH_THE_40_CHARACTER_COMMIT_OF_THE_RELEASE

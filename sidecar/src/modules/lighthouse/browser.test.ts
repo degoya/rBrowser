@@ -136,3 +136,58 @@ describe('the log line of a search', () => {
     expect(line).toBe('lighthouse: the browser of engines.lighthouseBrowserPath does not exist: ~\\chrome.exe');
   });
 });
+
+// RB-097-04: Lighthouse on macOS.
+describe('findBrowser on macOS', () => {
+  const mac = (files: string[], env: Record<string, string> = {}, dirs: Record<string, string[]> = {}) => ({
+    ...deps(files, env, 'darwin', dirs),
+    home: '/Users/me',
+  });
+  const root = '/Users/me/.local/state/rBrowser/ms-playwright';
+
+  it("finds Playwright's Chrome for Testing build (Playwright 1.5x and newer)", () => {
+    const chromium = `${root}/chromium-1200/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+    const d = mac([chromium], { PLAYWRIGHT_BROWSERS_PATH: root }, { [root]: ['webkit-2388', 'chromium-1200'] });
+    expect(findBrowser(d)).toEqual({ path: chromium, headless: true, source: 'playwright' });
+    const x64 = `${root}/chromium-1200/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+    expect(findBrowser(mac([x64], { PLAYWRIGHT_BROWSERS_PATH: root }, { [root]: ['chromium-1200'] }))?.path).toBe(x64);
+  });
+
+  it("prefers Playwright's headless shell on macOS", () => {
+    const shell = `${root}/chromium_headless_shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell`;
+    const d = mac([shell], { PLAYWRIGHT_BROWSERS_PATH: root }, { [root]: ['chromium_headless_shell-1200'] });
+    expect(findBrowser(d)).toEqual({ path: shell, headless: 'shell', source: 'playwright' });
+  });
+
+  it('falls back to Chrome, Edge, then Chromium, machine-wide before per-user', () => {
+    const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    const userChrome = '/Users/me/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    const edge = '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge';
+    const chromium = '/Users/me/Applications/Chromium.app/Contents/MacOS/Chromium';
+    expect(findBrowser(mac([chrome, userChrome, edge]))?.path).toBe(chrome);
+    expect(findBrowser(mac([userChrome, edge]))?.path).toBe(userChrome);
+    expect(findBrowser(mac([edge, chromium]))).toEqual({ path: edge, headless: true, source: 'installed' });
+    expect(findBrowser(mac([chromium]))?.path).toBe(chromium);
+  });
+
+  // A macOS file picker hands over the app bundle, a folder; its executable is inside.
+  it('takes an app bundle as CHROME_PATH and runs its executable', () => {
+    const app = '/Applications/Google Chrome Canary.app';
+    const binary = `${app}/Contents/MacOS/Google Chrome Canary`;
+    expect(findBrowser(mac([binary], { CHROME_PATH: app }))).toEqual({ path: binary, headless: true, source: 'CHROME_PATH' });
+    expect(findBrowser(mac([binary], { CHROME_PATH: `${app}/` }))?.path).toBe(binary);
+    const missing = searchBrowser(mac([], { CHROME_PATH: app }));
+    expect(missing.missing).toBe(app);
+    expect(missing.probed).toEqual([binary]);
+  });
+
+  it('takes an app bundle path as it is on Windows and Linux', () => {
+    expect(searchBrowser(deps([], { CHROME_PATH: '/opt/x.app' }, 'linux')).probed).toEqual(['/opt/x.app']);
+  });
+
+  it('masks the home folder in the log line', () => {
+    const line = describeSearch(searchBrowser(mac([])), mac([]));
+    expect(line).toContain('~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+    expect(line).not.toContain('/Users/me');
+  });
+});

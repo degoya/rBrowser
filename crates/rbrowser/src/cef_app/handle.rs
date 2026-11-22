@@ -1,5 +1,6 @@
 //! A native window handle as a plain number - comparable, `Send`, kept in the embedding's and
-//! the mouse hook's state: Windows' `HWND`, macOS' `NSView` pointer (RB-090-15).
+//! the mouse hook's state: Windows' `HWND`, macOS' `NSView` pointer (RB-090-15), an X11 window
+//! id on Linux (RB-097-05).
 
 use cef::sys::cef_window_handle_t;
 

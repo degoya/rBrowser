@@ -128,7 +128,7 @@ The complete list of contributors can be found at:
 
 ----------------------------------------
 
-html-validate 11.18.0 (MIT)
+html-validate 11.21.1 (MIT)
 
 MIT License
 

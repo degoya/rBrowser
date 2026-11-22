@@ -18,6 +18,7 @@ import { levelOf } from './level';
 import StatusLine from './StatusLine.vue';
 import CanvasZoom from './CanvasZoom.vue';
 import StatusCopyButton from './StatusCopyButton.vue';
+import { PANEL_PLACES } from '../notify/toastModel';
 
 const props = defineProps<{ client: IpcClient }>();
 const { t } = useI18n();
@@ -26,6 +27,8 @@ const feed = createStatusFeed(props.client);
 const current = computed(() => feed.current.value);
 const assertive = computed(() => current.value !== null && levelOf(current.value.level).live === 'assertive');
 const setting = computed(() => current.value?.settingsKey ?? null);
+// A key that opens a panel (RB-094-27) names the panel's place, not "Setting".
+const settingPlace = computed(() => (setting.value === null ? undefined : PANEL_PLACES[setting.value]));
 const action = computed(() => current.value?.action ?? null);
 const unread = computed(() => feed.unread.value);
 const historyLabel = computed(() =>
@@ -94,8 +97,8 @@ onBeforeUnmount(() => feed.stop());
         variant="link"
         size="xs"
         class="shrink-0 px-0"
-        :label="t('shell.status.open_setting')"
-        :aria-label="t('shell.status.open_setting_key', { key: setting })"
+        :label="t(settingPlace ?? 'shell.status.open_setting')"
+        :aria-label="settingPlace !== undefined ? t(settingPlace) : t('shell.status.open_setting_key', { key: setting })"
         :title="setting"
         data-testid="status-settings"
         @click="send({ type: 'openSettings', key: setting })"

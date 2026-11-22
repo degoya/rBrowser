@@ -164,6 +164,14 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
     "NSString",
 ] }
 
+# Linux (RB-097-05): CEF's libcef.so beside the program, found through the RUNPATH `$ORIGIN`
+# (build.rs). No crate feature: the Linux sandbox is the kernel's user namespaces or the setuid
+# `chrome-sandbox` of the distribution, neither linked.
+[target.'cfg(target_os = "linux")'.dependencies]
+cef = { version = "156.6.0", default-features = false }
+# `dup2` and `fcntl` for the CDP pipe on descriptors 3 and 4 (`cef_app/macos/pipe.rs`).
+libc = "0.2.191"
+
 [build-dependencies]
 # The version resource, the icon and the long-path manifest of rbrowser-nosandbox.exe.
 embed-resource.workspace = true

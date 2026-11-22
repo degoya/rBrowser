@@ -305,8 +305,10 @@ pub const GUARDS: &[Guard] = &[
     Guard {
         tool: "config_set",
         setting: None,
-        note: "Keys guarded by workspace trust (headers, network, plugins, extensions) are \
-               refused with code config_key_protected.",
+        note: "Keys guarded by workspace trust (headers, network, plugins, extensions), the \
+               protected keys of the core and of every installed plugin, and a write at a \
+               parent key that would remove or change one are refused with code \
+               config_key_protected.",
     },
     Guard {
         tool: "evaluate",

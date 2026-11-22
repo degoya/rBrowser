@@ -34,7 +34,7 @@ static LOG: OnceLock<rb_diag::LogHandle> = OnceLock::new();
 /// handler, `project_edit`). Two at once would each write over the other's key.
 pub(super) static ONE_CHANGE: Mutex<()> = Mutex::new(());
 
-/// Keeps the logger's handle, so a change of `logs.level` applies at once. Called once at start.
+/// Keeps the logger's handle, so a change of `logs.level` or the rotation applies at once. Called once at start.
 pub fn set_log_handle(handle: rb_diag::LogHandle) {
     if LOG.set(handle).is_err() {
         tracing::debug!("the log handle was handed over twice");
@@ -89,9 +89,9 @@ pub fn settings_answer(core: &Core, include_schema: bool) -> CoreToShell {
     let documents = documents(core);
     let registry = core.settings_registry();
     CoreToShell::Settings {
-        values: values(registry, &documents),
+        values: values(&registry, &documents),
         schema: include_schema.then(|| {
-            let mut payload = schema_payload(registry, &documents);
+            let mut payload = schema_payload(&registry, &documents);
             for (key, data) in dynamic::fields(core) {
                 dynamic::add(&mut payload, key, data);
             }
@@ -114,7 +114,7 @@ pub fn set_setting(
     // A program setting names an existing file (RB-080-58) - looked at only after the plan's
     // checks, so a caller refused the key (MCP: `x-protected`) learns nothing about the disk.
     let plan = write::plan(
-        core.settings_registry(),
+        &core.settings_registry(),
         &documents,
         key,
         value,
@@ -161,11 +161,15 @@ pub fn set_setting(
             document,
             also,
         }) => {
-            let Some(root) = documents.project.map(|project| project.root) else {
+            let Some(project) = documents.project else {
                 return rejected(key, write::refused(reason::NO_PROJECT));
             };
+            let root = &project.root;
+            // A renamed environment takes its references along (RB-094-24).
+            let (document, also, renamed) =
+                super::env_rename::carry(key, value, &project, file, document, also);
             let unwritable = |file: ConfigFile| {
-                let path = file.path(&root);
+                let path = file.path(root);
                 let refused = !writable(&path);
                 if refused {
                     tracing::warn!(path = %path.display(), "a config file that cannot be read is not written over");
@@ -175,20 +179,25 @@ pub fn set_setting(
             if unwritable(file) || also.as_ref().is_some_and(|(other, _)| unwritable(*other)) {
                 return rejected(key, write::refused(reason::NOT_SAVED));
             }
-            // The other file first: without the references of a removed breakpoint it is valid
-            // with the file on disk, which still defines the breakpoint (RB-090-61).
-            let writes = also
-                .iter()
-                .map(|(other, content)| (*other, content))
-                .chain([(file, &document)]);
-            for (target, content) in writes {
-                if let Err(error) = rb_config::write_config_file(&root, target, content) {
+            // Checked again after a rename, in the order that keeps both files valid on disk.
+            let writes =
+                match super::write_order::writes(&project, key, file, document, also, &renamed) {
+                    Ok(writes) => writes,
+                    Err(issues) => return rejected(key, issues),
+                };
+            for (target, content) in &writes {
+                if let Err(error) = rb_config::write_config_file(root, *target, content) {
                     tracing::warn!(%error, "a setting could not be written");
                     return rejected(key, write::refused(reason::NOT_SAVED));
                 }
             }
-            // The watcher reloads the config and the grid follows (`layout.gap` at once). No
-            // values: the write may take other keys along (RB-090-61), the pages read them again.
+            // In effect at once, not only when the watcher sees the write - it sees none over a
+            // WSL share (RB-094-23): the grid follows (`layout.gap`), the menus list a new
+            // environment. No values: the write may take other keys along (RB-090-61), the
+            // pages read them again.
+            super::env_rename::follow_in_effect(core, &renamed);
+            super::env_rename::rename_api_environments(root, &renamed);
+            crate::project_reload::after_write(core);
             changed(core, vec![key.to_owned()]);
             CoreToShell::Ack
         }
@@ -324,18 +333,23 @@ fn save_user(path: Option<&Path>, document: &Value) -> bool {
     }
 }
 
-/// Applies a changed `logs.level` to the running logger.
+/// Applies a changed `logs.level`, `logs.maxFileSizeMb` or `logs.maxFiles` to the running logger
+/// (the rotation: RB-094-28).
 fn apply_log_level(before: &UserSettings, after: &UserSettings) {
-    let (old, new) = (log_settings(before).level, log_settings(after).level);
-    if old == new {
+    let (old, new) = (log_settings(before), log_settings(after));
+    if old.level == new.level && old.rotation() == new.rotation() {
         return;
     }
-    match LOG.get() {
-        Some(handle) => {
-            if let Err(error) = handle.set_level(new) {
-                tracing::warn!(%error, "the log level could not be changed");
-            }
-        }
-        None => tracing::debug!("no running logger to change the level of"),
+    let Some(handle) = LOG.get() else {
+        tracing::debug!("no running logger to change");
+        return;
+    };
+    if old.level != new.level
+        && let Err(error) = handle.set_level(new.level)
+    {
+        tracing::warn!(%error, "the log level could not be changed");
+    }
+    if old.rotation() != new.rotation() {
+        handle.set_rotation(new.rotation());
     }
 }

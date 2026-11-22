@@ -105,6 +105,18 @@ describe('the status bar', () => {
     expect(mock.sent).toContainEqual({ type: 'openSettings', key: 'updates.cefAgeWarning' });
   });
 
+  it('names the panel, not a setting, for a notice about a key that opens a panel (RB-094-27)', async () => {
+    const { wrapper, mock } = await setup([
+      { id: 1, at: Date.now(), level: 'error', messageKey: 'shell.error.no_answer', settingsKey: 'api-client.secrets' },
+    ]);
+    const link = wrapper.get('[data-testid="status-settings"]');
+    expect(link.text()).toBe('API client › Variables');
+    expect(link.attributes('aria-label')).toBe('API client › Variables');
+    await link.trigger('click');
+    await flush();
+    expect(mock.sent).toContainEqual({ type: 'openSettings', key: 'api-client.secrets' });
+  });
+
   it("runs the message's command from its button and closes it (RB-090-71)", async () => {
     const args = { environment: 'local', origin: 'http://localhost:5173' };
     const { wrapper, mock } = await setup([

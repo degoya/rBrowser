@@ -3,7 +3,8 @@
 //! writer. The level comes from the setting `logs.level` and changes at runtime
 //! ([`LogHandle::set_level`], the settings window; `logs.level` is protected from MCP);
 //! `RUST_LOG`, when set, wins over it. Without `RUST_LOG`, rmcp stays at warn: it logs whole
-//! tool calls and answers at debug.
+//! tool calls and answers at debug. The rotation (`logs.maxFileSizeMb`, `logs.maxFiles`) changes
+//! at runtime as well ([`LogHandle::set_rotation`], RB-094-28).
 
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use tracing_subscriber::{EnvFilter, Registry, reload};
 
 use crate::error::DiagError;
 use crate::paths::{DiagPaths, LOG_FILE_NAME};
-use crate::rotate::{RotatingFile, RotationPolicy};
+use crate::rotate::{RotatingFile, RotationPolicy, SharedRotation};
 use crate::settings::{LogLevel, LogSettings};
 
 /// The log targets of the areas, so `RUST_LOG=cdp=debug` picks one:
@@ -83,11 +84,12 @@ fn env_filter(level: LogLevel, rust_log: Option<&str>) -> EnvFilter {
         .unwrap_or_else(|_| EnvFilter::new(filter_directives(level, None)))
 }
 
-/// Changes the level of a running logger.
+/// Changes the level and the rotation of a running logger.
 #[derive(Clone, Debug)]
 pub struct LogHandle {
     filter: reload::Handle<EnvFilter, Registry>,
     rust_log: Option<String>,
+    rotation: SharedRotation,
 }
 
 impl LogHandle {
@@ -96,6 +98,12 @@ impl LogHandle {
         self.filter
             .reload(env_filter(level, self.rust_log.as_deref()))
             .map_err(|error| DiagError::Filter(error.to_string()))
+    }
+
+    /// Applies `policy` to the log file from its next line on: a new size at the next write, a
+    /// smaller number of files at the next rotation (RB-094-28).
+    pub fn set_rotation(&self, policy: RotationPolicy) {
+        self.rotation.set(policy);
     }
 }
 
@@ -108,7 +116,7 @@ pub struct LogGuard {
 }
 
 impl LogGuard {
-    /// The handle that changes the level.
+    /// The handle that changes the level and the rotation.
     pub fn handle(&self) -> LogHandle {
         self.handle.clone()
     }
@@ -127,6 +135,7 @@ pub fn build(
                 source,
             }
         })?;
+    let rotation = file.rotation().clone();
     let (writer, worker) = NonBlockingBuilder::default()
         .lossy(false)
         .thread_name("rb-log")
@@ -141,6 +150,7 @@ pub fn build(
     let handle = LogHandle {
         filter: filter_handle,
         rust_log: rust_log.map(str::to_owned),
+        rotation,
     };
     Ok((
         dispatch,

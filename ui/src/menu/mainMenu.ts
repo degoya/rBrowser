@@ -373,6 +373,8 @@ export const APP_MENU: readonly MenuNode[] = [
   cmd('app.reload_config'),
   // The setup wizard again (RB-091-05).
   cmd('app.setup_wizard'),
+  // A key that applies at the next start, at once (RB-094-23).
+  cmd('app.restart'),
   // The AI agent's setup (RB-094-20: no feature behind a shortcut alone).
   sub('shell.menu.mcp', [cmd('mcp.setup'), setting('mcp.toggle', 'mcp.enabled'), cmd('mcp.copy_config')]),
   sub('shell.menu.cdp', [cmd('cdp.copy_endpoint'), cmd('cdp.rotate_token')]),

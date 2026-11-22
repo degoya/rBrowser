@@ -15,6 +15,7 @@ mod category;
 mod deeplink;
 mod registry;
 mod scope;
+mod secret;
 #[cfg(test)]
 mod test_support;
 
@@ -27,6 +28,7 @@ pub use category::{Category, SECTIONS, Section, section};
 pub use deeplink::{DeepLinkTarget, deep_link};
 pub use registry::SettingsRegistry;
 pub use scope::LayeredStore;
+pub use secret::{EditorPanel, SECRET_MASK, mask_secret};
 
 /// Schema annotation: the [`Category`] id of a key. Required on every key (the lint fails
 /// without it).
@@ -55,6 +57,13 @@ pub const X_HELP_KEY: &str = "x-help-key";
 /// Schema annotation on a string: which native dialog fills it, `"file"` or `"folder"`
 /// (RB-080-20); the window shows Browse beside the field.
 pub const X_INPUT: &str = "x-input";
+/// Schema annotation: `true` when the key's values are secrets (RB-094-26, RB-094-27): the key is
+/// not in the settings window at all, MCP's `settings_get` masks its values. Only on an
+/// `x-protected` key (the settings lint).
+pub const X_SECRET: &str = "x-secret";
+/// Schema annotation on an `x-secret` key: `{ "panel": "<id>", "tab": "<id>" }`, the panel of the
+/// key's plugin (and its tab) where its values are edited; a link to the key opens it (RB-094-27).
+pub const X_PANEL: &str = "x-panel";
 /// Schema annotation on a string: suggested values the window offers while the field stays
 /// free text (`"Win32"`, `"Europe/Berlin"`; RB-080-20).
 pub const X_OPTIONS: &str = "x-options";

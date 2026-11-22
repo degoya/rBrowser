@@ -12,7 +12,6 @@ use rb_commands::{
 use serde_json::{Value, json};
 
 use crate::host::Host;
-use crate::project;
 
 /// Why the zoom commands have no MCP tool.
 const ZOOM_OMITTED: &str = "ui-only: grid zoom";
@@ -69,13 +68,9 @@ pub fn run(host: &Host, id: &str, _args: Value) -> Result<Value, CommandError> {
 }
 
 /// Reads the project config again and applies it; views whose cell keeps its breakpoint stay.
+/// The files read are remembered as applied (`project_reload::reload`, RB-094-23).
 pub fn reload_config(host: &Host) -> Result<(), String> {
-    let Some(root) = host.project_root() else {
-        return Ok(());
-    };
-    let config = project::load(&root).map_err(|error| error.to_string())?;
-    host.open_config(config, Some(root))
-        .map_err(|error| error.to_string())
+    crate::project_reload::reload(host)
 }
 
 /// Registers every command with `registry`; returns what the registry refused.

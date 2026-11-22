@@ -21,7 +21,7 @@ fn merges_the_messages_of_every_view_with_their_breakpoints() {
     let mut host = host();
     let value = answer(&mut host, "", false);
     assert_eq!(value["engine"], json!("builtin"));
-    assert_eq!(value["htmlValidate"], json!("11.18.0"));
+    assert_eq!(value["htmlValidate"], json!("11.21.1"));
     assert_eq!(value["truncated"], json!(false));
     let findings = value["findings"].as_array().expect("findings");
     assert_eq!(findings.len(), 3);

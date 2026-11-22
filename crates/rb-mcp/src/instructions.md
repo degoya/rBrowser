@@ -55,7 +55,9 @@ Interacting and sync:
 
 Changing the config: `config_set` writes one key of `.rbrowser/config.json`;
 `breakpoint_add`, `breakpoint_update` and `breakpoint_remove` edit the breakpoints. Keys that
-workspace trust guards (headers, network, plugins, extensions) are refused.
+workspace trust guards (headers, network, plugins, extensions) and protected keys (of the core
+and of every installed plugin) are refused, and so is a write at a parent key that would remove
+or change one.
 
 Flows: `flow_list` lists the project's Playwright flows (`.rbrowser/flows/*.ts`) and whether
 the workspace is trusted; `flow_run` runs one in every chosen view at once and answers each

@@ -9,7 +9,9 @@
 // the row's hover or focus; `settings.showKeys` prints it under the title as before. The choices
 // of the control show names, a plugin key's from its plugin's catalogue, the ids beside them
 // with `settings.showKeys` (`optionNames.ts`, RB-090-16). Where a change is saved is a Nuxt UI
-// `URadioGroup` in a row (RB-080-88); a locked scope is a disabled item with its reason.
+// `URadioGroup` in a row (RB-080-88); a locked scope is a disabled item with its reason. A key
+// that applies only at the next start says so, with "Restart now" once its change was saved
+// (`restartPending`, from the section's `restartOffers.ts`, RB-094-23).
 import { computed, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
@@ -17,6 +19,7 @@ import UButton from '@nuxt/ui/components/Button.vue';
 import URadioGroup from '@nuxt/ui/components/RadioGroup.vue';
 import type { JsonValue, Origin, PathKind, Scope, SettingIssue } from '../ipc/protocol';
 import FieldControl from './FieldControl.vue';
+import RestartNotice from './RestartNotice.vue';
 import { helpTextOf } from './help';
 import { SETTINGS_ICONS } from './icons';
 import { OPTION_NAMING } from './optionNames';
@@ -33,8 +36,10 @@ const props = defineProps<{
   pickPath?: (kind: PathKind) => Promise<string | null>;
   /** Print the key under the title (`settings.showKeys`); off it is in the tooltip only. */
   showKeys?: boolean;
+  /** A change of this restart key was saved: "Restart now" shows (RB-094-23). */
+  restartPending?: boolean;
 }>();
-const emit = defineEmits<{ set: [value: JsonValue, scope: Scope]; reset: [] }>();
+const emit = defineEmits<{ set: [value: JsonValue, scope: Scope]; reset: []; restart: [] }>();
 const { t } = useI18n();
 provide(OPTION_NAMING, { plugin: () => props.def.plugin, showKeys: () => props.showKeys === true });
 
@@ -75,6 +80,8 @@ const reasons = computed(() => [
   ...new Set(choices.value.flatMap((choice) => (choice.reasonKey === undefined ? [] : [choice.reasonKey]))),
 ]);
 const locked = computed(() => props.def.lockedKey !== undefined);
+/** The key applies only at the next start (RB-094-23); saved here, the restart is offered. */
+const needsRestart = computed(() => props.def.schema['x-restart'] === true);
 const disabled = computed(() => scope.value === null || locked.value);
 
 function onScope(next: unknown): void {
@@ -82,6 +89,10 @@ function onScope(next: unknown): void {
   if (choice !== undefined) {
     scope.value = choice.scope;
   }
+}
+
+function onReset(): void {
+  emit('reset');
 }
 
 function onUpdate(value: JsonValue): void {
@@ -152,7 +163,7 @@ function onUpdate(value: JsonValue): void {
           :aria-label="t('settings.reset_field', { label })"
           :title="t('settings.reset_field', { label })"
           data-testid="reset"
-          @click="emit('reset')"
+          @click="onReset"
         />
       </div>
     </div>
@@ -166,6 +177,7 @@ function onUpdate(value: JsonValue): void {
       {{ help }}
     </p>
     <p v-if="def.lockedKey" class="text-xs text-warning" data-testid="locked">{{ t(def.lockedKey) }}</p>
+    <RestartNotice v-if="needsRestart" :changed="restartPending === true" @restart="emit('restart')" />
 
     <FieldControl
       :schema="def.schema"

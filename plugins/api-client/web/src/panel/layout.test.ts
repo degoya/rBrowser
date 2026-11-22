@@ -3,7 +3,7 @@
 // context menu by key, the Variables tab, a `{{$secret}}` without a value set from the panel, a
 // settings link.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { $, calls, chooseTab, posted, reply, SAVED, settle, start, stop, type, valueOf } from './harness';
+import { $, calls, chooseTab, posted, reply, SAVED, selectedSide, settle, start, stop, type, valueOf } from './harness';
 
 const STRINGS = {
   'plugin.api-client.panels.api-client': 'API client',
@@ -13,9 +13,16 @@ const STRINGS = {
   'plugin.api-client.panel.dialog.deleteFolder': 'Delete the collection {folder} with {count, plural, one {# request} other {# requests}} in it?',
   'plugin.api-client.panel.secretValue.title': 'No value yet: {names}',
   'plugin.api-client.panel.openSetting': 'Open the setting',
+  'plugin.api-client.panel.openVariables': 'Open Variables',
+  'plugin.api-client.panel.side.requests': 'Requests',
+  'plugin.api-client.panel.side.variables': 'Variables',
+  'plugin.api-client.panel.side.import': 'Import',
+  'plugin.api-client.panel.side.export': 'Export',
+  'plugin.api-client.panel.secretValue.description': 'Set it here or as an RB_SECRET_ variable.',
+  'plugin.api-client.panel.variables.description': 'The values the requests take.',
   'plugin.api-client.panel.bench.hint': 'Sends it a few times (Settings > Network > API client).',
   'plugin.api-client.panel.allow.title': 'Send requests to {host}?',
-  'plugin.api-client.errors.secrets_unreadable': 'The private values (Settings > Network > API client) do not read: {reason}',
+  'plugin.api-client.errors.secrets_unreadable': 'The private values (API client › Variables) do not read: {reason}',
   'plugin.api-client.errors.too_many_hosts': 'The project allows the most hosts it can keep; remove one in Settings > Network > API client.',
   'plugin.api-client.errors.host_not_allowed': 'Not allowed: {host}.',
 };
@@ -51,7 +58,7 @@ describe('the collections', () => {
     $('#new-folder')?.click();
     await settle();
     await type('#tree-dialog-text', 'orders');
-    ($('#tree-dialog') as HTMLFormElement).requestSubmit();
+    $('#tree-dialog-ok')?.click();
     await settle();
     expect(calls('createFolder')[0]?.args?.op).toEqual({ op: 'createFolder', folder: 'orders' });
     await reply('createFolder', { folder: 'orders' });
@@ -79,7 +86,7 @@ describe('the collections', () => {
     await settle();
     expect($('#tree-dialog')?.textContent).toContain('Delete the collection users with 1 request in it?');
     expect(calls('deleteFolder')).toHaveLength(0);
-    ($('#tree-dialog') as HTMLFormElement).requestSubmit();
+    $('#tree-dialog-ok')?.click();
     await settle();
     expect(calls('deleteFolder')[0]?.args?.op).toEqual({ op: 'deleteFolder', folder: 'users' });
   });
@@ -118,7 +125,7 @@ describe('variables and secrets', () => {
     $('[data-secret-name="password"] button')?.click();
     await settle();
     await type('#secret-value', 'pw-2');
-    ($('#secret-value')?.closest('form') as HTMLFormElement).requestSubmit();
+    $('#secret-save')?.click();
     await settle();
     expect(calls('setSecret')[0]?.args?.op).toEqual({ op: 'setSecret', name: 'password', value: 'pw-2', environment: 'staging' });
   });
@@ -153,19 +160,33 @@ describe('settings links (RB-094-21)', () => {
     expect(lastPost()).toEqual({ target: 'host', action: 'open_settings', key: 'api-client.allowedHosts' });
   });
 
-  it('links a failure that names the settings: secrets_unreadable and too_many_hosts', async () => {
-    for (const [code, key] of [
-      ['secrets_unreadable', 'api-client.secrets'],
-      ['too_many_hosts', 'api-client.allowedHosts'],
+  it('links a failure that names its place: secrets_unreadable to Variables, too_many_hosts to the settings', async () => {
+    for (const [code, key, label] of [
+      ['secrets_unreadable', 'api-client.secrets', 'Open Variables'],
+      ['too_many_hosts', 'api-client.allowedHosts', 'Open the setting'],
     ] as const) {
       $('#refresh')?.click();
       await settle();
       await reply('state', null, { error: `plugin.api-client.errors.${code}`, params: { reason: 'x' } });
       await reply('variables', { file: null, private: {}, baseUrls: {} });
       expect($(`[data-testid="setting-link-${key}"]`), code).not.toBeNull();
+      expect($(`[data-testid="setting-link-${key}"]`)?.textContent, code).toContain(label);
       $(`[data-testid="setting-link-${key}"]`)?.click();
       expect(lastPost()).toEqual({ target: 'host', action: 'open_settings', key });
     }
+  });
+
+  it('opens Variables from the question about a $secret without a value, and the tab links nowhere', async () => {
+    await type('#url', 'https://a.test/?k={{$secret password}}');
+    await reply('secrets', { missing: ['password'] });
+    const before = posted.length;
+    $('#secrets-missing [data-variables-link]')?.click();
+    await settle();
+    expect(posted.slice(before).filter((message) => message.action === 'open_settings')).toEqual([]);
+    expect(selectedSide()).toBe('Variables');
+    expect($('#variables [data-setting]')).toBeNull();
+    expect($('#variables [data-variables-link]')).toBeNull();
+    expect($('#variables')?.textContent).toContain('The values the requests take.');
   });
 });
 

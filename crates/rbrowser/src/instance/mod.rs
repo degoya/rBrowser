@@ -13,13 +13,16 @@ pub mod recent;
 pub mod screenshot;
 pub mod server;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use rb_commands::CommandError;
 use serde_json::{Value, json};
 
 use crate::control::Core;
 use protocol::Request;
+
+/// This process's listener, kept for [`stop_listening`].
+static LISTENING: Mutex<Option<server::Listening>> = Mutex::new(None);
 
 /// Runs the command `id` when it is this module's (`project.open_recent`); `None` otherwise.
 pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, CommandError>> {
@@ -50,11 +53,23 @@ pub fn on_start(core: &Core) {
         handle(&core, request)
     });
     match server::start(&local, &root, handler) {
-        Ok(()) => tracing::info!(project = %root.display(), "listening for calls for this project"),
+        Ok(listening) => {
+            *rb_util::lock(&LISTENING) = Some(listening);
+            tracing::info!(project = %root.display(), "listening for calls for this project");
+        }
         Err(error) => tracing::warn!(
             %error,
             "the instance channel did not start; a second call for this project starts its own window"
         ),
+    }
+}
+
+/// Stops this process's listener ([`server::Listening::stop`]): the quit of `app.restart` runs
+/// it before the next start (RB-094-23). Nothing when none listens.
+pub fn stop_listening() {
+    let listening = rb_util::lock(&LISTENING).take();
+    if let Some(listening) = listening {
+        listening.stop();
     }
 }
 

@@ -41,7 +41,7 @@
         "nothing_to_export": "There is no saved request to export there.",
         "outside": "A body's file lies in the project, outside .git and outside rBrowser's own files.",
         "secrets_not_saved": "The private values could not be kept in the project's local settings (config.local.json).",
-        "secrets_unreadable": "The private values (Settings > Network > API client) do not read: {reason}",
+        "secrets_unreadable": "The private values (API client › Variables) do not read: {reason}",
         "send_failed": "The request got no answer: {reason}",
         "too_deep": "\"{folder}\" would put its subfolders deeper than {most, plural, one {# level} other {# levels}}, which the API client does not list; choose a folder higher up.",
         "too_many_captures": "At most {most} captured requests are taken at once; filter the list further.",
@@ -64,8 +64,9 @@
         "allow": {
           "description": "Only you can allow a host. The choice is kept for this project on this machine (config.local.json); take it back in Settings > Network > API client.",
           "no": "Not now",
-          "title": "Send requests to {host} from this project?",
-          "yes": "Allow and send"
+          "title": "Allow {host} for this project?",
+          "yes": "Allow and send",
+          "yesRun": "Allow and run again"
         },
         "auth": {
           "authorizationCode": "Authorization code with PKCE",
@@ -147,15 +148,15 @@
             "unread": "The view could not hand over the request's body (another engine, a blob or a stream); add it yourself."
           },
           "incomplete": "The capture held the address shortened or masked (***); check the URL before you send.",
-          "missing": "No value yet for {names}: set it in Settings > Network > API client (private values) or as an RB_SECRET_ variable.",
+          "missing": "No value yet for {names}: set it in API client › Variables (as a private value) or as an RB_SECRET_ variable.",
           "opened": "Opened {name} from the network panel; not saved yet.",
-          "replaced": "{names} got a new value in place of the one kept before.",
           "replace": {
             "description": "The editor holds changes that are not saved. Replace drops them; Keep mine leaves the editor as it is, and the network panel can open the request again.",
             "no": "Keep mine",
             "title": "Replace your unsaved changes with {name} from the network panel?",
             "yes": "Replace"
           },
+          "replaced": "{names} got a new value in place of the one kept before.",
           "secretsNotKept": "The captured values could not be kept in the project's local settings; the variables have no value yet."
         },
         "checks": {
@@ -308,7 +309,7 @@
           "previewNote": "Nothing is written yet; Import writes it.",
           "reported": "Taken without",
           "run": "Import",
-          "secretItem": "{at}: {name} - set RB_SECRET_ variable {variable}, or {name} in the private values (Settings > Network > API client).",
+          "secretItem": "{at}: {name} - set RB_SECRET_ variable {variable}, or {name} as a private value (API client › Variables).",
           "secrets": "Secrets of the source became placeholders:",
           "summary": "{requests, plural, one {# request} other {# requests}} and {environments, plural, one {# environment} other {# environments}} to import.",
           "title": "Import a collection",
@@ -332,6 +333,8 @@
         "noEnvironment": "No environment",
         "noRequests": "No requests yet",
         "noRequestsHint": "Save a request to keep it as a .http file in .rbrowser/api, for the team to share through Git.",
+        "openSetting": "Open the setting",
+        "openVariables": "Open Variables",
         "options": {
           "redirects": "Follow redirects",
           "redirectsHint": "Up to ten, each to a host the project allows.",
@@ -426,14 +429,22 @@
         },
         "url": "URL",
         "variables": {
-          "addEnvironment": "Add an environment",
+          "create": "Create",
+          "createNamed": "Create the environment {name}",
           "description": "The values the requests' variables take, by environment, in .rbrowser/api/http-client.env.json, which is checked in. A row marked private is kept in the private values on this machine only, never in the file.",
-          "environmentName": "Environment name",
+          "fromProject": "This project's environments:",
           "kept": "Kept privately - type to replace",
-          "otherName": "Another name",
+          "nameProblem": {
+            "bad": "An environment name has at most 80 characters and no control characters.",
+            "taken": "There is already an environment {name}."
+          },
+          "newEnvironment": "New environment",
+          "newName": "Name of the new environment",
           "private": "Private",
           "reload": "Read again",
           "removeEnvironment": "Remove the environment {name}",
+          "rename": "Rename the environment {name}",
+          "renameTo": "New name for the environment {name}",
           "saved": "Saved the variables.",
           "shared": "$shared - every environment",
           "title": "Variables"
@@ -450,8 +461,7 @@
           "summary": "{passed} of {count, plural, one {# check} other {# checks}} passed",
           "title": "Checks"
         },
-        "waiting": "Waiting for the API client's running call...",
-        "openSetting": "Open the setting"
+        "waiting": "Waiting for the API client's running call..."
       },
       "panels": {
         "api-client": "API client"

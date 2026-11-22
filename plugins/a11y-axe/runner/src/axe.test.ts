@@ -40,7 +40,7 @@ describe('axe-core on the a11y fixture', () => {
   });
 
   it('is the pinned version', () => {
-    expect(axe.version).toBe('4.14.0');
+    expect(axe.version).toBe('4.14.1');
   });
 
   it('finds the nameless menu button on a narrow view', async () => {

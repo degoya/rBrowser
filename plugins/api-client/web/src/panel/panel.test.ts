@@ -1,7 +1,7 @@
 // The API client panel in its frame (RB-096-01): mounted as the panel frame mounts it
 // (`harness.ts`).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { $, calls, chooseTab, posted, fromHost, reply, SAVED, settle, start, STATE, stop, type, valueOf } from './harness';
+import { $, calls, chooseTab, posted, fromHost, reply, SAVED, selectedSide, settle, start, STATE, stop, type, valueOf } from './harness';
 import { HOST_NOT_ALLOWED } from './model';
 
 const STRINGS = {
@@ -12,8 +12,13 @@ const STRINGS = {
   'plugin.api-client.panel.import.summary': '{requests} to import',
   'plugin.api-client.panel.import.done': 'Imported {count} into {folder}.',
   'plugin.api-client.panel.import.notes.script': '{at}: the {detail} script does not run.',
-  'plugin.api-client.panel.import.secretItem': '{at}: {name} - set {variable} (Settings > Network > API client)',
+  'plugin.api-client.panel.import.secretItem': '{at}: {name} - set {variable} (API client › Variables)',
   'plugin.api-client.panel.openSetting': 'Open the setting',
+  'plugin.api-client.panel.openVariables': 'Open Variables',
+  'plugin.api-client.panel.side.requests': 'Requests',
+  'plugin.api-client.panel.side.variables': 'Variables',
+  'plugin.api-client.panel.side.import': 'Import',
+  'plugin.api-client.panel.side.export': 'Export',
   'plugin.api-client.panel.capture.opened': 'Opened {name} from the network panel; not saved yet.',
   'plugin.api-client.panel.capture.missing': 'No value yet for {names}.',
   'plugin.api-client.panel.capture.replace.title': 'Replace your unsaved changes with {name}?',
@@ -110,9 +115,14 @@ describe('the API client panel', () => {
     expect($('#import-summary')?.textContent).toContain('1 to import');
     expect($('#import-reported')?.textContent).toContain('the pre-request script does not run');
     expect($('#import-secrets')?.textContent).toContain('RB_SECRET_TOKEN');
-    // RB-094-21: the report's text names Settings > Network > API client and links there.
-    $('#import-secrets [data-setting]')?.click();
-    expect(posted.at(-1)).toEqual({ target: 'host', action: 'open_settings', key: 'api-client.secrets' });
+    // RB-094-27: the report's text names API client › Variables; its link shows the tab, here.
+    const before = posted.length;
+    expect($('#import-secrets [data-variables-link]')?.textContent).toContain('Open Variables');
+    $('#import-secrets [data-variables-link]')?.click();
+    await settle();
+    expect(posted.slice(before).filter((message) => message.action === 'open_settings')).toEqual([]);
+    expect(selectedSide()).toBe('Variables');
+    await chooseTab('side-tabs', 2);
     $('#import-run')?.click();
     await settle();
     await settle();
@@ -187,7 +197,8 @@ describe('checks, collection runs and the benchmark (RB-096-04)', () => {
     expect(valueOf('#url')).toBe('https://a.test/v1/me');
     expect(document.body.textContent).toContain('Opened GET /v1/me from the network panel');
     expect(document.body.textContent).toContain('a-test-token');
-    // RB-094-21: capture.missing names Settings > Network > API client; the line links there.
+    // RB-094-27: capture.missing names API client › Variables; the line links there - through
+    // the core, which asks this panel for its Variables tab.
     $('[data-testid="setting-link-api-client.secrets"]')?.click();
     expect(posted.at(-1)).toEqual({ target: 'host', action: 'open_settings', key: 'api-client.secrets' });
     expect(calls('save')).toHaveLength(0);
@@ -216,5 +227,46 @@ describe('checks, collection runs and the benchmark (RB-096-04)', () => {
     await settle();
     expect($('#draft-question')).toBeNull();
     expect(url()).toBe('https://a.test/v1/me');
+  });
+});
+
+describe('a link to the private values (RB-094-27)', () => {
+  it('shows the Variables tab when the core asks for it, once', async () => {
+    expect(selectedSide()).toBe('Requests');
+    await fromHost({ type: 'event', message: { tab: true } });
+    expect(calls('state')).toHaveLength(2);
+    expect(calls('variables')).toHaveLength(1);
+    await reply('state', { ...STATE, tab: 'variables' });
+    expect(selectedSide()).toBe('Variables');
+    // The next state without a tab leaves the tab the person is on.
+    await chooseTab('side-tabs', 0);
+    $('#refresh')?.click();
+    await settle();
+    await reply('state', STATE);
+    expect(selectedSide()).toBe('Requests');
+  });
+
+  it('starts at the Variables tab when a link opened the panel', async () => {
+    stop();
+    await start(STRINGS, { ...STATE, tab: 'variables' });
+    expect(selectedSide()).toBe('Variables');
+  });
+
+  it('keeps its tab for a tab it does not have', async () => {
+    await fromHost({ type: 'event', message: { tab: true } });
+    await reply('state', { ...STATE, tab: 'settings' });
+    expect(selectedSide()).toBe('Requests');
+  });
+
+  it('takes a waiting request with the state the tab came with', async () => {
+    await fromHost({ type: 'event', message: { tab: true } });
+    const draft = {
+      request: { name: 'GET /v1/me', method: 'GET', url: 'https://a.test/v1/me', headers: [], body: { kind: 'none' }, auth: { type: 'none' },
+        options: { timeoutMs: 30000, followRedirects: true, verifyTls: true } },
+      folder: 'a-test',
+      variables: [],
+    };
+    await reply('state', { ...STATE, draft, tab: 'variables' });
+    expect(valueOf('#url')).toBe('https://a.test/v1/me');
   });
 });

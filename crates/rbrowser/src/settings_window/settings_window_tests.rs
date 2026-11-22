@@ -91,9 +91,87 @@ fn a_deep_link_routes_to_a_known_key_or_area_only() {
         route(&registry, Some("sitemap")),
         "settings/capture?section=sitemap"
     );
-    assert_eq!(route(&registry, Some("no.such")), "settings");
-    assert_eq!(route(&registry, Some("\"><script>")), "settings");
+    // RB-094-26: a link that opens nothing names its key, never silently another page.
+    assert_eq!(
+        route(&registry, Some("no.such")),
+        "settings?missing=no.such"
+    );
+    assert_eq!(route(&registry, Some("\"><script>")), "settings?missing=");
     assert_eq!(route(&registry, None), "settings");
+}
+
+/// The API client's settings schema as the plugin load hands it over
+/// (`crate::analyzer::plugins` -> `crate::plugins::services`).
+fn api_client_schema() -> (String, Value) {
+    let schema = serde_json::from_str(include_str!(
+        "../../../../plugins/api-client/settings.schema.json"
+    ))
+    .expect("JSON");
+    ("api-client".to_owned(), schema)
+}
+
+/// RB-094-26, the owner's finding: "Open the setting" of the API client's benchmark hint opened
+/// General > Start behaviour. The plugin load handed its schema to the services only, and the
+/// window's registry held the core's keys: the link resolved to nothing (`#/settings`), the
+/// window's schema had no plugin key and a write of one was `unknown_key`. Red before the fix.
+#[tokio::test]
+async fn a_plugin_key_opens_its_field_shows_in_the_schema_and_takes_a_write() {
+    let dir = tempfile::tempdir().expect("temp");
+    let (ui, core) = core_in(dir.path());
+    crate::plugins::services::shared().set_schemas(vec![api_client_schema()]);
+    open(&core, Some("api-client.benchRepeats"));
+    assert_eq!(
+        windows(&ui).last().map(String::as_str),
+        Some("rbrowser://ui/settings.html#/settings/api-client.benchRepeats")
+    );
+    let CoreToShell::Settings { schema, values } = answer(
+        &core,
+        ShellToCore::GetSettings {
+            include_schema: true,
+        },
+    ) else {
+        panic!("settings");
+    };
+    let schema = schema.expect("asked for");
+    let def = schema["defs"]
+        .as_array()
+        .and_then(|defs| {
+            defs.iter()
+                .find(|def| def["key"] == "api-client.benchRepeats")
+        })
+        .expect("the plugin's key is in the window's schema");
+    assert_eq!(def["plugin"], "api-client");
+    assert_eq!(def["category"], "network");
+    assert_eq!(def["section"], "api-client");
+    assert!(
+        values
+            .iter()
+            .any(|value| value.key == "api-client.benchRepeats")
+    );
+    // The window writes the plugin's keys: a user key, and the local-only allow list.
+    let wrote = set(&core, "api-client.benchRepeats", json!(20), Scope::User);
+    assert!(matches!(wrote, CoreToShell::Ack), "{wrote:?}");
+    let wrote = set(
+        &core,
+        "api-client.allowedHosts",
+        json!(["api.example.test"]),
+        Scope::Local,
+    );
+    assert!(matches!(wrote, CoreToShell::Ack), "{wrote:?}");
+}
+
+/// RB-094-26: an unknown key opens the settings with the key named, never their start
+/// silently - `missing` for a key no plugin names, even while no plugin load has finished (as in
+/// this test process): `pending` is for an installed plugin's key only.
+#[tokio::test]
+async fn an_unknown_key_opens_the_settings_with_the_key_named() {
+    let dir = tempfile::tempdir().expect("temp");
+    let (ui, core) = core_in(dir.path());
+    open(&core, Some("no.such.key"));
+    assert_eq!(
+        windows(&ui).last().map(String::as_str),
+        Some("rbrowser://ui/settings.html#/settings?missing=no.such.key")
+    );
 }
 
 #[tokio::test]

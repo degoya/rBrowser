@@ -3,7 +3,7 @@
 //! sandboxed layout of ADR 0001) and the code behind `rbrowser-nosandbox.exe`.
 //!
 //! Everything but [`cef_app`] runs on every platform and is tested on Linux; the CEF code is
-//! Windows in phase 1, plus the macOS test build (RB-090-15).
+//! Windows in phase 1, plus the macOS test build (RB-090-15) and Linux (RB-097-05).
 
 pub mod about;
 pub mod activity_bar;
@@ -18,7 +18,7 @@ pub mod bundle;
 pub mod capture;
 pub mod cdp;
 pub mod cdp_proxy;
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(any(windows, target_os = "macos", target_os = "linux"))]
 mod cef_app;
 pub mod cell_info;
 pub mod checks;
@@ -28,6 +28,7 @@ pub mod compare;
 pub mod context_menu;
 pub mod control;
 pub mod cookies;
+pub mod desktop_linux;
 pub mod devtools;
 pub mod emulation;
 pub mod engine_compare;
@@ -60,11 +61,14 @@ pub mod pop_out;
 pub mod portal;
 pub mod presets;
 pub mod project;
+pub mod project_reload;
 pub mod recorder;
 pub mod reload;
 pub mod replay;
 pub mod report_view;
+pub mod restart;
 pub mod restore_last;
+pub mod sandbox_linux;
 pub mod scroll_sync;
 pub mod secret;
 pub mod session_state;
@@ -95,8 +99,8 @@ pub mod window_icon;
 pub use cef_app::RunWinMain;
 
 /// Runs the app without the sandbox; returns the process exit code. On macOS the app of the
-/// bundle (RB-090-15).
-#[cfg(any(windows, target_os = "macos"))]
+/// bundle (RB-090-15); on Linux the app itself, with the sandbox (RB-097-05).
+#[cfg(any(windows, target_os = "macos", target_os = "linux"))]
 pub fn run_plain() -> i32 {
     cef_app::run_plain()
 }
@@ -116,8 +120,8 @@ pub fn run_helper() -> i32 {
 }
 
 /// Runs the app without the sandbox; returns the process exit code. The browser runs on
-/// Windows and macOS: elsewhere only `--help` and `--version` work.
-#[cfg(not(any(windows, target_os = "macos")))]
+/// Windows, macOS and Linux: elsewhere only `--help` and `--version` work.
+#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
 pub fn run_plain() -> i32 {
     use clap::Parser;
     match cli::Cli::try_parse() {
@@ -131,7 +135,7 @@ pub fn run_plain() -> i32 {
             Err(code) => code,
             Ok(_) => {
                 eprintln!(
-                    "rBrowser {}: the browser runs on Windows and macOS only",
+                    "rBrowser {}: the browser runs on Windows, macOS and Linux only",
                     cli::VERSION
                 );
                 1

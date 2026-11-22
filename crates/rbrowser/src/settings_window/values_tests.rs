@@ -189,3 +189,77 @@ fn the_schema_carries_the_texts_of_the_plugins_keys() {
     assert!(!texts.contains_key("plugin.texts-schema.panel.title"));
     assert!(texts.keys().all(|key| key.starts_with("plugin.")));
 }
+
+/// RB-094-27: a secret key is no setting of the window - the API client's `secrets` are neither
+/// listed with a value nor in the schema, even with `config.local.json` holding them; its
+/// section keeps its other keys.
+#[test]
+fn a_secret_key_is_not_in_the_window() {
+    let api_client = serde_json::from_str(include_str!(
+        "../../../../plugins/api-client/settings.schema.json"
+    ))
+    .expect("JSON");
+    let registry =
+        crate::control::plugin_keys::with_plugins(&[("api-client".to_owned(), api_client)]);
+    assert!(
+        registry.get("api-client.secrets").is_some(),
+        "still registered"
+    );
+    let local = json!({ "api-client": { "secrets": { "staging": { "TOKEN": "opensesame99" } } } });
+    let mut documents = documents(json!({ "version": 1 }), Some(local.clone()), None);
+    // The config in effect carries the local file's plugin section, as the load merges it.
+    documents.project.as_mut().expect("a project").effective["api-client"] =
+        local["api-client"].clone();
+    let listed = values(&registry, &documents);
+    assert!(listed.iter().all(|value| value.key != "api-client.secrets"));
+    assert!(
+        listed
+            .iter()
+            .any(|value| value.key == "api-client.benchRepeats")
+    );
+    let payload = schema_payload(&registry, &documents);
+    let defs = payload["defs"].as_array().expect("defs");
+    assert!(defs.iter().all(|def| def["key"] != "api-client.secrets"));
+    assert!(
+        defs.iter()
+            .any(|def| def["key"] == "api-client.benchRepeats")
+    );
+    let text = serde_json::to_string(&(listed, payload)).expect("serializes");
+    assert!(!text.contains("opensesame99"));
+    assert!(!text.contains("TOKEN"));
+}
+
+/// RB-094-27 review: MCP's `settings_get` reads every key - a secret key included, its values
+/// masked - though the window lists none ([`all_values`] beside [`values`]).
+#[test]
+fn mcp_reads_a_secret_key_masked_that_the_window_does_not_list() {
+    let api_client = serde_json::from_str(include_str!(
+        "../../../../plugins/api-client/settings.schema.json"
+    ))
+    .expect("JSON");
+    let registry =
+        crate::control::plugin_keys::with_plugins(&[("api-client".to_owned(), api_client)]);
+    let local = json!({ "api-client": { "secrets": { "staging": { "TOKEN": "opensesame99" } } } });
+    let mut documents = documents(json!({ "version": 1 }), Some(local.clone()), None);
+    documents.project.as_mut().expect("a project").effective["api-client"] =
+        local["api-client"].clone();
+    let every = all_values(&registry, &documents);
+    let secrets = find(&every, "api-client.secrets");
+    assert_eq!(secrets.origin, Origin::Local);
+    let text = serde_json::to_string(&every).expect("serializes");
+    assert!(text.contains("TOKEN"), "{text}");
+    assert!(!text.contains("opensesame99"), "{text}");
+    let window: Vec<String> = values(&registry, &documents)
+        .into_iter()
+        .map(|value| value.key)
+        .collect();
+    let listed: Vec<String> = every
+        .iter()
+        .map(|value| value.key.clone())
+        .filter(|key| key != "api-client.secrets")
+        .collect();
+    assert_eq!(
+        window, listed,
+        "the same keys in the same order besides the secret"
+    );
+}

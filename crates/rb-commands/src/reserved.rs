@@ -74,13 +74,15 @@ pub enum KeyContext {
     CanvasBoard,
 }
 
-/// A desktop platform. Phase 1 is Windows only.
+/// A desktop platform. Phase 1 is Windows only; macOS (RB-090-15) and Linux (RB-097-05) have
+/// their own reservations.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Platform {
     /// Windows.
     Windows,
-    /// Linux (phase 2).
+    /// Linux (RB-097-05): the browsers' and text editing's combinations as on Windows, the
+    /// desktops' own (GNOME, KDE: `Super`, `Alt+F1`...`Alt+F10`, `Ctrl+Alt+T`, the workspaces).
     Linux,
     /// macOS (phase 2).
     Macos,
@@ -88,11 +90,13 @@ pub enum Platform {
 
 impl Platform {
     /// The platform whose reservations hold for this build: macOS on macOS (the test build,
-    /// RB-090-15), Windows everywhere else - Linux has no list of its own yet, so its tests
-    /// and builds hold the Windows one.
+    /// RB-090-15), Linux on Linux (RB-097-05), Windows everywhere else. The lint holds the
+    /// defaults to all three on every build (`tests/default_bindings.rs`).
     pub const fn current() -> Platform {
         if cfg!(target_os = "macos") {
             Platform::Macos
+        } else if cfg!(target_os = "linux") {
+            Platform::Linux
         } else {
             Platform::Windows
         }

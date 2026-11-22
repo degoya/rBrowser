@@ -15,7 +15,7 @@ const OPTIONS: RunOptions = {
 function fakeAxe(violations: AxeRule[], incomplete: AxeRule[] = []) {
   const calls: { context: unknown; options: Record<string, unknown> }[] = [];
   const axe: AxeLike = {
-    version: '4.14.0',
+    version: '4.14.1',
     async run(context, options) {
       calls.push({ context, options });
       return { url: 'http://localhost/a11y.html', violations, incomplete };
@@ -109,7 +109,7 @@ describe('start', () => {
   it('removes window.axe after the run, also when axe throws', async () => {
     const global = globalThis as unknown as { axe?: AxeLike };
     global.axe = {
-      version: '4.14.0',
+      version: '4.14.1',
       run: () => Promise.reject(new Error("'##' is not a valid selector")),
     };
     const answer = await start(OPTIONS);

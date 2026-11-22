@@ -1,12 +1,19 @@
 // A small ZIP reader for the WebKit archive (RB-040-04). The archive is checked against its
 // pinned SHA-256 before it is opened; this reader still trusts nothing in it: stored and deflated
 // entries only, no encryption, no ZIP64, every name a relative path inside the target folder,
-// every size and CRC-32 checked, and limits on the entry count and the unpacked size.
+// every size and CRC-32 checked, and limits on the entry count and the unpacked size. On macOS
+// (`unix`, RB-097-02) an entry's Unix permissions and symbolic links are kept by zip_unix.ts's
+// rules.
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, symlink, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { crc32, inflateRaw } from 'node:zlib';
+
+import { ZipError } from './zip_error.ts';
+import { checkLinks, fileMode, isLink } from './zip_unix.ts';
+
+export { ZipError };
 
 const inflate = promisify(inflateRaw);
 
@@ -18,8 +25,6 @@ export const MAX_ENTRIES = 20_000;
 /** The most bytes an archive may unpack to. */
 export const MAX_UNPACKED = 2 * 1024 * 1024 * 1024;
 
-export class ZipError extends Error {}
-
 export interface ZipEntry {
   /** The relative path, with `/` separators. */
   name: string;
@@ -30,6 +35,14 @@ export interface ZipEntry {
   size: number;
   /** The offset of the local header. */
   offset: number;
+  /** The Unix `st_mode` of an entry made on Unix; 0 otherwise. */
+  mode: number;
+}
+
+/** How `extractAll` writes. */
+export interface ExtractOptions {
+  /** Keep the Unix permissions and make the symbolic links (macOS); else a link is a file. */
+  unix?: boolean;
 }
 
 /** The relative path of an entry name, or an error for one that would leave the folder. */
@@ -68,6 +81,7 @@ export function readEntries(zip: Buffer): ZipEntry[] {
   let at = start;
   for (let index = 0; index < count; index += 1) {
     if (at + 46 > eocd || zip.readUInt32LE(at) !== CENTRAL) throw new ZipError('broken central directory');
+    const madeBy = zip.readUInt16LE(at + 4);
     const flags = zip.readUInt16LE(at + 8);
     const method = zip.readUInt16LE(at + 10);
     const crc = zip.readUInt32LE(at + 16);
@@ -76,6 +90,7 @@ export function readEntries(zip: Buffer): ZipEntry[] {
     const nameLength = zip.readUInt16LE(at + 28);
     const extraLength = zip.readUInt16LE(at + 30);
     const commentLength = zip.readUInt16LE(at + 32);
+    const external = zip.readUInt32LE(at + 38);
     const offset = zip.readUInt32LE(at + 42);
     if ((flags & 1) !== 0) throw new ZipError('encrypted entry');
     if (method !== 0 && method !== 8) throw new ZipError(`compression method ${method}`);
@@ -84,7 +99,10 @@ export function readEntries(zip: Buffer): ZipEntry[] {
     }
     const raw = zip.toString('utf8', at + 46, at + 46 + nameLength);
     const name = safeName(raw);
-    entries.push({ name, directory: raw.endsWith('/') || raw.endsWith('\\'), method, crc, compressedSize, size: entrySize, offset });
+    // The upper byte of "version made by" is the system; 3 is Unix, whose mode is the upper half
+    // of the external attributes.
+    const mode = madeBy >>> 8 === 3 ? external >>> 16 : 0;
+    entries.push({ name, directory: raw.endsWith('/') || raw.endsWith('\\'), method, crc, compressedSize, size: entrySize, offset, mode });
     at += 46 + nameLength + extraLength + commentLength;
   }
   return entries;
@@ -104,22 +122,48 @@ async function contents(zip: Buffer, entry: ZipEntry): Promise<Buffer> {
   return data;
 }
 
-/** Unpacks `zip` into `folder` (which must exist). */
-export async function extractAll(zip: Buffer, folder: string, signal?: AbortSignal): Promise<number> {
+/** Unpacks `zip` into `folder` (which must exist); with `unix` the links come last, once every
+ *  link was checked (nothing is written before). */
+export async function extractAll(zip: Buffer, folder: string, signal?: AbortSignal, options: ExtractOptions = {}): Promise<number> {
   const entries = readEntries(zip);
   const total = entries.reduce((sum, entry) => sum + entry.size, 0);
   if (total > MAX_UNPACKED) throw new ZipError('archive unpacks too large');
   const root = resolve(folder);
-  for (const entry of entries) {
-    signal?.throwIfAborted();
+  const unix = options.unix === true;
+  const links = new Map<string, string>();
+  if (unix) {
+    for (const entry of entries) {
+      if (!entry.directory && isLink(entry.mode)) links.set(entry.name, (await contents(zip, entry)).toString('utf8'));
+    }
+    checkLinks(
+      entries.map((entry) => entry.name.replace(/\/$/, '')),
+      links,
+    );
+  }
+  const targetOf = (entry: ZipEntry) => {
     const target = resolve(join(root, entry.name));
     if (target !== root && !target.startsWith(root + sep)) throw new ZipError(`unsafe entry name ${entry.name}`);
+    return target;
+  };
+  for (const entry of entries) {
+    signal?.throwIfAborted();
+    const target = targetOf(entry);
     if (entry.directory) {
       await mkdir(target, { recursive: true });
       continue;
     }
+    if (links.has(entry.name)) continue;
     await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, await contents(zip, entry), { flag: 'wx' });
+    const mode = unix ? { mode: fileMode(entry.mode) } : {};
+    await writeFile(target, await contents(zip, entry), { flag: 'wx', ...mode });
+  }
+  for (const entry of entries) {
+    const link = links.get(entry.name);
+    if (link === undefined) continue;
+    signal?.throwIfAborted();
+    const target = targetOf(entry);
+    await mkdir(dirname(target), { recursive: true });
+    await symlink(link, target);
   }
   return entries.length;
 }

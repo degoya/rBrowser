@@ -16,6 +16,7 @@ pub mod cli;
 pub mod clients;
 pub(crate) mod collect;
 pub mod host_tools;
+pub mod installed_keys;
 pub mod latest;
 pub mod network_tools;
 pub mod settings;

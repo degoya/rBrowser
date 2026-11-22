@@ -1,0 +1,15 @@
+# The menu entry of the deb and rpm packages (RB-097-05). The icon is assets/rBrowser-icon.svg,
+# installed as rbrowser.svg into the hicolor theme beside its renderings at 48, 128 and 256 px
+# (scripts/package-deb-rpm.sh). The window class is CEF's for the program `rbrowser`.
+[Desktop Entry]
+Type=Application
+Name=rBrowser
+GenericName=Development Browser
+Comment=Every breakpoint of a site at once, in one window
+Exec=rbrowser %U
+Icon=rbrowser
+Terminal=false
+StartupNotify=true
+StartupWMClass=rbrowser
+Categories=Development;WebDevelopment;Network;WebBrowser;
+Keywords=browser;breakpoints;responsive;devtools;mcp;playwright;

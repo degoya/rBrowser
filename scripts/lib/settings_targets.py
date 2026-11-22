@@ -22,6 +22,10 @@ name is a value only known at run time and is skipped. In TypeScript and Vue (`u
 `settingsKey: '<target>'`, a panel's `openSettings('<target>')` and its status line's
 `setting: { key: '<target>' }`, and a page's `setting-key="<target>"` (RB-094-21; a bound
 `:setting-key` is a value only known at run time). Used by scripts/lib/settings_lint.py.
+
+A secret key (`x-secret`, RB-094-27) is no place of the window, neither as a key nor under a
+prefix: its link opens the panel its `x-panel` names (`panel <plugin>.<panel>#<tab>`), and one
+without an `x-panel` opens nothing.
 """
 
 import re
@@ -143,17 +147,26 @@ def targets(root: Path) -> list[tuple[str, str]]:
     return found
 
 
+SECRET = "a secret key: it is not in the settings window and names no panel (x-panel)"
+
+
 def resolve(target: str, settings: list, cats: list) -> str | None:
-    """Where `target` opens the settings: `key`, `category`, `section <category>.<id>`,
-    `prefix ...`; `None` for nowhere."""
-    if any(setting.key == target for setting in settings):
+    """Where `target` opens: `key`, `category`, `section <category>.<id>`, `prefix ...` in the
+    settings window, `panel <plugin>.<panel>[#<tab>]` for a secret key; `None` for nowhere."""
+    setting = next((setting for setting in settings if setting.key == target), None)
+    if setting is not None and setting.secret:
+        if setting.panel is None:
+            return None
+        tab = setting.panel.get("tab")
+        return f"panel {setting.plugin}.{setting.panel['panel']}" + (f"#{tab}" if tab else "")
+    if setting is not None:
         return "key"
     if any(category == target for category, _ in cats):
         return "category"
     for category, sections in cats:
         if target in sections:
             return f"section {category}.{target}"
-    under = [s for s in settings if s.key.startswith(f"{target}.")]
+    under = [s for s in settings if not s.secret and s.key.startswith(f"{target}.")]
     places = {(s.category, s.section) for s in under}
     if len(places) == 1:
         category, section = next(iter(places))
@@ -171,7 +184,12 @@ def problems(root: Path, settings: list, cats: list) -> tuple[list[str], int]:
         if target.startswith("!"):
             lines.append(f"{where}: settings target: the constant {target[1:]} does not read")
         elif resolve(target, settings, cats) is None:
-            lines.append(
-                f"{where}: settings target `{target}` is no key, category, section or key prefix"
-            )
+            lines.append(f"{where}: settings target `{target}` is {why_not(target, settings)}")
     return lines, len(found)
+
+
+def why_not(target: str, settings: list) -> str:
+    """Why `target` opens nothing, for a problem's line."""
+    if any(setting.key == target and setting.secret for setting in settings):
+        return SECRET
+    return "no key, category, section or key prefix"

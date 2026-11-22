@@ -139,10 +139,10 @@ pub fn screen_point(x: i32, y: i32) -> Option<(Window, Point)> {
 /// The board's rectangle in screen DIP and its window's handle, while the board is shown - in
 /// canvas mode, when it fills the grid area (RB-080-50: where the middle button pans).
 #[cfg_attr(
-    target_os = "macos",
+    any(target_os = "macos", target_os = "linux"),
     allow(
         dead_code,
-        reason = "used by the Windows-only middle-button pan; its macOS twin is a no-op"
+        reason = "used by the Windows-only middle-button pan; the macOS and Linux twins are no-ops"
     )
 )]
 pub fn area_in_screen() -> Option<(Rect, usize)> {

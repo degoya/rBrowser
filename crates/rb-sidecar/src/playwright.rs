@@ -1,6 +1,6 @@
 //! The Playwright browser download (`engines.update`): the WebKit build that matches the pinned
-//! playwright-core, into `%LOCALAPPDATA%\rBrowser\ms-playwright` (or
-//! `engines.playwrightBrowsersPath`), with progress. The sidecar's `playwright.install` does the
+//! playwright-core, into `%LOCALAPPDATA%\rBrowser\ms-playwright` (macOS:
+//! `~/.local/state/rBrowser/ms-playwright`; or `engines.playwrightBrowsersPath`), with progress. The sidecar's `playwright.install` does the
 //! work and recognises an existing installation.
 
 use std::ffi::OsString;
@@ -26,8 +26,27 @@ pub const DONE_KEY: &str = "sidecar.install.done";
 /// The i18n key when the build was there already: `{browser}`, `{version}`.
 pub const ALREADY_KEY: &str = "sidecar.install.alreadyInstalled";
 
+/// The folder the default browsers folder goes under, from the environment `var`: on Windows
+/// `%LOCALAPPDATA%`; elsewhere (macOS, RB-097-01) `$XDG_STATE_HOME`, else `$HOME/.local/state` -
+/// so the browsers sit in the app's local folder `<base>/rBrowser`, as rb-config's `local_dir`
+/// names it. An empty variable counts as unset; `None` when none is set.
+pub fn local_base(windows: bool, var: impl Fn(&str) -> Option<OsString>) -> Option<OsString> {
+    let set = |name: &str| var(name).filter(|value| !value.is_empty());
+    if windows {
+        return set("LOCALAPPDATA");
+    }
+    set("XDG_STATE_HOME").or_else(|| {
+        set("HOME").map(|home| {
+            PathBuf::from(home)
+                .join(".local")
+                .join("state")
+                .into_os_string()
+        })
+    })
+}
+
 /// The browsers folder: `setting` (`engines.playwrightBrowsersPath`, absolute) when set, else
-/// `<local_app_data>\rBrowser\ms-playwright`.
+/// `<local_app_data>\rBrowser\ms-playwright` (`local_app_data` from [`local_base`]).
 pub fn browsers_path(
     setting: Option<&str>,
     local_app_data: Option<OsString>,
@@ -46,7 +65,11 @@ pub fn browsers_path(
     local_app_data
         .filter(|dir| !dir.is_empty())
         .map(|dir| PathBuf::from(dir).join("rBrowser").join("ms-playwright"))
-        .ok_or_else(|| SidecarError::BrowsersPath("LOCALAPPDATA is not set".to_owned()))
+        .ok_or_else(|| {
+            SidecarError::BrowsersPath(
+                "no local folder: LOCALAPPDATA (Windows) or HOME is not set".to_owned(),
+            )
+        })
 }
 
 /// A progress update of a download.

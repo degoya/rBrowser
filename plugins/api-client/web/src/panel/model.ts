@@ -9,18 +9,30 @@ export const PREFIX = 'plugin.api-client.';
 /** The core's failure when a send names a host the project has not allowed yet. */
 export const HOST_NOT_ALLOWED = `${PREFIX}errors.host_not_allowed`;
 
-/** The setting a failure's text names (RB-096-11, RB-094-21): the status line links there. Each
- * key is a literal `setting` object's key for the settings lint (scripts/lib/settings_targets.py). */
+/** The place a failure's text names (RB-096-11, RB-094-21): the status line links there, named by
+ * `label` - the private values (`api-client.secrets`) are no setting, their link opens API client ›
+ * Variables (RB-094-27). Each key is a literal `setting` object's key for the settings lint
+ * (scripts/lib/settings_targets.py). */
 const SETTING_LINKS = [
-  { code: `${PREFIX}errors.secrets_unreadable`, setting: { key: 'api-client.secrets' } },
-  { code: `${PREFIX}errors.secrets_not_saved`, setting: { key: 'api-client.secrets' } },
-  { code: `${PREFIX}errors.unresolved`, setting: { key: 'api-client.secrets' } },
-  { code: `${PREFIX}errors.too_many_hosts`, setting: { key: 'api-client.allowedHosts' } },
+  { code: `${PREFIX}errors.secrets_unreadable`, setting: { key: 'api-client.secrets' }, label: 'panel.openVariables' },
+  { code: `${PREFIX}errors.secrets_not_saved`, setting: { key: 'api-client.secrets' }, label: 'panel.openVariables' },
+  { code: `${PREFIX}errors.unresolved`, setting: { key: 'api-client.secrets' }, label: 'panel.openVariables' },
+  { code: `${PREFIX}errors.too_many_hosts`, setting: { key: 'api-client.allowedHosts' }, label: 'panel.openSetting' },
 ];
 
 /** The settings key `failure` points at, if any. */
-export function settingOf(failure: unknown): string | undefined {
-  return failure instanceof Error ? SETTING_LINKS.find((link) => link.code === failure.message)?.setting.key : undefined;
+/** The host of a `host_not_allowed` failure (RB-096-13): a send, a collection run or a benchmark
+ * to a host the project has not allowed; `null` for any other failure. */
+export function blockedHost(failure: unknown): string | null {
+  if (!(failure instanceof Error) || failure.message !== HOST_NOT_ALLOWED) return null;
+  const host = (failure as Error & { params?: Record<string, unknown> }).params?.host;
+  return typeof host === 'string' && host !== '' ? host : null;
+}
+
+/** The place `failure`'s text names - its key and the i18n key of the link's label -, if any. */
+export function linkOf(failure: unknown): { key: string; label: string } | undefined {
+  const link = failure instanceof Error ? SETTING_LINKS.find((one) => one.code === failure.message) : undefined;
+  return link ? { key: link.setting.key, label: link.label } : undefined;
 }
 
 export interface Entry {
@@ -104,6 +116,8 @@ export interface State {
   envProblem?: string | null;
   /** RB-096-08: a request the network panel opened here, carried once (`captured.ts`). */
   draft?: unknown;
+  /** RB-094-27: the side tab a link asked for (`sideTabs.ts`), carried once. */
+  tab?: unknown;
 }
 
 export interface Timings {

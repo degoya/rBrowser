@@ -5,6 +5,7 @@ import type { ShellToCore } from './protocol';
 import { recordingShellMessages } from './contractRecordingMessages';
 import { bugReportShellMessages } from './contractBugReportMessages';
 import { mcpSetupShellMessages } from './contractMcpSetupMessages';
+import { basicAuthShellMessages } from './contractBasicAuthMessages';
 
 export const shellToCore = [
   { type: 'getState' },
@@ -104,4 +105,5 @@ export const shellToCore = [
   },
   ...bugReportShellMessages, // RB-093-04
   ...mcpSetupShellMessages, // RB-091-09
+  ...basicAuthShellMessages, // RB-094-29
 ] satisfies ShellToCore[];

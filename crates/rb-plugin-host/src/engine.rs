@@ -7,20 +7,24 @@
 //! handed out again from memory. The ticker advances the epoch only while a call's store lives
 //! ([`SharedEngine::ticking`]); idle, its thread is parked and does not wake (RB-090-38). What survives a restart is [`crate::compile_cache`]'s business.
 //!
+//! Whether that cache is used is the setting `plugins.compileCache` ([`set_compile_cache`],
+//! RB-094-30): the cache is part of an engine's configuration, so a changed choice builds a new
+//! engine for the next load; the plugins loaded before keep the engine they were compiled on.
+//!
 //! Handing a compiled component out again bypasses nothing: it is looked up by the SHA-256 of the
 //! very bytes the caller passes, which the caller has verified before asking.
 
 use std::{
     collections::HashMap,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
-        Arc, Mutex, OnceLock,
+        Arc, Mutex, PoisonError,
         atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
     thread::JoinHandle,
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use sha2::{Digest, Sha256};
 use wasmtime::{Config, Engine, component::Component};
 
@@ -30,36 +34,70 @@ use crate::recover::LogPanic as _;
 /// Distinct component contents kept compiled in memory; past this the map starts over.
 const MAX_COMPILED: usize = 256;
 
-static SHARED: OnceLock<Arc<SharedEngine>> = OnceLock::new();
+static SHARED: EngineSlot = EngineSlot::new();
 
-/// Keeps compiled plugin code under `directory`, so a restart with unchanged plugins does not
-/// compile them again.
+/// Keeps compiled plugin code under `directory` from the next plugin load on, so a restart with
+/// unchanged plugins does not compile them again; `None` compiles in memory only - no cache is
+/// read or written (`plugins.compileCache`, RB-094-30).
 ///
-/// Called once at startup, before anything loads a plugin: the cache is part of the engine's
-/// configuration, and the engine is built by the first compile. A later call is refused rather
-/// than ignored. A process that never calls this - the packer, the tests - compiles as before.
-///
-/// # Errors
-///
-/// The cache directory cannot be opened, or the engine was built already.
-pub fn configure_compile_cache(directory: &Path) -> Result<()> {
-    let shared = Arc::new(SharedEngine::new(Some(directory))?);
-    SHARED.set(shared).map_err(|_| {
-        anyhow::anyhow!("the plugin engine was built before its compile cache was configured")
-    })
+/// Called before each load by the app; a process that never calls it - the packer, the tests -
+/// compiles in memory. The plugins loaded before keep their engine and its choice.
+pub fn set_compile_cache(directory: Option<&Path>) {
+    SHARED.set_cache(directory);
 }
 
-/// The process's engine, built on first use when `configure_compile_cache` was not called.
+/// The engine the next plugin is compiled on: the process's one, built anew when the compile
+/// cache choice changed since.
 pub(crate) fn shared() -> Result<Arc<SharedEngine>> {
-    if let Some(shared) = SHARED.get() {
-        return Ok(Arc::clone(shared));
+    SHARED.get()
+}
+
+/// The engine new plugins are compiled on and the compile cache it is built for.
+pub(crate) struct EngineSlot {
+    state: Mutex<SlotState>,
+}
+
+struct SlotState {
+    /// The cache folder the next engine takes; `None` compiles in memory only.
+    wanted: Option<PathBuf>,
+    /// The engine handed out now, with the cache folder it was built for.
+    engine: Option<(Option<PathBuf>, Arc<SharedEngine>)>,
+}
+
+impl EngineSlot {
+    pub(crate) const fn new() -> Self {
+        Self {
+            state: Mutex::new(SlotState {
+                wanted: None,
+                engine: None,
+            }),
+        }
     }
-    // Two first uses at once may both build one; the loser's is dropped with its ticker.
-    let _ = SHARED.set(Arc::new(SharedEngine::new(None)?));
-    SHARED
-        .get()
-        .map(Arc::clone)
-        .context("the plugin engine is not available")
+
+    /// Chooses the cache of the engines handed out from now on.
+    pub(crate) fn set_cache(&self, directory: Option<&Path>) {
+        self.state
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .wanted = directory.map(Path::to_path_buf);
+    }
+
+    /// The engine for the cache chosen now: the one handed out before while the choice is the
+    /// same, else a new one. Built under the lock, so two first uses build one engine.
+    pub(crate) fn get(&self) -> Result<Arc<SharedEngine>> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| anyhow::anyhow!("plugin engine lock poisoned"))?;
+        if let Some((built_for, engine)) = &state.engine
+            && *built_for == state.wanted
+        {
+            return Ok(Arc::clone(engine));
+        }
+        let engine = Arc::new(SharedEngine::new(state.wanted.as_deref())?);
+        state.engine = Some((state.wanted.clone(), Arc::clone(&engine)));
+        Ok(engine)
+    }
 }
 
 /// An engine, its epoch ticker, and what it has compiled.

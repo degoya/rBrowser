@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "html-validate": "11.18.0",
+    "html-validate": "11.21.1",
     "typescript": "7.0.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.1"
   }
 }

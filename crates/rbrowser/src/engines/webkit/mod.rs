@@ -1,6 +1,8 @@
 //! WebKit through Playwright (RB-040-04): every view whose breakpoint names WebKit runs in a
 //! window of its own, driven by Playwright in the Node sidecar - Playwright's WebKit build,
-//! labelled "WebKit (not Safari)" everywhere, never Safari.
+//! labelled "WebKit (not Safari)" everywhere, never Safari; the engine menu's row reads "WebKit
+//! (Playwright)" beside Safari's (RB-097-02). On macOS (RB-097-02) the sidecar installs the
+//! host's macOS build and every view stays a window of its own ([`view::EMBEDDABLE`]).
 //!
 //! | Part | Where |
 //! | --- | --- |

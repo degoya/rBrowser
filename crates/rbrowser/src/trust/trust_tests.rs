@@ -320,9 +320,8 @@ async fn no_command_and_no_setting_grants_trust() {
             command.id
         );
     }
-    let keys: Vec<&str> = s
-        .core
-        .settings_registry()
+    let registry = s.core.settings_registry();
+    let keys: Vec<&str> = registry
         .iter()
         .map(|def| def.key.as_str())
         .filter(|key| key.to_ascii_lowercase().contains("trust"))

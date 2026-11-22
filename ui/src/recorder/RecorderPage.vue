@@ -310,6 +310,12 @@ async function loadSettings(): Promise<void> {
 
 const stop = channel.onChanged(() => void load());
 const stopRuns = runs.onChanged(() => void loadRun());
+// A changed recorder setting applies in the open panel at once (RB-094-23).
+const stopSettings = (props.subscribe ?? windowEvents)((message) => {
+  if (message.type === 'settingsChanged' && message.keys.some((key) => key.startsWith('automation.recorder.'))) {
+    void loadSettings();
+  }
+});
 const stopSteps = channel.onStep((step) => {
   if (step.flow !== chosen.value) {
     return;
@@ -347,6 +353,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stop();
   stopRuns();
+  stopSettings();
   stopSteps();
   stopLive();
   stopCommands();

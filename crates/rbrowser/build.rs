@@ -18,6 +18,27 @@ fn main() {
             .manifest_required()
             .expect("failed to compile Windows resources");
     }
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
+        // RB-097-05: the executables find CEF's libcef.so beside themselves, in the build
+        // output (where the cef crate copies the runtime) and in the package alike, without
+        // LD_LIBRARY_PATH - which would also reach Firefox and Node, and CEF's own libEGL and
+        // libvulkan with them. The tests get target/<profile> from cargo and nextest instead.
+        println!("cargo:rustc-link-arg-bins=-Wl,-rpath,$ORIGIN");
+        // A dev build's executables and test binaries also find the libcef.so the cef crate
+        // left in the build output (the nearest folder above OUT_DIR that holds it: target/
+        // <profile>, or target/<profile>/build with a separate build directory), so `cargo test`
+        // and nextest load it without LD_LIBRARY_PATH. Only for the dev profile: a release
+        // binary must not carry a path of the build machine.
+        if env::var("PROFILE").as_deref() == Ok("debug")
+            && let Some(out) = env::var_os("OUT_DIR").map(std::path::PathBuf::from)
+            && let Some(dir) = out
+                .ancestors()
+                .take(6)
+                .find(|dir| dir.join("libcef.so").is_file())
+        {
+            println!("cargo:rustc-link-arg=-Wl,-rpath,{}", dir.display());
+        }
+    }
 }
 
 /// Compiles the commit and the build time into the binary (`rbrowser --version`, later the About

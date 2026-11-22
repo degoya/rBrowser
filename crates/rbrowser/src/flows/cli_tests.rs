@@ -133,3 +133,16 @@ fn a_run_that_did_not_start_says_why() {
     assert!(shown.contains("did not run: no flow \"cart\""), "{shown}");
     assert_eq!(exit_code(&broken), exit::FAILED);
 }
+
+// RB-097-03: the message names the variable the local folder comes from on this platform.
+#[test]
+fn no_local_folder_names_the_platforms_variable() {
+    assert_eq!(
+        no_local_folder(true),
+        "rbrowser flow run: no local folder (LOCALAPPDATA is not set)"
+    );
+    assert_eq!(
+        no_local_folder(false),
+        "rbrowser flow run: no local folder (neither XDG_STATE_HOME nor HOME is set)"
+    );
+}

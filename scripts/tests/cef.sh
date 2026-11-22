@@ -102,4 +102,66 @@ run_status rb_stage_app "$BUILD" "$SCRATCH/app2"
 expect_status "a build without rbrowser.dll fails" 1
 expect_output "the failure names the file" "rbrowser.dll"
 
+# The Linux part (RB-097-05): the archive against its own pin, the app folder of the package.
+LINUX_CACHE="$SCRATCH/cef-linux"
+mkdir -p "$LINUX_CACHE/$RB_CEF_VERSION"
+run_status rb_cef_verify_linux "$LINUX_CACHE"
+expect_status "a cache without the Linux archive fails" 1
+run_status rb_cef_verify_linux "$LINUX_CACHE" --if-present
+expect_status "a cache without the Linux archive passes before the build" 0
+printf 'stand-in linux archive' > "$LINUX_CACHE/$RB_CEF_VERSION/$RB_CEF_ARCHIVE_LINUX_X64"
+run_status rb_cef_verify_linux "$LINUX_CACHE"
+expect_status "a Linux archive that differs from the pin fails" 1
+expect_output "the failure names the Linux pin" "$RB_CEF_ARCHIVE_LINUX_X64_SHA256"
+linux_pin="$RB_CEF_ARCHIVE_LINUX_X64_SHA256"
+RB_CEF_ARCHIVE_LINUX_X64_SHA256="$(rb_sha256 "$LINUX_CACHE/$RB_CEF_VERSION/$RB_CEF_ARCHIVE_LINUX_X64")"
+run_status rb_cef_verify_linux "$LINUX_CACHE"
+expect_status "the pinned Linux archive passes" 0
+RB_CEF_ARCHIVE_LINUX_X64_SHA256="$linux_pin"
+expect "the extracted Linux distribution's folder" "$LINUX_CACHE/$RB_CEF_VERSION/cef_linux_x86_64" \
+    "$(rb_cef_linux_dir "$LINUX_CACHE")"
+expect "the Linux archive is the Windows build's" "${RB_CEF_ARCHIVE%_windows64_minimal.tar.bz2}" \
+    "${RB_CEF_ARCHIVE_LINUX_X64%_linux64_minimal.tar.bz2}"
+expect_true "the Linux archive is pinned with a SHA-256" '[[ ${#RB_CEF_ARCHIVE_LINUX_X64_SHA256} -eq 64 ]]'
+
+LBUILD="$SCRATCH/linux-build"
+mkdir -p "$LBUILD/locales"
+for file in rbrowser-nosandbox rbrowser-helper librbrowser.so librbrowser.rlib libcef.so \
+    chrome-sandbox libvk_swiftshader.so libvulkan.so.1 resources.pak chrome_100_percent.pak \
+    icudtl.dat v8_context_snapshot.bin vk_swiftshader_icd.json archive.json CMakeLists.txt \
+    locales/en-US.pak; do
+    printf '%s' "$file" > "$LBUILD/$file"
+done
+chmod 700 "$LBUILD/chrome-sandbox"
+UI="$SCRATCH/ui-dist-linux"
+mkdir -p "$UI"
+printf '<!doctype html>' > "$UI/index.html"
+LAPP="$SCRATCH/linux-app"
+CEF_PATH="$SCRATCH/no-cache" run_status rb_stage_app_linux "$LBUILD" "$LAPP" "$UI"
+expect_status "the Linux app folder is assembled" 0
+expect "rbrowser is the build's executable" "rbrowser-nosandbox" "$(cat "$LAPP/rbrowser")"
+expect_true "the runtime and the locales are beside it" \
+    '[[ -f $LAPP/libcef.so && -f $LAPP/libvk_swiftshader.so && -f $LAPP/libvulkan.so.1 && -f $LAPP/resources.pak && -f $LAPP/chrome_100_percent.pak && -f $LAPP/icudtl.dat && -f $LAPP/v8_context_snapshot.bin && -f $LAPP/vk_swiftshader_icd.json && -f $LAPP/locales/en-US.pak ]]'
+expect_true "the program and the sandbox helper are executable, the helper not setuid" \
+    '[[ -x $LAPP/rbrowser && $(stat -c %a "$LAPP/chrome-sandbox") == 755 ]]'
+expect_true "the shell is ui/" '[[ -f $LAPP/ui/index.html ]]'
+expect_true "no build leftovers, no helper app, no library of ours" \
+    '[[ ! -e $LAPP/rbrowser-nosandbox && ! -e $LAPP/rbrowser-helper && ! -e $LAPP/librbrowser.so && ! -e $LAPP/librbrowser.rlib && ! -e $LAPP/archive.json && ! -e $LAPP/CMakeLists.txt ]]'
+
+LDIST="$(rb_cef_linux_dir "$SCRATCH/cef-linux-cache")"
+mkdir -p "$LDIST/locales" "$SCRATCH/linux-bare"
+for file in libcef.so chrome-sandbox resources.pak locales/de.pak; do
+    printf 'dist %s' "$file" > "$LDIST/$file"
+done
+printf 'rbrowser-nosandbox' > "$SCRATCH/linux-bare/rbrowser-nosandbox"
+CEF_PATH="$SCRATCH/cef-linux-cache" run_status rb_stage_app_linux "$SCRATCH/linux-bare" "$SCRATCH/linux-app2"
+expect_status "a Linux build without the runtime takes it from the CEF cache" 0
+expect_true "the executable from the build, the runtime from the distribution" \
+    '[[ $(cat $SCRATCH/linux-app2/rbrowser) == rbrowser-nosandbox && $(cat $SCRATCH/linux-app2/libcef.so) == "dist libcef.so" && -f $SCRATCH/linux-app2/locales/de.pak && ! -e $SCRATCH/linux-app2/ui ]]'
+
+rm "$LBUILD/rbrowser-nosandbox"
+run_status rb_stage_app_linux "$LBUILD" "$SCRATCH/linux-app3"
+expect_status "a Linux build without the executable fails" 1
+expect_output "the failure names the executable" "rbrowser-nosandbox"
+
 finish_tests cef

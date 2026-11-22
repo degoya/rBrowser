@@ -1,5 +1,6 @@
 //! Which Node runtime runs the sidecar: `engines.nodePath` when set, else the one the package
-//! ships beside the executable (`<install>/node/node.exe`). Its major version must be the one of
+//! ships (`<install>/node/node.exe`; `<install>/node/bin/node` in the macOS app bundle, whose
+//! `<install>` is `Contents/Resources` - [`crate::layout`]). Its major version must be the one of
 //! `.nvmrc`; there is no fallback to a `node` on `PATH`.
 
 use std::path::{Path, PathBuf};

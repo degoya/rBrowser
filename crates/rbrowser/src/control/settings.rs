@@ -10,7 +10,6 @@ use rb_commands::ChordSettings;
 use rb_config::{ConfigError, ConfigIssue, ProjectConfig, UserSettings};
 use rb_ipc::SettingValue;
 use rb_settings::{Origin, SchemaIssue, Scope, SettingsRegistry};
-use serde_json::Value;
 
 /// The user settings as the launch read them.
 #[derive(Debug, Default)]
@@ -92,7 +91,8 @@ pub fn user_values(registry: &SettingsRegistry, user: &UserSettings) -> Vec<Sett
                 .split('.')
                 .try_fold(&document, |node, segment| node.get(segment))
                 .cloned()
-                .unwrap_or(Value::Null);
+                // A plugin key the user file does not set (RB-094-26).
+                .unwrap_or_else(|| def.default_value());
             let origin = if value == def.default_value() {
                 Origin::Default
             } else {

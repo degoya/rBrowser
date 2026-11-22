@@ -9,24 +9,28 @@ import { join } from 'node:path';
 import type { BrowserEntry } from '../modules/playwright.ts';
 import { ErrorCode, RpcError } from '../rpc.ts';
 import { randomNames } from './agent.ts';
-import { buildDirName, executableName, isPinnedBuild, readTextOrNull } from './pin.ts';
+import { NO_BUILD, type Pin, WEBKIT_PIN, buildDirName, currentHost, executableName, isPinnedBuild, pinFor, readTextOrNull } from './pin.ts';
 import type { ServiceDeps } from './service.ts';
 import type { LauncherLike } from './types.ts';
 
 /** The executable of the WebKit build `entries` name under `browsersPath`, when rBrowser
- *  installed it from the pinned archive (`PIN_MARKER`). */
+ *  installed it from `pin`, this system's pinned archive (`PIN_MARKER`; null: none here). */
 export function installedExecutable(
   browsersPath: string | undefined,
   entries: BrowserEntry[],
   platform: NodeJS.Platform,
   readText: (path: string) => string | null,
+  pin: Pin | null = WEBKIT_PIN,
 ): string {
   const webkit = entries.find((entry) => entry.name === 'webkit');
   if (browsersPath === undefined || webkit === undefined) {
     throw new RpcError(ErrorCode.WebkitNotInstalled, 'WebKit is not installed (no browsers folder)');
   }
+  if (pin === null) {
+    throw new RpcError(ErrorCode.WebkitNotInstalled, NO_BUILD);
+  }
   const dir = join(browsersPath, buildDirName(webkit.revision));
-  if (!isPinnedBuild(dir, readText)) {
+  if (!isPinnedBuild(dir, readText, pin)) {
     throw new RpcError(ErrorCode.WebkitNotInstalled, `WebKit ${webkit.revision} is not installed`, {
       revision: webkit.revision,
     });
@@ -45,7 +49,8 @@ export function realServiceDeps(
       // The one place the real type meets the module's interface; the fake tests the rest.
       return playwright.webkit as unknown as LauncherLike;
     },
-    executablePath: () => installedExecutable(browsersPath, entries(), process.platform, readTextOrNull),
+    executablePath: () =>
+      installedExecutable(browsersPath, entries(), process.platform, readTextOrNull, pinFor(currentHost())),
     notify,
     names: () => randomNames((bytes) => randomBytes(bytes)),
   };

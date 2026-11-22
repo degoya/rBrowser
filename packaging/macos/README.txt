@@ -5,8 +5,8 @@ rBrowser shows every breakpoint of a site at once, in one window. This build
 is for macOS 13 or later, one per processor: "aarch64" for Apple Silicon (M1
 and later), "x86_64" for Intel Macs. It is signed ad hoc, not by a registered
 developer, and not notarised yet. VERSION.txt (in
-rBrowser.app/Contents/Resources) names the version, the commit and the CEF
-build.
+rBrowser.app/Contents/Resources) names the version, the commit, the CEF
+build and the Node runtime the bundle carries for the sidecar.
 
 
 1. Install
@@ -41,7 +41,8 @@ The executable inside the bundle takes the same commands as on Windows:
 
 4. Not on macOS yet
 -------------------
-  - WebKit views, flows and Lighthouse (the Node runtime and the sidecar).
+  - WebKit views, flows and Lighthouse: the Node runtime and the sidecar they
+    run in ship in the bundle; the features follow.
   - Firefox and WebKit windows inside the grid cells: they open as windows of
     their own.
   - The right mouse button on a label strip, the middle-button pan of the

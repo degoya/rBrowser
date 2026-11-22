@@ -168,3 +168,60 @@ fn the_password_is_masked_in_the_log_once_known() {
     let line = rb_diag::redact(&format!("a line naming {secret}"));
     assert!(!line.contains(secret), "{line}");
 }
+
+/// RB-094-29: per environment whether a credential is stored and for whom - never the password,
+/// neither in the answer's JSON nor in its `Debug` output.
+#[test]
+fn the_status_names_the_stored_user_and_never_the_password() {
+    let auth = service();
+    let config = config(&["staging"]);
+    let secret = "status-test-password-77";
+    auth.set(
+        "p",
+        &config,
+        "staging",
+        &Credential::new("ada", secret).expect("valid"),
+    )
+    .expect("stored");
+    let statuses = auth.statuses(Some("p"), &config);
+    assert_eq!(
+        statuses,
+        vec![
+            rb_ipc::EnvironmentAuthStatus::stored("staging", "ada"),
+            rb_ipc::EnvironmentAuthStatus::none("remote"),
+        ]
+    );
+    let answer = rb_ipc::CoreToShell::BasicAuthStatus {
+        environments: statuses,
+    };
+    let json = serde_json::to_string(&answer).expect("json");
+    let debug = format!("{answer:?}");
+    for text in [&json, &debug] {
+        assert!(!text.contains(secret), "{text}");
+        assert!(!text.contains("password"), "{text}");
+    }
+}
+
+#[test]
+fn the_status_follows_a_removal_and_another_project() {
+    let auth = service();
+    let config = config(&["staging"]);
+    auth.set("p", &config, "staging", &credential())
+        .expect("stored");
+    assert!(
+        auth.statuses(Some("other"), &config)
+            .iter()
+            .all(|status| !status.stored),
+        "another project's credential is not this one's"
+    );
+    assert!(
+        auth.statuses(None, &config)
+            .iter()
+            .all(|status| !status.stored)
+    );
+    auth.remove("p", &config, "staging").expect("removed");
+    assert_eq!(
+        auth.statuses(Some("p"), &config)[0],
+        rb_ipc::EnvironmentAuthStatus::none("staging")
+    );
+}

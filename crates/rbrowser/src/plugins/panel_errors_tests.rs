@@ -23,6 +23,18 @@ fn a_panel_gets_the_host_codes_texts() {
     );
 }
 
+/// RB-096-13: a call the frame could not post (a value the clone refuses) is said with its own
+/// sentence and reason, never only "The plugin could not do that."
+#[test]
+fn a_panel_gets_the_text_of_a_call_it_could_not_post() {
+    let texts = host_texts();
+    let not_sent = texts
+        .get("plugins.panel.not_sent")
+        .expect("the not_sent text");
+    assert!(!not_sent.starts_with("plugins."), "{not_sent}");
+    assert_ne!(Some(not_sent), texts.get("plugins.panel.call_failed"));
+}
+
 #[test]
 fn the_same_failure_is_logged_once_a_minute() {
     let throttle = Throttle::default();

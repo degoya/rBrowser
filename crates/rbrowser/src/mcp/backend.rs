@@ -142,6 +142,8 @@ impl Backend for CoreBackend {
         crate::updates::refuse_mcp(id)?;
         // The setup wizard is a person's dialog (RB-091-05).
         crate::first_run::refuse_mcp(id)?;
+        // A restart ends every MCP session (RB-094-23).
+        crate::restart::refuse_mcp(id)?;
         // Basic auth credentials and login state are a person's (RB-094-08).
         crate::basic_auth::refuse_mcp(id)?;
         crate::session_state::refuse_mcp(id)?;
@@ -299,6 +301,27 @@ impl Backend for CoreBackend {
         read_or_empty(&file_of(scope).path(&root))
     }
 
+    fn mcp_protected_keys(&self) -> Vec<String> {
+        let Some(core) = self.core() else {
+            return Vec::new();
+        };
+        let registry = core.settings_registry();
+        let loaded = registry
+            .iter()
+            .filter(|def| def.protected_from_mcp && registry.plugin_of(&def.key).is_some())
+            .map(|def| def.key.clone());
+        // Every installed package's too, loaded or not (RB-094-31): the folders the load reads.
+        let installed = rb_plugin_host::Sources {
+            bundled: crate::analyzer::plugins::bundled_dir(),
+            user: crate::analyzer::plugins::user_dir(),
+            project_root: core.host().project_root(),
+            ..rb_plugin_host::Sources::default()
+        };
+        let mut keys = super::installed_keys::protected_keys(&installed);
+        keys.extend(loaded);
+        keys.into_iter().collect()
+    }
+
     fn write_config_document(
         &self,
         scope: ConfigScope,
@@ -329,7 +352,12 @@ impl Backend for CoreBackend {
         crate::settings_window::write::validate_project(&project, local.as_ref(), "")
             .map_err(|issues| check_failure(&issues))?;
         rb_config::write_config_file(&root, file, document)
-            .map_err(|error| ToolFailure::new("settings.rejected.not_saved", error.to_string()))
+            .map_err(|error| ToolFailure::new("settings.rejected.not_saved", error.to_string()))?;
+        // In effect at once, with or without the watcher (RB-094-23).
+        if let Some(core) = self.core() {
+            crate::project_reload::after_write(&core);
+        }
+        Ok(())
     }
 
     async fn cdp_endpoint(&self, view: Option<ViewId>) -> Result<Value, ToolFailure> {

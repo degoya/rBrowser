@@ -2,7 +2,7 @@ name: Package channels
 
 # RB-090-13, RB-110-04 (after rCommander's package-channels.yml, RC-100-52, RC-100-53): rBrowser
 # installed through the Scoop manifest, the winget manifests and - once a release carries macOS
-# or Linux archives (RB-090-15, RB-110-01) - the Homebrew cask and formula, as
+# or Linux archives (RB-090-15, RB-097-05) - the Homebrew cask and formula, as
 # scripts/package-managers.sh renders them from this tree's templates, against a published
 # release's archives: the newest release, or the one named by hand, and with `upgrade_from` an
 # older release installed first and upgraded by the manager. After each install and upgrade
@@ -106,7 +106,7 @@ jobs:
             scripts/package-managers.sh "${release}" "sums/${release}/SHA256SUMS" \
               "rendered/${release}" --repository "${GITHUB_REPOSITORY}"
           done
-          # The Homebrew matrix holds what the release rendered: nothing before RB-090-15/RB-110-01.
+          # The Homebrew matrix holds what the release rendered: nothing before RB-090-15/RB-097-05.
           matrix=()
           [[ ! -f "rendered/${RELEASE}/homebrew/Casks/rbrowser.rb" ]] \
             || matrix+=('{"os":"macos-15","kind":"cask"}')

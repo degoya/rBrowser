@@ -10,8 +10,9 @@
 #   rb_cef_verify "$CEF_PATH" [--if-present]        # the cached archive matches the pin
 #   rb_stage_app "$build_dir" "$app_dir" [ui_dist]  # assembles (or updates) the app folder
 #
-# The macOS part (RB-090-15) is at the end: the macOS archives and their pins; the app bundle
-# itself is scripts/lib/macos-bundle.sh.
+# The macOS part (RB-090-15) follows: the macOS archives and their pins; the app bundle
+# itself is scripts/lib/macos-bundle.sh. The Linux part (RB-097-05) is at the end: its archive,
+# its pin and the app folder of the Linux package.
 
 # shellcheck source=scripts/lib/tool-versions.sh
 source "$(dirname "${BASH_SOURCE[0]}")/tool-versions.sh"
@@ -93,15 +94,6 @@ rb_cef_windows_dir() {
 #   rb_cef_macos_dir "$CEF_PATH" aarch64|x86_64          # the extracted distribution's folder
 #   rb_cef_verify_macos "$CEF_PATH" aarch64|x86_64 [--if-present]
 
-# The SHA-256 of file $1 with what the system has: sha256sum, or shasum on macOS.
-rb_sha256() {
-    if command -v sha256sum > /dev/null 2>&1; then
-        sha256sum "$1" | cut -d ' ' -f 1
-    else
-        shasum -a 256 "$1" | cut -d ' ' -f 1
-    fi
-}
-
 # The archive and its pin for the macOS architecture $1, as "<archive> <sha256>".
 rb_cef_macos_pin() {
     case "$1" in
@@ -134,5 +126,78 @@ rb_cef_verify_macos() {
         echo "!! $archive has SHA-256 $actual; the pin (scripts/lib/tool-versions.sh) is $expected" >&2
         echo "   Remove $cache/$RB_CEF_VERSION and build again; if the CDN changed the file, check it first." >&2
         return 1
+    fi
+}
+
+# --- Linux (RB-097-05) -------------------------------------------------------------------------
+#
+#   rb_cef_linux_dir "$CEF_PATH"                         # the extracted distribution's folder
+#   rb_cef_verify_linux "$CEF_PATH" [--if-present]
+#   rb_stage_app_linux "$build_dir" "$app_dir" [ui_dist] # the app folder of the Linux package
+
+# The folder the `cef` crate extracts the Linux x64 distribution into, in cache $1.
+rb_cef_linux_dir() {
+    printf '%s\n' "$1/$RB_CEF_VERSION/cef_linux_x86_64"
+}
+
+# Holds the Linux archive in cache $1 to its pin, as rb_cef_verify does for Windows; --if-present
+# lets a cache without the archive pass (the build downloads it).
+rb_cef_verify_linux() {
+    local cache="$1" mode="${2:-}" archive actual
+    archive="$cache/$RB_CEF_VERSION/$RB_CEF_ARCHIVE_LINUX_X64"
+    if [[ ! -f "$archive" ]]; then
+        [[ "$mode" == --if-present ]] && return 0
+        echo "!! no CEF archive at $archive; a build with CEF_PATH=$cache downloads it" >&2
+        return 1
+    fi
+    actual="$(rb_sha256 "$archive")"
+    if [[ "$actual" != "$RB_CEF_ARCHIVE_LINUX_X64_SHA256" ]]; then
+        echo "!! $archive has SHA-256 $actual; the pin (scripts/lib/tool-versions.sh) is $RB_CEF_ARCHIVE_LINUX_X64_SHA256" >&2
+        echo "   Remove $cache/$RB_CEF_VERSION/cef_linux_x86_64 and the archive and build again; if the CDN changed the file, check it first." >&2
+        return 1
+    fi
+}
+
+# Assembles the Linux app folder $2 from the build output $1 (target/<triple>/<profile>): the
+# executable rbrowser-nosandbox as rbrowser (on Linux it runs with the sandbox: the kernel's user
+# namespaces or the setuid chrome-sandbox, no bootstrap), the CEF runtime - libcef.so,
+# chrome-sandbox, SwiftShader and its Vulkan loader, *.pak, *.dat, *.bin, the ICD file and
+# locales/ - and, when $3 holds a build of the shell, $3 as ui/. The runtime comes from the build
+# output, where the cef crate copies it, else from the extracted distribution in the CEF cache
+# (rb_cef_linux_dir). chrome-sandbox keeps mode 0755 here: only an installed package can make it
+# root's and setuid (packaging/linux/nfpm.yaml.in). Files are copied only when newer.
+rb_stage_app_linux() {
+    local build="$1" app="$2" ui="${3:-}" cef="$1" dist file
+    dist="$(rb_cef_linux_dir "$(rb_cef_path)")"
+    if [[ ! -f "$build/libcef.so" && -f "$dist/libcef.so" ]]; then
+        cef="$dist"
+    fi
+    if [[ ! -f "$build/rbrowser-nosandbox" ]]; then
+        echo "!! $build has no rbrowser-nosandbox: build -p rbrowser for Linux first" >&2
+        return 1
+    fi
+    if [[ ! -f "$cef/libcef.so" ]]; then
+        echo "!! $build has no libcef.so (nor $dist): build -p rbrowser for Linux first" >&2
+        return 1
+    fi
+    mkdir -p "$app"
+    cp -u "$build/rbrowser-nosandbox" "$app/rbrowser"
+    chmod 755 "$app/rbrowser"
+    for file in "$cef"/libcef.so "$cef"/libvk_swiftshader.so "$cef"/libvulkan.so.1 \
+        "$cef"/*.pak "$cef"/*.dat "$cef"/*.bin "$cef/vk_swiftshader_icd.json"; do
+        [[ -f "$file" ]] || continue
+        cp -u "$file" "$app/"
+    done
+    if [[ -f "$cef/chrome-sandbox" ]]; then
+        cp -u "$cef/chrome-sandbox" "$app/chrome-sandbox"
+        chmod 755 "$app/chrome-sandbox"
+    fi
+    if [[ -d "$cef/locales" ]]; then
+        mkdir -p "$app/locales"
+        cp -ru "$cef/locales/." "$app/locales/"
+    fi
+    rm -rf "$app/ui"
+    if [[ -n "$ui" && -f "$ui/index.html" ]]; then
+        cp -r "$ui" "$app/ui"
     fi
 }

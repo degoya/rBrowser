@@ -5,11 +5,14 @@
 //! `rb_config::check`). What workspace trust guards is refused here first: persisted request
 //! headers (`emulation.headers`, `breakpoints[].headers`), the `network` keys, plugins,
 //! extensions, the screenshot folder and the other protected parts are never written to a
-//! project file over MCP. Live headers are another matter: `emulation_set { headers }` sets them
+//! project file over MCP, and a write at a parent key never removes or changes one of them
+//! (RB-094-31). Live headers are another matter: `emulation_set { headers }` sets them
 //! on the running views only, nothing is persisted, which T1 allows (an untrusted workspace
 //! sends only live headers).
 
-use rb_config::breakpoint_refs::{References, defined_ids, drop_removed};
+use std::collections::BTreeSet;
+
+use rb_config::breakpoint_refs::{References, defined_ids, drop_removed, remove_definitions};
 use serde_json::{Map, Value};
 
 use crate::backend::{ConfigScope, ToolFailure};
@@ -43,6 +46,22 @@ const REFUSED_KEYS: &[&str] = &[
     "checks.export.dir",
     "report.folder",
     "report.preview",
+    // The bundled plugins' `x-protected` keys, refused also while their plugin is not loaded
+    // (the registry knows a plugin's keys only once it is): a host an MCP client allowed itself
+    // would be read as the person's grant. A test holds the list to the plugins' schemas.
+    "api-client.allowedHosts",
+    "api-client.secrets",
+    "console.mcpExec",
+    "html-validate.nuAddress",
+    "lighthouse.keepRuns",
+    "load-test.allowedHosts",
+    "load-test.maxDurationS",
+    "load-test.maxRps",
+    "load-test.maxUsers",
+    "network-panel.allowComposeFromMcp",
+    "network-panel.mapLocalRoots",
+    "snippets.library",
+    "storage-panel.mcpValues",
 ];
 /// A segment refused wherever it stands: request headers (`emulation.headers`,
 /// `breakpoints[].headers`).
@@ -83,6 +102,27 @@ pub fn write_refusal(key: &str, value: &Value) -> Option<ToolFailure> {
     (holds_refused(value) || sets_refused_key).then(|| protected(key))
 }
 
+/// Why writing `value` to `key` is refused over MCP by the settings registry, or `None`: `key`
+/// is one of the keys `protected` from MCP (`x-protected`, the plugins' allowed hosts and
+/// secrets: `Backend::mcp_protected_keys`) or lies below one, or `value` sets one below `key`
+/// (`api-client` with `allowedHosts`). A host an MCP client allowed itself would be read as the
+/// person's grant.
+#[must_use]
+pub fn protected_refusal(key: &str, value: &Value, guarded_keys: &[String]) -> Option<ToolFailure> {
+    let refused = guarded_keys.iter().any(|guarded| {
+        is_at_or_below(key, guarded)
+            || guarded
+                .strip_prefix(key)
+                .and_then(|rest| rest.strip_prefix('.'))
+                .is_some_and(|rest| {
+                    rest.split('.')
+                        .try_fold(value, |node, segment| node.get(segment))
+                        .is_some_and(|found| !found.is_null())
+                })
+    });
+    refused.then(|| protected(key))
+}
+
 /// Whether `key` is `refused` or a key below it.
 fn is_at_or_below(key: &str, refused: &str) -> bool {
     key.strip_prefix(refused)
@@ -111,18 +151,39 @@ fn holds_refused(value: &Value) -> bool {
 }
 
 /// Sets the dotted `key` of `document` to `value` (intermediate objects made); `null` removes
-/// the key.
+/// the key. Refused, with `document` left as it was: what [`write_refusal`] refuses, what
+/// [`protected_refusal`] refuses for `guarded_keys` (the plugins' protected keys,
+/// `Backend::mcp_protected_keys`), and an edit that removes or changes a protected key below
+/// `key` the file holds - `null` or an object without it at a parent key (RB-094-31).
 ///
 /// # Errors
 ///
-/// A refused key or value, or a segment that is no object.
-pub fn set(document: &mut Value, key: &str, value: Value) -> Result<(), ToolFailure> {
-    if let Some(refused) = write_refusal(key, &value) {
+/// A refused key, value or edit, or a segment that is no object.
+pub fn set(
+    document: &mut Value,
+    key: &str,
+    value: Value,
+    guarded_keys: &[String],
+) -> Result<(), ToolFailure> {
+    if let Some(refused) =
+        write_refusal(key, &value).or_else(|| protected_refusal(key, &value, guarded_keys))
+    {
         return Err(refused);
     }
     if key.is_empty() || key.split('.').any(str::is_empty) {
         return Err(invalid(format!("`{key}` is no dotted key")));
     }
+    let mut edited = document.clone();
+    put(&mut edited, key, value)?;
+    if let Some(refused) = change_refusal(document, &edited, guarded_keys) {
+        return Err(refused);
+    }
+    *document = edited;
+    Ok(())
+}
+
+/// Puts `value` at the dotted `key` of `document`; `null` removes the key.
+fn put(document: &mut Value, key: &str, value: Value) -> Result<(), ToolFailure> {
     let segments: Vec<&str> = key.split('.').collect();
     let (last, parents) = segments
         .split_last()
@@ -145,6 +206,54 @@ pub fn set(document: &mut Value, key: &str, value: Value) -> Result<(), ToolFail
         object.insert((*last).to_owned(), value);
     }
     Ok(())
+}
+
+/// Why the edit of a project file from `before` to `after` is refused over MCP, or `None`: it
+/// removes or changes the value of a single refused key ([`REFUSED_KEYS`]) or of one of
+/// `guarded_keys`, or persisted request headers anywhere (`emulation {}`, `breakpoints []`) -
+/// what a person set stays as they set it (RB-094-31).
+fn change_refusal(before: &Value, after: &Value, guarded_keys: &[String]) -> Option<ToolFailure> {
+    let guarded = REFUSED_KEYS
+        .iter()
+        .copied()
+        .chain(guarded_keys.iter().map(String::as_str))
+        .find(|guarded| held_at(before, guarded) != held_at(after, guarded))
+        .map(protected);
+    guarded.or_else(|| {
+        let (mut held, mut kept) = (Vec::new(), Vec::new());
+        headers_in(before, String::new(), &mut held);
+        headers_in(after, String::new(), &mut kept);
+        (held != kept).then(|| protected(REFUSED_SEGMENT))
+    })
+}
+
+/// Every `headers` subtree of `value` with its path (array items by index), in document order.
+fn headers_in<'a>(value: &'a Value, path: String, out: &mut Vec<(String, &'a Value)>) {
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                let at = format!("{path}.{key}");
+                if key == REFUSED_SEGMENT {
+                    out.push((at, child));
+                } else {
+                    headers_in(child, at, out);
+                }
+            }
+        }
+        Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                headers_in(child, format!("{path}[{index}]"), out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The value `document` holds at the dotted `key`; `None` for none or `null`.
+fn held_at<'a>(document: &'a Value, key: &str) -> Option<&'a Value> {
+    key.split('.')
+        .try_fold(document, |node, segment| node.get(segment))
+        .filter(|found| !found.is_null())
 }
 
 fn invalid(message: String) -> ToolFailure {
@@ -233,14 +342,15 @@ pub fn remove_breakpoint(document: &mut Value, id: &str) -> Result<(), ToolFailu
     Ok(())
 }
 
-/// Removes the breakpoint `id` from `document` (the project file `scope`) and every reference to
-/// it - cells, hidden selections, mode fields, a preset's focus, `envCompare.breakpoints` - from
-/// `document` and from `other` (the other project file), unless `other` still defines it: the
-/// settings window's own function, `rb_config::breakpoint_refs` (RB-090-61).
+/// Removes the breakpoint `id` from both project files - `document` (the file `scope`) and
+/// `other` - wherever either defines it (the merge joins their `breakpoints` by id, so an entry
+/// left in one brings it back, RB-094-25), and every reference to it - cells, hidden selections,
+/// mode fields, a preset's focus, `envCompare.breakpoints` - from both: the settings window's
+/// own functions, `rb_config::breakpoint_refs` (RB-090-61).
 ///
 /// # Errors
 ///
-/// No such breakpoint in `document`.
+/// Neither file defines the breakpoint.
 pub fn remove_breakpoint_everywhere(
     document: &mut Value,
     other: &mut Value,
@@ -251,11 +361,21 @@ pub fn remove_breakpoint_everywhere(
         ConfigScope::Project => defined_ids(document, Some(&*other)),
         ConfigScope::Local => defined_ids(other, Some(&*document)),
     };
-    remove_breakpoint(document, id)?;
+    if !before.contains(id) {
+        return Err(missing(id));
+    }
+    let gone: BTreeSet<String> = [id.to_owned()].into_iter().collect();
+    remove_definitions(&gone, document, Some(&mut *other));
     Ok(match scope {
         ConfigScope::Project => drop_removed(&before, document, Some(other)),
         ConfigScope::Local => drop_removed(&before, other, Some(document)),
     })
+}
+
+/// Whether `document` (one project file) defines the breakpoint `id`.
+#[must_use]
+pub fn defines_breakpoint(document: &Value, id: &str) -> bool {
+    defined_ids(document, None).contains(id)
 }
 
 fn missing(id: &str) -> ToolFailure {

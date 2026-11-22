@@ -56,17 +56,17 @@ Lighthouse module
   sidecar\node_modules\ with its licence (named in its package.json, the
   text in its LICENSE file where the package has one): MIT, Apache-2.0,
   BSD-3-Clause, BSD-2-Clause, ISC, 0BSD, MIT OR CC0-1.0, and MPL-2.0 for
-  axe-core 4.14.0 (unchanged; its Source Code Form is the npm package
-  axe-core@4.14.0). Lighthouse's error reporting (@sentry/node and the
+  axe-core 4.14.1 (unchanged; its Source Code Form is the npm package
+  axe-core@4.14.1). Lighthouse's error reporting (@sentry/node and the
   packages only it needs) is not included and never switched on.
   Files: sidecar\node_modules\ (beside the Playwright packages above)
 
-axe-core 4.14.0 - in the a11y-axe plugin
+axe-core 4.14.1 - in the a11y-axe plugin
   https://github.com/dequelabs/axe-core
   Copyright (c) 2015 - 2026 Deque Systems, Inc.
   Licence: Mozilla Public License 2.0 (MPL-2.0), https://mozilla.org/MPL/2.0/.
   The file is unchanged; its Source Code Form is the npm package
-  axe-core@4.14.0 and the repository above at tag v4.14.0. axe-core contains
+  axe-core@4.14.1 and the repository above at tag v4.14.1. axe-core contains
   components under their own licences (MIT, BSD, Apache-2.0, W3C and others),
   listed with their texts in the plugin source, plugins/a11y-axe/runner/dist/.
   Files: plugins\a11y-axe-*.rbplugin (embedded in its component)

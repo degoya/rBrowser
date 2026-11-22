@@ -114,3 +114,36 @@ fn the_user_values_carry_their_origin() {
         "project keys are not the user's"
     );
 }
+
+/// RB-094-26: a plugin key the user file does not set comes back with its default as the
+/// default, as the settings window resolves it - not as `null` set by the user.
+#[test]
+fn an_unset_plugin_key_is_its_default() {
+    let schema = serde_json::from_str(include_str!(
+        "../../../../plugins/api-client/settings.schema.json"
+    ))
+    .expect("the API client's settings schema is JSON");
+    let registry = super::super::plugin_keys::with_plugins(&[("api-client".to_owned(), schema)]);
+    let find = |values: &[SettingValue], key: &str| {
+        values
+            .iter()
+            .find(|value| value.key == key)
+            .cloned()
+            .expect("the plugin's key")
+    };
+    let unset = find(
+        &user_values(&registry, &UserSettings::default()),
+        "api-client.benchRepeats",
+    );
+    assert_eq!(unset.value, serde_json::json!(10));
+    assert_eq!(unset.origin, rb_config::Origin::Default);
+
+    let mut user = UserSettings::default();
+    user.extra.insert(
+        "api-client".to_owned(),
+        serde_json::json!({ "benchRepeats": 20 }),
+    );
+    let set = find(&user_values(&registry, &user), "api-client.benchRepeats");
+    assert_eq!(set.value, serde_json::json!(20));
+    assert_eq!(set.origin, rb_config::Origin::User);
+}

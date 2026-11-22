@@ -20,6 +20,10 @@ dialog; a string key whose last segment ends in `path` or `dir` (any case) has t
 choices the core finds at runtime (RB-080-32), or the name of a source the core fills at runtime
 (`OPTION_SOURCES`, RB-080-72) on a list (its items) or a map (its keys). Every key has a help text,
 `x-help-key` or `<base>.help`, beside its label and description.
+
+A secret key (`x-secret`, RB-094-26, RB-094-27) is no setting of the window; its `x-panel`,
+`{"panel": <id>, "tab": <id>}`, names the panel of its plugin that edits it (a panel the plugin's
+manifest lists), and only a secret key of a plugin carries one.
 """
 
 import json
@@ -47,6 +51,7 @@ MAX_DEPTH = 32
 KEY_SEGMENT = re.compile(r"[A-Za-z][A-Za-z0-9_-]*\Z")
 I18N_AREA = re.compile(r"[a-z][a-z0-9]*\Z")
 I18N_SEGMENT = re.compile(r"[a-z0-9][A-Za-z0-9_-]*\Z")
+PANEL_ID = re.compile(r"[a-z][a-z0-9-]{0,39}\Z")
 
 
 class DataError(Exception):
@@ -71,6 +76,9 @@ class Setting:
     input: str | None = None
     # The whole schema the key sits in, for the `$ref`s of its nested values (RB-090-16).
     root: dict = field(default_factory=dict)
+    # `x-secret` (RB-094-26), and the panel its `x-panel` names (RB-094-27), well formed.
+    secret: bool = False
+    panel: dict | None = None
 
 
 @dataclass
@@ -78,6 +86,8 @@ class Plugin:
     id: str
     schema: Path
     catalogue: dict = field(default_factory=dict)
+    # The ids of its `[[panels]]` (RB-094-27: a secret key's `x-panel` names one).
+    panels: list = field(default_factory=list)
 
 
 def categories(root: Path) -> list[tuple[str, list[str]]]:
@@ -163,7 +173,8 @@ def plugins(root: Path) -> list[Plugin]:
             raise DataError(f"{relative(manifest, root)}: malformed plugin id {plugin_id!r}")
         locale = (data.get("locales") or {}).get("en")
         texts = flatten(load_json(manifest.parent / locale, root)) if locale else {}
-        found.append(Plugin(plugin_id, manifest.parent / schema, texts))
+        panels = [panel.get("id") for panel in data.get("panels") or [] if isinstance(panel, dict)]
+        found.append(Plugin(plugin_id, manifest.parent / schema, texts, panels))
     return found
 
 
@@ -280,12 +291,16 @@ def read_setting(root, key, path, prop, source, sections, plugin):
     elif len(set(scopes)) != len(scopes):
         problems.append("x-scope repeats a scope")
     flags = {}
-    for name in ("x-local-only", "x-protected"):
+    for name in ("x-local-only", "x-protected", "x-secret"):
         flags[name] = prop.get(name, False)
         if not isinstance(flags[name], bool):
             problems.append(f"{name} is not true or false")
     if flags["x-local-only"] is True and scopes != ["local"]:
         problems.append('a local-only key has x-scope ["local"]')
+    # A secret's values never show (RB-094-26), and MCP never writes one.
+    if flags["x-secret"] is True and flags["x-protected"] is not True:
+        problems.append("a secret key is x-protected")
+    panel = panel_of(prop, flags["x-secret"] is True, plugin, problems)
     base = f"plugin.{plugin}.settings.{path}" if plugin else f"settings.key.{path}"
     label = prop.get("x-label-key", f"{base}.label")
     description = prop.get("x-description-key", f"{base}.description")
@@ -300,9 +315,32 @@ def read_setting(root, key, path, prop, source, sections, plugin):
     setting = Setting(
         key, category, section, order, scopes, flags["x-local-only"] is True,
         flags["x-protected"] is True, label, description, help_key, schema, source, plugin,
-        schema.get("x-input"), root,
+        schema.get("x-input"), root, flags["x-secret"] is True, panel,
     )
     return setting, problems
+
+
+def panel_of(prop: dict, secret: bool, plugin: str | None, problems: list) -> dict | None:
+    """The key's `x-panel` when it is well formed and allowed (RB-094-27), else `None` and the
+    problem; whether the plugin has that panel is read_all's."""
+    panel = prop.get("x-panel")
+    if panel is None:
+        return None
+    if not secret:
+        problems.append("x-panel is only on an x-secret key")
+        return None
+    if plugin is None:
+        problems.append("x-panel names a plugin's panel: only on a plugin's key")
+        return None
+    tab = panel.get("tab") if isinstance(panel, dict) else None
+    if (
+        not isinstance(panel, dict) or set(panel) - {"panel", "tab"}
+        or not isinstance(panel.get("panel"), str) or not PANEL_ID.match(panel["panel"])
+        or (tab is not None and (not isinstance(tab, str) or not PANEL_ID.match(tab)))
+    ):
+        problems.append('x-panel is not {"panel": <id>, "tab": <id>}')
+        return None
+    return panel
 
 
 def is_string_schema(schema) -> bool:
@@ -360,8 +398,11 @@ def read_all(root: Path):
     sections = dict(categories(root))
     settings, issues = [], []
     sources = [(path, None) for path in schema_files(root)]
+    panels = {}
     try:
-        sources += [(plugin.schema, plugin.id) for plugin in plugins(root)]
+        bundled = plugins(root)
+        sources += [(plugin.schema, plugin.id) for plugin in bundled]
+        panels = {plugin.id: plugin.panels for plugin in bundled}
     except DataError as error:
         issues.append(("plugins", "", str(error)))
     for path, plugin in sources:
@@ -380,6 +421,11 @@ def read_all(root: Path):
             issues.append((setting.source, setting.key, f"defined twice (also {seen[setting.key]})"))
             continue
         seen[setting.key] = setting.source
+        if setting.panel is not None and setting.panel["panel"] not in panels.get(setting.plugin, []):
+            issues.append((
+                setting.source, setting.key,
+                f"x-panel names `{setting.panel['panel']}`, no panel of plugin {setting.plugin}",
+            ))
         slot = (setting.category, setting.section, setting.order, setting.plugin)
         if slot in orders:
             issues.append((

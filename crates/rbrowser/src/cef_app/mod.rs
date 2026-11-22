@@ -1,14 +1,21 @@
-//! The CEF application (Windows; the macOS test build, RB-090-15): the entry points, the launch
-//! before CEF starts, and the window and views (ADR 0001). Two entries share [`run`] on
-//! Windows: `RunWinMain`, which CEF's `bootstrap.exe` (shipped as `rbrowser.exe`) calls in
-//! `rbrowser.dll` with the sandbox, and [`run_plain`] for `rbrowser-nosandbox.exe`. On macOS
-//! [`run_plain`] is the bundle's `rbrowser` and [`run_helper`] its helper apps' executable.
+//! The CEF application (Windows; the macOS test build, RB-090-15; Linux, RB-097-05): the entry
+//! points, the launch before CEF starts, and the window and views (ADR 0001). Two entries share
+//! [`run`] on Windows: `RunWinMain`, which CEF's `bootstrap.exe` (shipped as `rbrowser.exe`)
+//! calls in `rbrowser.dll` with the sandbox, and [`run_plain`] for `rbrowser-nosandbox.exe`. On
+//! macOS [`run_plain`] is the bundle's `rbrowser` and [`run_helper`] its helper apps'
+//! executable. On Linux [`run_plain`] is `rbrowser` itself, every CEF subprocess included, with
+//! the sandbox of the kernel's user namespaces or the setuid `chrome-sandbox`
+//! (`crate::sandbox_linux`).
 //!
 //! The Win32 modules have a macOS twin of the same name under `macos/` (the `path` attributes
 //! below): what macOS does not have yet is a no-op there that says so, so the grid, the views
-//! and the shell run on both.
+//! and the shell run on both. Linux takes the same twins where they hold for both - the POSIX
+//! CDP pipe and the no-ops - and one of its own under `linux/` where macOS calls AppKit.
 
-#[cfg_attr(target_os = "macos", path = "macos/activate.rs")]
+#[cfg_attr(
+    any(target_os = "macos", target_os = "linux"),
+    path = "macos/activate.rs"
+)]
 mod activate;
 mod active_label;
 mod address_field;
@@ -19,7 +26,10 @@ mod app;
 mod application;
 mod auth;
 mod backend;
-#[cfg_attr(target_os = "macos", path = "macos/board_pan.rs")]
+#[cfg_attr(
+    any(target_os = "macos", target_os = "linux"),
+    path = "macos/board_pan.rs"
+)]
 mod board_pan;
 mod canvas_board;
 mod cell_footers;
@@ -30,7 +40,10 @@ mod context_menu;
 mod devtools;
 mod dialogs;
 mod embed;
-#[cfg_attr(target_os = "macos", path = "macos/embed_windows.rs")]
+#[cfg_attr(
+    any(target_os = "macos", target_os = "linux"),
+    path = "macos/embed_windows.rs"
+)]
 mod embed_windows;
 mod engine_badge;
 mod frame;
@@ -40,13 +53,18 @@ mod handle;
 mod icon;
 mod keys;
 mod label_strip;
+// The Linux entry and its sandbox check (RB-097-05).
+#[cfg(target_os = "linux")]
+#[path = "linux/entry.rs"]
+mod linux;
 #[cfg_attr(target_os = "macos", path = "macos/message_box.rs")]
+#[cfg_attr(target_os = "linux", path = "linux/message_box.rs")]
 mod message_box;
 mod native_menu;
 mod page_windows;
 mod page_zoom;
 mod panel_dock;
-#[cfg_attr(target_os = "macos", path = "macos/pipe.rs")]
+#[cfg_attr(any(target_os = "macos", target_os = "linux"), path = "macos/pipe.rs")]
 mod pipe;
 mod placed;
 mod pop_out;
@@ -62,13 +80,17 @@ mod sitemap_scheme;
 mod splitter;
 mod start;
 mod status_bar;
-#[cfg_attr(target_os = "macos", path = "macos/strip_clicks.rs")]
+#[cfg_attr(
+    any(target_os = "macos", target_os = "linux"),
+    path = "macos/strip_clicks.rs"
+)]
 mod strip_clicks;
 mod take_focus;
 mod task;
 mod teardown;
 mod theme;
 #[cfg_attr(target_os = "macos", path = "macos/theme_dwm.rs")]
+#[cfg_attr(target_os = "linux", path = "linux/theme_dwm.rs")]
 mod theme_dwm;
 mod ui_watchdog;
 mod video_scheme;
@@ -94,6 +116,9 @@ use start::{LAUNCH, Launch};
 
 /// The exit code when the app is started from the WSL share.
 const EXIT_WSL_SHARE: i32 = 2;
+
+#[cfg(target_os = "linux")]
+pub use linux::run_plain;
 
 /// Entry of the plain executable (no sandbox).
 #[cfg(windows)]
@@ -296,6 +321,11 @@ fn run(
         tracing::warn!("the Chromium sandbox is off (setting engines.chromium.sandbox)");
     }
     let sandbox = sandboxed && !cli.no_sandbox && setting;
+    // Linux: a sandbox that cannot start says how to fix it, not Chromium's abort (RB-097-05).
+    #[cfg(target_os = "linux")]
+    if sandbox && let Some(code) = linux::sandbox_stops(&exe) {
+        return code;
+    }
     tracing::info!(sandbox, profile = %launch.1.display(), "starting CEF");
     let cef_log = launch.0.setup.diag.as_ref().map_or_else(
         || launch.1.join(rb_diag::paths::CEF_LOG_FILE_NAME),
@@ -365,6 +395,8 @@ fn run(
     crate::sidecar::shutdown(&runtime);
     shutdown();
     runtime.shutdown_timeout(Duration::from_secs(1));
+    // `app.restart` (RB-094-23): the profile is free now, the next start may take it.
+    crate::restart::relaunch_if_requested();
     0
 }
 

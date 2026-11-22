@@ -109,3 +109,19 @@ async fn a_blocking_thread_of_the_runtime_and_a_thread_that_entered_it_run_the_f
     .expect("joined");
     assert_eq!(on_thread, Ok(3));
 }
+
+/// RB-094-30: `plugins.compileCache` on keeps the compiled plugins in `plugin-cache` of the local
+/// folder; off - or without a local folder - no cache at all.
+#[test]
+fn the_compile_cache_folder_follows_the_setting() {
+    let local = std::path::PathBuf::from("/state/rBrowser");
+    let mut plugins = rb_config::PluginSettings::default();
+    assert!(plugins.compile_cache, "on by default");
+    assert_eq!(
+        super::compile_cache_dir_in(&plugins, Some(local.clone())),
+        Some(local.join(super::COMPILE_CACHE_DIR))
+    );
+    assert_eq!(super::compile_cache_dir_in(&plugins, None), None);
+    plugins.compile_cache = false;
+    assert_eq!(super::compile_cache_dir_in(&plugins, Some(local)), None);
+}

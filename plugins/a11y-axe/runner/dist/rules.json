@@ -1,5 +1,5 @@
 {
-  "axeVersion": "4.14.0",
+  "axeVersion": "4.14.1",
   "rules": [
     {
       "id": "accesskeys",

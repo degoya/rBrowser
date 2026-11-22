@@ -2705,6 +2705,17 @@
       }
     },
     {
+      "id": "app.restart",
+      "titleKey": "commands.app.restart",
+      "group": "settings",
+      "defaultBindings": [
+        "Ctrl+Shift+Space , S"
+      ],
+      "mcp": {
+        "omitted": "protected: a restart ends every MCP session; only a person restarts rBrowser"
+      }
+    },
+    {
       "id": "app.setup_wizard",
       "titleKey": "commands.app.setup_wizard",
       "group": "settings",

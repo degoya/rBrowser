@@ -542,7 +542,7 @@ dependencies = [
  "cranelift-entity",
  "cranelift-isle",
  "gimli",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "libm",
  "log",
  "postcard",
@@ -604,7 +604,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b45328ff7bac253860079032352989eae50341e155ddd4c6cfb8f5d40c490fa"
 dependencies = [
  "cranelift-codegen",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "log",
  "smallvec",
  "target-lexicon",
@@ -1205,9 +1205,9 @@ checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
 name = "hashbrown"
-version = "0.17.1"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+checksum = "735eaa21a6a5ffb2e84362faaeb90c05ba8e19797ca30428478cb6ea3a4921bc"
 dependencies = [
  "foldhash",
  "serde",
@@ -1220,7 +1220,7 @@ version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a596f1b20ed2cc5ecac41a164aaebc7258057060f06c0cf7a2ba3991ee7990fb"
 dependencies = [
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
 ]
 
 [[package]]
@@ -1464,7 +1464,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "serde",
  "serde_core",
 ]
@@ -1855,7 +1855,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd229a0361b9d0d4396176e02d65897f487eebeab7caa6d443855ee152ca0b9c"
 dependencies = [
  "crc32fast",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "indexmap",
  "memchr",
 ]
@@ -2053,7 +2053,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-export"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-api-model",
  "serde",
@@ -2062,7 +2062,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-import"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-api-model",
  "serde",
@@ -2072,7 +2072,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-model"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -2080,7 +2080,7 @@ dependencies = [
 
 [[package]]
 name = "rb-bidi"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "futures-util",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "rb-cdp"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "getrandom 0.4.3",
  "rb-util",
@@ -2110,7 +2110,7 @@ dependencies = [
 
 [[package]]
 name = "rb-commands"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "schemars",
  "serde",
@@ -2121,7 +2121,7 @@ dependencies = [
 
 [[package]]
 name = "rb-config"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "indexmap",
  "rb-i18n",
@@ -2138,7 +2138,7 @@ dependencies = [
 
 [[package]]
 name = "rb-diag"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "clap",
  "rb-commands",
@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "rb-engine"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "rb-config",
@@ -2170,7 +2170,7 @@ dependencies = [
 
 [[package]]
 name = "rb-i18n"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -2179,7 +2179,7 @@ dependencies = [
 
 [[package]]
 name = "rb-ipc"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-commands",
  "rb-config",
@@ -2193,7 +2193,7 @@ dependencies = [
 
 [[package]]
 name = "rb-mcp"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "axum",
@@ -2221,7 +2221,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -2230,7 +2230,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-host"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2268,7 +2268,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "schemars",
  "serde",
@@ -2278,7 +2278,7 @@ dependencies = [
 
 [[package]]
 name = "rb-process"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "tempfile",
  "tokio",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "rb-safari"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "rb-bidi",
@@ -2306,7 +2306,7 @@ dependencies = [
 
 [[package]]
 name = "rb-settings"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "schemars",
  "serde",
@@ -2316,7 +2316,7 @@ dependencies = [
 
 [[package]]
 name = "rb-sidecar"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-commands",
  "rb-diag",
@@ -2330,7 +2330,7 @@ dependencies = [
 
 [[package]]
 name = "rb-sync"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "rb-engine",
@@ -2346,7 +2346,7 @@ dependencies = [
 
 [[package]]
 name = "rb-update"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2371,11 +2371,11 @@ dependencies = [
 
 [[package]]
 name = "rb-util"
-version = "0.9.6"
+version = "0.9.7"
 
 [[package]]
 name = "rb-visual"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "png",
  "rb-util",
@@ -2387,7 +2387,7 @@ dependencies = [
 
 [[package]]
 name = "rb-wsl"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "base64 0.23.1",
  "clap",
@@ -2406,7 +2406,7 @@ dependencies = [
 
 [[package]]
 name = "rbrowser"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2465,7 +2465,7 @@ dependencies = [
 
 [[package]]
 name = "rbrowser-cli"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "rb-process",
  "tempfile",
@@ -2510,7 +2510,7 @@ checksum = "34f923657880712029496c2e68bb40bef163806b2011adde559b28bbcedc82ea"
 dependencies = [
  "allocator-api2",
  "bumpalo",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "log",
  "rustc-hash",
  "serde",
@@ -3638,7 +3638,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f20f20e44f7e8aeb6744823ea9d869ede51e51be4fdaedede2852282e54d2d8"
 dependencies = [
  "bitflags",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "indexmap",
  "semver",
  "serde",
@@ -3651,7 +3651,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f5fa0a054ae153606df820eb0a84213e28cda41bbe04ba2628e71b6ba100fcb"
 dependencies = [
  "bitflags",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "indexmap",
  "semver",
 ]
@@ -3722,7 +3722,7 @@ dependencies = [
  "cranelift-bitset",
  "cranelift-entity",
  "gimli",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "indexmap",
  "log",
  "object",
@@ -3788,7 +3788,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4668db5cde6343ae9c7c188741689d30bcefa40c70647b87be2afb2c14511aa"
 dependencies = [
  "anyhow",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "libm",
  "serde",
 ]
@@ -4165,7 +4165,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "962e43c4db2da607b50839a531e5b63473268b40efdf8028d5c54b572ca4f6f6"
 dependencies = [
  "anyhow",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "id-arena",
  "indexmap",
  "log",
@@ -4184,7 +4184,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "874d6ce9db4261cb66980ab14f3da066b24292497b6f46f988c0d1b9b27913f3"
 dependencies = [
  "anyhow",
- "hashbrown 0.17.1",
+ "hashbrown 0.17.2",
  "id-arena",
  "indexmap",
  "log",

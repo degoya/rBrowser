@@ -61,6 +61,8 @@ pub fn register_all(
     refused.extend(crate::pop_out::register(registry, core));
     refused.extend(crate::updates::register(registry, core));
     refused.extend(crate::first_run::register(registry, core));
+    // RB-094-23: the settings window's "Restart now".
+    refused.extend(crate::restart::register(registry, core));
     refused.extend(crate::sitemap::register(registry, core));
     refused.extend(crate::compare::register(registry, core));
     refused.extend(crate::engine_compare::register(registry, core));

@@ -19,7 +19,8 @@ use super::commands::failure_text;
 
 /// The core texts a panel gets besides the host codes': the panels window's own codes, the
 /// reasons of a host failure, the waiting line, the sentence of a code without a text and the
-/// names of the tab row's scroll buttons (`PanelTabs`, RB-090-48).
+/// names of the tab row's scroll buttons (`PanelTabs`, RB-090-48), and the sentence of a call the
+/// panel's frame could not post (`plugins.panel.not_sent`, RB-096-13).
 pub const PANEL_KEYS: &[&str] = &[
     "plugins.error.busy",
     "plugins.error.no_answer",
@@ -31,6 +32,7 @@ pub const PANEL_KEYS: &[&str] = &[
     "plugins.reason.panel_message_limit",
     "plugins.panel.waiting",
     "plugins.panel.call_failed",
+    "plugins.panel.not_sent",
     "plugins.panel.tabs_back",
     "plugins.panel.tabs_forward",
 ];

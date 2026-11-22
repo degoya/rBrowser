@@ -22,8 +22,9 @@ use tokio::process::Command;
 use crate::LOG_TARGET;
 use crate::error::SidecarError;
 use crate::framing::{LineRead, read_line};
+use crate::layout::{Layout, package_dir};
 use crate::node::{resolve_node, sidecar_script, verify};
-use crate::playwright::browsers_path;
+use crate::playwright::{browsers_path, local_base};
 use crate::settings::{SidecarSettings, non_empty};
 use crate::supervisor::{Launched, Launcher, Sidecar};
 
@@ -34,6 +35,8 @@ pub const ALLOWED_ENV: &[&str] = &[
     "SystemRoot",
     "TEMP",
     "TMP",
+    // The per-user temporary folder on macOS (RB-097-01); without it Node falls back to /tmp.
+    "TMPDIR",
     "LOCALAPPDATA",
     "USERPROFILE",
     "HOME",
@@ -95,7 +98,8 @@ const MAX_STDERR_LINE: usize = 64 * 1024;
 /// Where the package lives and what the settings say, for one start.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeLauncher {
-    /// The folder of `rbrowser.exe` (`node\`, `sidecar\` beside it).
+    /// The folder that holds `node\` and `sidecar\`: that of `rbrowser.exe`, or
+    /// `rBrowser.app/Contents/Resources` on macOS ([`package_dir`]).
     pub install_dir: PathBuf,
     /// `engines.nodePath`.
     pub node_path: Option<String>,
@@ -114,7 +118,8 @@ pub struct ConfiguredLauncher {
 }
 
 impl ConfiguredLauncher {
-    /// A launcher for the package in `install_dir`; `local_app_data` is `%LOCALAPPDATA%`.
+    /// A launcher for the package in `install_dir`; `local_app_data` is the folder the default
+    /// browsers folder goes under ([`local_base`]: `%LOCALAPPDATA%` on Windows).
     pub fn new(
         install_dir: PathBuf,
         local_app_data: Option<OsString>,
@@ -127,16 +132,21 @@ impl ConfiguredLauncher {
         }
     }
 
-    /// The launcher of the package `rbrowser.exe` belongs to.
+    /// The launcher of the package the running executable belongs to: `node\` and `sidecar\`
+    /// beside `rbrowser.exe`, or in `Contents/Resources` of the macOS app bundle (RB-097-01,
+    /// [`package_dir`]); the browsers under [`local_base`].
     pub fn beside_executable(settings: SidecarSettings) -> io::Result<Self> {
-        let exe = std::env::current_exe()?;
-        let install_dir = exe
-            .parent()
-            .map(Path::to_path_buf)
+        let layout = Layout::current();
+        let mut exe = std::env::current_exe()?;
+        // A link to the bundle's executable (a shell's `rbrowser` on PATH) still finds the bundle.
+        if layout == Layout::AppBundle {
+            exe = std::fs::canonicalize(&exe).unwrap_or(exe);
+        }
+        let install_dir = package_dir(&exe, layout)
             .ok_or_else(|| io::Error::other("the executable has no folder"))?;
         Ok(Self::new(
             install_dir,
-            std::env::var_os("LOCALAPPDATA"),
+            local_base(cfg!(windows), |name| std::env::var_os(name)),
             settings,
         ))
     }

@@ -183,7 +183,11 @@ fn a_secret_path_segment_becomes_a_variable_in_the_url_title_and_path() {
     );
     let bot = convert(&captured(
         "POST",
-        "https://api.telegram.test/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage",
+        // A bot token's shape, split so no secret scanner reads the fixture as a live token.
+        concat!(
+            "https://api.telegram.test/bot123456789",
+            ":AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage"
+        ),
         &[],
         None,
     ))

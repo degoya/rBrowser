@@ -16,6 +16,10 @@ export const ARMED_MS = 120_000;
 export const SHOWN_MS = 10_000;
 /** The notices about a program that rBrowser can download: the setting, the command. */
 const DOWNLOADS: Readonly<Record<string, string>> = { 'engines.android.adbPath': 'tools.adb.install' };
+/** The links that open a panel, not the settings (RB-094-27: a secret key's `x-panel`), and the
+ * label naming the panel's place - the shell has no schema to read it from. The status bar and
+ * its history name the place the same way. */
+export const PANEL_PLACES: Readonly<Record<string, string>> = { 'api-client.secrets': 'shell.toast.apiVariables' };
 
 /** When the person last started something, and the command to run again. */
 export interface Started {
@@ -61,7 +65,7 @@ export function toastOf(notification: Notification, started: Started | null, now
   }
   const setting = notification.settingsKey;
   if (setting !== undefined) {
-    buttons.push({ kind: 'settings', labelKey: 'shell.toast.settings', message: { type: 'openSettings', key: setting } });
+    buttons.push({ kind: 'settings', labelKey: PANEL_PLACES[setting] ?? 'shell.toast.settings', message: { type: 'openSettings', key: setting } });
     const download = DOWNLOADS[setting];
     if (download !== undefined) {
       buttons.push({ kind: 'download', labelKey: 'shell.toast.download', message: { type: 'runCommand', id: download } });

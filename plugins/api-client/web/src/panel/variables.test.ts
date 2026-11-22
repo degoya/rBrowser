@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blocksOf, hintOf, references, saveOf, type VariablesAnswer } from './variables';
+import { blocksOf, environmentNameProblem, hintOf, references, saveOf, type VariablesAnswer } from './variables';
 import { emptyRequest } from './model';
 
 const ANSWER: VariablesAnswer = {
@@ -92,5 +92,17 @@ describe('the Variables tab (RB-096-11)', () => {
     expect(hintOf('token', 'staging', blocks, ANSWER.baseUrls)).toEqual({ state: 'secret' });
     expect(hintOf('baseUrl', 'production', blocks, ANSWER.baseUrls)).toEqual({ state: 'plain', value: 'https://api.example.com' });
     expect(hintOf('path', 'production', blocks, ANSWER.baseUrls)).toEqual({ state: 'unknown' });
+  });
+});
+
+describe('a new environment\'s name (RB-096-13)', () => {
+  it('needs a name the tab does not have yet, as short as the core takes it', () => {
+    const taken = ['$shared', 'staging'];
+    expect(environmentNameProblem('  ', taken)).toBe('empty');
+    expect(environmentNameProblem(' staging ', taken)).toBe('taken');
+    expect(environmentNameProblem('$shared', taken)).toBe('taken');
+    expect(environmentNameProblem('a'.repeat(81), taken)).toBe('bad');
+    expect(environmentNameProblem('a\tb', taken)).toBe('bad');
+    expect(environmentNameProblem('qa', taken)).toBeNull();
   });
 });

@@ -8,8 +8,8 @@
 //! the key allows (a local-only key never goes to the project); a project scope needs a project;
 //! the value passes `SettingDef::check_value` and then the deep check of its whole schema; the
 //! result deserializes into the typed settings or config, and a project config passes
-//! `rb_config::check` - after a removed breakpoint's references left both project files
-//! (`refs`, RB-090-61). `null` resets: the key leaves the file.
+//! `rb_config::check` - after a removed breakpoint's entries (RB-094-25) and references
+//! (RB-090-61) left both project files (`refs`). `null` resets: the key leaves the file.
 
 use rb_config::{ConfigFile, ProjectConfig, UserSettings};
 use rb_ipc::SettingIssue;
@@ -70,8 +70,8 @@ pub enum Plan {
         file: ConfigFile,
         /// The file's new JSON.
         document: Value,
-        /// The other project file's new JSON, written first, when it named a breakpoint the
-        /// write removes (RB-090-61, `refs`).
+        /// The other project file's new JSON, when it named a breakpoint the write removes
+        /// (RB-090-61, `refs`); `write_order` puts the two files in order.
         also: Option<(ConfigFile, Value)>,
     },
 }
@@ -169,18 +169,25 @@ fn plan_project(
     } else {
         ConfigFile::Project
     };
-    let old = documents.effective(def);
+    let mut old = documents.effective(def);
     let mut document = documents
         .file(scope)
         .cloned()
         .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+    let mut other = super::refs::other_file(project, file);
+    // A breakpoint the list leaves out goes from both files, which the merge joins by id
+    // (RB-094-25); a Delete alone then changes nothing else of the file written.
+    let dropped = def.key == super::refs::BREAKPOINTS_KEY
+        && !value.is_null()
+        && super::refs::drop_definitions(&mut old, value, &mut document, other.as_mut());
+    let only_dropped = dropped && old == *value;
     if value.is_null() {
         docedit::remove(&mut document, &def.key);
-    } else {
+    } else if !only_dropped {
         docedit::set(&mut document, &def.key, &old, value).map_err(|_| refused(reason::INVALID))?;
     }
     // A breakpoint the write removes takes its references along, in both files (RB-090-61).
-    let also = super::refs::drop_dangling(project, file, &mut document);
+    let also = super::refs::drop_dangling(project, file, &mut document, other);
     let other = also.as_ref().map(|(_, other)| other);
     let (project_file, local_file) = match file {
         ConfigFile::Project => (&document, other.or(project.local_file.as_ref())),

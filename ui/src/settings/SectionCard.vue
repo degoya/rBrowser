@@ -6,7 +6,8 @@
 // The grid (`layout`) gets its preview beside it; the device presets list follows in the slot,
 // the plugin list stands above the keys in the slot `before`. The CDP proxy's and the MCP
 // server's commands stand under their switches (`AutomationActions`, RB-090-63); the MCP setup
-// under the client choice (`McpSettings`, RB-091-09).
+// under the client choice (`McpSettings`, RB-091-09); each environment's Basic auth user and
+// password under the list of environments behind it (`EnvironmentAuth`, RB-094-24).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -16,11 +17,14 @@ import type { JsonValue, PathKind, Scope } from '../ipc/protocol';
 import GridPreview from './GridPreview.vue';
 import WebStoreInstall from './WebStoreInstall.vue';
 import AutomationActions from './AutomationActions.vue';
+import EnvironmentAuth from './EnvironmentAuth.vue';
+import { BASIC_AUTH_KEY, ENVIRONMENTS_KEY } from './environmentAuth';
 import McpSettings from '../mcpsetup/McpSettings.vue';
 import { automationActions } from './automationActions';
 import { SETTINGS_ICONS } from './icons';
 import { flagOf, SHOW_KEYS_KEY } from './flags';
 import { projectRelative } from './paths';
+import { createRestartOffers } from './restartOffers';
 import { type CategoryView, type SectionView, type SettingDef, SHORTCUTS_KEY } from './schema';
 import SectionHeader from './SectionHeader.vue';
 import SettingField from './SettingField.vue';
@@ -32,6 +36,8 @@ const GRID_KEY = 'layout';
 /** The switch the Web Store field follows (RB-080-23). */
 const WEB_STORE_KEY = 'engines.chromium.extensions.allowWebStore';
 const BREAKPOINTS_KEY = 'breakpoints';
+/** The command of "Restart now" (RB-094-23). */
+const RESTART_COMMAND = 'app.restart';
 /** The MCP setup stands under the client choice (RB-091-09). */
 const MCP_CLIENT_KEY = 'mcp.client';
 
@@ -78,8 +84,20 @@ function originOf(def: SettingDef) {
   return props.store.values.value.get(def.key)?.origin ?? 'default';
 }
 
+/** "Restart now" under a key that applies at the next start (RB-094-23). */
+function restartNow(): void {
+  props.client.request({ type: 'runCommand', id: RESTART_COMMAND }).catch(() => undefined);
+}
+
+/** The restart keys saved here: "Restart now" shows under them, never for a refused write. */
+const restartOffers = createRestartOffers();
+
 function onSet(def: SettingDef, value: JsonValue, scope: Scope): void {
-  void props.store.set(def.key, value, scope);
+  void restartOffers.after(def, props.store.set(def.key, value, scope));
+}
+
+function onReset(def: SettingDef): void {
+  void restartOffers.after(def, props.store.reset(def));
 }
 
 /** The native dialog for `def`: a path inside the project is stored relative to it when the
@@ -157,11 +175,22 @@ function pickerFor(def: SettingDef): (kind: PathKind) => Promise<string | null> 
             :highlighted="highlighted === def.key"
             :pick-path="pickerFor(def)"
             :show-keys="showKeys"
+            :restart-pending="restartOffers.has(def.key)"
             @set="(value, scope) => onSet(def, value, scope)"
-            @reset="store.reset(def)"
+            @reset="onReset(def)"
+            @restart="restartNow"
           />
           <GridPreview v-if="def.key === GRID_KEY" class="px-2 py-3" :layout="valueOf(def)" :names="breakpointNames" />
           <WebStoreInstall v-if="def.key === WEB_STORE_KEY && valueOf(def) === true" class="basis-full px-2 pb-3" :client="client" />
+          <!-- User and password per environment under the Basic auth list (RB-094-24). -->
+          <EnvironmentAuth
+            v-if="def.key === BASIC_AUTH_KEY && hasProject"
+            class="basis-full px-2 pb-3"
+            :client="client"
+            :environments="store.values.value.get(ENVIRONMENTS_KEY)?.value ?? null"
+            :listed="valueOf(def)"
+            @set="(value) => onSet(def, value, originOf(def) === 'local' ? 'local' : 'project')"
+          />
           <McpSettings v-if="def.key === MCP_CLIENT_KEY" class="basis-full px-2 pb-3" :client="client" :selected="valueOf(def)" />
           <!-- The service's commands under its switch: CDP endpoint, script, token; MCP line (RB-090-63). -->
           <AutomationActions

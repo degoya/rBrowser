@@ -275,4 +275,11 @@ pub enum CoreToShell {
         /// The answer.
         answer: crate::McpSetupAnswer,
     },
+    /// The answer to `getBasicAuthStatus`, and pushed after `environment.auth` stored or removed
+    /// a credential (RB-094-29): every environment of the project, the user of a stored
+    /// credential, never its password.
+    BasicAuthStatus {
+        /// One per environment, in the config's order.
+        environments: Vec<crate::EnvironmentAuthStatus>,
+    },
 }

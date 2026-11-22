@@ -5,6 +5,7 @@ import { videoMessages } from './contractVideoMessages';
 import { galleryCoreMessages } from './contractGalleryMessages';
 import { bugReportCoreMessages } from './contractBugReportMessages';
 import { mcpSetupCoreMessages } from './contractMcpSetupMessages';
+import { basicAuthCoreMessages } from './contractBasicAuthMessages';
 import { recordingCoreMessages } from './contractRecordingMessages';
 import type { CoreToShell } from './protocol';
 
@@ -412,4 +413,5 @@ export const coreToShell = [
   },
   ...bugReportCoreMessages, // RB-093-04
   ...mcpSetupCoreMessages, // RB-091-09
+  ...basicAuthCoreMessages, // RB-094-29
 ] satisfies CoreToShell[];

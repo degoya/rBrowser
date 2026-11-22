@@ -21,5 +21,33 @@ Chromium
   licenses/chromium-credits.html.
   Files: part of the framework above
 
+Node.js
+  https://nodejs.org
+  Licence: MIT - the full text, together with the licences of the components
+  Node.js bundles, is Contents/Resources/node/LICENSE.
+  Files: Contents/Resources/node/bin/node
+
+Playwright (playwright-core, playwright, @playwright/test)
+  https://playwright.dev
+  Licence: Apache License 2.0 - the full texts are the LICENSE files in
+  Contents/Resources/sidecar/node_modules/playwright-core/, playwright/ and
+  @playwright/test/, each with its NOTICE; playwright-core's
+  ThirdPartyNotices.txt names the notices of the components it contains.
+  Files: those folders
+
+Lighthouse and Puppeteer (puppeteer-core) - the sidecar's Lighthouse module
+  https://github.com/GoogleChrome/lighthouse, https://pptr.dev
+  Licence: Apache License 2.0 - the full texts are the LICENSE files in
+  Contents/Resources/sidecar/node_modules/lighthouse/ and puppeteer-core/.
+  Lighthouse comes with the packages it needs, each in its own folder of
+  Contents/Resources/sidecar/node_modules/ with its licence (named in its
+  package.json, the text in its LICENSE file where the package has one): MIT,
+  Apache-2.0, BSD-3-Clause, BSD-2-Clause, ISC, 0BSD, MIT OR CC0-1.0, and
+  MPL-2.0 for axe-core (unchanged; its Source Code Form is the npm package of
+  the version its package.json names). Lighthouse's error reporting
+  (@sentry/node and the packages only it needs) is not included and never
+  switched on.
+  Files: Contents/Resources/sidecar/node_modules/
+
 The Rust crates and npm packages rBrowser is built from are listed with their
 licences under Settings > About > Licences.

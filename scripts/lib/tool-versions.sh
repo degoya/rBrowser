@@ -10,6 +10,7 @@
 #   rb_rust_version "$ROOT"          # 1.99.1
 #   rb_node_version "$ROOT"          # 26.13.0
 #   rb_use_pinned_node "$ROOT"       # node on PATH = .nvmrc (fnm or nvm), else fails
+#   rb_sha256 <file>                 # sha256sum, or shasum -a 256 on macOS
 #
 # Pinned 2026-11-10, each the newest stable release then. Sources: Rust `rustup check`
 # (static.rust-lang.org), Node https://nodejs.org/dist/index.json, crates from crates.io
@@ -49,7 +50,7 @@ RB_ACTIONLINT_SHA256="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b3
 RB_KOMAC_VERSION="2.17.2"
 # shellcheck disable=SC2034
 RB_KOMAC_SHA256="b03b020eec98acfb0b53e284a6e21815b884be33de6785b97e7a120f0e748966"
-# nfpm: writes the deb and rpm packages (RB-110-01, scripts/release-channels.sh install-nfpm); the
+# nfpm: writes the deb and rpm packages (RB-097-05, scripts/release-channels.sh install-nfpm); the
 # SHA-256 is that of the Linux_x86_64 archive. rCommander's pin.
 # shellcheck disable=SC2034
 RB_NFPM_VERSION="2.47.0"
@@ -83,6 +84,20 @@ RB_CEF_ARCHIVE_MACOS_X64_SHA256="a9b2fadcd20e1144a6db571e8e457ca616002d858ab3671
 # `crates/rbrowser/build.rs` embeds it; the shell warns once it is more than six weeks old.
 # shellcheck disable=SC2034
 RB_CEF_RELEASE_DATE="2026-11-13"
+# Linux x64 (RB-097-05): the distribution the `cef` crate downloads for x86_64-unknown-linux-gnu
+# (entry `linux64` of the index, its SHA-1 0b4c2189e3b93033bbef13add1a86f66849c1e62 checked) and
+# our own SHA-256 of it, taken 2026-11-22 (scripts/lib/cef.sh, rb_cef_verify_linux); and the
+# Node runtime of the Linux package, the official linux-x64 tarball of the .nvmrc version with
+# its SHA-256 from https://nodejs.org/dist/v<version>/SHASUMS256.txt. A new .nvmrc needs both
+# Node values; scripts/package-linux.sh refuses a pin for another version.
+# shellcheck disable=SC2034
+RB_CEF_ARCHIVE_LINUX_X64="cef_binary_156.0.30+g6028375+chromium-156.0.8078.96_linux64_minimal.tar.bz2"
+# shellcheck disable=SC2034
+RB_CEF_ARCHIVE_LINUX_X64_SHA256="356db99d653698aa9ba78b22965032b4fa5b23ba079ffdbaa5d28a8530f04011"
+# shellcheck disable=SC2034
+RB_NODE_LINUX_X64_VERSION="26.13.1"
+# shellcheck disable=SC2034
+RB_NODE_LINUX_X64_SHA256="5c063e46bab0fbc1c17cc445d7ff129cbdcd0471be6ed83b6ab864f8143bc864"
 
 # WebKit (RB-040-04, threat model T11): the Windows build of the `webkit` revision that the pinned
 # playwright-core (sidecar/package.json) names in its browsers.json, and our own SHA-256 of its
@@ -102,6 +117,39 @@ RB_WEBKIT_ARCHIVE_SHA256="0b390661995316d8f90fe0f7a0498f3a88c451c097fc8e4047342e
 # shellcheck disable=SC2034
 RB_WEBKIT_ARCHIVE_BYTES="65443702"
 
+# WebKit on macOS (RB-097-02): Playwright builds that WebKit per macOS version and CPU, and
+# `engines.update` takes the archive of the host (sidecar/src/webkit/pin.ts `hostPlatform`): for
+# each host its SHA-256 and size, taken 2026-11-22 (cdn.playwright.dev redirects to the Microsoft
+# mirror, which served them). The archive is
+# <mirror>/builds/webkit/<revision>/webkit-mac-<version>[-arm64].zip; macOS 14 keeps revision 2251
+# (browsers.json `revisionOverrides`), the others take RB_WEBKIT_REVISION. A new playwright-core
+# moves these with the Windows pin; scripts/tool-versions.sh --check holds `MAC_PINS` in pin.ts to
+# them.
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC14_SHA256="50ce5d7004274b01b106dda5ceee6703013b7bd0d0384457cd93a524ced34202"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC14_BYTES="86430592"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC14_ARM64_SHA256="2754eca5bab8773a6b1315528e7d8f342977ace799b3a91314e1be0cb324ee49"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC14_ARM64_BYTES="82217310"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC15_SHA256="c1220c739a2dbb6450059bfd678d5f5057e807d1d004464ef890ee1e6a9db727"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC15_BYTES="93121084"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC15_ARM64_SHA256="50b4238e145b8018e48aacefc15e9b3a43fafd18eee42ed4cb29a2e5c5a2e385"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC15_ARM64_BYTES="85207540"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC26_SHA256="43603b6130fc1341e02b87dde0d635f02b6d2defb90bc4f4e4b4a2d101900872"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC26_BYTES="93747438"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC26_ARM64_SHA256="d3cc730027105a014d0cbf53925bd7eababbdf8dbccbb4a3a1713c5f631dbcaf"
+# shellcheck disable=SC2034
+RB_WEBKIT_MAC26_ARM64_BYTES="85789503"
+
 # The Node runtime of the Windows package (RB-010-15): the official win-x64 ZIP of the .nvmrc
 # version and its SHA-256 from https://nodejs.org/dist/v<version>/SHASUMS256.txt. A new .nvmrc
 # needs both values here; scripts/package-windows.sh and scripts/tool-versions.sh --check refuse a
@@ -110,6 +158,17 @@ RB_WEBKIT_ARCHIVE_BYTES="65443702"
 RB_NODE_WIN_X64_VERSION="26.13.1"
 # shellcheck disable=SC2034
 RB_NODE_WIN_X64_SHA256="e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f1f7"
+# The Node runtime of the macOS app bundle (RB-097-01): the official darwin-arm64 and darwin-x64
+# tar.gz of the .nvmrc version, each with its SHA-256 from the same SHASUMS256.txt (taken
+# 2026-11-22; its win-x64 line is the pin above). scripts/package-macos.sh stages bin/node and
+# LICENSE into rBrowser.app/Contents/Resources/node; a new .nvmrc needs all three values here, and
+# scripts/tool-versions.sh --check refuses a pin for another version.
+# shellcheck disable=SC2034
+RB_NODE_DARWIN_VERSION="26.13.1"
+# shellcheck disable=SC2034
+RB_NODE_DARWIN_ARM64_SHA256="aec2514ea1ceb2ba52455e9ec65986f6749a06dd759e5db2a72e6889668c9735"
+# shellcheck disable=SC2034
+RB_NODE_DARWIN_X64_SHA256="82bb96078a24ca50b9c9a38f2379e6be6d87171fcd400fc14c8934b3bce96e2f"
 # rcedit (electron/rcedit, MIT): writes the icon and the version resource into CEF's
 # bootstrap.exe, which the package ships as rbrowser.exe (ADR 0001). A Windows program: the package
 # runs it natively (Git Bash) or through WSL interop. The SHA-256 of the release asset
@@ -118,6 +177,15 @@ RB_NODE_WIN_X64_SHA256="e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a
 RB_RCEDIT_VERSION="2.0.0"
 # shellcheck disable=SC2034
 RB_RCEDIT_SHA256="3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a"
+
+# The SHA-256 of file $1 with what the system has: sha256sum, or shasum on macOS.
+rb_sha256() {
+    if command -v sha256sum > /dev/null 2>&1; then
+        sha256sum "$1" | cut -d ' ' -f 1
+    else
+        shasum -a 256 "$1" | cut -d ' ' -f 1
+    fi
+}
 
 # The Rust toolchain checkout $1 pins: rust-toolchain.toml's `channel`.
 rb_rust_version() {

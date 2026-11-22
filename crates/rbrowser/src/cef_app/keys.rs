@@ -23,8 +23,11 @@ use crate::devtools::focus::KeySource;
 #[cfg(windows)]
 type OsEvent<'a> = Option<&'a mut sys::MSG>;
 /// The native event CEF hands `on_pre_key_event`: an `NSEvent` pointer on macOS (RB-090-15).
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
 type OsEvent<'a> = *mut u8;
+/// The native event CEF hands `on_pre_key_event`: an X11 `XEvent` on Linux (RB-097-05).
+#[cfg(target_os = "linux")]
+type OsEvent<'a> = Option<&'a mut sys::XEvent>;
 
 wrap_keyboard_handler! {
     // The keys of one view (`None`: the shell).

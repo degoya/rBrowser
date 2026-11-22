@@ -61,6 +61,8 @@ pub fn edit_project_file(
         tracing::warn!(%error, "a project file could not be written");
         return rejected(refused(reason::NOT_SAVED));
     }
+    // In effect at once, with or without the watcher (RB-094-23).
+    crate::project_reload::after_write(core);
     core.send(&CoreToShell::SettingsChanged {
         keys: vec![key.to_owned()],
         values: None,

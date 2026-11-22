@@ -12,7 +12,8 @@
 #                                  # cargo deny --offline check,
 #                                  # set-version.sh --check, tool-versions.sh --check, the
 #                                  # settings lint and reference (check-settings.sh,
-#                                  # settings-reference.sh --check), the keyboard reference
+#                                  # settings-reference.sh --check), the settings read rule
+#                                  # (check-settings-read.sh), the keyboard reference
 #                                  # (keyboard-reference.sh --check), the MCP tool
 #                                  # reference (mcp-reference.sh --check), the action pins
 #                                  # (check-actions-pinned.sh), actionlint over .github/ and
@@ -34,7 +35,9 @@
 #                                  # the plugins build and test in target/lanes/plugins
 #                                  # (RB-080-25);
 #                                  # the WSL helper rbrowser-wsl built for musl and held to a
-#                                  # static x86-64 executable (wsl-helper, RB-030-04)
+#                                  # static x86-64 executable (wsl-helper, RB-030-04); the
+#                                  # native Linux app linked against CEF, its RUNPATH and the
+#                                  # CEF archive's pin (linux-app, RB-097-05)
 #   scripts/check.sh --windows     # cargo xwin clippy for x86_64-pc-windows-msvc (-D warnings),
 #                                  # all targets, then the libraries alone with the features
 #                                  # they ship with, then the app with `--no-default-features`;
@@ -85,6 +88,8 @@ source "$ROOT/scripts/lib/wsl-helper.sh"
 source "$ROOT/scripts/lib/npm.sh"
 # shellcheck source=lib/lock.sh
 source "$ROOT/scripts/lib/lock.sh"
+# shellcheck source=lib/linux-app.sh
+source "$ROOT/scripts/lib/linux-app.sh"
 [[ "$mode" == --preflight ]] || rb_take_lock "$@"
 cd "$ROOT"
 
@@ -305,6 +310,8 @@ preflight() {
     stage links python3 -I scripts/lib/check_links.py .
     # The settings lint and the wiki's settings reference (RB-010-02, docs/settings.md).
     stage settings scripts/check-settings.sh
+    # Every core settings key is read by some code (RB-094-30).
+    stage settings-read scripts/check-settings-read.sh
     stage settings-ref scripts/settings-reference.sh --check
     # The wiki's keyboard reference from schema/commands.v1.json (RB-010-17).
     stage keyboard-ref scripts/keyboard-reference.sh --check
@@ -374,6 +381,8 @@ wsl_helper() {
 
 rust() {
     echo "==> rust"
+    # The Linux app links CEF (RB-097-05): the shared cache (scripts/lib/linux-app.sh).
+    rb_linux_app_cef
     stage clippy env CARGO_BUILD_JOBS="$CLIPPY_JOBS" \
         cargo clippy --locked --workspace --all-targets -j "$CLIPPY_JOBS" -- -D warnings
     # The app without self-update (RB-090-14: on by default), linted in both variants.
@@ -383,6 +392,9 @@ rust() {
     stage tests env CARGO_BUILD_JOBS="$JOBS" \
         cargo nextest run --locked --workspace --no-fail-fast --test-threads "$TEST_THREADS"
     stage wsl-helper wsl_helper
+    if [[ "$(uname -s)" == Linux ]]; then
+        stage linux-app rb_linux_app_check "$ROOT" "$JOBS" "$LOGS"
+    fi
     # Ignored in the run above: they start node with the sidecar's playwright-core (RB-040-06)
     # and its flow worker (RB-040-07), which the preflight's npm stage installs.
     if command -v node > /dev/null 2>&1 && [[ -d sidecar/node_modules/playwright-core ]]; then

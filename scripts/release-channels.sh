@@ -19,7 +19,7 @@
 # nothing here prints one. komac and nfpm are pinned in scripts/lib/tool-versions.sh. A channel
 # whose secret is missing (a fork, or before the owner set it) is skipped with a notice, and so
 # is the tap while a release carries neither the macOS archives (RB-090-80) nor the Linux one
-# (RB-110-01): scripts/package-managers.sh renders only the cask or the formula whose archives
+# (RB-097-05): scripts/package-managers.sh renders only the cask or the formula whose archives
 # are there. The release is out by then, so the jobs continue on error and never fail it.
 set -euo pipefail
 
@@ -108,7 +108,7 @@ winget() {
 }
 
 # nfpm writes both formats for both architectures and runs nothing it packs. Pinned with its
-# published checksum (rCommander's pin). For the deb and rpm packages of RB-110-01.
+# published checksum (rCommander's pin). For the deb and rpm packages of RB-097-05.
 install_nfpm() {
     curl --fail --silent --show-error --location --output "${RUNNER_TEMP}/nfpm.tar.gz" \
         "https://github.com/goreleaser/nfpm/releases/download/v${RB_NFPM_VERSION}/nfpm_${RB_NFPM_VERSION}_Linux_x86_64.tar.gz"

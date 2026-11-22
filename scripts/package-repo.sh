@@ -3,7 +3,7 @@
 # The signed apt and dnf repository of the deb and rpm packages (RB-110-04), as static files for
 # GitHub Pages: new packages from <incoming> go into the repository tree <site>, which keeps what
 # earlier releases put there, and the indexes are written and signed again. Copied from
-# rCommander's scripts/package-repo.sh. The deb and rpm packages themselves arrive with RB-110-01.
+# rCommander's scripts/package-repo.sh. The deb and rpm packages themselves arrive with RB-097-05.
 #
 # Usage:
 #   scripts/package-repo.sh <incoming> <site> [--keep N] [--key KEY] [--passphrase-file FILE]

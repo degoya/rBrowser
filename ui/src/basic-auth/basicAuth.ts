@@ -1,8 +1,10 @@
 // Basic auth per environment in the shell (RB-094-08): what the bar sends. The password goes to
 // the core once, inside `environment.auth`, which keeps it in the platform's credential store;
-// the shell never stores it and never shows one back.
+// the shell never stores it and never shows one back. What it shows instead is whether a
+// credential is stored and for which user (`getBasicAuthStatus`, RB-094-29).
 
-import type { ShellToCore } from '../ipc/protocol';
+import type { InjectionKey } from 'vue';
+import type { CoreToShell, EnvironmentAuthStatus, ShellToCore } from '../ipc/protocol';
 
 export const AUTH_COMMAND = 'environment.auth';
 /** The setting that lists the environments behind Basic auth (Project > Environments). */
@@ -55,4 +57,43 @@ export function removeMessage(environment: string): ShellToCore {
 /** Opens Settings at the list of environments behind Basic auth. */
 export function settingsMessage(): ShellToCore {
   return { type: 'runCommand', id: 'settings.open', args: { key: SETTINGS_KEY } };
+}
+
+/** Asks the core which environments have a stored credential, and for whom (RB-094-29). */
+export type AuthStatusQuery = () => Promise<EnvironmentAuthStatus[]>;
+
+/** The shell's query, provided by `bootstrap.ts`; the bar takes it, or its `query` prop. */
+export const AUTH_STATUS_QUERY_KEY: InjectionKey<AuthStatusQuery> = Symbol('authStatusQuery');
+
+/** The stored user by environment id; `null` for an environment without a credential. */
+export type StoredUsers = Record<string, string | null>;
+
+/** The users of `statuses`, by environment. */
+export function storedUsers(statuses: EnvironmentAuthStatus[]): StoredUsers {
+  return Object.fromEntries(
+    statuses.map((status) => [status.environment, status.stored ? (status.user ?? '') : null]),
+  );
+}
+
+/** The users of a pushed `basicAuthStatus`; `null` for any other message. */
+export function usersOf(message: CoreToShell): StoredUsers | null {
+  return message.type === 'basicAuthStatus' ? storedUsers(message.environments) : null;
+}
+
+/** What a row says about `environment`'s credential, as an i18n key and its parameters; `null`
+ * while the core has not said (an older core, a failed query). */
+export function storedText(
+  users: StoredUsers | null,
+  environment: string,
+): { key: string; params: Record<string, string> } | null {
+  if (users === null) {
+    return null;
+  }
+  const user = users[environment] ?? null;
+  return user === null ? { key: 'auth.status.none', params: {} } : { key: 'auth.status.stored', params: { user } };
+}
+
+/** Whether Remove has something to remove: a stored credential, or not known either way. */
+export function canRemove(users: StoredUsers | null, environment: string): boolean {
+  return users === null || (users[environment] ?? null) !== null;
 }

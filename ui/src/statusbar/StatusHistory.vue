@@ -13,6 +13,7 @@ import { copiedText, shown, type LevelFilter } from './history';
 import { STATUS_ICONS } from './icons';
 import { LEVELS, levelOf } from './level';
 import StatusLine from './StatusLine.vue';
+import { PANEL_PLACES } from '../notify/toastModel';
 
 // The pages window hands every page its route key and trust state; the history needs neither.
 defineOptions({ inheritAttrs: false });
@@ -46,6 +47,17 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault();
     close();
   }
+}
+
+// A key that opens a panel (RB-094-27) names the panel's place, not "Setting".
+function linkLabel(key: string): string {
+  const place = PANEL_PLACES[key];
+  return place !== undefined ? t(place) : t('shell.status.open_setting');
+}
+
+function linkName(key: string): string {
+  const place = PANEL_PLACES[key];
+  return place !== undefined ? t(place) : t('shell.status.open_setting_key', { key });
 }
 
 function openSetting(key: string): void {
@@ -121,8 +133,8 @@ onBeforeUnmount(() => {
           variant="link"
           size="xs"
           class="shrink-0 px-0"
-          :label="t('shell.status.open_setting')"
-          :aria-label="t('shell.status.open_setting_key', { key: message.settingsKey })"
+          :label="linkLabel(message.settingsKey)"
+          :aria-label="linkName(message.settingsKey)"
           :title="message.settingsKey"
           @click="openSetting(message.settingsKey)"
         />

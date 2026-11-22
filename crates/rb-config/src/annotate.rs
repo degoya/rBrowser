@@ -3,7 +3,8 @@
 //!
 //! A **key** is a property the settings window edits as one field; it gets `x-category`,
 //! `x-section`, `x-order` and `x-scope`, a local-only key also `x-local-only`, a key MCP may not
-//! touch `x-protected` (names: `rb-settings`). A root property that is no key is a **group**
+//! touch `x-protected` (names: `rb-settings`), a key that applies only at the next start
+//! `x-restart` ([`RESTART_KEYS`], RB-094-23). A root property that is no key is a **group**
 //! (`sync`, `network`): it stays unannotated and each of its properties is a key
 //! (`sync.scroll`). The root's `$schema` and `version` are file structure, neither. The tables
 //! (`project_keys.rs`, `user_keys.rs`) are the keys in display order; `x-order` numbers them per
@@ -21,10 +22,12 @@ use crate::LOCAL_ONLY_KEYS;
 
 mod inputs;
 mod project_keys;
+mod restart;
 mod user_keys;
 
 pub use inputs::{InputDef, PROJECT_INPUTS, USER_INPUTS, annotate_inputs};
 pub use project_keys::PROJECT_KEYS;
+pub use restart::{RESTART_KEYS, X_RESTART};
 pub use user_keys::USER_KEYS;
 
 /// One settings key and where the window shows it.
@@ -174,6 +177,9 @@ pub fn annotate(
         }
         if def.protected {
             map.insert(X_PROTECTED.to_owned(), Value::Bool(true));
+        }
+        if RESTART_KEYS.contains(&def.key) {
+            map.insert(X_RESTART.to_owned(), Value::Bool(true));
         }
     }
     if let Err(paths) = annotate_inputs(schema, kind.inputs()) {

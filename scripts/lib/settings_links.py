@@ -9,6 +9,10 @@ crates/rbrowser/data/settings-links.json -
   `panel.openSettings('...')`);
 * or in `unlinked`, with why: a path in another program's settings (the phone's, Xcode's).
 
+A secret key is no setting of the window (RB-094-27): a row linked to one opens the panel that
+edits it, so its text names that panel's place ("API client › Variables"), never a settings path,
+and a link to a secret key without a panel opens nothing.
+
 The texts are the core catalogue (locales/en.json with the wave parts) and every plugin's
 plugins/<id>/locales/en.json. The settings window's own texts (`settings.*`,
 `plugin.<id>.settings.*`) and the MCP tool descriptions (`plugin.<id>.tools.*`), read by a
@@ -28,18 +32,26 @@ MENTION = re.compile(r"\bSettings ?(?:>|›|&gt;)")
 EXEMPT = (re.compile(r"^settings\."), re.compile(r"^plugin\.[^.]+\.(?:settings|tools)\."))
 
 
-def mentions(root: Path) -> dict:
-    """Every text key that names a settings path, with the file it is in."""
+def texts(root: Path) -> dict:
+    """Every text of the catalogues, the core's and the plugins', as key -> (file, text)."""
     found = {}
     catalogues = [("locales/en.json", settings_schema.catalogue(root))]
     for path in sorted((root / "plugins").glob("*/locales/en.json")):
         catalogues.append((settings_schema.relative(path, root),
                            settings_schema.flatten(settings_schema.load_json(path, root))))
-    for where, texts in catalogues:
-        for key, text in texts.items():
-            if isinstance(text, str) and MENTION.search(text) and not any(p.match(key) for p in EXEMPT):
-                found[key] = where
+    for where, catalogue in catalogues:
+        for key, text in catalogue.items():
+            if isinstance(text, str):
+                found[key] = (where, text)
     return found
+
+
+def mentions(every: dict) -> dict:
+    """Every text key of `every` that names a settings path, with the file it is in."""
+    return {
+        key: where for key, (where, text) in every.items()
+        if MENTION.search(text) and not any(p.match(key) for p in EXEMPT)
+    }
 
 
 def table(root: Path) -> tuple[dict, dict]:
@@ -59,7 +71,8 @@ def problems(root: Path, settings: list, cats: list) -> tuple[list[str], int]:
     """The problems, one line each, and the number of settings mentions."""
     try:
         links, unlinked = table(root)
-        found = mentions(root)
+        every = texts(root)
+        found = mentions(every)
     except settings_schema.DataError as error:
         return [str(error)], 0
     out = []
@@ -69,9 +82,18 @@ def problems(root: Path, settings: list, cats: list) -> tuple[list[str], int]:
                        f"setting in {TABLE} (`links`), or say in `unlinked` why it cannot link")
     name = TABLE.name
     for key, target in sorted(links.items()):
-        if key not in found:
+        place = settings_targets.resolve(target, settings, cats) if isinstance(target, str) else None
+        if place is not None and place.startswith("panel "):
+            # A secret key's panel (RB-094-27): the text names the panel, no settings path.
+            if key not in every:
+                out.append(f"{name}: `{key}` is no text of the catalogues")
+            elif key in found:
+                out.append(f"{name}: `{key}` opens the {place} but its text names a settings path")
+        elif isinstance(target, str) and settings_targets.why_not(target, settings) == settings_targets.SECRET:
+            out.append(f"{name}: `{key}` links to `{target}`, {settings_targets.SECRET}")
+        elif key not in found:
             out.append(f"{name}: `{key}` is no text that names a settings path")
-        elif not isinstance(target, str) or settings_targets.resolve(target, settings, cats) is None:
+        elif place is None:
             out.append(f"{name}: `{key}` links to `{target}`, which is no key, category, section "
                        "or key prefix")
     for key, why in sorted(unlinked.items()):

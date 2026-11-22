@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { type BrowserEntry, type PlaywrightDeps, parseBrowsersJson } from './modules/playwright.ts';
 import { ErrorCode, RpcError } from './rpc.ts';
 import { installWebkit, realInstallDeps } from './webkit/install.ts';
-import { readTextOrNull } from './webkit/pin.ts';
+import { currentHost, pinFor, readTextOrNull } from './webkit/pin.ts';
 
 function packageDir(): string {
   const require = createRequire(import.meta.url);
@@ -22,8 +22,9 @@ export function playwrightVersion(): string {
   return typeof data.version === 'string' ? data.version : 'unknown';
 }
 
+/** The builds for this system: macOS 14 has a revision of its own (RB-097-02). */
 function entries(): BrowserEntry[] {
-  return parseBrowsersJson(readFileSync(join(packageDir(), 'browsers.json'), 'utf8'));
+  return parseBrowsersJson(readFileSync(join(packageDir(), 'browsers.json'), 'utf8'), currentHost());
 }
 
 /** The download of `playwright.install`: only WebKit, the pinned archive, verified (webkit/install.ts). */
@@ -42,6 +43,7 @@ export function realPlaywrightDeps(env: NodeJS.ProcessEnv): PlaywrightDeps {
     browsersPath: browsersPath === undefined || browsersPath === '' ? undefined : browsersPath,
     entries,
     readText: readTextOrNull,
+    webkitPin: pinFor(currentHost()),
     runInstall,
   };
 }

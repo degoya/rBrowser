@@ -165,6 +165,14 @@ describe('the settings page', () => {
     const issues = wrapper.get('[data-key="logs.maxFiles"] [data-testid="issues"]');
     expect(issues.text()).toContain('below the minimum');
     expect(core.values.get('logs.maxFiles')?.origin).toBe('default');
+    // RB-094-25: said at the top as well, where a field below a long list is out of sight.
+    const notice = wrapper.get('[data-testid="refusal-notice"]');
+    expect(notice.text()).toContain('was not saved');
+    expect(notice.text()).toContain('below the minimum');
+    await notice.get('[data-testid="refusal-close"]').trigger('click');
+    await settle();
+    expect(wrapper.find('[data-testid="refusal-notice"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="logs.maxFiles"] [data-testid="issues"]').exists()).toBe(true);
   });
 
   it('writes a project value through its control', async () => {

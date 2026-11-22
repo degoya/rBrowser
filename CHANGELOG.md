@@ -7,6 +7,117 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-11-22
+
+### Added
+
+- The macOS app bundle ships the Node runtime and the sidecar (RB-097-01): `rBrowser.app`
+  carries the Node of `.nvmrc` (the official darwin-arm64 or darwin-x64 build, held to its
+  SHA-256 pin) and the sidecar with its production packages in `Contents/Resources`, signed ad hoc
+  with the app and started once while packaging; rBrowser finds both there, and on macOS the
+  Playwright browsers go to `~/.local/state/rBrowser/ms-playwright`. WebKit views, flows and
+  Lighthouse on macOS follow (RB-097-02 to RB-097-04).
+- Flows on macOS (RB-097-03): the flow worker is granted each folder also under its real path
+  (macOS's `/tmp` and `/var` are links into `/private`), and `rbrowser flow run` names
+  `XDG_STATE_HOME` and `HOME` when it finds no local folder off Windows.
+- Lighthouse on macOS (RB-097-04): it runs in Playwright's Chrome for Testing build, else an
+  installed Google Chrome, Microsoft Edge or Chromium from `/Applications` or `~/Applications`;
+  `engines.lighthouseBrowserPath` takes an app bundle (`/Applications/Google Chrome.app`).
+- Basic auth at the environment (RB-094-24): Settings > Project > Environments shows each
+  environment's Basic auth switch, user and password with Save and Remove, stored where the
+  shell's bar stores them (the Windows Credential Manager, never a project file); the password
+  field never shows a value. Renaming an environment takes its Basic auth along, and its
+  Environment compare entry and the API client's environment of the same name.
+
+### Changed
+
+- Dependencies: hashbrown 0.17.2.
+- The log rotation applies at once (RB-094-28): a change of `logs.maxFileSizeMb` or
+  `logs.maxFiles` takes effect on the running log without a restart; fewer files kept clears the
+  older ones at the next rotation, never the file being written.
+- The API client's private values are no setting (RB-094-27): Settings > Network > API client no
+  longer shows a "Private values" card without an option; a secret key (`x-secret`) is in no
+  category, search, "only changed" or JSON view of the settings window. Every link to them - a
+  missing `$secret`, an import's placeholders, the network panel's capture, the status bar's
+  "do not read" - opens the API client at its Variables tab, and the texts say
+  "API client › Variables". The new schema annotation `x-panel` names the panel that edits a
+  secret key; the settings lint refuses a link to a secret key without one.
+- Dependencies (Dependabot, 2026-11-22): axe-core 4.14.1 and html-validate 11.21.1 in their
+  plugins' bundles, vitest 5.1.1, Playwright 1.65.1 in the examples and the recorder tests, the
+  SDK template's `@nuxt/ui` 4.13.0, `taiki-e/install-action` 2.90.6 in the workflows.
+- Settings apply without a restart (RB-094-23): a project setting written in the settings window
+  or over MCP applies at once, also for a project on a WSL share (an environment created there
+  appeared in the main menu only after a restart); a plugin switched on or off, a trusted key, the
+  development mode and the crash limit apply at once, as do the Recorder's and Flows' settings
+  in an open panel and the layout-mode settings of the mode shown. The keys that need a restart
+  for a technical reason say "Applies after a restart of rBrowser" with "Restart now", the new
+  command `app.restart` (`Ctrl+Shift+Space , S`); the settings lint holds every key to one of
+  the two.
+
+### Fixed
+
+- MCP `config_set` and protected keys (security, RB-094-31): a write at a parent key that would
+  remove or change a protected key - `null` or an object without it, such as `api-client` or
+  `capture` - is refused, for the core's protected keys (`capture.dir`, the recorder's folders
+  and secret list, the report folder) and the plugins' (allowed hosts, secrets). A plugin's
+  protected keys are refused whether it is loaded or not, read from every installed package
+  (bundled, user, project); a package whose settings do not read is guarded whole.
+- MCP `config_set` keeps persisted request headers (security, RB-094-31): a write at a parent
+  key that would remove or change them - `emulation {}` or `null`, `breakpoints []` - is
+  refused with `config_key_protected`, and a protected key is refused so also with no project
+  open.
+- Linux: a start that cannot go on shows its reason in the desktop's dialog (`zenity`, else
+  `kdialog`) when started from the menu, besides stderr (RB-097-05).
+- Basic auth shows what is stored (RB-094-29): Settings > Project > Environments and the
+  shell's Basic auth bar say per environment "Credentials stored for <user>" or "No credentials
+  stored", current after Save and Remove; Remove is off without stored credentials. The password
+  is never shown or sent to the shell.
+- `plugins.compileCache` takes effect (RB-094-30): on, the compiled plugin code is kept in
+  `plugin-cache` of the local folder, so a start with unchanged plugins does not compile them
+  again; off, no cache is read or written - from the next install, update or load on. A new
+  preflight rule fails on a settings key no code reads (`scripts/check-settings-read.sh`).
+- WebKit views on macOS (RB-097-02): Update engines (Ctrl+Shift+Space, V, U) downloads
+  Playwright's WebKit build of the Mac - macOS 14 to 26, Intel or Apple silicon - held to its own
+  SHA-256 pin, and unpacks it with its executables and framework links; the views follow, sync and
+  take screenshots as on Windows. On macOS each WebKit view stays a window of its own, and its cell
+  says why (macOS lets no app show another app's window in its cell). The engine menu names the
+  row "WebKit (Playwright)" beside "Safari"; the badge's tooltip keeps "WebKit (not Safari)".
+- Linux x64 (RB-097-05): rBrowser builds and runs natively on Linux with CEF for Linux (the
+  archive held to its SHA-256 pin), the Chromium sandbox on - the kernel's user namespaces or the
+  setuid `chrome-sandbox`; where neither works, the start says how to fix it instead of failing
+  without a word - and the Linux desktops' own shortcuts reserved (Super, `Alt+F1` to `Alt+F10`,
+  `Ctrl+Alt+T`, the workspaces). `scripts/package-linux.sh` writes
+  `rbrowser-<version>-linux-x64.tar.gz` and, with `--deb --rpm`, the deb and rpm packages
+  (installed in `/usr/lib/rbrowser` with a menu entry); the CI Linux job builds and smoke-tests
+  them.
+- Security: MCP's `config_set` refuses the plugin settings protected from MCP (RB-094-26): an MCP
+  client can no longer allow itself a host (`api-client.allowedHosts`, `load-test.allowedHosts`), nor
+  overwrite the API client's secrets, at the key or through a parent key that sets it.
+- Settings > Breakpoints: Delete removes a breakpoint while `config.local.json` holds breakpoints
+  too (a view added at a size): its entry leaves both project files, which the merge joins by id,
+  without copying the other file's breakpoints; MCP `breakpoint_remove` the same, whichever file
+  defines it. A write the core refuses is named at the top of the settings window with its
+  reasons and a link to the field (RB-094-25).
+- API client: the controls work in the panel's sandboxed frame (RB-096-13). A dialog's OK, a
+  private value's Save and adding an environment were form submissions the frame blocks; no
+  plugin panel renders a form any more (panel-ui `PanelForm`, a test over every panel). Save,
+  Save as new, Copy as code and the Variables' Save carried a value the frame cannot post and
+  said only "The plugin could not do that."; calls now post plain data, and a failure of the
+  panel itself names its reason. Adding a parameter keeps the new row. A collection run and a
+  benchmark to a new host ask "Allow <host> for this project?" like a send, and run again after
+  Allow. A refused write of the private values or the allowed hosts says the core's reason. The
+  Variables tab has one way to a new environment (its name and Create, or one of the project's
+  environments), renaming apart from it; the side column's tabs are icons with tooltips.
+- A settings link to a plugin's setting lands on it (RB-094-26): "Open the setting" of the API
+  client's benchmark hint (`api-client.benchRepeats`) opens Settings > Network > API client with
+  the field highlighted instead of General. The settings window holds the loaded plugins' keys -
+  shown in their category, written like a core key, following a plugin installed, removed or
+  switched on or off - and a window open before the plugins came reads them then. A link to a key
+  no setting has opens Settings with a notice naming the key; while the plugins still load it says
+  the key opens once they are in. A key annotated `x-secret` (`api-client.secrets`) shows none of
+  its values: its field says they are kept in config.local.json and edited in the plugin, the JSON
+  view and MCP `settings_get` mask them.
+
 ## [0.9.6] - 2026-11-21
 
 ### Added

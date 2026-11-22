@@ -184,6 +184,13 @@ pub trait Backend: Send + Sync + 'static {
     /// The project file `scope` as it is on disk (an empty object when it does not exist).
     fn config_document(&self, scope: ConfigScope) -> Result<Value, ToolFailure>;
 
+    /// The dotted keys of the installed plugins' settings that are protected from MCP
+    /// (`x-protected`: allowed hosts, secrets), whether a plugin is loaded or not, and the whole
+    /// prefix of a package whose keys do not read (RB-094-31); `config_set` refuses them, also
+    /// a parent write that would remove or change one (`config_edit::set`). The core's are in
+    /// `config_edit`'s own lists.
+    fn mcp_protected_keys(&self) -> Vec<String>;
+
     /// Writes `document` as the project file `scope` after the checks the settings window
     /// runs (migrated, merged with the other file, `rb_config::check`).
     fn write_config_document(

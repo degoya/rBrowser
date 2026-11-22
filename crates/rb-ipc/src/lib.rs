@@ -16,6 +16,7 @@
 //! shell side.
 
 mod activity;
+mod basic_auth;
 mod bug_report;
 mod checks;
 mod devices_menu;
@@ -41,6 +42,7 @@ mod videos;
 use serde::Serialize;
 
 pub use activity::{Activity, ActivityBarState, VideoActivity};
+pub use basic_auth::EnvironmentAuthStatus;
 pub use bug_report::{BugReportAnswer, BugReportRequest, ReportPreview};
 pub use checks::{CheckJob, CheckJobState, ChecksProgress};
 pub use devices_menu::{AndroidDeviceRow, AndroidDeviceState, DevicesMenu};

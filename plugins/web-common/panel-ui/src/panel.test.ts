@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { nextTick, reactive, ref } from 'vue';
 import '../../panel/texts.js';
 import { createPanel } from './panel';
 
@@ -84,5 +84,48 @@ describe('a Nuxt UI panel\'s link', () => {
     const panel = createPanel({ prefix: 'plugin.demo.', name: 'demo' });
     panel.openSettings('api-client.benchRepeats');
     expect(posted).toEqual([{ target: 'host', action: 'open_settings', key: 'api-client.benchRepeats' }]);
+  });
+
+  // RB-096-13: a frame's postMessage clones its message as structured data, and a Vue reactive
+  // value is a Proxy, which the clone refuses (DataCloneError). The panel's calls with the
+  // editor's request in them (Save, Save as new, Copy as code) never left the frame and said only
+  // "The plugin could not do that."; the call now posts plain data.
+  it('posts a reactive argument as plain data, as the frame\'s clone needs', async () => {
+    vi.mocked(window.postMessage).mockImplementation((message: unknown) => {
+      posted.push(structuredClone(message) as Posted);
+    });
+    const panel = createPanel({ prefix: 'plugin.demo.', name: 'demo' });
+    panel.start();
+    const request = ref({ name: 'Me', headers: [{ name: 'a', value: 'b' }] });
+    const answered = panel.call({ tool: 'panel' }, { op: { op: 'save', request: request.value, extra: reactive({ n: 1 }) } });
+    expect(posted.filter((m) => m.type === 'call')).toEqual([
+      { type: 'call', id: 1, tool: 'panel', args: { op: { op: 'save', request: { name: 'Me', headers: [{ name: 'a', value: 'b' }] }, extra: { n: 1 } } } },
+    ]);
+    fromHost({ type: 'result', id: 1, ok: true, value: { id: 'me.http' } });
+    await expect(answered).resolves.toEqual({ id: 'me.http' });
+  });
+
+  it('says a call it could not post with its code and reason, and logs it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.mocked(window.postMessage).mockImplementation((message: unknown) => {
+      if ((message as Posted).type === 'call') throw new DOMException('#<Object> could not be cloned.', 'DataCloneError');
+    });
+    const panel = createPanel({ prefix: 'plugin.demo.', name: 'demo' });
+    panel.start();
+    const failure = await panel.call({ tool: 'panel' }, { a: 1 }).catch((error: unknown) => error);
+    expect((failure as Error).message).toBe('plugins.panel.not_sent');
+    fromHost({ type: 'settings', strings: { 'plugins.panel.not_sent': 'The panel could not send this to rBrowser.' } });
+    expect(panel.error(failure)).toBe('The panel could not send this to rBrowser. DataCloneError: #<Object> could not be cloned.');
+    expect(warn.mock.calls.flat().join(' ')).toContain('plugins.panel.not_sent');
+  });
+
+  it('says an exception of the panel itself with its reason, never only "could not do that"', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const panel = createPanel({ prefix: 'plugin.demo.', name: 'demo' });
+    panel.start();
+    fromHost({ type: 'settings', strings: { 'plugins.panel.call_failed': 'The plugin could not do that.' } });
+    expect(panel.error(new TypeError("Cannot read properties of undefined (reading 'id')"))).toBe(
+      "The plugin could not do that. TypeError: Cannot read properties of undefined (reading 'id')",
+    );
   });
 });

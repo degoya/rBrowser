@@ -4,7 +4,7 @@
 # settings lists (RB-010-18; adapted from rCommander's scripts/licenses.sh, RC-010-19).
 #
 # Generated, never kept by hand. `cargo tree` names every crate the rbrowser binary links on the
-# platform it is built for (Windows x64 in phase 1), every crate the WSL helper rbrowser-wsl
+# platforms it is built for (Windows x64, Linux x64), every crate the WSL helper rbrowser-wsl
 # links for x86_64-unknown-linux-musl (RB-030-04) and every crate a bundled plugin links for
 # wasm32, features resolved as a build resolves them; proc macros, build scripts and tests run
 # on the build machine and ship nowhere. `cargo metadata` has the declared licences. The npm
@@ -29,9 +29,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# The platform the app is built for (phase 1: Windows x64) and the plugins' target
-# (scripts/build-plugins.sh).
-APP_TARGETS=(x86_64-pc-windows-msvc)
+# The platforms the app is built for (phase 1: Windows x64; Linux x64 since RB-097-05) and the
+# plugins' target (scripts/build-plugins.sh).
+APP_TARGETS=(x86_64-pc-windows-msvc x86_64-unknown-linux-gnu)
 # The WSL helper beside rbrowser.exe (scripts/lib/wsl-helper.sh).
 WSL_HELPER_TARGET=x86_64-unknown-linux-musl
 PLUGIN_TARGET=wasm32-unknown-unknown

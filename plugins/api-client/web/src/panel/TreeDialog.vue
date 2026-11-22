@@ -3,9 +3,10 @@
 // action was chosen - no window over the panel: a new collection's name, a new name for a
 // collection or a request's title, the collection a request moves to (a pick list), and the
 // word before a delete, which names what goes (a collection's requests counted). Enter answers,
-// Escape cancels.
+// Escape cancels. No form element: the frame's sandbox blocks a submission (RB-096-13).
 import { computed, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
+import PanelForm from '../../../../web-common/panel-ui/src/components/PanelForm.vue';
 import { type Dialog, folderName, isCollectionName, joinFolder } from './collections';
 
 const props = defineProps<{ dialog: Dialog }>();
@@ -72,14 +73,22 @@ function answer(): void {
 </script>
 
 <template>
-  <form id="tree-dialog" role="alertdialog" :aria-label="title" class="flex flex-col gap-1.5 rounded-md border border-default p-2" @submit.prevent="answer" @keydown.escape.prevent="emit('cancel')">
+  <PanelForm
+    id="tree-dialog"
+    role="alertdialog"
+    :aria-label="title"
+    class="flex flex-col gap-1.5 rounded-md border border-default p-2"
+    :disabled="problem !== null"
+    @submit="answer"
+    @keydown.escape.prevent="emit('cancel')"
+  >
     <p class="text-sm" :class="danger ? 'text-error' : ''">{{ title }}</p>
     <UInput v-if="asks" id="tree-dialog-text" v-model="text" size="sm" class="w-full font-mono" autofocus :aria-label="title" :aria-invalid="problem ? 'true' : undefined" />
     <USelect v-if="dialog.kind === 'move'" id="tree-dialog-target" v-model="choice" :items="targetItems" value-key="value" size="sm" icon="i-lucide-folder" class="w-full" :aria-label="title" />
     <p v-if="problem && text !== ''" id="tree-dialog-problem" class="text-xs text-error">{{ problem }}</p>
     <div class="flex justify-end gap-1.5">
       <UButton id="tree-dialog-cancel" size="xs" color="neutral" variant="outline" :label="danger ? t('panel.keep') : t('panel.dialog.cancel')" :autofocus="danger" @click="emit('cancel')" />
-      <UButton id="tree-dialog-ok" type="submit" size="xs" :color="danger ? 'error' : 'primary'" :disabled="problem !== null" :label="danger ? t('panel.delete') : t('panel.dialog.ok')" />
+      <UButton id="tree-dialog-ok" size="xs" :color="danger ? 'error' : 'primary'" :disabled="problem !== null" :label="danger ? t('panel.delete') : t('panel.dialog.ok')" @click="answer" />
     </div>
-  </form>
+  </PanelForm>
 </template>

@@ -8,7 +8,7 @@ esbuild from runner/src/ and the following third-party software, bundled and min
 full licence texts are runner/dist/runner.LICENSES.txt; the Source Code Form of each is the
 npm package at the version named (plugins/package-lock.json pins them).
 
-html-validate 11.18.0
+html-validate 11.21.1
   https://gitlab.com/html-validate/html-validate
   Copyright (c) 2017 David Sveningsson
   Licence: MIT

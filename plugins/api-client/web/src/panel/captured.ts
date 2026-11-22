@@ -46,9 +46,9 @@ export function draftNote(draft: CapturedDraft, t: T): { tone: Tone; text: strin
   if (draft.incomplete) parts.push(t('panel.capture.incomplete'));
   if (draft.warning === 'secrets_not_saved') parts.push(t('panel.capture.secretsNotKept'));
   const tone = parts.length > 1 ? 'warn' : 'info';
-  // RB-096-11, RB-094-21: the text names Settings > Network > API client; the line links there.
+  // RB-096-11, RB-094-27: the text names API client › Variables; the line links there.
   if (missing.length === 0) return { tone, text: parts.join(' ') };
-  return { tone, text: parts.join(' '), setting: { key: 'api-client.secrets', label: t('panel.openSetting') } };
+  return { tone, text: parts.join(' '), setting: { key: 'api-client.secrets', label: t('panel.openVariables') } };
 }
 
 /** The editor content as compared for unsaved edits. */
