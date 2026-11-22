@@ -38,9 +38,12 @@ impl RbMcpServer {
     pub fn new(backend: Arc<dyn Backend>) -> Self {
         // The loaded plugins' tools beside the core ones (RB-060-12).
         let plugins = crate::tools::plugins::router(backend.plugin_tools());
+        let mut tool_router = Self::router() + plugins;
+        // `script_run` lists the `rb.*` signatures of every tool this session serves (RB-098-01).
+        crate::scripts::signatures::describe(&mut tool_router);
         Self {
             backend,
-            tool_router: Self::router() + plugins,
+            tool_router,
         }
     }
 
@@ -87,6 +90,7 @@ impl RbMcpServer {
             + Self::restore_last_router()
             + Self::android_router()
             + Self::ios_router()
+            + Self::script_router()
     }
 
     /// The names of every tool, sorted: what the coverage test holds the commands against.

@@ -4066,6 +4066,63 @@
       }
     },
     {
+      "name": "script_run",
+      "area": "scripts",
+      "description": "Run a short JavaScript that calls rBrowser's tools itself and answers only what it returns (MCP code mode): one call instead of a round trip per tool and view, the intermediate results never enter the context. code is the body of an async function with the parameters args (the JSON given as args) and target (as given, default \"all\"). Inside, await rb.<tool>(arguments) runs that MCP tool with exactly the guards of a direct call and gives its JSON answer; a refusal throws an Error named ToolError with code and tool. console.log lines come back as logs. Answer: result (the returned value as JSON), calls, durationMs, cut at mcp.scripts.maxResultBytes. The script runs in a sandbox: no fetch, require, import, timers, file system, network or process; at most mcp.scripts.maxCalls tool calls within mcp.scripts.timeoutMs. Off by default: a person switches it on with the setting mcp.scripts.enabled (code scripts_disabled). Failure codes: script.syntax (with line), script.timeout, script.call_limit, script.recursion (script_run inside a script), script.memory, script.stack, script.error or the tool's own code for an uncaught error (with name, tool, line). Example: await rb.navigate({ target, url: args.url }); const views = await rb.evaluate({ target, expression: 'document.documentElement.scrollWidth > innerWidth' }); return views.filter((v) => v.value).map((v) => v.breakpoint);",
+      "target": "all",
+      "guard": {
+        "note": "Off until a person switches on the setting mcp.scripts.enabled (code scripts_disabled); every rb.* call inside runs through the same router and guards as a direct call, script_run itself is refused there (script.recursion), and a run is bounded by mcp.scripts.timeoutMs and mcp.scripts.maxCalls in a sandbox without file system, network or process.",
+        "setting": "mcp.scripts.enabled"
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "TargetArg": {
+            "description": "What a tool's `target` says, as written.",
+            "anyOf": [
+              {
+                "description": "A view id (`views_list`).",
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              },
+              {
+                "description": "`\"all\"`, a view id as text, or a breakpoint id: every view showing that breakpoint.",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "description": "The script: the body of an async function with the parameters `args` and `target`;\n`return` gives the answer. At most 64 KiB.",
+            "type": "string"
+          },
+          "args": {
+            "description": "Any JSON value; the script gets it as `args` (default `{}`).",
+            "default": null
+          },
+          "target": {
+            "description": "`\"all\"` (default), a view id or a breakpoint id; the script gets it as `target` and\npasses it on to the tools it calls.",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TargetArg"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "scroll",
       "area": "sync",
       "description": "Scroll the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent) the way scroll sync does, so every view shows the same content: `to` \"top\" or \"bottom\", `element` (CSS selector) brought to the top edge, or `percentY` / `percentX` (0 to 100) of the scroll range; the other axis goes to its start. `container` (CSS selector) scrolls that element instead of the page. Answers per view done, notFound, notVisible or a failure.",

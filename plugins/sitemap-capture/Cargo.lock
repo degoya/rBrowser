@@ -365,7 +365,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "rb-config"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "indexmap",
  "rb-i18n",
@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "rb-engine"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "rb-config",
@@ -395,7 +395,7 @@ dependencies = [
 
 [[package]]
 name = "rb-i18n"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -404,7 +404,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -412,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -421,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "rb-settings"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "schemars",
  "serde",
@@ -431,11 +431,11 @@ dependencies = [
 
 [[package]]
 name = "rb-util"
-version = "0.9.7"
+version = "0.9.8"
 
 [[package]]
 name = "rb-visual"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "png",
  "rb-util",

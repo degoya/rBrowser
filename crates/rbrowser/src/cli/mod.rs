@@ -130,7 +130,8 @@ pub enum Command {
     Screenshot(screenshot::ScreenshotCliArgs),
     /// Speak MCP on stdin and stdout, forwarded to the project's running rBrowser (its MCP
     /// server must be on); fails with exit code 3 when none runs. For `claude mcp add`.
-    Mcp,
+    /// `mcp tools --format anthropic` prints the core tools' definitions instead (RB-098-01).
+    Mcp(crate::mcp::cli::McpCliArgs),
     /// Tunnel rBrowser's CDP proxy into WSL in NAT mode: `rbrowser-wsl cdp-proxy` listens on
     /// 127.0.0.1 in the distribution until it ends (RB-030-06).
     CdpTunnel(CdpTunnelArgs),

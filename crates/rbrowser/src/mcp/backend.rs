@@ -263,8 +263,19 @@ impl Backend for CoreBackend {
                     .unwrap_or(rb_mcp::backend::DEFAULT_MAX_ANSWER_BYTES),
                 prompts: settings.prompts,
                 resources: settings.resources,
+                scripts: rb_mcp::ScriptOptions {
+                    enabled: settings.scripts.enabled,
+                    timeout: Duration::from_millis(u64::from(settings.scripts.timeout_ms)),
+                    max_calls: settings.scripts.max_calls,
+                    max_result_bytes: usize::try_from(settings.scripts.max_result_bytes)
+                        .unwrap_or(usize::MAX),
+                },
             }
         })
+    }
+
+    fn script_runner(&self) -> Option<Arc<dyn rb_mcp::ScriptRunner>> {
+        Some(super::scripts::runner())
     }
 
     async fn wsl_info(&self) -> Value {

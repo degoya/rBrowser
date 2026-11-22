@@ -1,0 +1,28 @@
+// The contract between rBrowser and its script engine component (RB-098-01, MCP code mode).
+//
+// The engine runs one short JavaScript (the body of an async function) per instance. Its only
+// way out is `host`: one MCP tool call at a time, which rBrowser runs through the same
+// dispatcher and guards as a direct call, and the wall clock for `Date`. The world imports no
+// WASI interface: the component has no file system, network, environment or process to reach.
+package rbrowser:script@0.1.0;
+
+interface host {
+    /// Runs the MCP tool `tool` with `arguments` (a JSON object as text). Ok: the tool's answer
+    /// as JSON text. Err: the refusal as JSON text `{"code": ..., "message": ...}`.
+    call: func(tool: string, arguments: string) -> result<string, string>;
+
+    /// Milliseconds since the Unix epoch, for `Date`.
+    clock-ms: func() -> u64;
+}
+
+interface engine {
+    /// Runs `code`, the body of an async function with the parameters `args` (from the JSON
+    /// text `args`) and `target` (the JSON text `target`). Ok: `{"value": ..., "logs": [...]}`
+    /// as JSON text. Err: `{"code", "name", "message", "line"?, "tool"?, "logs"}` as JSON text.
+    run: func(code: string, args: string, target: string) -> result<string, string>;
+}
+
+world script {
+    import host;
+    export engine;
+}

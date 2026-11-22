@@ -59,6 +59,8 @@ rb-plugin-host = { path = "../rb-plugin-host" }
 # The findings model and the check-plugin kind (RB-060-01).
 rb-plugin-types = { path = "../rb-plugin-types" }
 rb-process = { path = "../rb-process" }
+# The sandbox of MCP code mode, `script_run` (RB-098-01).
+rb-script = { path = "../rb-script" }
 # Safari on macOS over safaridriver: the engine of the Safari views (RB-095-03).
 rb-safari = { path = "../rb-safari" }
 rb-settings = { path = "../rb-settings" }
@@ -111,7 +113,7 @@ self-update = ["dep:rb-update"]
 [target.'cfg(windows)'.dependencies]
 # Not `cef.workspace`: the workspace entry keeps the crate's default features (build-util,
 # resources), which the app does not need, and a member cannot switch them off. Same version.
-cef = { version = "156.6.0", default-features = false, features = ["sandbox"] }
+cef = { version = "156.7.0", default-features = false, features = ["sandbox"] }
 windows-sys = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Security",
@@ -144,7 +146,7 @@ windows-sys = { workspace = true, features = [
 # The macOS test build (RB-090-15): the app bundle `scripts/package-macos.sh` makes.
 [target.'cfg(target_os = "macos")'.dependencies]
 # Without the sandbox feature: the helpers run unsandboxed until the signed build (RB-110-06).
-cef = { version = "156.6.0", default-features = false }
+cef = { version = "156.7.0", default-features = false }
 # `dup2` and `fcntl` for the CDP pipe on descriptors 3 and 4 (`cef_app/macos/pipe.rs`).
 libc = "0.2.191"
 # The shared application Chromium's message pump needs (`CrAppProtocol`), the menu bar and the
@@ -168,7 +170,7 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
 # (build.rs). No crate feature: the Linux sandbox is the kernel's user namespaces or the setuid
 # `chrome-sandbox` of the distribution, neither linked.
 [target.'cfg(target_os = "linux")'.dependencies]
-cef = { version = "156.6.0", default-features = false }
+cef = { version = "156.7.0", default-features = false }
 # `dup2` and `fcntl` for the CDP pipe on descriptors 3 and 4 (`cef_app/macos/pipe.rs`).
 libc = "0.2.191"
 

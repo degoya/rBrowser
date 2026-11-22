@@ -95,6 +95,11 @@ const BASE_KEYS: &[KeyDef] = &[
     // The AI client the MCP setup shows first (RB-091-09).
     protected("mcp.client", Category::Automation, "mcp"),
     protected("mcp.allowEvaluate", Category::Security, "evaluate"),
+    // MCP code mode beside evaluate (RB-098-01): a script reaches every tool.
+    protected("mcp.scripts.enabled", Category::Security, "evaluate"),
+    protected("mcp.scripts.timeoutMs", Category::Security, "evaluate"),
+    protected("mcp.scripts.maxCalls", Category::Security, "evaluate"),
+    protected("mcp.scripts.maxResultBytes", Category::Security, "evaluate"),
     // The portal (RB-080-05): every key widens what reaches the LAN, so none is MCP's to set.
     protected("portal.enabled", Category::Security, "portal"),
     protected("portal.interface", Category::Security, "portal"),

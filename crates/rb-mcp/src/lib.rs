@@ -16,6 +16,9 @@
 //!   MCP resources (RB-095-01), behind `mcp.prompts` and `mcp.resources`, with the tools' token
 //!   and limits; `rbrowser://config` leaves every `x-protected` key out ([`protected_keys`]).
 //!
+//! - [`scripts`]: MCP code mode (RB-098-01): `script_run` runs a short JavaScript in the host's
+//!   sandbox whose `rb.<tool>(...)` calls go through the same router and guards as direct calls.
+//!
 //! MCP can never grant workspace trust, install or trust a plugin, or write an `x-protected`
 //! setting: there is no tool for the first two, and `settings_set` writes as an MCP caller.
 
@@ -31,6 +34,7 @@ pub mod logs;
 pub mod prompts;
 pub mod protected_keys;
 pub mod resources;
+pub mod scripts;
 pub mod secret;
 pub mod server;
 pub mod settings_view;
@@ -40,11 +44,13 @@ pub mod target;
 #[doc(hidden)]
 pub mod testing;
 pub mod token;
+pub mod tool_defs;
 pub mod tools;
 
 pub use backend::{Backend, ConfigScope, McpOptions, SettingScope, ToolFailure};
 pub use http::{HttpHandle, McpHttpConfig, serve_http};
 pub use logs::{IssueEntry, LogKind, LogLimits, LogStore};
+pub use scripts::{ScriptOptions, ScriptRequest, ScriptRunner, ScriptStop, ScriptTools};
 pub use server::RbMcpServer;
 pub use token::McpToken;
 pub use tools::plugins::PluginToolInfo;

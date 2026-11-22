@@ -1,0 +1,5 @@
+# Boa reaches getrandom (Math.random); wasm32-unknown-unknown has no source of its own, so the
+# guest defines one (src/guest.rs, `__getrandom_v03_custom`). Read by the wasm32 build in this
+# folder (scripts/build-script-engine.sh); the native tests use the platform's backend.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "getrandom_backend=\"custom\""]

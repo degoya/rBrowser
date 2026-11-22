@@ -270,9 +270,9 @@ dependencies = [
 
 [[package]]
 name = "cef"
-version = "156.6.0+156.0.30"
+version = "156.7.0+156.0.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccf965a472527fea5b7fc508ae3dca5115a1d8f8534558fe3aa8d8712fceeec9"
+checksum = "292ba28510070fe38679adb866cb0dc2f8b5ccced8fd29e56e561ccda98b8cfb"
 dependencies = [
  "cef-dll-sys",
  "libloading",
@@ -282,9 +282,9 @@ dependencies = [
 
 [[package]]
 name = "cef-dll-sys"
-version = "156.6.0+156.0.30"
+version = "156.7.0+156.0.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d35a4bcb237ea9c8cb88f2e66f63394fd0321ece6f1a74be7c0354f115e1a096"
+checksum = "bdb47aa0db7e12990e90e37f5295ca7ec54446b35142ee8399442b53b9014f56"
 dependencies = [
  "anyhow",
  "cc",
@@ -2053,7 +2053,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-export"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-api-model",
  "serde",
@@ -2062,7 +2062,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-import"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-api-model",
  "serde",
@@ -2072,7 +2072,7 @@ dependencies = [
 
 [[package]]
 name = "rb-api-model"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -2080,7 +2080,7 @@ dependencies = [
 
 [[package]]
 name = "rb-bidi"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "futures-util",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "rb-cdp"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "getrandom 0.4.3",
  "rb-util",
@@ -2110,7 +2110,7 @@ dependencies = [
 
 [[package]]
 name = "rb-commands"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "schemars",
  "serde",
@@ -2121,7 +2121,7 @@ dependencies = [
 
 [[package]]
 name = "rb-config"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "indexmap",
  "rb-i18n",
@@ -2138,7 +2138,7 @@ dependencies = [
 
 [[package]]
 name = "rb-diag"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "clap",
  "rb-commands",
@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "rb-engine"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "rb-config",
@@ -2170,7 +2170,7 @@ dependencies = [
 
 [[package]]
 name = "rb-i18n"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -2179,7 +2179,7 @@ dependencies = [
 
 [[package]]
 name = "rb-ipc"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-commands",
  "rb-config",
@@ -2193,7 +2193,7 @@ dependencies = [
 
 [[package]]
 name = "rb-mcp"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "axum",
@@ -2221,7 +2221,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-api"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-plugin-types",
  "serde",
@@ -2230,7 +2230,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-host"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2268,7 +2268,7 @@ dependencies = [
 
 [[package]]
 name = "rb-plugin-types"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "schemars",
  "serde",
@@ -2278,7 +2278,7 @@ dependencies = [
 
 [[package]]
 name = "rb-process"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "tempfile",
  "tokio",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "rb-safari"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "rb-bidi",
@@ -2305,8 +2305,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rb-script"
+version = "0.9.8"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "wasmtime",
+ "wat",
+ "wit-component 0.263.0",
+ "wit-parser 0.263.0",
+]
+
+[[package]]
 name = "rb-settings"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "schemars",
  "serde",
@@ -2316,7 +2331,7 @@ dependencies = [
 
 [[package]]
 name = "rb-sidecar"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-commands",
  "rb-diag",
@@ -2330,7 +2345,7 @@ dependencies = [
 
 [[package]]
 name = "rb-sync"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "rb-engine",
@@ -2346,7 +2361,7 @@ dependencies = [
 
 [[package]]
 name = "rb-update"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2371,11 +2386,11 @@ dependencies = [
 
 [[package]]
 name = "rb-util"
-version = "0.9.7"
+version = "0.9.8"
 
 [[package]]
 name = "rb-visual"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "png",
  "rb-util",
@@ -2387,7 +2402,7 @@ dependencies = [
 
 [[package]]
 name = "rb-wsl"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "base64 0.23.1",
  "clap",
@@ -2406,7 +2421,7 @@ dependencies = [
 
 [[package]]
 name = "rbrowser"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2438,6 +2453,7 @@ dependencies = [
  "rb-plugin-types",
  "rb-process",
  "rb-safari",
+ "rb-script",
  "rb-settings",
  "rb-sidecar",
  "rb-sync",
@@ -2465,7 +2481,7 @@ dependencies = [
 
 [[package]]
 name = "rbrowser-cli"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "rb-process",
  "tempfile",

@@ -84,6 +84,7 @@ const CORE_TOOLS: &[&str] = &[
     "recorder_stop",
     "reload",
     "screenshot",
+    "script_run",
     "scroll",
     "session_assign",
     "session_clear",

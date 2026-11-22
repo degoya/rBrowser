@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{McpClient, McpSettings};
+use super::{McpClient, McpScriptSettings, McpSettings};
 
 #[test]
 fn prompts_and_resources_are_on_by_default() {
@@ -50,4 +50,41 @@ fn network_is_collected_on_demand_by_default() {
     let settings: McpSettings =
         serde_json::from_value(json!({ "collectNetwork": true })).expect("collect network");
     assert!(settings.collect_network);
+}
+
+#[test]
+fn code_mode_is_off_by_default_with_bounded_runs() {
+    // RB-098-01: a person switches `script_run` on; the limits have defaults.
+    let defaults = McpSettings::default().scripts;
+    assert_eq!(
+        defaults,
+        McpScriptSettings {
+            enabled: false,
+            timeout_ms: 30_000,
+            max_calls: 200,
+            max_result_bytes: 65_536,
+        }
+    );
+    let settings: McpSettings =
+        serde_json::from_value(json!({ "scripts": { "enabled": true, "maxCalls": 20 } }))
+            .expect("a scripts section");
+    assert!(settings.scripts.enabled);
+    assert_eq!(settings.scripts.max_calls, 20);
+    assert_eq!(settings.scripts.timeout_ms, 30_000);
+    let written = serde_json::to_value(McpSettings::default()).expect("serialises");
+    assert_eq!(written["scripts"]["maxResultBytes"], 65_536);
+    assert_eq!(written["scripts"]["timeoutMs"], 30_000);
+}
+
+#[test]
+fn a_script_ends_before_the_stdio_forward_gives_up() {
+    // `rbrowser mcp` waits 600 s for an answer (rb-mcp `stdio.rs`, REQUEST_TIMEOUT); the longest
+    // script plus the server's 2 s of grace stays below it.
+    let schema = serde_json::to_value(schemars::schema_for!(McpScriptSettings)).expect("schema");
+    let maximum = schema
+        .pointer("/properties/timeoutMs/maximum")
+        .and_then(serde_json::Value::as_u64)
+        .expect("a maximum");
+    assert_eq!(maximum, 590_000);
+    assert!(maximum + 2_000 < 600_000);
 }

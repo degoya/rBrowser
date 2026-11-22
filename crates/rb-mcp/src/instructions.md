@@ -84,6 +84,11 @@ triage, bug reproduction - each taking url and breakpoints. The resources are re
 `checks_run`), `rbrowser://screenshots/latest` (paths and per file a URI; the PNG only when that
 URI is read) and `rbrowser://config` (the project config without its protected keys).
 
+Many calls with a small answer (code mode, off until a person switches on
+`mcp.scripts.enabled`): `script_run` runs a short JavaScript whose `await rb.<tool>(arguments)`
+calls these tools with the same guards and answers only what the script returns - one call
+instead of a round trip per view; its description lists every `rb.*` signature.
+
 Other tools: `devtools_open`, `devtools_inspect_at` (DevTools with the element at a point
 selected; it opens them whatever `devtools.openOnInspect` says), `app_info`, `wsl_info`, `diagnostics`, `plugins_list`,
 `project_open`, `app_perf` (the timing counters: sync replay per engine, plugin calls, shell IPC,

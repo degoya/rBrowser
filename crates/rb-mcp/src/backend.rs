@@ -63,6 +63,8 @@ pub struct McpOptions {
     pub prompts: bool,
     /// `mcp.resources`: the resources are listed and read (RB-095-01).
     pub resources: bool,
+    /// `mcp.scripts.*`: MCP code mode, `script_run` (RB-098-01).
+    pub scripts: crate::scripts::ScriptOptions,
 }
 
 impl Default for McpOptions {
@@ -73,6 +75,7 @@ impl Default for McpOptions {
             max_answer_bytes: DEFAULT_MAX_ANSWER_BYTES,
             prompts: true,
             resources: true,
+            scripts: crate::scripts::ScriptOptions::default(),
         }
     }
 }
@@ -227,6 +230,12 @@ pub trait Backend: Send + Sync + 'static {
     ) -> Result<Value, ToolFailure> {
         let _ = (name, views, wait);
         Err(no_flows())
+    }
+
+    /// The sandbox `script_run` runs scripts in (RB-098-01, `crates/rb-script` in the app);
+    /// `None` - the default - answers `script.unavailable`.
+    fn script_runner(&self) -> Option<Arc<dyn crate::scripts::ScriptRunner>> {
+        None
     }
 
     /// The last check run (RB-060-01) as `{ run, messages }`: the run's `findings.json` and the

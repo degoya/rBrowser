@@ -202,9 +202,9 @@ pub use user_presentation::{
 };
 pub use user_settings::{
     BreakpointShortcutSettings, CdpSettings, ChromiumSettings, DeviceSettings, DevtoolsMode,
-    DevtoolsSettings, EngineSettings, LogSettings, McpClient, McpSettings, NewViewModifier,
-    PluginId, PluginSettings, ShortcutSettings, Theme, TrustedPluginKey, UiSettings,
-    UpdateAutoInstall, UpdateChannel, UpdateCheck, UpdateSettings, UserReloadSettings,
+    DevtoolsSettings, EngineSettings, LogSettings, McpClient, McpScriptSettings, McpSettings,
+    NewViewModifier, PluginId, PluginSettings, ShortcutSettings, Theme, TrustedPluginKey,
+    UiSettings, UpdateAutoInstall, UpdateChannel, UpdateCheck, UpdateSettings, UserReloadSettings,
     UserSettings, WslNetworkingMode, WslSettings,
 };
 pub use user_view::{

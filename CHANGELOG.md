@@ -7,6 +7,29 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-11-22
+
+### Added
+
+- MCP code mode (RB-098-01): the tool `script_run` runs a short JavaScript whose
+  `await rb.<tool>(...)` calls rBrowser's own MCP tools - core and plugin - and answers only what
+  the script returns, one call instead of a round trip per tool and view. Every inner call goes
+  through the same router and guards as a direct one (`evaluate` behind `mcp.allowEvaluate`,
+  flows behind workspace trust, protected keys refused), `script_run` inside a script is refused,
+  and the script runs in a wasmtime sandbox (the Boa engine as a component with no WASI: no file
+  system, network or process) with a memory limit. Settings `mcp.scripts.enabled` (off),
+  `mcp.scripts.timeoutMs`, `mcp.scripts.maxCalls`, `mcp.scripts.maxResultBytes`; the tool's
+  description lists every `rb.*` signature; `Leader X J` opens the setting. `rbrowser mcp tools
+  --format anthropic [--allowed-caller <type>]` prints the core tools as Messages API custom
+  tools, for programs using programmatic tool calling.
+
+### Changed
+
+- CEF 156.0.31 (Chromium 156.0.8078.100, the `cef` crate 156.7.0) on every platform
+  (RB-098-02): the Windows x64, macOS arm64 and x64 and Linux x64 archives pinned to new
+  SHA-256s, each checked against the SHA-1 of the CDN index; the CEF age notice counts from
+  the build's release on 2026-11-18. CEF's own change is the Chromium update alone; no API moved.
+
 ## [0.9.7] - 2026-11-22
 
 ### Added

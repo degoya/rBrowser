@@ -87,6 +87,7 @@ pub fn areas() -> Vec<(&'static str, Vec<Tool>)> {
         ("views", RbMcpServer::pseudo_locale_router().list_all()),
         ("updates", RbMcpServer::updates_router().list_all()),
         ("views", RbMcpServer::restore_last_router().list_all()),
+        ("scripts", RbMcpServer::script_router().list_all()),
     ];
     for (_, tools) in &mut areas {
         tools.sort_by(|a, b| a.name.cmp(&b.name));

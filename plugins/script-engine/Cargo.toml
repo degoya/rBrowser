@@ -1,0 +1,50 @@
+[package]
+name = "rb-script-engine"
+description = "rBrowser's script engine for MCP code mode: the Boa JavaScript engine as a WebAssembly component whose only import is rbrowser:script/host (RB-098-01)"
+# The engine's own version, not the workspace's; no plugin (no manifest.toml).
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A crate of its own, outside the app's workspace, like plugins/plugin-util: `cargo test` here
+# runs its logic natively (scripts/check.sh, plugin tests), and scripts/build-script-engine.sh
+# builds it for wasm32-unknown-unknown into crates/rb-script/engine/rb-script-engine.wasm.
+[workspace]
+
+[dependencies]
+# The JavaScript engine (Unlicense OR MIT), pure Rust, so it builds for wasm32-unknown-unknown
+# without a C toolchain or WASI. No default features: no Temporal, no Intl, no time zone data.
+boa_engine = { version = "0.22.0", default-features = false }
+serde_json = "1.0.154"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# The guest binding (src/guest.rs) against crates/rb-script/wit.
+wit-bindgen = "0.63.0"
+# Boa's Math.random reaches getrandom through rand; on wasm32-unknown-unknown the custom
+# backend (.cargo/config.toml) is a generator in src/guest.rs - nothing of the host's.
+getrandom = "0.4.3"
+
+[lib]
+name = "rb_script_engine"
+# `cdylib` is the core module `wasm-tools component new` turns into the component; `rlib` lets
+# `cargo test` build the logic natively.
+crate-type = ["cdylib", "rlib"]
+
+# The app's workspace lints, repeated: this crate is no member of that workspace.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+allow_attributes_without_reason = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "warn"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1

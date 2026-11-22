@@ -9,6 +9,8 @@
 //! Code (stdio through `rbrowser mcp`, so no token is in it). `mcp.setup` (`Leader , N`) opens
 //! Settings > Automation > MCP at the client choice, where [`setup`] connects an AI client in
 //! the project or for every project (RB-091-09; the setup wizard's step does the same).
+//! `mcp.run_script` (`Leader X J`) opens the setting of MCP code mode, whose sandbox is
+//! [`scripts`] (RB-098-01).
 
 pub mod autostart;
 pub mod backend;
@@ -19,6 +21,7 @@ pub mod host_tools;
 pub mod installed_keys;
 pub mod latest;
 pub mod network_tools;
+pub mod scripts;
 pub mod settings;
 pub mod setup;
 pub mod shared_logs;
@@ -136,12 +139,16 @@ pub fn register(registry: &mut CommandRegistry, core: &Arc<Core>) -> Vec<Command
         Ok(defs) => defs,
         Err(error) => return vec![error],
     };
-    defs.into_iter()
+    let mut refused: Vec<CommandError> = defs
+        .into_iter()
         .filter_map(|def| {
             let handler = handler(def.id.as_str(), Arc::downgrade(core));
             registry.register(def, handler).err()
         })
-        .collect()
+        .collect();
+    // MCP code mode's command (RB-098-01).
+    refused.extend(scripts::register(registry, core));
+    refused
 }
 
 fn handler(id: &str, core: Weak<Core>) -> Handler {

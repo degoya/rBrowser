@@ -2529,6 +2529,17 @@
       }
     },
     {
+      "id": "mcp.run_script",
+      "titleKey": "commands.mcp.run_script",
+      "group": "plugins",
+      "defaultBindings": [
+        "Ctrl+Shift+Space X J"
+      ],
+      "mcp": {
+        "covered": "script_run"
+      }
+    },
+    {
       "id": "plugins.catalog",
       "titleKey": "commands.plugins.catalog",
       "group": "plugins",

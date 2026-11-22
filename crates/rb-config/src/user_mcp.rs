@@ -49,6 +49,38 @@ pub struct McpSettings {
     /// The AI client the MCP setup shows first, in the setup wizard and in Settings >
     /// Automation > MCP (RB-091-09).
     pub client: McpClient,
+    /// MCP code mode: `script_run` (RB-098-01).
+    pub scripts: McpScriptSettings,
+}
+
+/// `mcp.scripts`: MCP code mode (RB-098-01) - `script_run` runs a short JavaScript whose tool
+/// calls go through the same guards as direct ones. Protected from MCP itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", default)]
+pub struct McpScriptSettings {
+    /// `script_run` runs scripts that call the MCP tools (off by default).
+    pub enabled: bool,
+    /// How long one script may run, its tool calls included, in milliseconds; below the 600 s
+    /// `rbrowser mcp` waits for an answer.
+    #[schemars(range(min = 1000, max = 590_000))]
+    pub timeout_ms: u32,
+    /// The most tool calls one script may make.
+    #[schemars(range(min = 1, max = 10_000))]
+    pub max_calls: u32,
+    /// The most bytes of a script's answer; more is cut.
+    #[schemars(range(min = 1024, max = 16_777_216))]
+    pub max_result_bytes: u32,
+}
+
+impl Default for McpScriptSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            timeout_ms: 30_000,
+            max_calls: 200,
+            max_result_bytes: 65_536,
+        }
+    }
 }
 
 /// The AI clients the MCP setup knows (RB-091-09): each one's project file and its connection
@@ -113,6 +145,7 @@ impl Default for McpSettings {
             prompts: true,
             resources: true,
             client: McpClient::ClaudeCode,
+            scripts: McpScriptSettings::default(),
         }
     }
 }

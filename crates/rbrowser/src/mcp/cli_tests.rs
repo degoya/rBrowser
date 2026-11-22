@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use clap::Parser as _;
 
-use super::{bridge_env, exit_code};
+use super::{McpCommand, ToolsFormat, bridge_env, exit_code, tools_json};
 use crate::cli::plan::{Env, plan};
 use crate::cli::{Cli, exit};
 use rb_mcp::stdio::StdioError;
@@ -75,4 +75,44 @@ fn no_instance_is_3_several_is_2() {
         exit_code(&StdioError::Io(std::io::Error::other("closed"))),
         exit::FAILED
     );
+}
+
+#[test]
+fn mcp_tools_prints_the_core_tools_in_the_messages_api_format() {
+    let cli = Cli::try_parse_from([
+        "rbrowser",
+        "mcp",
+        "tools",
+        "--format",
+        "anthropic",
+        "--allowed-caller",
+        "code_execution_20260120",
+    ])
+    .expect("parses");
+    let Some(crate::cli::Command::Mcp(args)) = &cli.command else {
+        panic!("the mcp command");
+    };
+    let Some(McpCommand::Tools(tools)) = &args.command else {
+        panic!("the tools subcommand");
+    };
+    assert_eq!(tools.format, ToolsFormat::Anthropic);
+    let printed: serde_json::Value = serde_json::from_str(&tools_json(tools)).expect("JSON");
+    let navigate = printed
+        .as_array()
+        .and_then(|tools| tools.iter().find(|tool| tool["name"] == "navigate"))
+        .expect("navigate is listed");
+    assert_eq!(navigate["input_schema"]["type"], "object");
+    assert_eq!(
+        navigate["allowed_callers"],
+        serde_json::json!(["code_execution_20260120"])
+    );
+}
+
+#[test]
+fn bare_rbrowser_mcp_stays_the_stdio_bridge() {
+    let cli = Cli::try_parse_from(["rbrowser", "mcp"]).expect("parses");
+    let Some(crate::cli::Command::Mcp(args)) = &cli.command else {
+        panic!("the mcp command");
+    };
+    assert!(args.command.is_none());
 }

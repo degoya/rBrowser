@@ -447,6 +447,7 @@
     },
     "mcp": {
       "copy_config": "Show the Claude Code line for MCP",
+      "run_script": "MCP code mode settings",
       "setup": "Connect an AI agent over MCP...",
       "toggle": "Switch the MCP server on or off"
     },
@@ -3619,6 +3620,28 @@
           "description": "Let MCP agents read the views, the latest findings and screenshots and the project config as resources.",
           "help": "Lets MCP agents read rBrowser's state without a tool call: the views, the latest check run, the latest screenshots (an image only when asked for) and the project config with every protected key left out. Read only, with the same token and size limit as the tools.",
           "label": "Offer resources"
+        },
+        "scripts": {
+          "enabled": {
+            "description": "Let MCP agents run short scripts that call rBrowser's tools in one request (code mode).",
+            "help": "Lets MCP agents send a short JavaScript with the script_run tool: it calls rBrowser's tools itself and only its result comes back, which saves round trips and context with many views. The script runs in a sandbox without file system, network or processes and gets no right a direct call lacks: evaluate still needs Allow evaluate, flows still need a trusted workspace, protected settings stay protected.",
+            "label": "Allow MCP scripts"
+          },
+          "maxCalls": {
+            "description": "The most tool calls one MCP script may make.",
+            "help": "The most tool calls one script may make; the call after it fails and the script ends with script.call_limit. Example: 200 covers a review of every view with several reads each.",
+            "label": "Script tool calls"
+          },
+          "maxResultBytes": {
+            "description": "The largest answer of an MCP script, in bytes. Longer answers are cut.",
+            "help": "The largest answer of an MCP script, in bytes; a longer one is cut and marked, and its console lines are left out. Example: 65536 for 64 KiB. Lower it to keep an agent's context small.",
+            "label": "Largest script answer"
+          },
+          "timeoutMs": {
+            "description": "How long one MCP script may run, its tool calls included, in milliseconds.",
+            "help": "How long one script may run, in milliseconds, the time its tool calls take included; then it stops with script.timeout. Example: 30000. Raise it for scripts that navigate many pages.",
+            "label": "Script time limit"
+          }
         },
         "stdioAutoStart": {
           "description": "When an MCP client starts rbrowser mcp and the project's rBrowser is not running, start it in the background. The MCP server must be on.",

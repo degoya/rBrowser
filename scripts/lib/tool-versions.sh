@@ -62,38 +62,38 @@ RB_NFPM_SHA256="0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
 # own index. A new `cef` crate means a new archive: download it with a build, check it against
 # https://cef-builds.spotifycdn.com/index.json and move all four values here.
 # shellcheck disable=SC2034
-RB_CEF_VERSION="156.0.30"
+RB_CEF_VERSION="156.0.31"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE="cef_binary_156.0.30+g6028375+chromium-156.0.8078.96_windows64_minimal.tar.bz2"
+RB_CEF_ARCHIVE="cef_binary_156.0.31+ge603d97+chromium-156.0.8078.100_windows64_minimal.tar.bz2"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_SHA256="74fd321975e99703acd8fc7e3c1b0859292f61b388f4052a0cd7ef1fb3b29f6e"
+RB_CEF_ARCHIVE_SHA256="c691636862b5f6bab05e76d77bd1b57799659552a25a5bc8b7eaa365de6e63fd"
 # The macOS distributions of the same build (RB-090-15): the archives the `cef` crate downloads
 # for aarch64-apple-darwin and x86_64-apple-darwin, held to our own SHA-256 the same way
-# (scripts/lib/cef.sh, rb_cef_verify_macos). Pinned 2026-11-17, each checked against the SHA-1
+# (scripts/lib/cef.sh, rb_cef_verify_macos). Pinned 2026-11-22, each checked against the SHA-1
 # of its entry under `macosarm64` and `macosx64` in the index.
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_MACOS_ARM64="cef_binary_156.0.30+g6028375+chromium-156.0.8078.96_macosarm64_minimal.tar.bz2"
+RB_CEF_ARCHIVE_MACOS_ARM64="cef_binary_156.0.31+ge603d97+chromium-156.0.8078.100_macosarm64_minimal.tar.bz2"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_MACOS_ARM64_SHA256="731b599e78c71bf33530d65bfa18963f7d1d59902c1f381f5452188e5116b855"
+RB_CEF_ARCHIVE_MACOS_ARM64_SHA256="1bd39ff38db20baa5b52768919d6599aafb4aacbc7fd192458496749a0630ee8"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_MACOS_X64="cef_binary_156.0.30+g6028375+chromium-156.0.8078.96_macosx64_minimal.tar.bz2"
+RB_CEF_ARCHIVE_MACOS_X64="cef_binary_156.0.31+ge603d97+chromium-156.0.8078.100_macosx64_minimal.tar.bz2"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_MACOS_X64_SHA256="a9b2fadcd20e1144a6db571e8e457ca616002d858ab3671be295d9b0bcfc8bc8"
+RB_CEF_ARCHIVE_MACOS_X64_SHA256="58ffeec9beff9f0f57cca19fa950674f9756c1b28ba595129ba613806633b6fa"
 # The release date of that build (RB-010-10): the `last_modified` day of the archive's entry under
 # `windows64` in https://cef-builds.spotifycdn.com/index.json (the index has no other date).
 # `crates/rbrowser/build.rs` embeds it; the shell warns once it is more than six weeks old.
 # shellcheck disable=SC2034
-RB_CEF_RELEASE_DATE="2026-11-13"
+RB_CEF_RELEASE_DATE="2026-11-18"
 # Linux x64 (RB-097-05): the distribution the `cef` crate downloads for x86_64-unknown-linux-gnu
-# (entry `linux64` of the index, its SHA-1 0b4c2189e3b93033bbef13add1a86f66849c1e62 checked) and
+# (entry `linux64` of the index, its SHA-1 0adb813face4ca098f17210fe471b172c2bc1950 checked) and
 # our own SHA-256 of it, taken 2026-11-22 (scripts/lib/cef.sh, rb_cef_verify_linux); and the
 # Node runtime of the Linux package, the official linux-x64 tarball of the .nvmrc version with
 # its SHA-256 from https://nodejs.org/dist/v<version>/SHASUMS256.txt. A new .nvmrc needs both
 # Node values; scripts/package-linux.sh refuses a pin for another version.
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_LINUX_X64="cef_binary_156.0.30+g6028375+chromium-156.0.8078.96_linux64_minimal.tar.bz2"
+RB_CEF_ARCHIVE_LINUX_X64="cef_binary_156.0.31+ge603d97+chromium-156.0.8078.100_linux64_minimal.tar.bz2"
 # shellcheck disable=SC2034
-RB_CEF_ARCHIVE_LINUX_X64_SHA256="356db99d653698aa9ba78b22965032b4fa5b23ba079ffdbaa5d28a8530f04011"
+RB_CEF_ARCHIVE_LINUX_X64_SHA256="a6c3452c47f344f9f125c71dfc9d8965149bac7c8df1e23ffd80442a28ce1b62"
 # shellcheck disable=SC2034
 RB_NODE_LINUX_X64_VERSION="26.13.1"
 # shellcheck disable=SC2034

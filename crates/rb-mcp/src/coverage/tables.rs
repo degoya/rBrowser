@@ -311,6 +311,15 @@ pub const GUARDS: &[Guard] = &[
                config_key_protected.",
     },
     Guard {
+        tool: "script_run",
+        setting: Some(crate::scripts::ENABLED_KEY),
+        note: "Off until a person switches on the setting mcp.scripts.enabled (code \
+               scripts_disabled); every rb.* call inside runs through the same router and guards \
+               as a direct call, script_run itself is refused there (script.recursion), and a run \
+               is bounded by mcp.scripts.timeoutMs and mcp.scripts.maxCalls in a sandbox without \
+               file system, network or process.",
+    },
+    Guard {
         tool: "evaluate",
         setting: Some(ALLOW_EVALUATE),
         note: "Off until a person switches on the setting mcp.allowEvaluate; while off it \

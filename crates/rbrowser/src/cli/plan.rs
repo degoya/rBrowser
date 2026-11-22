@@ -266,8 +266,8 @@ pub fn before_ui(cli: &Cli, user: &UserSettings) -> Result<Option<Plan>, i32> {
         return Err(crate::flows::cli::main(cli, args, &env, user));
     }
     // `rbrowser mcp` forwards to the running instance and never opens a window (RB-030-01).
-    if matches!(cli.command, Some(Command::Mcp)) {
-        return Err(crate::mcp::cli::run(cli, &env, user));
+    if let Some(Command::Mcp(args)) = &cli.command {
+        return Err(crate::mcp::cli::main(cli, args, &env, user));
     }
     let plan = match plan(cli, &env) {
         Ok(plan) => plan,

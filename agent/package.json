@@ -1,7 +1,7 @@
 {
   "name": "rbrowser-sync-agent",
   "private": true,
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "The rBrowser sync agent: injected into every view's isolated world, captures input and resolves selectors (RB-020-01).",
   "license": "GPL-3.0-or-later",
   "type": "module",

@@ -17,7 +17,7 @@ use crate::user_engines::{
     CookieSettings, ExternalWindowSettings, FirefoxSettings, WebkitSettings,
 };
 pub use crate::user_logs::LogSettings;
-pub use crate::user_mcp::{McpClient, McpSettings};
+pub use crate::user_mcp::{McpClient, McpScriptSettings, McpSettings};
 // Split from this file (500-line rule, RB-095-04); the old path holds.
 pub use crate::user_reload::UserReloadSettings;
 pub use crate::user_shortcuts::{BreakpointShortcutSettings, NewViewModifier, ShortcutSettings};

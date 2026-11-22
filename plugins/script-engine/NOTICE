@@ -1,0 +1,10 @@
+rb-script-engine - rBrowser's script engine for MCP code mode (RB-098-01)
+Copyright (c) DEGOYA.digital
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version, like rBrowser.
+
+The component crates/rb-script/engine/rb-script-engine.wasm, built from this folder by
+scripts/build-script-engine.sh, links third-party Rust crates unchanged: the Boa JavaScript
+engine (boa_engine and its boa_* crates, Unlicense OR MIT), ICU4X (Unicode-3.0), and their
+dependencies under the MIT, Apache-2.0, BSL-1.0, Zlib and Unicode-3.0 licences. The name,
+version and licence of every crate is in Cargo.lock and `cargo metadata` here.

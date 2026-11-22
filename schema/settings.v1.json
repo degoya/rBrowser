@@ -1574,6 +1574,75 @@
             "user"
           ],
           "x-protected": true
+        },
+        "scripts": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "`script_run` runs scripts that call the MCP tools (off by default).",
+              "default": false,
+              "x-category": "security",
+              "x-section": "evaluate",
+              "x-order": 2,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1000,
+              "description": "How long one script may run, its tool calls included, in milliseconds; below the 600 s\n`rbrowser mcp` waits for an answer.",
+              "maximum": 590000,
+              "default": 30000,
+              "x-category": "security",
+              "x-section": "evaluate",
+              "x-order": 3,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "maxCalls": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1,
+              "description": "The most tool calls one script may make.",
+              "maximum": 10000,
+              "default": 200,
+              "x-category": "security",
+              "x-section": "evaluate",
+              "x-order": 4,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            },
+            "maxResultBytes": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1024,
+              "description": "The most bytes of a script's answer; more is cut.",
+              "maximum": 16777216,
+              "default": 65536,
+              "x-category": "security",
+              "x-section": "evaluate",
+              "x-order": 5,
+              "x-scope": [
+                "user"
+              ],
+              "x-protected": true
+            }
+          },
+          "description": "MCP code mode: `script_run` (RB-098-01).",
+          "default": {
+            "enabled": false,
+            "timeoutMs": 30000,
+            "maxCalls": 200,
+            "maxResultBytes": 65536
+          }
         }
       },
       "description": "Automation > MCP (RB-030-01).",
@@ -1590,7 +1659,13 @@
         "notifyOnSettingChange": true,
         "prompts": true,
         "resources": true,
-        "client": "claudeCode"
+        "client": "claudeCode",
+        "scripts": {
+          "enabled": false,
+          "timeoutMs": 30000,
+          "maxCalls": 200,
+          "maxResultBytes": 65536
+        }
       }
     },
     "portal": {

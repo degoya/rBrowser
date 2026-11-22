@@ -36,6 +36,7 @@ pub mod pseudo_locale;
 pub mod recorder;
 pub mod recorder_steps;
 pub mod restore_last;
+pub mod script;
 pub mod sitemap;
 pub mod status;
 pub mod sync;

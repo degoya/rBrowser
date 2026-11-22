@@ -6,7 +6,7 @@ members = ["crates/*"]
 exclude = ["spikes", "sdk"]
 
 [workspace.package]
-version = "0.9.7"
+version = "0.9.8"
 authors = ["Alexander Herling / DEGOYA.digital"]
 edition = "2024"
 rust-version = "1.99"
@@ -23,7 +23,7 @@ anyhow = "1.0.104"
 # Async methods on object-safe traits (rb-engine `ViewHost::cdp_send`).
 async-trait = "0.1.92"
 # CEF, the Chromium of the grid (RB-010-04); pinned here for that job, unused by the contracts.
-cef = "156.6.0"
+cef = "156.7.0"
 clap = { version = "4.6.8", features = ["derive"] }
 # The Windows resources of the binary: version info, icon, long-path manifest (crates/rbrowser).
 embed-resource = "3.0.12"
