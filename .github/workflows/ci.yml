@@ -66,7 +66,7 @@ jobs:
           node-version-file: .nvmrc
       - name: Install shellcheck, gitleaks and actionlint
         run: scripts/ci-tools.sh linters
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: cargo-deny@0.20.2
       # The preflight's `cargo deny --offline check` reads the advisory database fetched here.
@@ -103,7 +103,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
           cache-key: linux
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: nextest@0.9.151,wasm-tools@1.261.0
       - name: scripts/check.sh --rust
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: cargo-xwin@0.23.1,wasm-tools@1.261.0
       - name: scripts/check.sh --windows
@@ -199,7 +199,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: windows
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: nextest@0.9.151
       - name: scripts/check.sh --rust
@@ -259,7 +259,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: wasm-tools@1.261.0
       - name: The plugins, unsigned
