@@ -37,7 +37,7 @@ pub struct LogParams {
 #[tool_router(router = logs_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The console messages of the targeted views since the MCP server started (or the last clear): level, source, text, url, line, time (ms since epoch); newest last. level filters, limit caps per view (default 100), clear empties the buffer. Buffer size: setting mcp.consoleLogLimit."
+        description = "The console messages of the targeted views since the MCP server started (or the last clear): level, source, text, url, line, time; newest last. level filters, limit caps per view (default 100), clear empties the buffer (mcp.consoleLogLimit)."
     )]
     pub(crate) async fn console_logs(
         &self,
@@ -47,7 +47,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "The network requests of the targeted views: url, method, resourceType, status, mimeType, fromCache, size, decodedSize, time, durationMs, failed, response (ttfbMs, encoding, cacheControl, expires, etag, lastModified) - never headers or bodies; newest last. failedOnly keeps failures and HTTP errors, limit caps per view (default 100), clear empties the buffer. Buffer size: setting mcp.networkRequestLimit. Requests are collected from the first call on (from the start with the setting mcp.collectNetwork): a first call answers nothing yet - reload the page, then call again."
+        description = "The network requests of the targeted views: url, method, resourceType, status, mimeType, fromCache, size, decodedSize, time, durationMs, failed, response (ttfbMs, encoding, caching headers) - never headers or bodies; newest last. failedOnly keeps failures and HTTP errors, limit caps per view (default 100), clear empties the buffer (mcp.networkRequestLimit). Collected from the first call on (from the start with mcp.collectNetwork): reload, then call again."
     )]
     pub(crate) async fn network_requests(
         &self,

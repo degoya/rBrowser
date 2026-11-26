@@ -233,6 +233,37 @@ export interface FrameworkReport {
   react?: FrameworkInfo;
 }
 
+/** What the build plays of the codecs the standard CEF build lacks (RB-099-29), by `canPlayType`. */
+export interface MediaPlays {
+  h264: boolean;
+  aac: boolean;
+  hevc: boolean;
+}
+
+/** The element a media failure was fired at (RB-099-29). */
+export type MediaTag = 'video' | 'audio' | 'source';
+
+/** A `<video>`/`<audio>` that failed with `MediaError` code 4, or a `<source>` that failed
+ *  (RB-099-29); the core decides whether a format is missing. Addresses without query and fragment. */
+export interface MediaFailure {
+  /** The reporting document's address. */
+  url: string;
+  tag: MediaTag;
+  /** `MediaError.code` (4) of a media element. */
+  code?: number;
+  /** `MediaError.message`, cut. */
+  message?: string;
+  /** The media's address; a data URL as its media type. */
+  src: string;
+  /** A source's `type` attribute. */
+  type?: string;
+  /** What `canPlayType` says to `type`: `''`, `'maybe'` or `'probably'`. */
+  canPlay?: string;
+  plays: MediaPlays;
+  /** The element's CSS path. */
+  path: string;
+}
+
 /** A message between a framework's DevTools backend (main world) and its panel (RB-080-24). */
 export type DevtoolsEnvelope =
   /** The panel is listening: the backend may start. */
@@ -295,7 +326,9 @@ export type AgentMessage =
   /** The top document's Web Vitals, at most once a second while they change (RB-060-10). */
   | ({ kind: 'vitals' } & VitalsData & Origin)
   /** The frameworks of the top document, whenever the probe's finding changes (RB-080-24). */
-  | ({ kind: 'framework' } & FrameworkReport & Origin);
+  | ({ kind: 'framework' } & FrameworkReport & Origin)
+  /** A media element or source that failed, once per document and source (RB-099-29). */
+  | ({ kind: 'media' } & MediaFailure & Origin);
 
 /** What the agent captures; the core sets it from `sync.*`. */
 export interface AgentConfig {

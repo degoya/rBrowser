@@ -186,7 +186,7 @@ fn health(token: &McpToken, port: u16, headers: &HeaderMap, uri: &Uri) -> Respon
     let Some(nonce) = uri.query().and_then(nonce_of) else {
         return Refusal {
             status: StatusCode::BAD_REQUEST,
-            code: "nonce_required",
+            code: "http.nonce_required",
             message: "the probe sends a nonce of 32 to 128 hex digits",
         }
         .into_response();
@@ -262,13 +262,20 @@ pub(crate) struct Refusal {
     message: &'static str,
 }
 
+impl Refusal {
+    /// `{"error", "code", "legacyCode"?}`, as a tool's failure.
+    pub(crate) fn body(&self) -> serde_json::Value {
+        let mut body = serde_json::Map::new();
+        body.insert("error".to_owned(), self.message.into());
+        body.insert("code".to_owned(), self.code.into());
+        crate::codes::add_legacy(&mut body);
+        serde_json::Value::Object(body)
+    }
+}
+
 impl IntoResponse for Refusal {
     fn into_response(self) -> Response {
-        let mut response = (
-            self.status,
-            Json(serde_json::json!({ "error": self.message, "code": self.code })),
-        )
-            .into_response();
+        let mut response = (self.status, Json(self.body())).into_response();
         if self.status == StatusCode::UNAUTHORIZED {
             response
                 .headers_mut()
@@ -293,7 +300,7 @@ pub(crate) fn check(token: &McpToken, headers: &HeaderMap) -> Result<(), Refusal
     if !offered.is_some_and(|offered| token.matches(offered)) {
         return Err(Refusal {
             status: StatusCode::UNAUTHORIZED,
-            code: "unauthorized",
+            code: "http.unauthorized",
             message: "a valid bearer token is required",
         });
     }
@@ -310,7 +317,7 @@ fn check_loopback(headers: &HeaderMap) -> Result<(), Refusal> {
     if !is_loopback_authority(host) {
         return Err(Refusal {
             status: StatusCode::FORBIDDEN,
-            code: "host_rejected",
+            code: "http.host_rejected",
             message: "only 127.0.0.1 and localhost are served",
         });
     }
@@ -319,7 +326,7 @@ fn check_loopback(headers: &HeaderMap) -> Result<(), Refusal> {
     {
         return Err(Refusal {
             status: StatusCode::FORBIDDEN,
-            code: "origin_rejected",
+            code: "http.origin_rejected",
             message: "requests from web pages are refused",
         });
     }

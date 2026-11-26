@@ -7,7 +7,7 @@
       "errors": {
         "bad_args": "The storage panel got arguments it cannot read: {reason}",
         "cannot_pin": "This value cannot be pinned ({field}).",
-        "mcp_values_off": "Reading and writing storage values over MCP is off. A person can switch it on in Settings > DevTools & Debugging > Storage > Values over MCP; the storage panel works without it.",
+        "mcp_values_off": "Reading and writing storage values over MCP is off. A person can switch it on in Settings › DevTools & Debugging › Storage › Values over MCP; the storage panel works without it.",
         "no_entry": "The view has no such entry (any more).",
         "no_origin": "The view shows no web page, so it has no storage to write.",
         "no_pin": "There is no such pin (any more).",
@@ -91,12 +91,12 @@
       "settings": {
         "mcpValues": {
           "description": "Lets an AI agent read cookie and storage values through storage_get and write them through storage_set. Off by default: storage_get then answers names, attributes, lengths and which views agree, never a value, and storage_set is refused. The panel works either way.",
-          "help": "Lets an AI agent read cookie and storage values through storage_get and write them through storage_set. Off, storage_get answers names and attributes only and storage_set is refused. The panel works either way.",
+          "help": "Lets an AI agent read cookie and storage values through storage_get and write them through storage_set. When off, storage_get answers names and attributes only and storage_set is refused. The panel works either way.",
           "label": "Values over MCP"
         },
         "pinsEnabled": {
           "description": "Pinned cookies and storage values are set again after every navigation, storage values before the page's own scripts run.",
-          "help": "Pinned cookies and storage values are set again after every navigation, storage values before the page's own scripts run, so a feature flag survives a reload. Off ignores the pins.",
+          "help": "Pinned cookies and storage values are set again after every navigation, storage values before the page's own scripts run, so a feature flag survives a reload. When off, it ignores the pins.",
           "label": "Apply pinned values"
         },
         "pollMs": {
@@ -106,12 +106,12 @@
         },
         "showHttpOnly": {
           "description": "HttpOnly cookies appear in the panel and in storage_get (they are read through the DevTools protocol, not document.cookie).",
-          "help": "HttpOnly cookies appear in the panel and in storage_get, read through the DevTools protocol. Off hides them as document.cookie would.",
+          "help": "HttpOnly cookies appear in the panel and in storage_get, read through the DevTools protocol. When off, it hides them as document.cookie would.",
           "label": "Show HttpOnly cookies"
         }
       },
       "tools": {
-        "get": "The cookies, localStorage and sessionStorage of the targeted views as JSON (per view, Chromium views only; others are marked unsupported), with the entries that differ between the views: which views agree and which lack it. Values only while a person allows them (Settings > Storage > Values over MCP); otherwise names, attributes and lengths. Optional kinds, origin and search filter.",
+        "get": "The cookies, localStorage and sessionStorage of the targeted views as JSON (per view, Chromium views only; others are marked unsupported), with the entries that differ between the views: which views agree and which lack it. Values only while a person allows them (Settings › Storage › Values over MCP); otherwise names, attributes and lengths. Optional kinds, origin and search filter.",
         "set": "Sets or deletes one cookie, localStorage or sessionStorage entry in the targeted views and answers per view success or error. A storage write goes to the views showing the given origin (default: each view's own). Refused unless a person allows values over MCP in the settings."
       }
     }

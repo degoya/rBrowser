@@ -110,7 +110,7 @@ pub fn notification(snapshot: &[Summary]) -> CoreToShell {
     })
 }
 
-/// The definition: group DevTools & Debug beside `debug.vitals` and `debug.resources`,
+/// The definition: group DevTools & Debugging beside `debug.vitals` and `debug.resources`,
 /// `Leader D B`, MCP `app_perf`; title key `commands.debug.perf_counters`.
 pub fn definitions() -> Result<Vec<CommandDef>, CommandError> {
     Ok(vec![CommandDef {

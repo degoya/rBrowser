@@ -8,9 +8,12 @@
 
 use async_trait::async_trait;
 use rb_engine::{EngineError, ViewHost, ViewId};
+use rb_ipc::IpcErrorCode;
 use serde_json::{Value, json};
 
+use crate::control::Core;
 use crate::host::Host;
+use crate::ipc::Failure;
 
 /// The longest selector taken, in characters.
 pub const MAX_SELECTOR_CHARS: usize = 1024;
@@ -161,6 +164,31 @@ pub async fn highlight_all(
             .map(|view| async move { (*view, highlight_view(cdp, *view, selector).await) }),
     )
     .await
+}
+
+/// `highlightFinding`: checked here, the CDP calls on the runtime (answered at once).
+pub(super) fn start(
+    core: &Core,
+    finding_id: &str,
+    selector: &str,
+    views: &[ViewId],
+) -> Result<(), Failure> {
+    let host = core.host().clone();
+    let known: Vec<ViewId> = host.views().iter().map(|view| view.id).collect();
+    validate(finding_id, selector, views, &known)
+        .map_err(|error| (IpcErrorCode::BadRequest, error.to_string()))?;
+    let (selector, views) = (selector.to_owned(), views.to_vec());
+    core.runtime().spawn(async move {
+        for (view, outcome) in highlight_all(&*host, &views, &selector).await {
+            match outcome {
+                Ok(true) => {}
+                Ok(false) => tracing::debug!(%view, "the finding's element is not in the view"),
+                // The selector is a plugin's text: not logged.
+                Err(error) => tracing::debug!(%view, %error, "the finding was not marked"),
+            }
+        }
+    });
+    Ok(())
 }
 
 #[cfg(test)]

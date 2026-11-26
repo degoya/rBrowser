@@ -20,8 +20,8 @@ const COMPARE_TOOL: &str = "compare_engines";
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CompareEnginesParams {
-    /// One view (a view id, or a breakpoint id shown once) whose breakpoint and page are
-    /// compared; the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent. Its
+    /// breakpoint and page are compared.
     #[serde(default, skip_serializing)]
     pub target: Option<TargetArg>,
     /// A breakpoint id over the target view's.
@@ -43,13 +43,14 @@ pub struct CompareEnginesParams {
 }
 
 fn args_of(params: &impl Serialize) -> Result<serde_json::Value, ToolFailure> {
-    serde_json::to_value(params).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(params)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[tool_router(router = compare_engines_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Compare one page at one breakpoint in Chromium, Firefox and WebKit. target (one view; the active view when absent) gives the breakpoint and the page; optional breakpoint (id), engines (chromium, firefox, webkit; all three when absent), url (http, https or file), threshold (colour tolerance 0 to 1), maxDiffPercent (0 to 100). Each engine shoots the viewport at the breakpoint's size and DPR - Chromium in a hidden render view, Firefox and WebKit in a window of their own - with its own user agent, and every engine pair is diffed; anti-aliased pixels (font smoothing) never count. An engine that cannot run (not installed, switched off) is listed under skipped, not an error. Answers when done: runId, folder (.rbrowser/out/engine-compare/<runId>/), report (report.html: side by side, slider, difference), each engine's shot path, and per pair status (same, differs, sizeMismatch, failed), percent, differentPixels, the diff image's path and the differing areas (x, y, width, height in pixels). One comparison at a time."
+        description = "Compare one page at one breakpoint in Chromium, Firefox and WebKit: the target view gives the breakpoint and page unless breakpoint or url say otherwise. Each engine shoots the viewport at the breakpoint's size and DPR, every pair is diffed (anti-aliasing never counts); an engine that cannot run is listed under skipped. Answers when done: runId, folder (.rbrowser/out/engine-compare/<runId>/), report.html, each engine's shot and per pair status (same, differs, sizeMismatch, failed), percent, differentPixels, diff image and the differing areas. One comparison at a time."
     )]
     pub(crate) async fn compare_engines(
         &self,
@@ -61,7 +62,7 @@ impl RbMcpServer {
                 .is_some_and(|threshold| !(0.0..=1.0).contains(&threshold))
             {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "threshold must be a number from 0 to 1",
                 ));
             }
@@ -70,7 +71,7 @@ impl RbMcpServer {
                 .is_some_and(|percent| !(0.0..=100.0).contains(&percent))
             {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "maxDiffPercent must be a number from 0 to 100",
                 ));
             }

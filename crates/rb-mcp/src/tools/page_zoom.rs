@@ -40,7 +40,7 @@ pub struct PageZoomParams {
 #[tool_router(router = page_zoom_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Zoom the page inside the targeted views as Chrome's Ctrl+Plus, Ctrl+Minus and Ctrl+0 do (Chromium's page zoom, not the grid's zoom of a cell). A zoomed page lays out at another CSS width than its breakpoint's, so breakpoints apply differently; the view's label strip shows the level. level: a factor (1 = 100 %, 0.25 to 5), \"in\" or \"out\" for one of Chromium's steps (25 % to 500 %); 100 % when absent. With the user setting views.pageZoom.sync every view takes the level; Chromium keeps a zoom per site, so views of one session on the same host zoom together. Chromium views zoom; a Firefox view zooms its Chromium stand-in in the grid only - Firefox's own window keeps the zoom its own keys and wheel give it; WebKit views do not zoom. target: \"all\", a view id or a breakpoint id; default the active view. Answers views: [{ view, level, percent }]."
+        description = "Zoom the page inside the targeted views as Chrome's Ctrl+Plus, Ctrl+Minus and Ctrl+0 do (Chromium's page zoom, not the grid's zoom of a cell): the page lays out at another CSS width, so breakpoints apply differently. level: a factor (1 = 100 %, 0.25 to 5), \"in\" or \"out\" for one step; 100 % when absent. With views.pageZoom.sync every view takes the level; Chromium keeps one zoom per site and session. A Firefox view zooms its stand-in only; WebKit views do not zoom. Answers views: [{ view, level, percent }]."
     )]
     pub(crate) async fn view_page_zoom(
         &self,
@@ -57,7 +57,7 @@ impl RbMcpServer {
             Some(PageZoomLevel::Step(step)) if step == "out" => ("view.page_zoom.out", json!({})),
             Some(_) => {
                 return respond::<Value>(Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "level is a factor from 0.25 to 5 (1 = 100 %), \"in\" or \"out\"",
                 )));
             }

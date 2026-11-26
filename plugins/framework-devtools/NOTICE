@@ -4,8 +4,9 @@ Third-party code in the framework-devtools plugin (RB-080-24)
 The panels (panel/dist/react.js, panel/dist/vue.js) are built from web/src with the packages below bundled
 in, unchanged, each under the MIT licence (https://opensource.org/license/mit). The matching
 backends ride in rbrowser.exe (agent/dist/rb-react-devtools.js, rb-vue-devtools.js; see
-packaging/windows/NOTICE). The versions are pinned in web/package-lock.json and
-agent/package-lock.json.
+packaging/NOTICE.in). The versions are pinned in web/package-lock.json and
+agent/package-lock.json. The build writes the name, version and full licence text of every
+bundled package to panel/dist/THIRD-PARTY-LICENSES.txt, which the plugin package carries.
 
 panel/dist/react.js
   react-devtools-inline 8.0.0 - Copyright (c) Meta Platforms, Inc. and affiliates.

@@ -1,9 +1,15 @@
-//! `rbrowser capture sitemap [<url>] [--breakpoints a,b] [--env staging] [--max N] [--compare]
-//! [--json]` (RB-050-05): the capture runs in the project's running rBrowser, in hidden render
-//! views. The call is handed over the instance channel (`Request::SitemapCapture`), which answers
-//! once the pages are found; the command line then follows the run's `run.json`, prints its
-//! progress to stderr and ends with the gallery's path (`--json`: the run's status). Ctrl+C ends
-//! only the command line: the run goes on in rBrowser (`sitemap_cancel`, `Leader C X`).
+//! `rbrowser capture sitemap [<url>] [--breakpoints a,b | --visible] [--env staging] [--max N]
+//! [--compare] [--json]` (RB-050-05, `--visible` RB-099-08): the capture runs in the project's
+//! running rBrowser, in hidden render views. The call is handed over the instance channel
+//! (`Request::SitemapCapture`), which answers once the pages are found; the command line then
+//! follows the run's `run.json`, prints its progress to stderr and ends with the gallery's path
+//! (`--json`: the run's status). Ctrl+C ends only the command line: the run goes on in rBrowser
+//! (`sitemap_cancel`, `Leader C X`).
+//!
+//! `--list` (RB-099-09) finds the pages without capturing one and prints them, one URL a line
+//! (`--json`: the discovery with its tree); `--urls <file>` captures exactly the URLs of a file
+//! (one a line, `#` comments), each one the source's discovery finds - the rest is refused
+//! (`super::capture_list`).
 //!
 //! Exit codes: 0 every shot taken, 1 a shot failed, the run was cancelled or it stalled, 2 a
 //! wrong command line, 3 no rBrowser runs for the project, 4 no project, 6 refused.
@@ -20,7 +26,7 @@ use super::{Cli, exit};
 use crate::instance::client::{self, Outcome};
 use crate::instance::protocol::{Refusal, Request};
 use crate::sitemap::status::status_of;
-use crate::sitemap::tool::{CaptureArgs, CaptureStarted};
+use crate::sitemap::tool::{CaptureArgs, CaptureStarted, CaptureViews};
 
 /// How often `run.json` is read.
 const POLL: Duration = Duration::from_secs(1);
@@ -55,6 +61,10 @@ pub struct SitemapCliArgs {
     /// The breakpoints by id, comma-separated; every Chromium breakpoint when absent.
     #[arg(long, value_delimiter = ',', value_name = "ID")]
     pub breakpoints: Vec<String>,
+
+    /// Only the breakpoints the grid shows when the capture starts (RB-099-08).
+    #[arg(long, conflicts_with = "breakpoints")]
+    pub visible: bool,
 
     /// An environment id: the sitemap's URLs move to its origin, the path kept.
     #[arg(long, value_name = "ID")]
@@ -91,6 +101,17 @@ pub struct SitemapCliArgs {
     /// Print the run's status as JSON at the end instead of the gallery's path.
     #[arg(long)]
     pub json: bool,
+
+    /// Only find the pages and print their URLs, one a line; nothing is captured.
+    #[arg(long, conflicts_with_all = [
+        "resume", "urls", "compare", "breakpoints", "session", "env", "visible"
+    ])]
+    pub list: bool,
+
+    /// Capture exactly the URLs of this `.txt` file inside the project (one a line, `#`
+    /// comments, at most 100000), each one the source's discovery finds.
+    #[arg(long, value_name = "FILE", conflicts_with = "resume")]
+    pub urls: Option<std::path::PathBuf>,
 }
 
 impl SitemapCliArgs {
@@ -108,6 +129,7 @@ impl SitemapCliArgs {
             compare: self.compare,
             resume: self.resume.clone(),
             session: self.session.clone(),
+            views: self.visible.then_some(CaptureViews::Visible),
             ..CaptureArgs::default()
         };
         args.check()?;
@@ -157,17 +179,26 @@ pub fn exit_code(run: &SitemapRun) -> i32 {
 
 /// What the hand-over gave: the run started, or the exit code and why not.
 pub fn started(outcome: Outcome, root: &Path) -> Result<CaptureStarted, Refused> {
+    answered(outcome, root, "run")
+}
+
+/// What the hand-over gave: its answer as `T` (`what` names it), or the exit code and why not.
+pub fn answered<T: serde::de::DeserializeOwned>(
+    outcome: Outcome,
+    root: &Path,
+    what: &str,
+) -> Result<T, Refused> {
     let root = root.display();
     match outcome {
         Outcome::Answered(value) => serde_json::from_value(value).map_err(|error| {
             (
                 exit::FAILED,
-                format!("the running rBrowser for {root} answered no run: {error}"),
+                format!("the running rBrowser for {root} answered no {what}: {error}"),
             )
         }),
         Outcome::Handed => Err((
             exit::FAILED,
-            format!("the running rBrowser for {root} answered no run"),
+            format!("the running rBrowser for {root} answered no {what}"),
         )),
         Outcome::NotRunning => Err((
             exit::NO_INSTANCE,
@@ -230,7 +261,12 @@ pub fn run(cli: &Cli, args: &CaptureCliArgs, env: &Env, local: Option<&Path>) ->
         Ok(root) => root,
         Err((code, message)) => return fail(code, &message),
     };
-    let capture = match args.capture_args() {
+    if args.list {
+        return super::capture_list::list(args, &root, local);
+    }
+    let capture = match args.capture_args().and_then(|capture| {
+        super::capture_list::with_urls_file(capture, args.urls.as_deref(), &env.cwd, &root)
+    }) {
         Ok(capture) => capture,
         Err(message) => return fail(exit::USAGE, &message),
     };

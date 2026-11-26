@@ -62,7 +62,7 @@
           "skipped": "not checked",
           "unchecked": "not checked in time"
         },
-        "loading": "Reading the views...",
+        "loading": "Reading the views…",
         "marked": "Marked in {count} of {views, plural, one {# view} other {# views}}.",
         "missingIn": "missing in {views}",
         "noDifferences": "Every view shows the same elements.",
@@ -138,13 +138,13 @@
         },
         "headingMaxLength": {
           "description": "A heading longer than this many characters is a finding (20 to 1000).",
-          "help": "A heading longer than this many characters is reported as very long; the rule itself is switched in Checks > Findings. Example: 120.",
+          "help": "A heading longer than this many characters is reported as very long; the rule itself is switched in Checks › Findings. Example: 120.",
           "label": "Longest heading"
         },
         "linkCheck": {
           "enabled": {
             "description": "Request the links of the current page to find broken ones.",
-            "help": "Requests the links of the current page to find broken ones and shows them in the outline. Off lists the links without checking them.",
+            "help": "Requests the links of the current page to find broken ones and shows them in the outline. When off, it lists the links without checking them.",
             "label": "Check links"
           },
           "rps": {

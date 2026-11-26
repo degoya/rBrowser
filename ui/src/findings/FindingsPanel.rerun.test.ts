@@ -7,6 +7,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { createShellI18n } from '../i18n';
 import { settle } from '../test/mountShell';
+import FindingsFilters from './FindingsFilters.vue';
 import FindingsPanel from './FindingsPanel.vue';
 import { fakeChannel, sampleMessages, sampleProgress, sampleRun } from './testing';
 import type { FindingsRun } from './types';
@@ -77,7 +78,7 @@ describe('FindingsPanel running checks again', () => {
   it('runs the check the plugin filter shows again', async () => {
     const { core, wrapper } = await withRun();
     expect(wrapper.find('[data-testid="rerun-filtered"]').exists()).toBe(false);
-    wrapper.findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'a11y-axe');
+    wrapper.getComponent(FindingsFilters).findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'a11y-axe');
     await settle();
     const again = wrapper.get('[data-testid="rerun-filtered"]');
     expect(again.attributes('aria-label')).toBe('Run a11y-axe again');
@@ -89,7 +90,7 @@ describe('FindingsPanel running checks again', () => {
 
   it('runs again over the last run target and page, so the core merges it', async () => {
     const { core, wrapper } = await withRun({ ...sampleRun(), target: 2, url: 'https://site.test/a' });
-    wrapper.findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'seo');
+    wrapper.getComponent(FindingsFilters).findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'seo');
     await settle();
     await wrapper.get('[data-testid="rerun-filtered"]').trigger('click');
     await settle();
@@ -99,7 +100,7 @@ describe('FindingsPanel running checks again', () => {
 
   it('offers nothing to run again while checks run', async () => {
     const { core, wrapper } = await withRun();
-    wrapper.findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'seo');
+    wrapper.getComponent(FindingsFilters).findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'seo');
     await settle();
     await wrapper.get('[data-testid="rerun-filtered"]').trigger('click');
     await settle();

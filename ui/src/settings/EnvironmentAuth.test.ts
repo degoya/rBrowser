@@ -6,7 +6,7 @@ import type { VueWrapper } from '@vue/test-utils';
 import { IpcClient } from '../ipc/client';
 import type { CoreToShell, EnvironmentAuthStatus, ShellToCore } from '../ipc/protocol';
 import EnvironmentAuth from './EnvironmentAuth.vue';
-import { environmentIdsOf, withListed } from './environmentAuth';
+import { authAddressOf, environmentIdsOf, sharingOf, withListed } from './environmentAuth';
 import { createFakeCore } from './test/fakeCore';
 import { mountPage, settle } from './test/mountPage';
 
@@ -185,5 +185,64 @@ describe('environment auth section and the stored credentials', () => {
     await settle();
     expect(stored(wrapper, 'local')).toBe('Credentials stored for linus');
     expect(stored(wrapper, 'staging')).toBe('No credentials stored');
+  });
+});
+
+// RB-099-04: environments with one address share one sign-in, and their rows say so; what Save
+// answers stands with the row it belongs to.
+describe('environment auth and shared addresses', () => {
+  const SHARED = [
+    { id: 'local', url: 'http://localhost:3000' },
+    { id: 'development', url: 'https://dev.example.test/' },
+    { id: 'staging', url: 'http://localhost:3000/' },
+    { id: 'Production', url: 'http://LOCALHOST:3000/shop' },
+  ];
+
+  it('names the address a credential belongs to as the core does', () => {
+    expect(authAddressOf('https://dev.example.test')).toBe('https://dev.example.test:443');
+    expect(authAddressOf('http://LocalHost:3000/x?y#z')).toBe('http://localhost:3000');
+    expect(authAddressOf('http://localhost')).toBe('http://localhost:80');
+    expect(authAddressOf('ftp://example.test/')).toBeNull();
+    expect(authAddressOf('not a url')).toBeNull();
+    expect(authAddressOf(42)).toBeNull();
+  });
+
+  it('finds the other environments of each address, in order', () => {
+    expect(sharingOf(SHARED)).toEqual({
+      local: ['staging', 'Production'],
+      development: [],
+      staging: ['local', 'Production'],
+      Production: ['local', 'staging'],
+    });
+    expect(sharingOf(null)).toEqual({});
+  });
+
+  it('says at the row which environments share its address', async () => {
+    const { wrapper } = await mountPage(EnvironmentAuth, { environments: SHARED, listed: ['local'] });
+    current = wrapper;
+    expect(wrapper.get('[data-testid="env-auth-shared-local"]').text()).toBe(
+      'Shared with staging, Production - same address',
+    );
+    expect(wrapper.get('[data-testid="env-auth-shared-Production"]').text()).toBe(
+      'Shared with local, staging - same address',
+    );
+    expect(wrapper.find('[data-testid="env-auth-shared-development"]').exists()).toBe(false);
+  });
+
+  it('shows the answer of Save on the saved row, beside its stored line', async () => {
+    const { wrapper } = await mountPage(EnvironmentAuth, { environments: SHARED, listed: ['development'] });
+    current = wrapper;
+    await wrapper.get('[data-testid="env-auth-user-development"]').setValue('ada');
+    await wrapper.get('[data-testid="env-auth-password-development"]').setValue('secret-3');
+    await wrapper.get('[data-testid="env-auth-save-development"]').trigger('click');
+    await settle();
+    const row = wrapper.get('[data-testid="env-auth-development"]');
+    const status = row.get('[data-testid="env-auth-status-development"]');
+    expect(status.text()).not.toBe('');
+    // One line under the row's controls, with the stored line - not a cell of the wrapping row.
+    const line = row.get('[data-testid="env-auth-info-development"]');
+    expect(line.element.contains(status.element)).toBe(true);
+    expect(line.element.contains(row.get('[data-testid="env-auth-stored-development"]').element)).toBe(true);
+    expect(row.get('[data-testid="env-auth-controls-development"]').element.contains(status.element)).toBe(false);
   });
 });

@@ -267,6 +267,8 @@ impl FirefoxEngine {
             AgentMessage::Vitals(vitals) => vitals.top,
             // The probe's framework report (RB-080-24); the hooks reach Chromium views only.
             AgentMessage::Framework(framework) => framework.top,
+            // A media failure (RB-099-29); the codec notice is for Chromium views.
+            AgentMessage::Media(media) => media.top,
         };
         // No subscriber is fine.
         let _sent = self.reports.send(AgentReport {

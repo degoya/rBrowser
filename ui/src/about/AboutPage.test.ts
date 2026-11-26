@@ -94,6 +94,15 @@ describe('Settings > About', () => {
     expect(wrapper.text()).toContain('Version info copied to the clipboard.');
   });
 
+  // RB-099-12: the GPL's "Appropriate Legal Notices" - copyright, no warranty, the licence.
+  it('names the copyright holder and says there is no warranty', async () => {
+    const { wrapper } = await mountAbout();
+    const legal = wrapper.get('[data-testid="about-legal"]').text();
+    expect(legal).toContain('Copyright (c) 2026 Alexander Herling / DEGOYA.digital');
+    expect(legal).toContain('ABSOLUTELY NO WARRANTY');
+    expect(legal).toContain('GNU General Public License');
+  });
+
   it('has a light and a dark logo, switched by the theme class', async () => {
     const { wrapper } = await mountAbout();
     expect(wrapper.find('[data-testid="logo-light"]').classes()).toContain('dark:hidden');

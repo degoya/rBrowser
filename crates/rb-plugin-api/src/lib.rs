@@ -41,8 +41,13 @@ pub const API_VERSION: &str = "0.1.0";
 /// The package name every interface of the contract is imported and exported under.
 pub const PACKAGE: &str = "rbrowser:plugin";
 
-/// The most bytes one `project.read` answers or one `out.write` takes.
+/// The most bytes one `project.read` answers or one `out.write` takes - and one
+/// `project-range.read` answers or one `out-stream.append` takes (RB-099-24).
 pub const MAX_IO_BYTES: usize = 8 * 1024 * 1024;
+
+/// The largest file `out-stream` writes, all its parts together (RB-099-24): a 256-megapixel
+/// screenshot as an uncompressed PNG, and room.
+pub const MAX_STREAM_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 /// The most characters of one JSON answer (`run-command`, `call-tool`, `evaluate`, `cdp.send`,
 /// `sidecar.call`) the host accepts.

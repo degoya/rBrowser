@@ -7,6 +7,7 @@
 //! Setting up Git LFS (`visual.lfs_setup`) has no tool: it changes the Git configuration, which
 //! only the person decides.
 
+use rb_config::ViewScope;
 use rb_engine::Target;
 use rb_visual::Comparison;
 use serde::{Deserialize, Serialize};
@@ -15,8 +16,8 @@ use serde::{Deserialize, Serialize};
 pub const COMPARE_TOOL: &str = "visual_compare";
 /// The compare tool's description for the agent.
 pub const COMPARE_DESCRIPTION: &str = "Compare views with their baselines in \
-.rbrowser/baselines/<page>/<breakpoint>.png (target \"all\", the default, or a view id): each \
-view is captured, diffed pixel by pixel with anti-aliasing tolerance and answered as ok, \
+.rbrowser/baselines/<page>/<breakpoint>.png (target \"all\", the default, or a view id; scope \
+\"visible\" or breakpoint ids narrows it to their views): each view is captured, diffed pixel by pixel with anti-aliasing tolerance and answered as ok, \
 differs (share of differing pixels, bounding boxes, diff image path), new (no baseline), \
 sizeMismatch or failed, with the metadata fields that make a comparison unreliable (another \
 DPI, engine or engine version, viewport or full page). threshold (0 to 1) overrides visual.threshold. The findings \
@@ -26,7 +27,8 @@ freezeAnimations override capture.hideBanners and capture.freezeAnimations for t
 pub const UPDATE_TOOL: &str = "visual_baseline_update";
 /// The baseline tool's description for the agent.
 pub const UPDATE_DESCRIPTION: &str = "Capture views (target \"all\", the default, or a view \
-id) and store them as the new baselines in .rbrowser/baselines/<page>/<breakpoint>.png with \
+id; scope \"visible\" or breakpoint ids narrows it to their views, the other baselines stay) and \
+store them as the new baselines in .rbrowser/baselines/<page>/<breakpoint>.png with \
 meta.json (machine, DPI, engine and version, viewport, date), replacing the ones before. \
 Answers the files written and whether Git LFS tracks the baselines. hideBanners and \
 freezeAnimations override capture.hideBanners and capture.freezeAnimations for this run.";
@@ -47,6 +49,9 @@ pub struct CompareArgs {
     /// Freeze animations and videos; `capture.freezeAnimations` when absent (RB-080-12).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub freeze_animations: Option<bool>,
+    /// Only the views of these breakpoints: `"visible"` or breakpoint ids (RB-099-10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<ViewScope>,
 }
 
 impl CompareArgs {
@@ -87,6 +92,9 @@ pub struct UpdateArgs {
     /// Freeze animations and videos; `capture.freezeAnimations` when absent (RB-080-12).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub freeze_animations: Option<bool>,
+    /// Only the views of these breakpoints: `"visible"` or breakpoint ids (RB-099-10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<ViewScope>,
 }
 
 impl UpdateArgs {
@@ -122,6 +130,9 @@ pub struct CompareAnswer {
     /// The folder of the diff images, when one was written.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    /// The chosen breakpoints no view shows: not compared (RB-099-10).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_shown: Vec<String>,
 }
 
 impl CompareAnswer {
@@ -139,6 +150,7 @@ impl CompareAnswer {
                 .count(),
             comparisons,
             folder,
+            not_shown: Vec::new(),
         }
     }
 }
@@ -182,6 +194,9 @@ pub struct UpdateAnswer {
     /// The LFS check; absent with `visual.lfsCheck` off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lfs: Option<LfsAnswer>,
+    /// The chosen breakpoints no view shows: their baselines stay as they are (RB-099-10).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_shown: Vec<String>,
 }
 
 #[cfg(test)]

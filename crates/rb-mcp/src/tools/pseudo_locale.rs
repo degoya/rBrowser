@@ -39,7 +39,7 @@ pub struct PseudoLocaleParams {
 #[tool_router(router = pseudo_locale_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Pseudo-localise the page's texts in the targeted views, live and without a reload: every text node longer by factor (1 to 3, default the user's 1.4), letters accented, [ ] marking its edges, optionally running right to left - a localisation stress test of the layout in every breakpoint. Input values, script, style, code, pre and editable content keep their text, and the sync keeps working: the selectors read the original texts. on: false puts the original texts back. Chromium views only; Firefox and WebKit views come back as unsupported. dir and lang of <html> are emulation_set fields. target: \"all\", a view id or a breakpoint id; default the active view. Answers { on, views, unsupported }."
+        description = "Pseudo-localise the page's texts in the targeted views, live: every text node longer by factor (1 to 3, default 1.4), accented, [ ] at its edges, optionally right to left (rtl) - a stress test of the layout at every breakpoint. Inputs, script, style, code, pre and editable content keep their text; the sync keeps working. on: false puts the texts back. Chromium only (others unsupported). dir and lang of <html> are emulation_set fields. Answers { on, views, unsupported }."
     )]
     pub(crate) async fn pseudo_locale(
         &self,
@@ -49,7 +49,7 @@ impl RbMcpServer {
             && !(factor.is_finite() && (FACTOR_RANGE.0..=FACTOR_RANGE.1).contains(&factor))
         {
             return respond::<Value>(Err(ToolFailure::new(
-                "invalid_arguments",
+                "args.invalid",
                 "factor is a number from 1 to 3",
             )));
         }

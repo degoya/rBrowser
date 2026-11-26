@@ -158,7 +158,12 @@ async fn video_list_is_a_read_of_the_host() {
         &host("video_list"),
         Ok(json!({ "project": true, "autoplay": false, "recordings": [] })),
     );
-    let (error, answer) = answer_json(&server(&fake).video_list().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .video_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["project"], true);
     assert_eq!(fake.calls(), [(host("video_list"), json!({}))]);

@@ -10,15 +10,16 @@ use super::forward::Answers;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 use crate::backend::ToolFailure;
-use crate::target::TargetArg;
+use crate::run_target::{RunTarget, Split, with_scope};
 
 /// `visual_compare`.
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CompareParams {
-    /// `"all"` (default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. Also `"visible"` (the views the grid shows)
+    /// or a list of view ids and breakpoint ids.
     #[serde(default, skip_serializing)]
-    pub target: Option<TargetArg>,
+    pub target: Option<RunTarget>,
     /// The colour tolerance, 0 to 1; the setting `visual.threshold` when absent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub threshold: Option<f64>,
@@ -34,9 +35,10 @@ pub struct CompareParams {
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BaselineUpdateParams {
-    /// `"all"` (default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. Also `"visible"` or a list of view ids and
+    /// breakpoint ids; the baselines of the other breakpoints stay.
     #[serde(default, skip_serializing)]
-    pub target: Option<TargetArg>,
+    pub target: Option<RunTarget>,
     /// Hide cookie banners and chat widgets; the setting capture.hideBanners when absent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hide_banners: Option<bool>,
@@ -46,13 +48,37 @@ pub struct BaselineUpdateParams {
 }
 
 fn args_of(params: &impl Serialize) -> Result<serde_json::Value, ToolFailure> {
-    serde_json::to_value(params).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(params)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
+}
+
+impl RbMcpServer {
+    /// Runs host tool `name` per view of `target`, or once over a scope's views (RB-099-10).
+    async fn visual_run(
+        &self,
+        name: &str,
+        target: Option<&RunTarget>,
+        args: serde_json::Value,
+        answers: Answers,
+    ) -> Result<serde_json::Value, ToolFailure> {
+        match self.split_target(target).await? {
+            Split::Target(target) => {
+                self.host_per_target(name, target.as_ref(), args, answers)
+                    .await
+            }
+            Split::Scope(scope) => {
+                self.backend
+                    .host_tool(name, with_scope(&args, &scope))
+                    .await
+            }
+        }
+    }
 }
 
 #[tool_router(router = visual_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Compare views with their baselines in .rbrowser/baselines/<page>/<breakpoint>.png (target \"all\" (default), a view id or a breakpoint id): each view is captured, diffed pixel by pixel with anti-aliasing tolerance and answered as ok, differs (share of differing pixels, bounding boxes, diff image path), new (no baseline), sizeMismatch or failed, with the metadata fields that make a comparison unreliable (another machine, DPI or engine version). threshold (0 to 1) overrides visual.threshold. The findings also go to the findings panel; regressions counts differs and sizeMismatch. One run at a time. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after)."
+        description = "Compare views with their baselines in .rbrowser/baselines/<page>/<breakpoint>.png: each view is captured and diffed pixel by pixel with anti-aliasing tolerance and answered as ok, differs (share of pixels, bounding boxes, diff image), new (no baseline), sizeMismatch or failed, with the metadata that makes a comparison unreliable; chosen breakpoints no view shows are notShown. threshold (0 to 1) overrides visual.threshold. The findings also go to the findings panel; regressions counts differs and sizeMismatch. One run at a time. hideBanners and freezeAnimations override the capture.* settings."
     )]
     pub(crate) async fn visual_compare(
         &self,
@@ -64,12 +90,12 @@ impl RbMcpServer {
                 .is_some_and(|threshold| !(0.0..=1.0).contains(&threshold))
             {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "threshold must be a number from 0 to 1",
                 ));
             }
             let args = args_of(&params)?;
-            self.host_per_target(
+            self.visual_run(
                 "visual_compare",
                 params.target.as_ref(),
                 args,
@@ -82,7 +108,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Capture views (target \"all\" (default), a view id or a breakpoint id) and store them as the new baselines in .rbrowser/baselines/<page>/<breakpoint>.png with meta.json (machine, DPI, engine and version, viewport, date), replacing the ones before. Answers the files written and whether Git LFS tracks the baselines; setting up Git LFS is the person's command in rBrowser. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after)."
+        description = "Capture the targeted views and store them as the new baselines in .rbrowser/baselines/<page>/<breakpoint>.png with meta.json (machine, DPI, engine and version, viewport, date), replacing the ones before. Answers the files written and whether Git LFS tracks the baselines (setting it up is the person's command). hideBanners and freezeAnimations override the capture.* settings."
     )]
     pub(crate) async fn visual_baseline_update(
         &self,
@@ -90,7 +116,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = match args_of(&params) {
             Ok(args) => {
-                self.host_per_target(
+                self.visual_run(
                     "visual_baseline_update",
                     params.target.as_ref(),
                     args,

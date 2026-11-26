@@ -10,8 +10,14 @@ use crate::control::Core;
 /// never translated.
 pub const CREDIT: &str = "made with Love by Alexander Herling/DEGOYA.digital";
 
+/// Chromium's own sign-in prompt off, so every Basic auth challenge reaches the app's
+/// `GetAuthCredentials` (`cef_app/auth.rs`): with the prompt on, CEF hands a browser's challenge
+/// to the prompt and never asks the handler, so no stored credential could answer (RB-099-04).
+pub const LOGIN_PROMPT_OFF: &str = "disable-chrome-login-prompt";
+
 /// The switches the browser process adds to its command line: the CDP pipe (ADR 0001,
-/// Decision 4; no port) and the project's network settings, which apply to this instance only.
+/// Decision 4; no port), the project's network settings, which apply to this instance only, and
+/// [`LOGIN_PROMPT_OFF`].
 pub fn browser_switches(
     pipe: Option<&str>,
     network: &NetworkConfig,
@@ -44,6 +50,7 @@ pub fn browser_switches(
     if network.ignore_certificate_errors {
         switches.push(("ignore-certificate-errors".to_owned(), None));
     }
+    switches.push((LOGIN_PROMPT_OFF.to_owned(), None));
     switches
 }
 

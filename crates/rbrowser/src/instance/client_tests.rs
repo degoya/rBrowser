@@ -149,8 +149,11 @@ fn a_long_screenshot_does_not_hold_up_other_calls() {
     let root = local.path().join("site");
     let (release, wait) = std::sync::mpsc::channel::<()>();
     let wait = Mutex::new(wait);
+    let (entered, taking) = std::sync::mpsc::channel::<()>();
+    let entered = Mutex::new(entered);
     let handler: Handler = Arc::new(move |request: Request| match request {
         Request::Screenshot { .. } => {
+            let _ = entered.lock().expect("lock").send(());
             let _ = wait
                 .lock()
                 .expect("lock")
@@ -169,7 +172,10 @@ fn a_long_screenshot_does_not_hold_up_other_calls() {
         };
         hand_over(&shot_local, &shot_root, request)
     });
-    std::thread::sleep(Duration::from_millis(200));
+    // The screenshot is being taken - and held - when the reload comes.
+    taking
+        .recv_timeout(Duration::from_secs(10))
+        .expect("the screenshot reached the instance");
     let reload = Request::Reload {
         ignore_cache: false,
     };

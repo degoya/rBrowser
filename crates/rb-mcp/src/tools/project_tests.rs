@@ -37,7 +37,7 @@ async fn config_get_answers_all_or_one_key() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(missing["code"], "key_not_found");
+    assert_eq!(missing["code"], "settings.key_not_found");
 }
 
 #[tokio::test]
@@ -135,7 +135,7 @@ async fn settings_get_answers_the_structure_and_filters_it() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(unknown["code"], "category_not_found");
+    assert_eq!(unknown["code"], "settings.category_not_found");
 }
 
 #[tokio::test]
@@ -161,7 +161,12 @@ async fn a_protected_key_is_refused_with_its_setting() {
 async fn project_info_and_open_reach_the_backend() {
     let fake = Arc::new(FakeBackend::default());
     let server = server(&fake);
-    let (_, info) = answer_json(&server.project_info().await.expect("answer"));
+    let (_, info) = answer_json(
+        &server
+            .project_info(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert_eq!(info["trusted"], false);
     server
         .project_open(Parameters(OpenParams {

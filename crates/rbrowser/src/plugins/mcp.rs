@@ -58,7 +58,7 @@ fn served(core: &Core) -> Vec<PluginTool> {
 ///
 /// # Errors
 ///
-/// `evaluate_disabled` naming the setting.
+/// `evaluate.disabled` naming the setting.
 pub fn allowed(tool: &PluginTool, allow_evaluate: bool) -> Result<(), ToolFailure> {
     if !tool.evaluates_input || allow_evaluate {
         return Ok(());
@@ -85,6 +85,11 @@ pub async fn call(core: &Core, name: &str, args: Value) -> Option<Result<Value, 
         return Some(Err(refused));
     }
     let runtime = for_host(core.host())?;
+    // RB-099-10: the scope of `target: "visible"` or a list becomes the breakpoints it takes.
+    let args = match crate::run_scope::plugin_args(&core.host().config(), &args) {
+        Ok(args) => args,
+        Err(error) => return Some(Err(ToolFailure::new(error.code(), error.to_string()))),
+    };
     let result = runtime
         .call_tool(&tool.plugin_id, &tool.tool, &args)
         .await

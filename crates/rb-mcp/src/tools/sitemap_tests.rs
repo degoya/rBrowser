@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rmcp::handler::server::wrapper::Parameters;
 use serde_json::json;
 
-use super::{SitemapCaptureParams, SitemapRunParams};
+use super::{SitemapCaptureParams, SitemapDiscoverParams, SitemapRunParams};
 use crate::testing::{FakeBackend, HOST_TOOL_PREFIX, answer_json, server};
 
 #[tokio::test]
@@ -96,4 +96,73 @@ fn unknown_arguments_are_refused() {
     assert!(refused.is_err());
     let refused = serde_json::from_value::<SitemapRunParams>(json!({ "id": "r1" }));
     assert!(refused.is_err());
+}
+
+#[tokio::test]
+async fn sitemap_discover_hands_its_arguments_to_the_host_and_answers_the_pages() {
+    let fake = Arc::new(FakeBackend::default());
+    fake.answer(
+        &format!("{HOST_TOOL_PREFIX}sitemap_discover"),
+        Ok(json!({ "discoveryId": "1-1", "pages": ["https://a.test/"], "tree": [] })),
+    );
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .sitemap_discover(Parameters(SitemapDiscoverParams {
+                include: Some(vec!["/de/**".to_owned()]),
+                depth: Some(2),
+                ..SitemapDiscoverParams::default()
+            }))
+            .await
+            .expect("answer"),
+    );
+    assert!(!error, "{answer}");
+    assert_eq!(answer["discoveryId"], "1-1");
+    assert_eq!(
+        fake.calls(),
+        [(
+            format!("{HOST_TOOL_PREFIX}sitemap_discover"),
+            json!({ "include": ["/de/**"], "depth": 2 })
+        )]
+    );
+}
+
+#[tokio::test]
+async fn sitemap_capture_hands_the_chosen_urls_and_their_discovery_over() {
+    let fake = Arc::new(FakeBackend::default());
+    server(&fake)
+        .sitemap_capture(Parameters(SitemapCaptureParams {
+            urls: Some(vec!["https://a.test/de".to_owned()]),
+            discovery: Some("1-1".to_owned()),
+            ..SitemapCaptureParams::default()
+        }))
+        .await
+        .expect("answer");
+    assert_eq!(
+        fake.calls(),
+        [(
+            format!("{HOST_TOOL_PREFIX}sitemap_capture"),
+            json!({ "urls": ["https://a.test/de"], "discovery": "1-1" })
+        )]
+    );
+    let refused = serde_json::from_value::<SitemapDiscoverParams>(json!({ "target": "all" }));
+    assert!(refused.is_err());
+}
+
+#[tokio::test]
+async fn sitemap_capture_hands_the_views_to_the_host() {
+    let fake = Arc::new(FakeBackend::default());
+    let params: SitemapCaptureParams =
+        serde_json::from_value(json!({ "views": "visible" })).expect("reads");
+    server(&fake)
+        .sitemap_capture(Parameters(params))
+        .await
+        .expect("answer");
+    assert_eq!(
+        fake.calls(),
+        [(
+            format!("{HOST_TOOL_PREFIX}sitemap_capture"),
+            json!({ "views": "visible" })
+        )]
+    );
+    assert!(serde_json::from_value::<SitemapCaptureParams>(json!({ "views": "some" })).is_err());
 }

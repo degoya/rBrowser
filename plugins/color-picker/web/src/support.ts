@@ -5,11 +5,29 @@ import markers from '../../page/markers.js?raw';
 import marks from '../../page/marks.js?raw';
 import picker from '../../page/picker.js?raw';
 import tile from '../../page/tile.js?raw';
-import { type FakePlugin, type Message, fakePlugin as fake, runPageScriptRoots } from '../../../web-common/src/harness';
+import { vi } from 'vitest';
+
+import { type FakePlugin, type Message, fakePlugin as fake, runPageScriptRoots, settle } from '../../../web-common/src/harness';
 
 export { settle } from '../../../web-common/src/harness';
 export { collect, fixturePage, loadPage, pluginFile } from '../../../web-common/src/load';
 export type { FakePlugin, Message };
+
+/**
+ * Puts the page script's clocks on Vitest's virtual time (RB-099-18): the pointer's rest
+ * (`setTimeout`) and its chained frame waits (`requestAnimationFrame`). `Date` stays real - a
+ * test that ages a tile mocks `Date.now` itself.
+ */
+export function useVirtualTimers(): void {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });
+}
+
+/** Advances the virtual clock by `ms`, the fake bridge's promises settled before and after. */
+export async function advance(ms: number): Promise<void> {
+  await settle();
+  await vi.advanceTimersByTimeAsync(ms);
+  await settle();
+}
 
 export const fakePlugin = (answer: (message: Message) => unknown): FakePlugin => fake('color-picker', answer);
 

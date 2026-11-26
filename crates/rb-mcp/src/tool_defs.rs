@@ -12,13 +12,14 @@ use crate::RbMcpServer;
 /// The shape of the definitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolFormat {
-    /// As MCP's `tools/list` has them: `name`, `description`, `inputSchema`.
+    /// As MCP's `tools/list` has them: `name`, `description`, `inputSchema`, `annotations`.
     Mcp,
     /// As the Messages API's custom tools: `name`, `description`, `input_schema`.
     Anthropic,
 }
 
-/// Every core tool in `format`, by name; `allowed_caller` adds `allowed_callers: [it]` to each
+/// Every core tool in `format`, by name (the annotations in MCP's form only: the Messages API's
+/// custom tools have no field for them); `allowed_caller` adds `allowed_callers: [it]` to each
 /// Anthropic definition (`code_execution_20260120` for programmatic tool calling).
 #[must_use]
 pub fn definitions(format: ToolFormat, allowed_caller: Option<&str>) -> Value {
@@ -33,6 +34,7 @@ pub fn definitions(format: ToolFormat, allowed_caller: Option<&str>) -> Value {
             match format {
                 ToolFormat::Mcp => json!({
                     "name": tool.name, "description": description, "inputSchema": schema,
+                    "annotations": tool.annotations,
                 }),
                 ToolFormat::Anthropic => {
                     let mut entry = json!({

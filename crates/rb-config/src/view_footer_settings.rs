@@ -34,9 +34,9 @@ pub enum FooterField {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ViewFooterSettings {
-    /// Show the breakpoint bar under every view (formerly the footer), in the breakpoint's
-    /// colour, in every layout and in a view's own window; the view gives it 18 px of its height.
-    /// Off gives the height back.
+    /// Show the breakpoint bar under every view, in the breakpoint's colour, in every layout and
+    /// in a view's own window; the view gives it 18 px of its height. When off, the view keeps
+    /// its full height.
     pub visible: bool,
     /// What the breakpoint bar names, in this order: `breakpoint`, `range`, `size`, `queries`,
     /// `framework`; `range` and `framework` by default. A breakpoint bar with no field left is

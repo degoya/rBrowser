@@ -152,7 +152,8 @@ pub fn run(core: &Core, args: &Value) -> Result<Value, CommandError> {
     }
 }
 
-fn notice(level: NotificationLevel, key: &str, environment: &str) -> CoreToShell {
+/// The notice `key` about `environment`, linked to its setting.
+pub(super) fn notice(level: NotificationLevel, key: &str, environment: &str) -> CoreToShell {
     CoreToShell::Notification(Notification {
         level,
         message_key: key.to_owned(),

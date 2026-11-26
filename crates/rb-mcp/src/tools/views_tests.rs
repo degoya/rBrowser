@@ -14,7 +14,12 @@ use crate::testing::{FakeBackend, answer_json, server};
 #[tokio::test]
 async fn views_list_answers_every_view() {
     let fake = Arc::new(FakeBackend::default());
-    let (error, answer) = answer_json(&server(&fake).views_list().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .views_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error);
     assert_eq!(answer[0]["id"], 1);
     assert_eq!(answer[1]["breakpoint"], "desktop");
@@ -80,7 +85,7 @@ async fn an_unknown_target_runs_nothing_and_names_the_views() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], "view_not_found");
+    assert_eq!(answer["code"], "view.not_found");
     assert_eq!(
         answer["error"],
         "view `foo` not found; known views: 1 (mobile), 2 (desktop)"
@@ -159,7 +164,7 @@ async fn a_failed_command_is_an_error_answer() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], "command_failed");
+    assert_eq!(answer["code"], "command.failed");
 }
 
 /// Review batch 3, finding 2: `navigate` with `"all"` names the views it left alone and waits

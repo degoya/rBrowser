@@ -15,7 +15,8 @@ Compiles nothing: it reads the checked-in schemas, which a rb-config test holds 
     export_wiki.py ROOT WIKI --check    exit 1 when a page is stale or missing
     export_wiki.py ROOT WIKI --dry-run  name what would change, write nothing
 
-Exit 2 when the data does not read (a schema or the example is missing or not JSON). The
+Exit 2 when the data does not read (a schema or the example is missing or not JSON) or a job id
+is left in the page (scripts/lib/wiki_text.py: a parenthesis of them is dropped). The
 annotations themselves are the settings lint's (scripts/check-settings.sh).
 """
 
@@ -23,6 +24,9 @@ import json
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wiki_text import job_ids_left, public_text  # noqa: E402
 
 PROJECT_SCHEMA = "schema/config.v1.json"
 USER_SCHEMA = "schema/settings.v1.json"
@@ -284,13 +288,17 @@ def render(root):
     if not isinstance(example, dict):
         raise DataError(f"{EXAMPLE}: not a JSON object")
     example.pop("$schema", None)
-    return "".join([
+    text = public_text("".join([
         HEADER.format(project=PROJECT_SCHEMA, user=USER_SCHEMA, example=compact(example)),
         "\n## Project config: `config.json` and `config.local.json`\n\n",
         table(project, texts),
         "\n## User settings: `settings.json`\n\n",
         table(user, texts),
-    ])
+    ]))
+    left = job_ids_left(text, PAGE)
+    if left:
+        raise DataError("\n".join(left))
+    return text
 
 
 def main(argv):

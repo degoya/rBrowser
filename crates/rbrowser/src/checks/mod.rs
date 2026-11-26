@@ -11,6 +11,10 @@
 //! every plugin x view job and gets the findings of each plugin as it is through;
 //! `checks.cancel` stops it with what it found so far ([`progress`], RB-080-89). A run of chosen
 //! checks over the views and page of the last run is merged into it ([`selection`], RB-094-17).
+//! A `scope` (`"visible"` or chosen breakpoints, [`crate::run_scope`]) narrows the views to those
+//! showing its breakpoints, resolved once at the start; `checks.run_visible` (`Leader K 3`) is
+//! the run over the views the grid shows. The answer and the run name the views checked; a chosen
+//! breakpoint no view shows is named in a notice and as `notShown` (RB-099-10).
 
 pub mod cancel;
 pub mod catalog;
@@ -31,7 +35,8 @@ use std::thread::JoinHandle;
 use std::time::{Instant, SystemTime};
 
 use rb_commands::CommandError;
-use rb_engine::{EngineError, ViewHost, ViewId};
+use rb_config::ViewScope;
+use rb_engine::{EngineError, ViewHost};
 use rb_ipc::{CoreToShell, IpcErrorCode, Notification, NotificationLevel, ShellToCore};
 use rb_plugin_host::{
     Cancel, ChecksRunAnswer, ChecksRunArgs, ChecksSettings, RunControl, RunOutcome, RunRequest,
@@ -44,9 +49,12 @@ use crate::analyzer::plugins::{self, NoRuntime};
 use crate::cdp::lock;
 use crate::control::Core;
 use crate::ipc::Failure;
+use crate::run_scope::{self, RunScopeError};
 
 /// The command of a check run.
 pub const RUN_ALL_COMMAND: &str = "checks.run_all";
+/// The command of a check run over the views the grid shows (RB-099-10).
+pub const RUN_VISIBLE_COMMAND: &str = "checks.run_visible";
 /// The i18n key of the refusal while a run is in progress.
 pub const BUSY_KEY: &str = "checks.error.busy";
 /// The i18n key of the notice when a run could not be written.
@@ -89,6 +97,15 @@ enum StartError {
     Thread(std::io::Error),
 }
 
+/// Why a run could not be prepared: an unknown view, or a scope without views.
+#[derive(Debug, thiserror::Error)]
+enum PrepareError {
+    #[error(transparent)]
+    Engine(#[from] EngineError),
+    #[error(transparent)]
+    Scope(#[from] RunScopeError),
+}
+
 /// One run, prepared on the calling thread: what to run, with which settings, where to write.
 struct Job {
     request: RunRequest,
@@ -99,12 +116,28 @@ struct Job {
     /// Whether a run of chosen checks merges into the last run (`runChecks`, `checks.run_all`);
     /// `visual.compare`'s requested run replaces it.
     merge: bool,
+    /// The chosen breakpoints no view shows (RB-099-10).
+    not_shown: Vec<String>,
 }
 
-/// Runs the command `id` when it is this module's (`checks.run_all`); `None` otherwise.
-/// `checks.cancel` registers its own handler ([`cancel`]).
+/// Runs the command `id` when it is this module's (`checks.run_all`, `checks.run_visible`);
+/// `None` otherwise. `checks.cancel` registers its own handler ([`cancel`]).
 pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, CommandError>> {
-    (id == RUN_ALL_COMMAND).then(|| run_all(core, args))
+    match id {
+        RUN_ALL_COMMAND => Some(run_all(core, args)),
+        RUN_VISIBLE_COMMAND => Some(run_all(core, &visible(args))),
+        _ => None,
+    }
+}
+
+/// `args` (none, or an object) with the scope `"visible"`.
+fn visible(args: &Value) -> Value {
+    let mut args = match args {
+        Value::Object(fields) => Value::Object(fields.clone()),
+        _ => json!({}),
+    };
+    args[run_scope::SCOPE_ARG] = json!("visible");
+    args
 }
 
 /// Answers `message` when it is this module's (`runChecks`, `highlightFinding`,
@@ -119,30 +152,49 @@ pub fn ipc(core: &Core, message: &ShellToCore) -> Option<Result<CoreToShell, Fai
                 progress::last_progress().map_or(CoreToShell::Ack, CoreToShell::ChecksProgress)
             ));
         }
-        ShellToCore::RunChecks {
+        ShellToCore::RunChecks(rb_ipc::RunChecksRequest {
             target,
             plugins,
             url,
-        } => start_from_shell(
+            scope,
+        }) => start_from_shell(
             core,
-            &json!({ "target": target, "plugins": plugins, "url": url }),
+            &json!({ "target": target, "plugins": plugins, "url": url, "scope": scope }),
         ),
-        ShellToCore::HighlightFinding {
+        ShellToCore::HighlightFinding(rb_ipc::HighlightFindingRequest {
             finding_id,
             selector,
             views,
-        } => start_highlight(core, finding_id, selector, views),
+        }) => highlight::start(core, finding_id, selector, views),
         _ => return None,
     };
     Some(started.map(|()| CoreToShell::Ack))
 }
 
 /// `checks.run_all`: runs and waits for the run (the caller is a command thread, not the UI).
+/// The answer names the views checked and the chosen breakpoints no view shows (RB-099-10); a
+/// person's run opens the findings first (RB-099-25).
 fn run_all(core: &Core, args: &Value) -> Result<Value, CommandError> {
-    let args = parse(args).map_err(CommandError::InvalidArgs)?;
-    let outcome = run_blocking(core, args)?;
-    serde_json::to_value(ChecksRunAnswer::from_outcome(&outcome))
-        .map_err(|error| CommandError::Failed(error.to_string()))
+    let (args, scope) = parse(args).map_err(CommandError::InvalidArgs)?;
+    let job = prepare(core, args, scope.as_ref())
+        .map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
+    // A person's run (the Checks menu, the palette, `Leader K K`) shows its findings as they
+    // come, a dock folded to its rail opened; a tool's (`checks_run`) keeps the fold (RB-099-25).
+    if !crate::mcp::origin::is_mcp() {
+        crate::panel_dock::core_panels::open_unfolded(
+            core,
+            crate::panel_dock::core_panels::FINDINGS,
+        );
+    }
+    let not_shown = job.not_shown.clone();
+    let outcome = wait(core, job)?;
+    let mut answer = serde_json::to_value(ChecksRunAnswer::from_outcome(&outcome))
+        .map_err(|error| CommandError::Failed(error.to_string()))?;
+    answer["views"] = json!(outcome.file.views);
+    if !not_shown.is_empty() {
+        answer["notShown"] = json!(not_shown);
+    }
+    Ok(answer)
 }
 
 /// Runs `args` on the thread `rb-checks` and waits for the run - shown, written and remembered
@@ -153,7 +205,13 @@ fn run_all(core: &Core, args: &Value) -> Result<Value, CommandError> {
 ///
 /// An unknown view (`InvalidArgs`), another run in progress or no runtime (`Failed`).
 pub(crate) fn run_blocking(core: &Core, args: ChecksRunArgs) -> Result<RunOutcome, CommandError> {
-    let job = prepare(core, args).map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
+    let job =
+        prepare(core, args, None).map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
+    wait(core, job)
+}
+
+/// Starts `job` on the thread `rb-checks` and waits for it.
+fn wait(core: &Core, job: Job) -> Result<RunOutcome, CommandError> {
     start(core, job)
         .map_err(|error| CommandError::Failed(error.to_string()))?
         .join()
@@ -174,10 +232,10 @@ pub(crate) fn last_run() -> Option<(FindingsFile, BTreeMap<String, String>)> {
 
 /// `runChecks`: checked and started here, answered at once; the run follows as `findings`.
 fn start_from_shell(core: &Core, args: &Value) -> Result<(), Failure> {
-    let args = parse(args).map_err(|error| (IpcErrorCode::BadRequest, error))?;
-    let job = prepare(core, args).map_err(|error| {
+    let (args, scope) = parse(args).map_err(|error| (IpcErrorCode::BadRequest, error))?;
+    let job = prepare(core, args, scope.as_ref()).map_err(|error| {
         let code = match error {
-            EngineError::UnknownView(_) => IpcErrorCode::NotFound,
+            PrepareError::Engine(EngineError::UnknownView(_)) => IpcErrorCode::NotFound,
             _ => IpcErrorCode::BadRequest,
         };
         (code, error.to_string())
@@ -189,20 +247,38 @@ fn start_from_shell(core: &Core, args: &Value) -> Result<(), Failure> {
     }
 }
 
-/// The arguments of `checks_run`, checked; none is every plugin over every view.
-fn parse(args: &Value) -> Result<ChecksRunArgs, String> {
+/// The arguments of `checks_run`, checked, and the scope they name; none is every plugin over
+/// every view.
+fn parse(args: &Value) -> Result<(ChecksRunArgs, Option<ViewScope>), String> {
+    let (args, scope) = run_scope::take_scope(args).map_err(|error| error.to_string())?;
     if args.is_null() {
-        return Ok(ChecksRunArgs::default());
+        return Ok((ChecksRunArgs::default(), scope));
     }
-    ChecksRunArgs::parse(args).map_err(|failure| failure.to_string())
+    let args = ChecksRunArgs::parse(&args).map_err(|failure| failure.to_string())?;
+    Ok((args, scope))
 }
 
-/// The run of `args`: the target's views (an unknown view is refused), the settings in effect
-/// and the project to write to.
-fn prepare(core: &Core, args: ChecksRunArgs) -> Result<Job, EngineError> {
+/// The run of `args`: the target's views (an unknown view is refused) - the views of `scope`'s
+/// breakpoints when it narrows them, held from now on -, the settings in effect and the project
+/// to write to.
+fn prepare(
+    core: &Core,
+    args: ChecksRunArgs,
+    scope: Option<&ViewScope>,
+) -> Result<Job, PrepareError> {
     let host = core.host();
-    let views = host
-        .target_views(Some(run::engine_target(args.target)))?
+    let scoped = match scope {
+        Some(scope) => run_scope::scoped(&host.config(), &host.views(), scope)?,
+        None => None,
+    };
+    let (ids, not_shown) = match scoped {
+        Some(scoped) => (scoped.views, scoped.not_shown),
+        None => (
+            host.target_views(Some(run::engine_target(args.target)))?,
+            Vec::new(),
+        ),
+    };
+    let views = ids
         .into_iter()
         .filter_map(|id| host.view(id))
         .map(|info| run::run_view(&info))
@@ -214,6 +290,7 @@ fn prepare(core: &Core, args: ChecksRunArgs) -> Result<Job, EngineError> {
         root: host.project_root(),
         project_off: run::project_off(&project, &user),
         merge: true,
+        not_shown,
     })
 }
 
@@ -263,6 +340,7 @@ pub(crate) fn run_request(core: &Core, request: RunRequest) -> Result<FindingsFi
         root: host.project_root(),
         project_off: run::project_off(&project, &user),
         merge: false,
+        not_shown: Vec::new(),
     };
     Ok(execute(core, job)?.file)
 }
@@ -278,7 +356,11 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
         root,
         project_off,
         merge,
+        not_shown,
     } = job;
+    if let Some(notice) = run_scope::not_shown_notice(&not_shown) {
+        core.notify(notice);
+    }
     let plugins: Vec<String> = sources
         .iter()
         .map(|source| source.plugin_id().to_owned())
@@ -398,31 +480,6 @@ fn execute(core: &Core, job: Job) -> Result<RunOutcome, NoRuntime> {
         ],
     );
     Ok(outcome)
-}
-
-/// `highlightFinding`: checked here, the CDP calls on the runtime (answered at once).
-fn start_highlight(
-    core: &Core,
-    finding_id: &str,
-    selector: &str,
-    views: &[ViewId],
-) -> Result<(), Failure> {
-    let host = core.host().clone();
-    let known: Vec<ViewId> = host.views().iter().map(|view| view.id).collect();
-    highlight::validate(finding_id, selector, views, &known)
-        .map_err(|error| (IpcErrorCode::BadRequest, error.to_string()))?;
-    let (selector, views) = (selector.to_owned(), views.to_vec());
-    core.runtime().spawn(async move {
-        for (view, outcome) in highlight::highlight_all(&*host, &views, &selector).await {
-            match outcome {
-                Ok(true) => {}
-                Ok(false) => tracing::debug!(%view, "the finding's element is not in the view"),
-                // The selector is a plugin's text: not logged.
-                Err(error) => tracing::debug!(%view, %error, "the finding was not marked"),
-            }
-        }
-    });
-    Ok(())
 }
 
 #[cfg(test)]

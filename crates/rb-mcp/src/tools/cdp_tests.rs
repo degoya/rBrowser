@@ -20,7 +20,7 @@ fn evaluating() -> Arc<FakeBackend> {
 }
 
 /// The endpoint's token is Runtime.evaluate, the cookies and every navigation: while
-/// `mcp.allowEvaluate` is off the tool answers `evaluate_disabled` with the setting, carries no
+/// `mcp.allowEvaluate` is off the tool answers `evaluate.disabled` with the setting, carries no
 /// token and does not even ask the host (security review RB-090-06, finding 1).
 #[tokio::test]
 async fn evaluate_off_the_endpoint_is_refused_without_its_token() {
@@ -36,7 +36,7 @@ async fn evaluate_off_the_endpoint_is_refused_without_its_token() {
             .expect("answer");
         let (error, answer) = answer_json(&result);
         assert!(error);
-        assert_eq!(answer["code"], json!("evaluate_disabled"));
+        assert_eq!(answer["code"], json!("evaluate.disabled"));
         assert_eq!(answer["settingsKey"], json!("mcp.allowEvaluate"));
         assert!(!answer.to_string().contains("t0k3n"), "{answer}");
     }
@@ -95,5 +95,5 @@ async fn a_target_is_resolved_to_one_view() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("target_not_single"));
+    assert_eq!(answer["code"], json!("target.not_single"));
 }

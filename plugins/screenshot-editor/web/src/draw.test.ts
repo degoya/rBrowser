@@ -59,6 +59,43 @@ describe('the redactions', () => {
   });
 });
 
+describe('a large image shown at a scale (RB-099-24)', () => {
+  it('redacts the canvas pixels under the region, its blocks scaled as far', () => {
+    const calls: Call[] = [];
+    // A 400 x 300 image whose canvas holds it at 1:4.
+    draw.draw(fakeContext(calls), { type: 'redact', x: 20, y: 22, w: 400, h: 40, mode: 'pixelate', block: 16 }, 400, 300, 4);
+    expect(calls.find((call) => call.name === 'getImageData')?.args).toEqual([5, 5, 95, 11]);
+    expect(calls.find((call) => call.name === 'putImageData')?.args.slice(1)).toEqual([5, 5]);
+  });
+
+  it('draws the preview at its own size and the annotations in image pixels', () => {
+    const calls: Call[] = [];
+    const items: ShotAnnotation[] = [{ type: 'rect', x: 40, y: 40, w: 80, h: 40, color: '#ff0000', width: 4 }];
+    draw.render(fakeContext(calls), {} as CanvasImageSource, items, 400, 300, 4);
+    const names = calls.map((call) => call.name);
+    expect(calls.find((call) => call.name === 'clearRect')?.args).toEqual([0, 0, 100, 75]);
+    expect(calls.filter((call) => call.name === 'setTransform').map((call) => call.args)).toEqual([
+      [1, 0, 0, 1, 0, 0],
+      [0.25, 0, 0, 0.25, 0, 0],
+      [1, 0, 0, 1, 0, 0],
+    ]);
+    // The image first, untransformed; the rectangle in image pixels after the transform.
+    expect(names.indexOf('drawImage')).toBeLessThan(names.indexOf('strokeRect'));
+    expect(calls.find((call) => call.name === 'strokeRect')?.args).toEqual([40, 40, 80, 40]);
+  });
+
+  it('keeps the crop frame and the cursor one canvas pixel wide', () => {
+    const calls: Call[] = [];
+    const ctx = fakeContext(calls);
+    draw.cropFrame(ctx, [{ type: 'crop', x: 40, y: 40, w: 80, h: 40 }], 400, 300, 4);
+    expect(ctx.lineWidth).toBe(4);
+    expect(calls.find((call) => call.name === 'setLineDash')?.args).toEqual([[24, 16]]);
+    expect(calls.find((call) => call.name === 'strokeRect')?.args).toEqual([42, 42, 76, 36]);
+    draw.cursorMark(ctx, 100, 100, 4);
+    expect(calls.filter((call) => call.name === 'strokeRect').at(-1)?.args).toEqual([76, 76, 48, 48]);
+  });
+});
+
 describe('the shapes', () => {
   it('end an arrow in the head the component draws: four widths, at least 12 px', () => {
     const head = draw.arrowHead(2, 10, 58, 10, 2);

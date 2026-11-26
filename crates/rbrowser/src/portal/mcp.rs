@@ -31,7 +31,7 @@ pub const TOOLS: [&str; 5] = [
 ///
 /// # Errors
 ///
-/// `invalid_arguments` for a device that is no id, `unknown_tool` for any other name.
+/// `args.invalid` for a device that is no id, `tool.unknown` for any other name.
 pub fn host_tool(core: &Arc<Core>, name: &str, args: &Value) -> Result<Value, ToolFailure> {
     match name {
         present if super::present::mcp::TOOLS.contains(&present) => {
@@ -48,9 +48,7 @@ pub fn host_tool(core: &Arc<Core>, name: &str, args: &Value) -> Result<Value, To
                     value
                         .as_u64()
                         .and_then(|id| u32::try_from(id).ok())
-                        .ok_or_else(|| {
-                            ToolFailure::new("invalid_arguments", "device is a device id")
-                        })?,
+                        .ok_or_else(|| ToolFailure::new("args.invalid", "device is a device id"))?,
                 ),
             };
             let disconnected = super::disconnect(device);
@@ -58,11 +56,11 @@ pub fn host_tool(core: &Arc<Core>, name: &str, args: &Value) -> Result<Value, To
         }
         other => {
             return Err(ToolFailure::new(
-                "unknown_tool",
+                "tool.unknown",
                 format!("the portal runs no tool `{other}`"),
             ));
         }
     }
     serde_json::to_value(app::panel_state(core, false))
-        .map_err(|error| ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }

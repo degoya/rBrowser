@@ -253,7 +253,9 @@ fn the_leader_submits_alone_and_the_others_follow_its_url() {
             followers: vec![B, C]
         }
     );
+    assert_eq!(hub.follow_leader(), Some(A), "the follow is open");
     let navigations = hub.navigated(A, "http://localhost/thanks", now);
+    assert_eq!(hub.follow_leader(), None, "the leader's load took it");
     assert_eq!(
         navigations,
         vec![

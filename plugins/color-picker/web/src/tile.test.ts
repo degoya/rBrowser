@@ -1,10 +1,10 @@
 // The loupe drawn from a tile at fractional device pixel ratios (RB-080-56) and from the view's
 // image as it is shown (RB-080-64): the image is the viewport's size at the DPR rounded, so the
 // scale the component reports is not the DPR itself; at the image's edge the tile is cut short.
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import pixels from '../../src/pixels.rs?raw';
-import { type FakePlugin, type Message, fakePlugin, runPageScript, settle } from './support';
+import { advance, type FakePlugin, type Message, fakePlugin, runPageScript, useVirtualTimers } from './support';
 import { TILE_HALF, type TileOptions, calibrateAnswer, tileAnswer } from './tile';
 
 let plugin: FakePlugin;
@@ -32,12 +32,11 @@ const middleCell = (): string => {
 const tiles = (): Message[] => plugin.sent.filter((message) => message.type === 'tile');
 
 async function idle(ms = 50): Promise<void> {
-  await settle();
-  await new Promise((resolve) => setTimeout(resolve, ms));
-  await settle();
+  await advance(ms);
 }
 
 beforeEach(() => {
+  useVirtualTimers();
   document.body.innerHTML = '<main></main>';
   plugin = fakePlugin(answer);
   shadow = runPageScript(plugin);
@@ -45,6 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
   plugin.stop();
+  vi.useRealTimers();
   if (ratio) Object.defineProperty(window, 'devicePixelRatio', ratio);
   options = {};
 });

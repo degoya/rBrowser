@@ -9,7 +9,7 @@
       "errors": {
         "bad_args": "The console got arguments it cannot read: {reason}",
         "expression_too_long": "The command is longer than {limit} characters.",
-        "mcp_exec_off": "Running console commands over MCP is off. A person can switch it on in Settings > DevTools & Debugging > Console > Commands over MCP; the console panel's command line works without it.",
+        "mcp_exec_off": "Running console commands over MCP is off. A person can switch it on in Settings › DevTools & Debugging › Console › Commands over MCP; the console panel's command line works without it.",
         "no_active_view": "No view is active; run the command in all views instead.",
         "no_expression": "Type a command first.",
         "unknown_view": "There is no view {view}."
@@ -25,7 +25,7 @@
         "clear": "Clear",
         "command": "Command",
         "commandHint": "A JavaScript expression, run in the views' isolated world; Enter runs it.",
-        "count": "{count} times",
+        "count": "{count, plural, one {# time} other {# times}}",
         "empty": "No messages.",
         "entries": "Messages",
         "levels": "Levels",
@@ -39,7 +39,7 @@
         "target": "Run in",
         "truncated": "Showing the newest {shown} of {total} messages.",
         "unknownSource": "unknown source",
-        "viewDot": "{label} ({breakpoint}, {engine}): {count} times",
+        "viewDot": "{label} ({breakpoint}, {engine}): {count, plural, one {# time} other {# times}}",
         "views": "Views"
       },
       "levels": {
@@ -65,7 +65,7 @@
         },
         "clearOnNavigate": {
           "description": "A view's messages from before its last navigation leave the console.",
-          "help": "Messages from before a view's last navigation leave the console, so each page starts clean. Off keeps them across navigations.",
+          "help": "Messages from before a view's last navigation leave the console, so each page starts clean. When off, it keeps them across navigations.",
           "label": "Clear on navigation"
         },
         "execTarget": {
@@ -90,7 +90,7 @@
         },
         "showRbrowserMessages": {
           "description": "Shows what rBrowser's own plugins reported in a view (a failed request of the rulers, say), marked with the source rBrowser and the plugin. Off by default: they are no messages of the page, and the rBrowser log has them either way. A plugin's page script that failed shows either way, with its stack.",
-          "help": "Shows what rBrowser's plugins reported in a view, marked rBrowser and the plugin's name, beside the page's own messages. Off keeps the console to the page; the rBrowser log keeps them either way. A plugin script that failed always shows, with its stack.",
+          "help": "Shows what rBrowser's plugins reported in a view, marked rBrowser and the plugin's name, beside the page's own messages. When off, it keeps the console to the page; the rBrowser log keeps them either way. A plugin script that failed always shows, with its stack.",
           "label": "rBrowser's own messages"
         },
         "option": {
@@ -114,7 +114,7 @@
         }
       },
       "tools": {
-        "exec": "Runs a JavaScript expression in the targeted views (isolated world) and answers one result per distinct value, with the views that gave it. Off until a person allows it in the settings (Console > Commands over MCP).",
+        "exec": "Runs a JavaScript expression in the targeted views (isolated world) and answers one result per distinct value, with the views that gave it. Off until a person allows it in the settings (Console › Commands over MCP).",
         "grouped": "The shared console: the views' console messages, uncaught exceptions and failed fetch/XHR requests, deduplicated (numbers and ids ignored) with the views that reported each and how often. Optional levels, views, search and limit filter; clear: true clears the console after answering."
       }
     }

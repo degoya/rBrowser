@@ -18,7 +18,7 @@ const STRINGS: Record<string, string> = {
   [P + 'breakpoints.queued']: 'Sent to the app.',
   [P + 'breakpoints.masked']: 'Cookies show as ***.',
   [P + 'compose.result']: '{method} {url}: {status} in {time} ms',
-  [P + 'compose.badUrl']: 'Enter an http(s) URL.',
+  [P + 'compose.badUrl']: 'Enter an http or https URL.',
   [P + 'compose.noView']: 'no view',
   [P + 'sessions.viewing']: 'Showing session {path}.',
   [P + 'sessions.saved']: 'Saved: {path}',
@@ -179,7 +179,7 @@ describe('the compose tab', () => {
     expect($('#compose-view').textContent).toBe('Mobile');
     $('#compose-send').click();
     await settle();
-    expect($('#compose-note').textContent).toBe('Enter an http(s) URL.');
+    expect($('#compose-note').textContent).toBe('Enter an http or https URL.');
     await type('#compose-url', 'http://x.test/api/user');
     await type('#compose-method', 'post');
     await type('#compose-headers', 'content-type: application/json');

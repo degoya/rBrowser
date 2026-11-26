@@ -87,7 +87,7 @@ describe('the SEO panel', () => {
   });
 
   it('says it is loading, then shows the page and a card per platform in the table order', async () => {
-    expect($('#status')?.textContent).toBe('Loading the previews...');
+    expect($('#status')?.textContent).toBe('Loading the previews…');
     expect($('#status')?.dataset.tone).toBe('busy');
     await answer(ANSWER);
     expect($('#status')?.textContent).toBe('');

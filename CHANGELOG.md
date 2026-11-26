@@ -7,6 +7,246 @@ All notable changes to rBrowser are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.9.9-beta.1] - 2026-11-26
+
+### Added
+
+- The Windows MSI is built in the public CI and the release (RB-099-27): WiX 5 pinned
+  (`RB_WIX_VERSION`, installed by `scripts/ci-tools.sh wix`), `scripts/package-msi.sh` builds the
+  MSI from the package ZIP on `windows-2025`, `ci.yml` installs it per user, runs
+  `rbrowser.com --version` and uninstalls it, and `release.yml` publishes
+  `rbrowser-<version>-windows-x64.msi` beside the ZIP, listed in `SHA256SUMS`.
+- A video or audio a view cannot play names the reason (RB-099-29): when a `<video>`, `<audio>`
+  or `<source>` fails on a format this build has no codec for (MP4 with H.264 or AAC, HEVC,
+  QuickTime), the status bar says which format is missing and that WebM (VP9, AV1) and Opus
+  play, once per page and format, with a button to the handbook's *Media formats* page; an Info
+  finding `media.unsupported-format` names the source and the element for the findings panel
+  and MCP. The sync agent reports the failure (message `media`); no setting.
+
+### Changed
+
+- A check a person runs shows its result (RB-099-25): a plugin check from the palette, a menu or
+  its shortcut ("Validate the HTML of every view") and "Run all checks" open the findings, a dock
+  folded to its rail unfolded, and a plugin check's end in the status bar names how many it
+  found ("nothing found" for none). MCP's `checks_run` keeps the dock as it is.
+- The canvas is the built-in layout mode (RB-099-26): a project without a start preset - a new
+  one from `rbrowser init`, one without any config - opens in the canvas, which places the views
+  itself until they are moved; a preset without `mode` is a canvas preset unless it has a grid
+  of its own (`layout`), which stays a grid, and a config that names a mode keeps it. The setup
+  wizard preselects the canvas; its grid choice starts the project in a grid preset over every
+  view (`layouts.default`).
+- The screenshot editor opens, annotates, redacts, crops, saves, copies and exports every image
+  the capture writes - up to 65535 pixels a side and 256 megapixels instead of 16384 and 25 -
+  rendered in bands at full resolution; the panel shows an image too large for a canvas as a
+  preview at 1:2, 1:3 or 1:4 (RB-099-24). The plugin contract gains `project-range` (a file
+  larger than one `project.read`, read in ranges) and `out-stream` (a file of `out.write` in
+  parts, renamed into place at the commit); a plugin that imports neither links as before.
+
+### Fixed
+
+- Full-page screenshots show lazily loaded images (RB-099-28): before every full-page capture
+  (context menu, commands, MCP `screenshot`, visual regression, sitemap capture) the page is
+  scrolled to its end one viewport at a time, so `loading="lazy"` images and
+  IntersectionObserver loaders below the fold load, then back to where it was; the images get up
+  to 4 s, then the page is measured again and captured. Images still loading at the deadline do
+  not stop the screenshot - its answer says `imagesPending: true`. The other views do not follow
+  the scrolling, and the captured view keeps its scroll position.
+
+## [0.9.9-pre.3] - 2026-11-26
+
+### Added
+
+- The final Windows package (RB-099-01): `scripts/package-windows.sh --msi` also builds an
+  optional per-user MSI (`scripts/package-msi.sh`, WiX 5 on Windows; installs to
+  `%LOCALAPPDATA%\Programs\rBrowser` without admin rights, with a Start menu entry, and keeps the
+  user data on uninstall). The ZIP is reproducible - two runs on one commit write the same
+  SHA-256, listed in `artifacts/windows/SHA256SUMS` - ships only the CEF locales en-US, de, es
+  and fr (about 48 MB less unpacked), and is held to a content list before it is written.
+- `scripts/e2e-windows.sh` checks the acceptance criteria K1 to K12, the scroll sync fixture and
+  the milestone smokes against the Windows package, staged portable in its own folder; the cases
+  are TypeScript in `tests/e2e/` (MCP through `rbrowser.com mcp`, CDP through the token proxy, a
+  fixture server that counts POSTs and stamps reloads), K1, K3 and K11 through `scripts/perf.sh`;
+  `report.json` and `report.md` hold every value with its threshold; `--only`, `--native`,
+  `--list`, `--keep`, `--allow-missing`. The first green run on the reference machine is pending
+  (RB-099-02).
+
+## [0.9.9-pre.2] - 2026-11-26
+
+### Added
+
+- Licence texts of every shipped component (RB-099-12): each package (Windows, Linux, macOS)
+  carries `THIRD-PARTY-LICENSES.txt` beside `NOTICE`, the full licence texts with the copyright
+  lines of every Rust crate and npm package it ships (`scripts/licenses.sh`; a package without a
+  licence file gets its licence's standard text, one without any fails the preflight); the three
+  `NOTICE` files come from one source, `packaging/NOTICE.in` (macOS gains the missing entries);
+  one copyright holder everywhere; the About tab shows the GPL's copyright and no-warranty notice,
+  and its licence list no longer names `sentry`/`@sentry/*`, which the packages leave out; the
+  framework-devtools plugin carries `panel/dist/THIRD-PARTY-LICENSES.txt`.
+- The LGPL source offer and Google's adb terms (RB-099-13): every `NOTICE` names the exact CEF
+  version, commit and Chromium version of the package (filled from the CEF pin, so a CEF update
+  cannot leave them stale), their source addresses and a written offer, valid three years, of
+  the complete corresponding source of the CEF runtime's LGPL components; the Windows `NOTICE`
+  lists adb among the downloads on request. "Tools: download adb" now shows Google's Android SDK
+  terms in the toolbar strip, with a link to them, and downloads only after "Accept and
+  download"; Cancel downloads nothing.
+- Native Windows tests for the security code (RB-099-17): the private folder's and the instance
+  pipe's DACL read back, the user SID, the job object, the pipe's first instance and the
+  Credential Manager store.
+- Privacy and network transparency (RB-099-14): the handbook's new pages *Network connections*
+  (every connection rBrowser makes, when, what goes out and the setting that switches it off) and
+  *Data protection notes* (what is kept where and how to delete it, HAR content, the portal over
+  plain HTTP, the presentation through Cloudflare, what an MCP agent passes to its model
+  provider); the public README and the package repository's page link the imprint and privacy
+  policy, the README adds a privacy section and a trademark notice; the DPIA threshold
+  assessment is `docs/privacy/dpia-threshold.md`. The presentation's consent names Cloudflare,
+  Inc. (USA) and asks to present no real personal data, and the README asks for a GPL-compatible
+  plugin licence instead of promising "any licence".
+
+### Changed
+
+- The MCP interface is smaller and says more (RB-099-16): every core tool carries the MCP
+  annotations `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`; the
+  descriptions are a third shorter, so `tools/list` shrinks although the annotations join it;
+  the 15 tools without arguments refuse any; every `target` says its default by one rule (`"all"`
+  for reading, navigating and runs over the views, the active view for tools that act in a page
+  as a person would); every failure code is dotted (`area.reason`: `evaluate.disabled`,
+  `args.invalid`, `config.key_protected`, `script.disabled`, ...) and, until 1.0, an answer whose
+  code replaced a flat one carries it as `legacyCode` (in code mode too: a caught `ToolError` has
+  `error.legacyCode`). `rb_ipc::PROTOCOL_VERSION`, never checked,
+  is gone from Rust and TypeScript.
+- The shell pages load less (RB-099-20): the settings keys' labels, descriptions, help texts and
+  option names - 41 % of `locales/en.json` - leave the chunk every page parses and load with the
+  pages window only, so the toolbar, the status bar and the canvas board each load about 163 kB
+  less script (the shared chunk 521 to 357 kB); `scripts/check.sh --preflight` holds every page
+  to its bundle budget (`ui/bundle-budget.json`, `scripts/bundle-budget.sh`).
+- Tests wait on what they check instead of a fixed sleep (RB-099-18): positive checks poll
+  their condition, absences wait behind a barrier or on virtual time (agent, sidecar, ui and 32
+  Rust sites), the shell's query allowlist is built by a tested pure function and the CDP
+  proxy's order promise names the target check, which a test holds.
+- The texts say one thing one way (RB-099-22): every command title follows "Show or hide ..." or
+  "Switch ... on or off" in sentence case, core and plugins, and the group D is "DevTools &
+  Debugging" like its settings category; the catalogues write the ellipsis `…`, settings paths
+  with ` › `, real plurals instead of "(s)" ("1 plugin update was installed"), "When off" and
+  "If empty" in help texts and British "analyse"; the theme's system option and the first run's
+  folder hint fit every platform; the status statements of the README and the roadmap name the
+  released beta. The i18n lint holds the title pattern and the typography; the generated wiki
+  references and the public wiki export carry no job id (the export refuses one).
+
+- The loop warning of RB-099-07 names its cause (RB-099-07): every time the window re-attaches
+  its views - a grid sent again, the DevTools dock or the plugin panels' dock laid out anew - is
+  counted with what caused it (the place that rebuilt the grid, the footer that changed its
+  height with the room it was fitted to, a view that left or entered the grid, the text size),
+  and more than ten in a second are logged once a minute with those causes counted.
+- Less work on the UI thread and in step (RB-099-19): the shortcut editor's changes write the
+  user settings off the UI thread, on the settings' lane and under their one-change lock, so a
+  shortcut and a setting changed at the same moment both survive; each view applies its size
+  and emulation under a lock of its own instead of one for all views (only the geolocation
+  grants of a browser context still take turns), so a resize no longer sends eight views'
+  metrics one after the other; the DevTools window's bounds are saved off the UI thread;
+  DevTools and the time control catch up with closed views and the active view after missing
+  events; CDP answers are no longer copied, and the CDP writer counts its waiting bytes and
+  warns once past 32 MiB.
+
+### Fixed
+
+- A presentation's hidden paths that name a marker - a rule beginning with `.` or `__`, such as
+  `/.git`, `/.env` and the editor launches - now match at every path segment, not only from the
+  root (RB-099-15): `/sub/.git/config`, `/sub/.env` and `/app/__open-in-editor` answer 404 like
+  their root forms, also percent-encoded; other rules such as `/admin` and `/@fs/` stay prefixes
+  from the root, so a Nuxt app's modules under `/_nuxt/@fs/` still load. The unused sitemap HTTP transport, which skipped the
+  plugins' public-address check, is gone, and the threat model names the three credential stores
+  and an agent's reach into the LAN through `navigate` as a residual risk.
+
+- Screen readers hear the sign-in bar and the sitemap start page (RB-099-21): the sign-in bar is a
+  named form instead of a non-modal alert dialog, says a problem at once and marks the field it
+  is about, and lets a password manager fill user name and password; the sitemap start page says
+  a failure and a refused start at once and moves the focus to "Find the pages again" instead of
+  dropping it; its page tree says a row's choice once, not as selected and checked. The bug
+  report preview, the sitemap gallery and the plugin catalogue's changed-key warning say their
+  errors when they appear. The sign-in bar and the sitemap start page are in the accessibility
+  tests and inventory, the native strips' target-size exception is written down, and the
+  Definition of Done asks every new surface into both.
+
+## [0.9.9-pre.1] - 2026-11-23
+
+### Added
+
+- Sitemap capture of only the visible views (RB-099-08): `sitemap.capture_visible`
+  (`Leader C J`, Capture > Sitemap), `sitemap_capture` with `views: "visible"` and `rbrowser
+  capture sitemap --visible` take only the breakpoints the grid shows when the run starts (the
+  hidden selection, a chosen preset's included, and only the cells of a grid with cells); the
+  list is kept in `run.json`. `views` together with `breakpoints` is refused, and so is a start
+  with no visible Chromium breakpoint. The shared `rb_config::resolve_scope` (all, visible or
+  named breakpoints) is the scope for the other runs too.
+- Sitemap capture in two steps (RB-099-09): `sitemap.capture` (`Leader C M`, the menu, the
+  sitemap bar's Start) opens a start page that finds the pages first (progress, Cancel), shows
+  them as a tree by path segments with a count per node, and captures only the pages and areas
+  chosen - checkboxes per subtree with a partial state, All and None following a search over the
+  URLs, the environment the pages move to, all or only the visible views, and "N pages x M views
+  = K shots" before Start. The tree draws only the rows on screen, so 10,000 pages stay fluid.
+  The core takes only URLs of the discovery the start names (the last four are kept), at most
+  100,000 pages. MCP `sitemap_discover` (pages and tree, nothing captured) and `sitemap_capture`
+  with `discovery` and `urls`; `rbrowser capture sitemap --list` (the discovery is written to
+  `.rbrowser/out/sitemap-discover/<id>.json`) and `--urls <file>` (a `.txt` file inside the
+  project, read by the running rBrowser). A refused start shows on the start page; a discovery
+  serves only the project it was made for.
+- Tests over the visible views or chosen breakpoints (RB-099-10): checks, visual regression, flows
+  and Lighthouse take a scope - every view, the views the grid shows or chosen breakpoints - from
+  one pick list at each start point (findings panel, its visual regression, Flows and Lighthouse
+  panels), the last choice kept per function; `checks.run_visible` (`Leader K 3`),
+  `visual.compare_visible` (`Leader C C`), `flows.run_all_visible` (`Leader F G`) and
+  `plugin.lighthouse.run_visible` (`Leader K 4`); MCP `checks_run`, `visual_compare`,
+  `visual_baseline_update`, `flow_run` and `lighthouse_run` take `target` `"visible"` or a list
+  of view and breakpoint ids. Baselines of other breakpoints stay; the results name the views
+  covered and a notice the chosen breakpoints no view shows. The Flows panel offers a single
+  view beside the scopes, and "Run again" in the findings panel keeps the views of the run shown.
+
+### Fixed
+
+- Full-page screenshots of long pages (RB-099-11): a breakpoint without `dpr` renders at the
+  screen's pixel ratio, which the cap of one shot counted as 1, so at 150 % scaling the image
+  was 24576 px tall whatever the page and repeated its top from row 16384 on. The ratio is now
+  measured from the page's layout metrics, and a page longer than one GPU texture is captured in
+  sections of at most 16000 device px under one viewport and stacked into one PNG - context
+  menu, `capture.*` commands, MCP `screenshot` (`fullPage`), sitemap capture and visual
+  regression alike. The image holds at most 65535 px and 256 megapixels; a longer page is cut
+  there, its entry says `truncated` with `pageHeight`, and the commands show a warning. The
+  overview image takes each view's top 16384 rows.
+- Basic auth credentials on macOS and Linux (RB-099-05): the macOS Keychain (a generic password,
+  service `rbrowser/basic-auth`) and on Linux the Secret Service (GNOME Keyring, KWallet) keep
+  them, as the Credential Manager does on Windows; without a running Secret Service storing fails
+  with "no secret service is running", never a file. The texts name the store of the platform.
+- HTML validation says why a view has no source as served (RB-099-06): a page that asks for a
+  sign-in (HTTP 401 or 407, pointing to the environment's Basic auth), a page still loading, or a
+  document the browser did not keep (with what helps: reload, the setting Collect network requests
+  from the start, or the rendered DOM) instead of CDP's words, which stay the detail of any other
+  reason. A document body the view's own network log still holds is validated without a second
+  request. The checks panel ends a failure's reason with a period before "Its findings are
+  missing." when the reason has none.
+- CEF's log no longer grows without bound (RB-099-07): `cef.log` keeps to the size and number of
+  files of `logs.maxFileSizeMb` and `logs.maxFiles` - trimmed before CEF starts and once a minute
+  while the app runs, its end kept in `cef.1.log` - and the diagnostics ZIP takes only the last
+  5 MiB of each CEF log. CEF writes only its errors up to `logs.level` `info`: Chromium warns for
+  every stacking move of a browser view's window (`StackChildLayerRelativeTo`), which flooded the
+  file; `debug` brings CEF's warnings back. A grid built again more than ten times a second is
+  logged as a loop.
+- Basic auth per environment answers again (RB-099-04): CEF handed every view's challenge to
+  Chromium's own "Sign in" dialog and never asked rBrowser, so a stored credential was never
+  sent. Chromium's prompt is now off (`disable-chrome-login-prompt`): the stored credential of an
+  environment answers its challenge in every view, read off CEF's network thread. Any other
+  challenge - another site's, a proxy's, a refused password's - is asked in rBrowser's own sign-in
+  bar in the toolbar strip: origin, realm, proxy and the views waiting, user and password, Sign in
+  or Cancel (the server's 401 page). One question per origin, realm and proxy answers every view
+  waiting, a popup under the view that opened it; a sitemap capture's render views use the store
+  only. A refused answer asks again, saying so, up to three times in a row per view; plain http to
+  another machine says it is sent unencrypted; "Save for environment" stores it for an
+  environment's own address (only while that address is still the one asked for), else it is
+  used once for the session. The credential store is never read on the UI or network thread.
+  Every decision is logged at INFO with the environment, origin, realm and reason, never
+  the user, the password or the request URL. Settings > Project > Environments says which
+  environments share an address (and so one sign-in), and the answer of Save stands on its own
+  row.
+
 ## [0.9.8] - 2026-11-22
 
 ### Added

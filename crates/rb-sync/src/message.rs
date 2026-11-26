@@ -14,6 +14,7 @@ use crate::bus::{BusMessage, BusPayload, PageState};
 use crate::event::{ChangeData, ElementTarget, PROTOCOL_VERSION, PathPoint, ScrollData, SyncEvent};
 use crate::framework::FrameworkMessage;
 use crate::locale::PageLocale;
+use crate::media::MediaMessage;
 use crate::vitals::VitalsMessage;
 
 /// The largest binding payload the core reads.
@@ -100,6 +101,8 @@ pub enum AgentMessage {
     Vitals(VitalsMessage),
     /// The top document's frameworks, Vue and React (RB-080-24).
     Framework(FrameworkMessage),
+    /// A media element or source that failed, in any frame (RB-099-29).
+    Media(MediaMessage),
 }
 
 impl AgentMessage {
@@ -112,6 +115,7 @@ impl AgentMessage {
             Self::Detected(detected) => detected.v,
             Self::Vitals(vitals) => vitals.v,
             Self::Framework(framework) => framework.v,
+            Self::Media(media) => media.v,
         }
     }
 }

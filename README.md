@@ -51,7 +51,9 @@ files with their SHA-256 in `SHA256SUMS`.
 `rbrowser-<version>-windows-x64.zip` into a folder of your own and start `rbrowser.exe`. Do not
 start it from inside the zip or from a WSL share: the browser sandbox refuses both. The program is
 not code-signed yet, so Windows SmartScreen may warn on the first start; choose *More info* and
-*Run anyway*. Node.js is not needed: the package carries its own runtime.
+*Run anyway*. Node.js is not needed: the package carries its own runtime. To install it instead,
+take `rbrowser-<version>-windows-x64.msi`: it installs for your user alone, without administrator
+rights, into `%LOCALAPPDATA%\Programs\rBrowser`, with an entry in the start menu and in *Apps*.
 
 **macOS.** Download `rbrowser-<version>-macos-aarch64.dmg` for Apple Silicon or
 `rbrowser-<version>-macos-x86_64.dmg` for an Intel Mac (each also as a zip), open it and drag
@@ -116,7 +118,9 @@ The handbook is the [wiki](https://github.com/degoya/rBrowser/wiki):
 - **Plugins**: [Plugins](https://github.com/degoya/rBrowser/wiki/plugins) ·
   [Plugin development](https://github.com/degoya/rBrowser/wiki/plugin-development) ·
   [`sdk/README.md`](sdk/README.md)
-- **Help**: [FAQ and troubleshooting](https://github.com/degoya/rBrowser/wiki/faq)
+- **Help**: [FAQ and troubleshooting](https://github.com/degoya/rBrowser/wiki/faq) ·
+  [Network connections](https://github.com/degoya/rBrowser/wiki/network-connections) ·
+  [Data protection notes](https://github.com/degoya/rBrowser/wiki/data-protection)
 
 A Playwright example that connects to the running app is in
 [`examples/playwright/`](examples/playwright/connect.ts).
@@ -135,10 +139,34 @@ repository is an export of the development repository, refreshed at every releas
 is a proposal that is applied by hand, with credit. Please report a vulnerability privately
 through GitHub's security advisories, not as an issue.
 
+## Privacy
+
+rBrowser sends no telemetry and uploads no logs or crash dumps. The connections it makes - the
+update check, the plugin catalogue, the Chrome Web Store and the downloads you ask for - are
+listed with the setting that switches each off in
+[Network connections](https://github.com/degoya/rBrowser/wiki/network-connections); what it keeps
+on your computer, and how to delete it, is in
+[Data protection notes](https://github.com/degoya/rBrowser/wiki/data-protection).
+
 ## Licence
 
 rBrowser is developed by Alexander Herling / DEGOYA.digital and licensed under the GNU General
 Public License v3.0 or later, see [LICENSE](LICENSE). The plugin SDK (its templates, the WIT
 contract and the CI workflow, [`sdk/LICENSE`](sdk/LICENSE)) and the panel runtime
-`plugins/web-common/panel-ui` ([its LICENSE](plugins/web-common/panel-ui/LICENSE)) are MIT, so
-plugins can use any licence.
+`plugins/web-common/panel-ui` ([its LICENSE](plugins/web-common/panel-ui/LICENSE)) are MIT.
+Plugins run in rBrowser's process, and rBrowser's licence grants no additional permission for
+them (GPL section 7): check that a plugin's licence is compatible with the GPL.
+
+## Trademarks
+
+Google, Chrome and Android are trademarks of Google LLC. Firefox is a trademark of the Mozilla
+Foundation. Apple, Safari, macOS and iPhone are trademarks of Apple Inc. Microsoft and Windows are
+trademarks of the Microsoft group of companies. Cloudflare is a trademark of Cloudflare, Inc. All
+other product names are trademarks of their owners. They are named here only to say what
+rBrowser works with; rBrowser is an independent project, not affiliated with or endorsed by any
+of them.
+
+## Imprint and privacy policy
+
+Published by DEGOYA.digital: [Imprint](https://degoya.digital/impressum) ·
+[Privacy policy](https://degoya.digital/datenschutz).

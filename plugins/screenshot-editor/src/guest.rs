@@ -2,7 +2,8 @@
 //! (`crates/rb-plugin-api/wit`), world `feature-plugin`. Built only for `wasm32`; it holds no
 //! logic of its own. The host it hands the native trait reaches `host`, `settings` and the
 //! capabilities the manifest grants - `project-read` (the images below `.rbrowser/out/` and the
-//! saved annotations) and `out-write` (the edited image and its annotations); every other one is
+//! saved annotations, an image larger than one read in ranges: `project-range`) and `out-write`
+//! (the edited image in parts, `out-stream`, and its annotations); every other one is
 //! refused here already, as the real host would refuse it, and a component that calls no other
 //! interface imports none.
 #![allow(
@@ -23,7 +24,7 @@ use crate::ScreenshotEditor;
 
 rb_plugin_api::guest_host! {
     /// The host as the plugin sees it.
-    struct GuestHost grants [settings, project, out]
+    struct GuestHost grants [settings, project, project_range, out, out_stream]
 }
 
 struct Component;

@@ -1,13 +1,23 @@
 //! Where a Basic auth credential is kept: the platform's credential store, one entry per project
 //! and origin (`rbrowser/basic-auth/<project key>/<scheme://host:port>`), never a file of the
-//! project. On Windows that is the Credential Manager (generic credential, persisted for the
-//! user on this machine, encrypted with DPAPI; `store_windows`). Linux and macOS (phase 2) get
-//! the Secret Service and the Keychain behind the same trait; until then they keep nothing and
-//! setting a credential fails, so a password never lands in a plain file.
+//! project and never a file of rBrowser's own.
+//!
+//! | Platform | Store | Module |
+//! | --- | --- | --- |
+//! | Windows | Credential Manager: a generic credential, persisted for the user on this machine, encrypted with DPAPI | `store_windows` |
+//! | macOS | Keychain: a generic password, service `rbrowser/basic-auth`, account `<project key>/<origin>` | `store_macos` |
+//! | Linux | Secret Service over D-Bus (GNOME Keyring, KWallet): an item of the default collection with the same service and account | `store_linux` |
+//!
+//! Where none is running (a Linux server, WSL without D-Bus) setting a credential fails with "no
+//! secret service is running"; there is no fallback to a file. What the Keychain and the Secret
+//! Service keep, and how their errors read, is `store_codec` (RB-099-05).
 
 use std::fmt;
 
 use super::origin::AuthOrigin;
+
+/// The service of every entry; the target names start with it.
+pub const SERVICE: &str = "rbrowser/basic-auth";
 
 /// The longest user name taken.
 pub const MAX_USER: usize = 256;
@@ -79,15 +89,30 @@ impl fmt::Debug for Credential {
     }
 }
 
-/// Why the credential store failed. Never carries a value.
+/// Why the credential store failed. Never carries a value: a status code or what failed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum StoreError {
-    /// This platform has no credential store rBrowser uses yet (phase 2).
-    #[error("this platform keeps no Basic auth credentials yet")]
+    /// This platform has no credential store rBrowser uses.
+    #[error("this platform keeps no Basic auth credentials")]
     Unsupported,
-    /// The platform's store refused (the OS error code).
+    /// The Windows Credential Manager refused (the Win32 error code).
     #[error("the credential store failed (code {0})")]
     Failed(u32),
+    /// The macOS Keychain refused (its `OSStatus`).
+    #[error("the macOS Keychain failed (status {0})")]
+    Keychain(i32),
+    /// Linux: no session bus, or nobody on it serves `org.freedesktop.secrets`.
+    #[error("no secret service is running")]
+    NoSecretService,
+    /// Linux: the Secret Service has no default collection to keep a credential in.
+    #[error("the secret service has no default keyring")]
+    NoCollection,
+    /// The store is locked and was not unlocked, or the person refused access.
+    #[error("the credential store is locked or refused access")]
+    Denied,
+    /// Linux: the Secret Service failed; what failed, never a value.
+    #[error("the secret service failed ({0})")]
+    SecretService(&'static str),
 }
 
 /// A store of credentials by target name.
@@ -118,7 +143,7 @@ pub trait CredentialStore: Send + Sync {
 /// (`crate::instance::file::key`).
 #[must_use]
 pub fn target_name(project: &str, origin: &AuthOrigin) -> String {
-    format!("rbrowser/basic-auth/{project}/{origin}")
+    format!("{SERVICE}/{project}/{origin}")
 }
 
 /// The store of this platform.
@@ -128,17 +153,49 @@ pub fn platform_store() -> Box<dyn CredentialStore> {
     {
         Box::new(super::store_windows::WindowsStore)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        Box::new(macos::KeychainStore)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Box::new(linux::SecretServiceStore)
+    }
+    #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
     {
         Box::new(NoStore)
     }
 }
 
-/// Linux and macOS until phase 2: keeps nothing.
-#[cfg(not(windows))]
+/// Which store [`platform_store`] is, for the shell to name it (`basicAuthStatus`).
+#[must_use]
+pub fn kind() -> rb_ipc::CredentialStoreKind {
+    if cfg!(windows) {
+        rb_ipc::CredentialStoreKind::WindowsCredentialManager
+    } else if cfg!(target_os = "macos") {
+        rb_ipc::CredentialStoreKind::MacosKeychain
+    } else if cfg!(target_os = "linux") {
+        rb_ipc::CredentialStoreKind::SecretService
+    } else {
+        rb_ipc::CredentialStoreKind::None
+    }
+}
+
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
+#[path = "store_codec.rs"]
+mod codec;
+#[cfg(target_os = "linux")]
+#[path = "store_linux.rs"]
+mod linux;
+#[cfg(target_os = "macos")]
+#[path = "store_macos.rs"]
+mod macos;
+
+/// A platform without a store rBrowser uses: keeps nothing, and setting a credential fails.
+#[cfg(any(test, not(any(windows, target_os = "macos", target_os = "linux"))))]
 struct NoStore;
 
-#[cfg(not(windows))]
+#[cfg(any(test, not(any(windows, target_os = "macos", target_os = "linux"))))]
 impl CredentialStore for NoStore {
     fn read(&self, _target: &str) -> Result<Option<Credential>, StoreError> {
         Ok(None)

@@ -43,6 +43,15 @@ pub enum RunError {
     /// Anything else.
     #[error("sitemap.error.failed: {0}")]
     Failed(String),
+    /// `discovery` names no discovery kept (RB-099-09): a new one is needed.
+    #[error("sitemap.error.unknown_discovery: no sitemap discovery {0}; discover the pages again")]
+    UnknownDiscovery(String),
+    /// A URL of `urls` that the discovery did not find (RB-099-09).
+    #[error("sitemap.error.foreign_url: {0} is not a page the discovery found")]
+    ForeignUrl(String),
+    /// More URLs than one run takes (RB-099-09).
+    #[error("sitemap.error.too_many_urls: at most {0} pages per run")]
+    TooManyUrls(usize),
 }
 
 impl RunError {
@@ -58,6 +67,9 @@ impl RunError {
             Self::NoProject => "sitemap.error.no_project",
             Self::Store(_) => "sitemap.error.store",
             Self::Failed(_) => "sitemap.error.failed",
+            Self::UnknownDiscovery(_) => "sitemap.error.unknown_discovery",
+            Self::ForeignUrl(_) => "sitemap.error.foreign_url",
+            Self::TooManyUrls(_) => "sitemap.error.too_many_urls",
         }
     }
 }

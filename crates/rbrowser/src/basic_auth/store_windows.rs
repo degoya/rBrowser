@@ -139,3 +139,7 @@ impl CredentialStore for WindowsStore {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "store_windows_tests.rs"]
+mod tests;

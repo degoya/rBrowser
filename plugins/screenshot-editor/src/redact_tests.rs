@@ -1,6 +1,7 @@
 use tiny_skia::{IntSize, Pixmap};
 
 use super::*;
+use crate::model::RedactMode;
 
 /// An opaque pixmap with `pixel(x, y)` (RGB).
 fn pixmap(width: u32, height: u32, pixel: impl Fn(u32, u32) -> [u8; 3]) -> Pixmap {
@@ -55,7 +56,7 @@ fn the_mosaic_is_the_expected_block_averages_and_the_original_pattern_is_gone() 
         right: 36,
         bottom: 27,
     };
-    pixelate(&mut redacted, region, block);
+    pixelate(&mut redacted, region, block, 0);
 
     // The expected mosaic, computed here on its own.
     let mut top = region.top;
@@ -123,12 +124,12 @@ fn the_smoothed_mode_depends_on_the_block_averages_only() {
         let (bx, by) = (x / 8 * 8, y / 8 * 8);
         secret(bx + 7 - (x - bx), by + 7 - (y - by))
     });
-    blur(&mut first, region, 8);
-    blur(&mut second, region, 8);
+    blur(&mut first, region, 8, 0);
+    blur(&mut second, region, 8, 0);
     assert_eq!(first.data(), second.data());
     // And it is not just the mosaic.
     let mut mosaic = pixmap(24, 24, secret);
-    pixelate(&mut mosaic, region, 8);
+    pixelate(&mut mosaic, region, 8, 0);
     assert_ne!(first.data(), mosaic.data());
 }
 
@@ -143,6 +144,7 @@ fn a_black_bar_is_opaque_black() {
             right: 5,
             bottom: 4,
         },
+        0,
     );
     for y in 2..4 {
         for x in 2..5 {
@@ -153,4 +155,75 @@ fn a_black_bar_is_opaque_black() {
         let [r, g, b] = secret(5, 4);
         [r, g, b, 255]
     });
+}
+
+/// The rows `top..bottom` of `image` as a pixmap of their own: a band.
+fn band(image: &Pixmap, top: u32, bottom: u32) -> Pixmap {
+    let stride = (image.width() * 4) as usize;
+    let data = image.data()[top as usize * stride..bottom as usize * stride].to_vec();
+    let size = tiny_skia::IntSize::from_wh(image.width(), bottom - top).expect("size");
+    Pixmap::from_vec(data, size).expect("band")
+}
+
+#[test]
+fn a_band_with_its_margin_redacts_its_rows_as_the_whole_image_does() {
+    // RB-099-24: a region crossing the band's edges, blocks not starting at the band's top.
+    let region = Region {
+        left: 3,
+        top: 5,
+        right: 37,
+        bottom: 58,
+    };
+    for (mode, block) in [
+        (RedactMode::Pixelate, 8),
+        (RedactMode::Pixelate, 13),
+        (RedactMode::Blur, 8),
+        (RedactMode::Blur, 12),
+        (RedactMode::Black, 8),
+    ] {
+        let original = pixmap(40, 64, secret);
+        let mut whole = original.clone();
+        apply(&mut whole, mode, region, block, 0);
+        let margin = margin(mode, block);
+        for (from, to) in [(0u32, 9u32), (9, 22), (22, 23), (23, 50), (50, 64)] {
+            let top = from.saturating_sub(margin);
+            let bottom = (to + margin).min(64);
+            let mut part = band(&original, top, bottom);
+            apply(&mut part, mode, region, block, top);
+            for y in from..to {
+                for x in 0..40 {
+                    assert_eq!(
+                        get(&part, x, y - top),
+                        get(&whole, x, y),
+                        "{mode:?} block {block}: pixel {x},{y} of band {from}..{to}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn apply(pixmap: &mut Pixmap, mode: RedactMode, region: Region, block: u32, top: u32) {
+    match mode {
+        RedactMode::Pixelate => pixelate(pixmap, region, block, top),
+        RedactMode::Blur => blur(pixmap, region, block, top),
+        RedactMode::Black => black(pixmap, region, top),
+    }
+}
+
+#[test]
+fn a_band_outside_the_region_is_left_alone() {
+    let original = pixmap(10, 10, secret);
+    let mut part = original.clone();
+    let region = Region {
+        left: 0,
+        top: 0,
+        right: 10,
+        bottom: 4,
+    };
+    // The pixmap holds the image's rows 20..30: nothing of the region.
+    blur(&mut part, region, 8, 20);
+    pixelate(&mut part, region, 8, 20);
+    black(&mut part, region, 20);
+    assert_eq!(part.data(), original.data());
 }

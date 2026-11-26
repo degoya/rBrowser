@@ -1,0 +1,56 @@
+# What the Windows package's folder holds (RB-099-01), checked by rb_check_stage
+# (scripts/lib/package-stage.sh) before scripts/package-windows.sh writes the ZIP and held by
+# scripts/tests/windows-paket.sh. One path per line, relative to the folder, `/` between its
+# parts; a trailing `/` is a folder. Every entry is required unless it starts with `? `. A file
+# or folder at the top of the package that no line names stops the package: a new CEF file, a
+# new program, a new notice is added here on purpose, never shipped by accident.
+
+# The app in the sandboxed layout of ADR 0001: CEF's bootstrap as rbrowser.exe, the DLL beside it.
+rbrowser.exe
+rbrowser.dll
+# A test package (--profile release-test) keeps the line tables beside the DLL.
+? rbrowser.pdb
+rbrowser.com
+rbrowser-updater.exe
+rbrowser-wsl
+crash_reporter.cfg
+
+# The CEF runtime (scripts/lib/cef.sh, rb_stage_app).
+libcef.dll
+chrome_elf.dll
+d3dcompiler_47.dll
+dxcompiler.dll
+vk_swiftshader.dll
+vk_swiftshader_icd.json
+vulkan-1.dll
+icudtl.dat
+resources.pak
+chrome_100_percent.pak
+chrome_200_percent.pak
+v8_context_snapshot.bin
+# Only the locales of RB_PACKAGE_LOCALES (rb_trim_locales).
+locales/en-US.pak
+
+# The shell, built from ui/.
+ui/index.html
+
+# The pinned Node runtime and the sidecar with its production dependencies.
+node/node.exe
+node/LICENSE
+sidecar/package.json
+sidecar/dist/main.js
+sidecar/dist/flow-worker.js
+sidecar/node_modules/playwright-core/package.json
+sidecar/node_modules/playwright-core/LICENSE
+
+# The bundled plugins (scripts/build-plugins.sh); the packages themselves are passed to the check.
+? plugins/
+
+# The notices and the documents.
+README.txt
+LICENSE
+NOTICE
+THIRD-PARTY-LICENSES.txt
+licenses/chromium-credits.html
+CHANGELOG.md
+VERSION.txt

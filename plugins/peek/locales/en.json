@@ -12,7 +12,7 @@
         "enabled": {
           "label": "Peek inspector",
           "description": "Holding the modifier over an element shows its size, colours and contrast, font, box model, role and name.",
-          "help": "Holding the modifier key over an element shows its size, colours and contrast, font, box model, role and name in a small panel. Off switches the inspector off."
+          "help": "Holding the modifier key over an element shows its size, colours and contrast, font, box model, role and name in a small panel. When off, it switches the inspector off."
         },
         "modifier": {
           "label": "Modifier key",
@@ -22,12 +22,12 @@
         "syncHighlight": {
           "label": "Outline in every view",
           "description": "The inspected element is outlined in the other views too, where it exists.",
-          "help": "The inspected element is outlined in the other views too, where it exists, so you compare it across breakpoints. Off outlines it in one view."
+          "help": "The inspected element is outlined in the other views too, where it exists, so you compare it across breakpoints. When off, it outlines it in one view."
         },
         "showBoxModel": {
           "label": "Show the box model",
           "description": "Draws the element's margin, border, padding and content in colour.",
-          "help": "Draws the element's margin, border, padding and content in colour while peeking. Off shows the numbers only."
+          "help": "Draws the element's margin, border, padding and content in colour while peeking. When off, it shows the numbers only."
         },
         "option": {
           "modifier": {

@@ -31,6 +31,8 @@ trap cleanup EXIT
 
 # shellcheck source=lib/expect.sh
 source "$ROOT/scripts/tests/lib/expect.sh"
+# shellcheck source=scripts/lib/package.sh
+source "$ROOT/scripts/lib/package.sh"
 
 SIGN="$ROOT/scripts/sign-windows.sh"
 FIXTURES="$ROOT/scripts/tests/lib/sign_fixtures.py"
@@ -260,8 +262,11 @@ expect_output "and named" "is no package folder"
 
 rm -rf "$SCRATCH/pkg"
 make_package "$PKG"
-(cd "$SCRATCH/pkg" && zip -qry "$SCRATCH/pkg/rbrowser-1.2.3-windows-x64.zip" rbrowser-1.2.3-windows-x64)
+# Packed as package-windows.sh packs it: every member dated to the commit, SHA256SUMS beside it.
+(cd "$SCRATCH/pkg" && SOURCE_DATE_EPOCH=1577934245 rb_package_zip "$SCRATCH/pkg" rbrowser-1.2.3-windows-x64 \
+    "$SCRATCH/pkg/rbrowser-1.2.3-windows-x64.zip")
 rm -rf "$PKG"
+rb_package_sums "$SCRATCH/pkg" rbrowser-1.2.3-windows-x64.zip
 signer -- "$SCRATCH/pkg/rbrowser-1.2.3-windows-x64.zip"
 expect_status "a package ZIP is signed and packed again" 0
 zip_member() { python3 -I -c 'import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))' "$SCRATCH/pkg/rbrowser-1.2.3-windows-x64.zip" "rbrowser-1.2.3-windows-x64/$1"; }
@@ -269,7 +274,11 @@ expect_true "rbrowser.exe in it is signed" 'zip_member rbrowser.exe | grep -q SI
 expect_true "libcef.dll too" 'zip_member libcef.dll | grep -q SIGNED'
 expect_true "node.exe is not" '! zip_member node/node.exe | grep -q SIGNED'
 expect "the other files are still there" "pak" "$(zip_member locales/en-US.pak)"
-expect_true "nothing but the ZIP is left beside it" '[[ "$(ls "$SCRATCH/pkg")" == rbrowser-1.2.3-windows-x64.zip ]]'
+expect_true "nothing but the ZIP and its sums is left beside it" '[[ "$(LC_ALL=C ls "$SCRATCH/pkg" | tr "\n" " ")" == "SHA256SUMS rbrowser-1.2.3-windows-x64.zip " ]]'
+# A ZIP date counts in steps of two seconds: 03:04:05 is stored as 03:04:04.
+expect "every member keeps the commit's date" "{(2020, 1, 2, 3, 4, 4)}" \
+    "$(python3 -I -c 'import sys, zipfile; print({i.date_time for i in zipfile.ZipFile(sys.argv[1]).infolist()})' "$SCRATCH/pkg/rbrowser-1.2.3-windows-x64.zip")"
+expect_true "SHA256SUMS names the signed ZIP" '(cd "$SCRATCH/pkg" && sha256sum -c --quiet SHA256SUMS)'
 
 # --- The other backends' arguments.
 pe "$SCRATCH/app.exe"

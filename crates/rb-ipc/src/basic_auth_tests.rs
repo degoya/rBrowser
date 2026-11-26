@@ -36,12 +36,32 @@ fn the_query_and_its_answer_have_their_wire_names() {
     );
     let answer = CoreToShell::BasicAuthStatus {
         environments: vec![EnvironmentAuthStatus::stored("staging", "ada")],
+        store: CredentialStoreKind::SecretService,
     };
     assert_eq!(
         serde_json::to_value(&answer).expect("json"),
         json!({
             "type": "basicAuthStatus",
-            "environments": [{ "environment": "staging", "stored": true, "user": "ada" }]
+            "environments": [{ "environment": "staging", "stored": true, "user": "ada" }],
+            "store": "secretService"
         })
     );
+}
+
+#[test]
+fn each_credential_store_has_its_wire_name() {
+    for (kind, name) in [
+        (
+            CredentialStoreKind::WindowsCredentialManager,
+            "windowsCredentialManager",
+        ),
+        (CredentialStoreKind::MacosKeychain, "macosKeychain"),
+        (CredentialStoreKind::SecretService, "secretService"),
+        (CredentialStoreKind::None, "none"),
+    ] {
+        assert_eq!(serde_json::to_value(kind).expect("json"), json!(name));
+        let back: CredentialStoreKind = serde_json::from_value(json!(name)).expect("reads back");
+        assert_eq!(back, kind);
+    }
+    assert!(serde_json::from_value::<CredentialStoreKind>(json!("plainFile")).is_err());
 }

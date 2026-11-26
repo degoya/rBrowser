@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { type Connected, type RunnerDeps, runFlow } from './runner.ts';
 import type { JobView, RunJob, ViewResult } from './result.ts';
@@ -55,6 +55,8 @@ function deps(options: { failConnect?: number; screenshotFails?: boolean; closeH
     reported: [] as ViewResult[],
     /** Per view: the action and the navigation timeout the runner set. */
     limits: new Map<number, { action?: number; navigation?: number }>(),
+    /** The `page.wait` calls that ran out: a step cut off by the timeout has ended (RB-099-18). */
+    waitsEnded: 0,
   };
   const runner: RunnerDeps = {
     expect: (value: unknown) => ({
@@ -84,7 +86,13 @@ function deps(options: { failConnect?: number; screenshotFails?: boolean; closeH
           }
           return Buffer.from('png');
         },
-        wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        wait: (ms) =>
+          new Promise((resolve) =>
+            setTimeout(() => {
+              state.waitsEnded += 1;
+              resolve();
+            }, ms),
+          ),
       };
       return {
         page,
@@ -205,7 +213,7 @@ describe('runFlow', () => {
   });
 
   it('lists the step that ran out of time as failed and names it in the error', async () => {
-    const { runner } = deps();
+    const { runner, state } = deps();
     const source = [
       'await step("Step 1: navigate", () => 1);',
       'await step("Step 3: click", () => page.wait(view.id === 1 ? 500 : 1));',
@@ -220,8 +228,8 @@ describe('runFlow', () => {
     expect(timedOut?.error?.step).toBe('Step 3: click');
     // RB-090-84: the recording's step id and the first line, so the panel parses nothing.
     expect(timedOut?.error).toMatchObject({ stepId: 3, summary: 'the flow ran longer than 100 ms' });
-    // The step that ends after the timeout adds nothing to the result.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // The step that ends after the timeout adds nothing to the result: once both waits ran out.
+    await vi.waitFor(() => expect(state.waitsEnded).toBe(2), { timeout: 5000 });
     expect(timedOut?.steps).toHaveLength(2);
     expect(results.get(2)?.steps.map((s) => s.status)).toEqual(['passed', 'passed']);
   });
@@ -245,7 +253,8 @@ describe('runFlow', () => {
     const { runner, state } = deps();
     const source = 'await step("Step 3: click", () => page.wait(300));\nawait step("Step 4: fill", () => 1);\n';
     await runFlow(job(source, { timeoutMs: 50, views: [view(1, 'Mobile')] }), runner);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Once the cut-off step's wait ran out, nothing more is reported.
+    await vi.waitFor(() => expect(state.waitsEnded).toBe(1), { timeout: 5000 });
     expect(state.steps.map(({ step }) => [step.name, step.state])).toEqual([
       ['Step 3: click', 'running'],
       ['Step 3: click', 'failed'],

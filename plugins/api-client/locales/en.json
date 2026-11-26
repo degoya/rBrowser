@@ -46,7 +46,7 @@
         "too_deep": "\"{folder}\" would put its subfolders deeper than {most, plural, one {# level} other {# levels}}, which the API client does not list; choose a folder higher up.",
         "too_many_captures": "At most {most} captured requests are taken at once; filter the list further.",
         "too_many_environments": "A benchmark compares at most {most, plural, one {# environment} other {# environments}}.",
-        "too_many_hosts": "The project allows the most hosts it can keep; remove one in Settings > Network > API client.",
+        "too_many_hosts": "The project allows the most hosts it can keep; remove one in Settings › Network › API client.",
         "too_many_names": "At most {most, plural, one {# secret is} other {# secrets are}} checked at once.",
         "unreadable": "The request's file does not read (line {line}: {reason}).",
         "unresolved": "These variables have no value: {names}. Set them in .rbrowser/api/http-client.env.json, in the private values or as RB_SECRET_ variables.",
@@ -62,7 +62,7 @@
       "name": "API client",
       "panel": {
         "allow": {
-          "description": "Only you can allow a host. The choice is kept for this project on this machine (config.local.json); take it back in Settings > Network > API client.",
+          "description": "Only you can allow a host. The choice is kept for this project on this machine (config.local.json); take it back in Settings › Network › API client.",
           "no": "Not now",
           "title": "Allow {host} for this project?",
           "yes": "Allow and send",
@@ -104,11 +104,11 @@
           "compareWith": "Compare with an environment",
           "comparison": "{second} against {first}: median {median}, p95 {p95}.",
           "errors": "{count} without an answer",
-          "hint": "Sends this saved request a few times (Settings > Network > API client) and measures each phase - no load test.",
+          "hint": "Sends this saved request a few times (Settings › Network › API client) and measures each phase - no load test.",
           "noCompare": "One environment only",
           "phase": "Phase",
           "run": "Benchmark",
-          "running": "Benchmarking...",
+          "running": "Benchmarking…",
           "savedOnly": "Save the request first: a benchmark sends a saved request.",
           "sent": "{count, plural, one {# send} other {# sends}}, {concurrency} at once",
           "stats": {
@@ -279,7 +279,7 @@
             "thunderClient": "Thunder Client"
           },
           "kept": "Already set in http-client.env.json, kept as they were: {names}",
-          "more": "... and {count, plural, one {# more request} other {# more requests}}",
+          "more": "… and {count, plural, one {# more request} other {# more requests}}",
           "notes": {
             "auth": "{at}: the auth {detail} is not sent by rBrowser; the request was taken without it.",
             "body": "{at}: the body ({detail}) was not taken.",
@@ -340,7 +340,7 @@
           "redirectsHint": "Up to ten, each to a host the project allows.",
           "timeout": "Timeout (ms)",
           "tls": "Check the TLS certificate",
-          "tlsHint": "Off accepts any certificate - for a local server with its own."
+          "tlsHint": "When off, it accepts any certificate - for a local server with its own."
         },
         "problem": "Does not read: {problem}",
         "refresh": "Read the collections again",
@@ -372,7 +372,7 @@
           "close": "Close the report",
           "cut": "Only the first {count, plural, one {# request} other {# requests}} ran.",
           "findings": "The failures are in the findings panel too.",
-          "running": "Running the collections...",
+          "running": "Running the collections…",
           "start": "Run every saved request with its checks",
           "tally": "{requests, plural, one {# request} other {# requests}}: {passed} passed, {failed} failed, {errors} without an answer",
           "title": "Last run"
@@ -393,7 +393,7 @@
           "value": "Value of {name}"
         },
         "send": "Send",
-        "sending": "Sending...",
+        "sending": "Sending…",
         "side": {
           "export": "Export",
           "import": "Import",
@@ -461,7 +461,7 @@
           "summary": "{passed} of {count, plural, one {# check} other {# checks}} passed",
           "title": "Checks"
         },
-        "waiting": "Waiting for the API client's running call..."
+        "waiting": "Waiting for the API client's running call…"
       },
       "panels": {
         "api-client": "API client"

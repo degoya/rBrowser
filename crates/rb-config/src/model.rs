@@ -142,7 +142,7 @@ pub struct Environment {
 /// `layouts`: the named presets and the one used at start.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Layouts {
-    /// The preset at start; the top-level `layout` when absent.
+    /// The preset at start; the top-level `layout` in the canvas when absent (RB-099-26).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
     /// The presets in config order (`leader L 1...9` follows it).
@@ -150,35 +150,16 @@ pub struct Layouts {
     pub presets: IndexMap<String, LayoutPreset>,
 }
 
-/// A named layout preset.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct LayoutPreset {
-    /// Grid, focus, horizontal, split or canvas.
-    #[serde(default)]
-    pub mode: LayoutMode,
-    /// The grid of this preset; the top-level `layout` when absent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub layout: Option<Layout>,
-    /// Focus mode: the breakpoint shown first; the first breakpoint when absent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub focus: Option<String>,
-    /// The fields of the horizontal, split and canvas modes (RB-080-04).
-    #[serde(flatten)]
-    pub modes: crate::ModeFields,
-    /// The breakpoints whose views are not open while this preset is shown (RB-080-41):
-    /// choosing the preset writes it as `layout.hidden`; absent, the preset leaves the
-    /// selection as it is. `[]` opens every view.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hidden: Option<Vec<String>>,
-}
+pub use crate::layout_preset::LayoutPreset;
 
 /// The layout modes: grid and focus (RB-010-12), horizontal, split and canvas (RB-080-04).
+/// Canvas is the built-in one (owner, 2026-11-26, RB-099-26): a project without a start preset
+/// shows it, and so does a preset without `mode` unless it has a grid of its own
+/// ([`LayoutPreset`]); a config that names a mode keeps it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum LayoutMode {
     /// Every cell of the grid.
-    #[default]
     Grid,
     /// One large view with a quick switcher.
     Focus,
@@ -187,6 +168,7 @@ pub enum LayoutMode {
     /// Two sides with a movable divider (RB-080-04).
     Split,
     /// Views placed freely, with snapping and a minimap (RB-080-04).
+    #[default]
     Canvas,
 }
 

@@ -112,7 +112,7 @@ fn fresh_settings_never_start_the_portal_and_mcp_cannot_either() {
     let toggled = run(&core, TOGGLE, &Value::Null);
     assert!(toggled.is_err());
     let failure = mcp::host_tool(&core, "portal_start", &json!({})).expect_err("refused");
-    assert_eq!(failure.code, "unknown_tool");
+    assert_eq!(failure.code, "tool.unknown");
     assert!(app::current().is_none(), "no port was opened");
     let state = app::panel_state(&core, true);
     assert!(!state.enabled && !state.running && state.address.is_none());
@@ -232,7 +232,7 @@ fn mcp_cannot_start_an_allowed_portal() {
     let (_runtime, core, _ui) = core(user);
     assert!(!mcp::TOOLS.contains(&"portal_start"));
     let failure = mcp::host_tool(&core, "portal_start", &json!({})).expect_err("refused");
-    assert_eq!(failure.code, "unknown_tool");
+    assert_eq!(failure.code, "tool.unknown");
     assert!(
         app::current().is_none(),
         "a LAN listener is a person's decision"

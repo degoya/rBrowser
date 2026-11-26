@@ -22,8 +22,10 @@ pub const DEFAULT_MAX_CONCURRENT: u32 = 1;
 /// Hard ceilings for what a manifest may ask for itself. The limits are the plugin author's
 /// request, so a manifest asking for 8 GiB or a day of compute is refused, not granted.
 pub const MAX_MEMORY_BYTES: u64 = 512 * 1024 * 1024;
-/// The most fuel a manifest may declare: twenty times [`DEFAULT_FUEL`].
-pub const MAX_FUEL: u64 = 20 * DEFAULT_FUEL;
+/// The most fuel a manifest may declare: a hundred times [`DEFAULT_FUEL`] - the screenshot
+/// editor renders a 256-megapixel capture in one call (RB-099-24); the timeout below bounds the
+/// wall clock still.
+pub const MAX_FUEL: u64 = 100 * DEFAULT_FUEL;
 /// The longest compute time of one call a manifest may declare (30 minutes).
 pub const MAX_TIMEOUT_MILLISECONDS: u64 = 30 * 60 * 1000;
 /// The largest HTTP answer a manifest may let its plugin read (64 MiB).

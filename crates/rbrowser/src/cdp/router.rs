@@ -150,11 +150,13 @@ impl CdpRouter {
     /// Handles one message read from the connection: a reply completes its call, an event goes
     /// to its taps and the subscribers ([`TAP_ONLY`] methods not to the shared broadcast).
     /// Messages that are neither are dropped.
-    pub fn on_message(&self, message: Value) {
+    pub fn on_message(&self, mut message: Value) {
         if let Some(id) = message.get("id").and_then(Value::as_u64) {
             let Some(pending) = lock(&self.pending).remove(&id) else {
                 return;
             };
+            // The result is taken, not copied (RB-099-19): the message is ours, and a large
+            // answer (a DOM tree, a screenshot) is not cloned on the reader's thread.
             let reply = match message.get("error") {
                 Some(error) => Err(EngineError::Cdp {
                     method: pending.method,
@@ -165,7 +167,7 @@ impl CdpRouter {
                         .unwrap_or_default()
                         .to_owned(),
                 }),
-                None => Ok(message.get("result").cloned().unwrap_or(Value::Null)),
+                None => Ok(message.get_mut("result").map_or(Value::Null, Value::take)),
             };
             // The caller may have timed out and gone; nothing to do then.
             let _ = pending.reply.send(reply);

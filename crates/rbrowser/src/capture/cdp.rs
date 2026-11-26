@@ -6,17 +6,21 @@
 //!
 //! - `viewport`: the visual viewport at the breakpoint's size, `clip` from
 //!   `Page.getLayoutMetrics` (a clip renders at the emulated DPR, not at the cell's scale).
-//! - `fullPage`: the viewport height raised to `cssContentSize.height` (at most
-//!   [`MAX_DEVICE_PX`] device pixels), `captureBeyondViewport`.
+//! - `fullPage`: the page as [`super::full_page::plan`] cuts it - one shot of the page's
+//!   height, or for a page beyond one GPU texture ([`MAX_DEVICE_PX`] device pixels) sections at
+//!   their offsets, `captureBeyondViewport`, stacked into one PNG by `rb_visual::stitch` off the
+//!   runtime's threads (RB-099-11). Before it, at the breakpoint's height, the lazy-loading
+//!   pre-pass walks the page so its lazy images load ([`super::lazy`], RB-099-28); the page is
+//!   measured after it, and scrolled back to where it was once the metrics are the host's again.
 //! - `element`: `DOM.querySelector` (or a picked node), `DOM.getBoxModel`'s border box plus
 //!   the padding, moved into the page by the scroll offset, `captureBeyondViewport`, so an
 //!   element out of the viewport is captured as well.
 //!
 //! A windowless render view (RB-090-83) paints only its own rectangle: with the page's height in
 //! the emulation alone its full-page image repeated the top viewport down the page (RB-090-88).
-//! Its [`Surface`] grows the view to the page's height after the override and before the shot,
-//! and gives it its own size back after the restore ([`capture_on`]); a grid view is a window
-//! and needs none ([`FixedSurface`]).
+//! Its [`Surface`] grows the view to the plan's viewport (the page's height, at most one
+//! section's) after the override and before the shots, and gives it its own size back after the
+//! restore ([`capture_on`]); a grid view is a window and needs none ([`FixedSurface`]).
 
 use std::sync::Arc;
 
@@ -25,10 +29,11 @@ use base64::Engine as _;
 use rb_engine::EngineError;
 use serde_json::{Value, json};
 
+use super::full_page::{FullPagePlan, device_ratio, plan};
+use super::lazy::{self, Prepass, put_back};
 use crate::cdp::CdpRouter;
 
-/// The longest side of a capture in device pixels (a GPU texture); a taller page is cut.
-pub const MAX_DEVICE_PX: f64 = 16_384.0;
+pub use super::full_page::MAX_DEVICE_PX;
 /// The longest selector taken.
 pub const MAX_SELECTOR_LEN: usize = 1024;
 
@@ -120,17 +125,6 @@ pub fn element_clip(quad: &[f64], padding: u32, page: (f64, f64), scale: f64) ->
     })
 }
 
-/// The CSS height of a full-page capture: the page's, at least the viewport's, at most
-/// [`MAX_DEVICE_PX`] device pixels - and at most that many CSS px at a pixel ratio below 1.
-pub fn full_page_height(content: f64, viewport: f64, dpr: f64, scale: f64) -> f64 {
-    // A ratio below 1 (or none) counts as 1: the cap in CSS px is never above the device one.
-    let device = dpr.max(1.0) * scale.max(f64::EPSILON);
-    content
-        .max(viewport)
-        .ceil()
-        .min((MAX_DEVICE_PX / device).floor())
-}
-
 /// `params` with another `height`.
 fn with_height(params: &Value, height: f64) -> Value {
     let mut params = params.clone();
@@ -150,7 +144,8 @@ fn number(value: &Value, pointer: &str) -> Result<f64, EngineError> {
 /// What a full-page capture does to the view's painted area besides the emulation.
 #[async_trait]
 pub trait Surface: Send + Sync {
-    /// Grows the view to `height` CSS px and waits (bounded) for its frame at that size.
+    /// Grows the view to `height` CSS px (the plan's viewport, at most one section) and waits
+    /// (bounded) for its frame at that size.
     ///
     /// # Errors
     ///
@@ -185,9 +180,9 @@ pub async fn capture(
     capture_on(cdp, target, shot, scale, restore, &FixedSurface).await
 }
 
-/// [`capture`] of a view whose painted area is `surface`: a full page grows it to the page's
-/// height after the override and before the shot, and shrinks it after the restore - also when
-/// the capture failed.
+/// [`capture`] of a view whose painted area is `surface`: a full page grows it to the plan's
+/// viewport after the override and before the shots, and shrinks it after the restore - also
+/// when the capture failed. Its lazy-loading pre-pass runs in rBrowser's capture world.
 pub async fn capture_on(
     cdp: &Arc<CdpRouter>,
     target: &CaptureTarget,
@@ -195,6 +190,21 @@ pub async fn capture_on(
     scale: f64,
     restore: &(dyn Fn() -> Option<Value> + Send + Sync),
     surface: &dyn Surface,
+) -> Result<Vec<u8>, EngineError> {
+    capture_in(cdp, target, shot, scale, restore, surface, None).await
+}
+
+/// [`capture_on`] whose full-page pre-pass (RB-099-28) runs in `agent`, the sync agent's world
+/// of the view (its session and context), so the agent captures none of its scrolls; `None`:
+/// rBrowser's capture world (a view without an agent has nothing to echo).
+pub async fn capture_in(
+    cdp: &Arc<CdpRouter>,
+    target: &CaptureTarget,
+    shot: &Shot,
+    scale: f64,
+    restore: &(dyn Fn() -> Option<Value> + Send + Sync),
+    surface: &dyn Surface,
+    agent: Option<(String, i64)>,
 ) -> Result<Vec<u8>, EngineError> {
     let session = Some(target.session.as_str());
     let current = number(&target.metrics, "/height")?;
@@ -219,13 +229,20 @@ pub async fn capture_on(
             .await
             .map(|_| ());
     }
+    // The pre-pass walks the page at the breakpoint's height, before the page is measured.
+    let (page, walked) = match (&result, shot) {
+        (Ok(()), Shot::FullPage) => lazy::run(cdp, &target.session, agent).await,
+        _ => (None, Prepass::default()),
+    };
     let result = match result {
         Ok(()) => {
             let changed = Changed {
                 overridden: &mut overridden,
                 grown: &mut grown,
             };
-            shoot(cdp, target, shot, scale, nominal_height, changed, surface).await
+            shoot(cdp, target, shot, scale, nominal_height, changed, surface)
+                .await
+                .map(|png| walked.mark(png))
         }
         Err(error) => Err(error),
     };
@@ -240,6 +257,9 @@ pub async fn capture_on(
     };
     if grown {
         surface.restore().await;
+    }
+    if let (Some(page), Some(start)) = (&page, walked.start) {
+        put_back(page, start).await;
     }
     restored.and(result)
 }
@@ -277,25 +297,23 @@ async fn shoot(
         }
         Shot::FullPage => {
             let content = number(&metrics, "/cssContentSize/height")?;
-            let height = full_page_height(content, nominal_height, target.dpr, scale);
+            let ratio = device_ratio(&metrics, target.dpr);
+            let plan = plan(content, nominal_height, width, ratio, scale).ok_or_else(|| {
+                EngineError::Invalid(format!(
+                    "the view is too wide for a full-page shot at a pixel ratio of {ratio}"
+                ))
+            })?;
             *changed.overridden = true;
             cdp.call(
                 "Emulation.setDeviceMetricsOverride",
-                with_height(&target.metrics, height),
+                with_height(&target.metrics, plan.viewport),
                 session,
             )
             .await?;
-            // The frame the shot copies is painted at the view's size: the page's height too.
+            // The frame a shot copies is painted at the view's size: the viewport's height too.
             *changed.grown = true;
-            surface.fit(height).await?;
-            let clip = Clip {
-                x: 0.0,
-                y: 0.0,
-                width,
-                height,
-                scale,
-            };
-            (clip, true)
+            surface.fit(plan.viewport).await?;
+            return full_page(cdp, session, &plan, width, scale).await;
         }
         Shot::Element { selector, padding } => {
             let node = query(cdp, session, selector).await?;
@@ -318,6 +336,74 @@ async fn shoot(
             (element(&metrics, &model, *padding, scale)?, true)
         }
     };
+    screenshot(cdp, session, clip, beyond).await
+}
+
+/// The sections of `plan`, one shot each at its offset, as one PNG: a single whole section as
+/// Chromium gave it, else stacked (and a cut recorded) on a blocking thread.
+async fn full_page(
+    cdp: &Arc<CdpRouter>,
+    session: Option<&str>,
+    plan: &FullPagePlan,
+    width: f64,
+    scale: f64,
+) -> Result<Vec<u8>, EngineError> {
+    let mut shots = Vec::with_capacity(plan.sections.len());
+    for section in &plan.sections {
+        let clip = Clip {
+            x: 0.0,
+            y: section.y,
+            width,
+            height: section.height,
+            scale,
+        };
+        shots.push(screenshot(cdp, session, clip, true).await?);
+    }
+    if shots.len() == 1 && !plan.truncated {
+        return shots
+            .pop()
+            .ok_or_else(|| EngineError::Invalid("no section was captured".to_owned()));
+    }
+    if plan.truncated {
+        tracing::warn!(
+            page = plan.page,
+            captured = plan.height,
+            "a full page is taller than an image may be; the screenshot is cut"
+        );
+    }
+    let rows: Vec<u32> = plan.sections.iter().map(|section| section.rows).collect();
+    let truncated = plan.truncated.then(|| rb_visual::Truncated {
+        page_height: css_px(plan.page),
+        captured_height: css_px(plan.height),
+    });
+    tokio::task::spawn_blocking(move || {
+        let sections: Vec<rb_visual::stitch::Section<'_>> = shots
+            .iter()
+            .zip(rows)
+            .map(|(png, rows)| rb_visual::stitch::Section {
+                png: png.as_slice(),
+                rows,
+            })
+            .collect();
+        rb_visual::stitch(&sections, truncated)
+    })
+    .await
+    .map_err(|error| EngineError::Invalid(format!("stitching the sections: {error}")))?
+    .map_err(|error| EngineError::Invalid(format!("stitching the sections: {error}")))
+}
+
+/// A whole CSS height as `u32`.
+fn css_px(height: f64) -> u32 {
+    height.clamp(0.0, f64::from(u32::MAX)) as u32
+}
+
+/// One `Page.captureScreenshot` of `clip` as PNG bytes.
+async fn screenshot(
+    cdp: &Arc<CdpRouter>,
+    session: Option<&str>,
+    clip: Clip,
+    beyond: bool,
+) -> Result<Vec<u8>, EngineError> {
     let answer = cdp
         .call(
             "Page.captureScreenshot",

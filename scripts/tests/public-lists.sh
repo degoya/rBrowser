@@ -41,7 +41,7 @@ expect "no entry is absolute or climbs out" "" "$(grep -E '^/|\.\.' <<< "$entrie
 expect "no entry is listed twice" "" "$(sort <<< "$entries" | uniq -d)"
 # What the exports read must stay public, or a public export could not run at all.
 for script in export-public.sh export-public-wiki.sh lib/public.sh lib/public_wiki.py \
-    lib/public-links.py lib/public-names.py public-names-allow.txt; do
+    lib/public-links.py lib/public-names.py lib/wiki_text.py public-names-allow.txt; do
     expect_true "scripts/$script exists and stays public" \
         '[[ -f "$ROOT/scripts/$script" ]] && ! listed "scripts/$script"'
 done

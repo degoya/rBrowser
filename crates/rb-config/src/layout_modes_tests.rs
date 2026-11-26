@@ -337,3 +337,36 @@ fn the_selection_keeps_a_cell_of_the_grid_in_effect_open() {
         ]
     ));
 }
+
+/// RB-099-26 (owner, 2026-11-26): canvas is the built-in layout mode - a preset that names no
+/// mode is a canvas; a config that names one keeps it.
+#[test]
+fn a_preset_without_a_mode_is_a_canvas_and_a_named_mode_stays() {
+    assert_eq!(LayoutMode::default(), LayoutMode::Canvas);
+    let config: ProjectConfig = serde_json::from_value(json!({
+        "version": 1,
+        "layouts": { "presets": {
+            "free": {},
+            "cells": { "mode": "grid" },
+            "phone": { "mode": "focus" }
+        } }
+    }))
+    .expect("parses");
+    let presets = &config.layouts.presets;
+    assert_eq!(presets["free"].mode, LayoutMode::Canvas);
+    assert_eq!(presets["cells"].mode, LayoutMode::Grid);
+    assert_eq!(presets["phone"].mode, LayoutMode::Focus);
+    // Written back, every preset names its mode: a later default changes none of them.
+    let written = serde_json::to_value(&config).expect("serializes");
+    assert_eq!(written["layouts"]["presets"]["free"]["mode"], "canvas");
+    assert_eq!(written["layouts"]["presets"]["cells"]["mode"], "grid");
+}
+
+/// The schema says what a preset without `mode` is (RB-099-26).
+#[test]
+fn the_schema_names_canvas_as_the_default_mode() {
+    let schema = Value::from(crate::project_schema());
+    let mode = &schema["properties"]["layouts"]["properties"]["presets"]["additionalProperties"]["properties"]
+        ["mode"];
+    assert_eq!(mode["default"], "canvas", "{mode}");
+}

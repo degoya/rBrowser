@@ -7,10 +7,13 @@
 //! the old size is never saved as the full page (code review, wave 090-w23). The restore gives
 //! the view its breakpoint's size back without waiting.
 //!
-//! The grown view is bounded (security review, wave 090-w23): at most [`MAX_DEVICE_PX`] DIP tall
-//! at any pixel ratio, and at most [`MAX_SHOT_PIXELS`] - width x height x ratio squared, a ratio
-//! below 1 counted as 1 - per shot. A page beyond either fails its shot with the reason, in
-//! `run.json` like any failed shot, before the view grows.
+//! The view grows to the full-page plan's viewport (RB-099-11): the page's height when it fits one
+//! section, else one section's - a longer page is taken in sections at their offsets
+//! (`capture::full_page`), never by a view taller than one texture. It stays bounded on its own
+//! too (security review, wave 090-w23): at most [`MAX_DEVICE_PX`] DIP tall at any pixel ratio,
+//! and at most [`MAX_SHOT_PIXELS`] - width x height x ratio squared, a ratio below 1 counted as
+//! 1 - per shot. A height beyond either fails its shot with the reason, in `run.json` like any
+//! failed shot, before the view grows.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,12 +22,11 @@ use async_trait::async_trait;
 use rb_engine::EngineError;
 
 use super::render_views::RenderViews;
-use crate::capture::cdp::{MAX_DEVICE_PX, Surface};
+use crate::capture::cdp::Surface;
+pub use crate::capture::full_page::{MAX_DEVICE_PX, MAX_SHOT_PIXELS};
 
 /// The longest wait for a render view's frame at a new size.
 pub const FRAME_WAIT: Duration = Duration::from_secs(2);
-/// The most pixels of one full-page shot at its pixel ratio: 64 megapixels (3840 x 16384 at 1).
-pub const MAX_SHOT_PIXELS: f64 = 64.0 * 1024.0 * 1024.0;
 
 /// Whether a view of `width` x `height` DIP at pixel ratio `dpr` (below 1 or none: 1) stays
 /// within [`MAX_SHOT_PIXELS`].
@@ -74,7 +76,7 @@ impl RenderSurface<'_> {
     }
 }
 
-/// A height in CSS px as whole DIP, at least the view's own (`full_page_height` is a whole
+/// A height in CSS px as whole DIP, at least the view's own (the plan's viewport is a whole
 /// number below `MAX_DEVICE_PX` already).
 fn whole(height: f64, own: u32) -> u32 {
     if height.is_finite() && height > 0.0 {

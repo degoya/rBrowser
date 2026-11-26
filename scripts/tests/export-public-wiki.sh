@@ -5,8 +5,9 @@
 # leaking one - a link to the page, a link to a heading inside the section, a marker that does
 # not pair up - refuses the export before anything reaches the clone, as do a private name, a
 # link into docs/ of the repository and two pages with one base name. Nothing is pushed without
-# --push; a pre-release is refused; --out writes the converted tree, reports every finding and
-# the warnings (job ids, the internal test) and touches no clone.
+# --push; a pre-release is refused; a job id left after the conversion is refused with its page
+# and line (RB-099-22); --out writes the converted tree, reports every finding and the warning
+# (the internal test) and touches no clone.
 #
 # Local only: the "public" wiki is a bare repository in the scratch directory, gitleaks a stub,
 # the private names a made-up list beside a copy of the scripts.
@@ -27,6 +28,7 @@ mkdir -p "$TOOLS/scripts/lib"
 cp "$ROOT/scripts/export-public-wiki.sh" "$TOOLS/scripts/"
 cp "$ROOT/scripts/lib/public.sh" "$ROOT/scripts/lib/public_wiki.py" \
     "$ROOT/scripts/lib/public-links.py" "$ROOT/scripts/lib/public-names.py" \
+    "$ROOT/scripts/lib/wiki_text.py" \
     "$TOOLS/scripts/lib/"
 HOST="private.example""-host.test"
 printf '%s\n' 'docs/' > "$TOOLS/scripts/public-exclude.txt"
@@ -168,6 +170,22 @@ printf '# Downloads for developers\n' > "$RB_WIKI/develop/downloads.md"
 refused "two pages with one base name" "two pages share the base name 'downloads'"
 rm -rf "$RB_WIKI/develop"
 
+printf '\nPending on RB-040-07.\n' >> "$RB_WIKI/home.md"
+refused "a job id left in prose" "Home.md:5: names the job id RB-040-07"
+
+printf '\nThe helper (see RB-030-04 for it) is not packaged.\n' >> "$RB_WIKI/home.md"
+refused "a job id the cleanup leaves inside a parenthesis" "Home.md:5: names the job id RB-030-04"
+
+# Code is kept as written and not checked: a fenced block and an inline span.
+printf '\nRun `rb job RB-030-05` and (`RB-030-06`).\n\n```\nkept (RB-030-07)\n```\n' >> "$RB_WIKI/home.md"
+commit_wiki
+export_wiki
+expect_status "job ids in code are no finding" 0
+expect_true "an inline code span keeps its job id" \
+    'git -C "$RB_PUBLIC_WIKI_DIR" show HEAD:Home.md | grep -qF "Run \`rb job RB-030-05\` and (\`RB-030-06\`)."'
+expect_true "and so does a fenced block" 'git -C "$RB_PUBLIC_WIKI_DIR" show HEAD:Home.md | grep -qxF "kept (RB-030-07)"'
+write_wiki
+
 commit_wiki
 before="$(git -C "$RB_PUBLIC_WIKI_DIR" rev-parse HEAD)"
 run_status "$TOOLS/scripts/export-public-wiki.sh" 1.1.0-beta.1
@@ -188,7 +206,7 @@ write_wiki
 commit_wiki
 before="$(git -C "$RB_PUBLIC_WIKI_DIR" rev-parse HEAD)"
 run_status "$TOOLS/scripts/export-public-wiki.sh" 1.0.0 --out "$SCRATCH/dry"
-expect_status "--out converts into a new directory" 0
+expect_status "--out converts into a new directory, and fails on the job ids left" 1
 expect "the converted pages" "Home.md _Sidebar.md using/downloads.md " \
     "$(cd "$SCRATCH/dry" && find . -type f | sed 's#^\./##' | sort | tr '\n' ' ')"
 expect_true "a parenthesis of job ids goes, with the internal test's" \
@@ -197,7 +215,9 @@ expect_true "a job id inside another parenthesis goes" 'grep -qF "testing (0.4).
 expect_true "code keeps its job ids" 'grep -qxF "kept (RB-030-05)" "$SCRATCH/dry/Home.md"'
 expect_true "a reference definition loses its folder" 'grep -qxF "[q]: downloads#queue \"Queue\"" "$SCRATCH/dry/Home.md"'
 expect_true "and so does an HTML link" 'grep -qF "<a href=\"downloads#queue\">" "$SCRATCH/dry/Home.md"'
-expect_output "a job id left in prose is a warning" "2 line(s) of the handbook name job ids"
+expect_output "a job id left in prose is refused" "Home.md:11: names the job id RB-040-07"
+expect_true "one in code is not" '! grep -qF "Home.md:14:" <<< "$output"'
+expect_output "by the job id check" "refused by: job_ids"
 expect_output "and so is the internal test" "1 line(s) of the handbook name the internal test"
 expect "the clone is untouched by it" "$before" "$(git -C "$RB_PUBLIC_WIKI_DIR" rev-parse HEAD)"
 run_status "$TOOLS/scripts/export-public-wiki.sh" 1.0.0 --out "$SCRATCH/dry"

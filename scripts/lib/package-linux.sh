@@ -56,7 +56,8 @@ rb_check_linux_stage() {
     local stage="$1" path missing=()
     for path in rbrowser libcef.so chrome-sandbox icudtl.dat v8_context_snapshot.bin \
         locales/en-US.pak ui/index.html node/bin/node node/LICENSE sidecar/dist/main.js \
-        NOTICE LICENSE VERSION.txt licenses/chromium-credits.html crash_reporter.cfg; do
+        NOTICE THIRD-PARTY-LICENSES.txt LICENSE VERSION.txt licenses/chromium-credits.html \
+        crash_reporter.cfg; do
         [[ -e "$stage/$path" ]] || missing+=("$path")
     done
     if ((${#missing[@]})); then

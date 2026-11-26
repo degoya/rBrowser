@@ -170,7 +170,7 @@
           "properties": {
             "visible": {
               "type": "boolean",
-              "description": "Show the breakpoint bar under every view (formerly the footer), in the breakpoint's\ncolour, in every layout and in a view's own window; the view gives it 18 px of its height.\nOff gives the height back.",
+              "description": "Show the breakpoint bar under every view, in the breakpoint's colour, in every layout and\nin a view's own window; the view gives it 18 px of its height. When off, the view keeps\nits full height.",
               "default": true,
               "x-category": "layout",
               "x-section": "grid",
@@ -1831,7 +1831,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Paths a viewer never loads, even below an allowed one: they answer 404 and never reach\nthe dev server (`/admin` also covers `/admin/users` and `/administrator`).",
+              "description": "Paths a viewer never loads, even below an allowed one: they answer 404 and never reach\nthe dev server (`/admin` also covers `/admin/users` and `/administrator`). A path that\nbegins with `.` or `__` is matched at every segment (`/.git` also covers\n`/sub/.git/config`, `/__open-in-editor` also `/app/__open-in-editor`).",
               "default": [
                 "/admin",
                 "/.env",
@@ -2271,7 +2271,7 @@
             },
             "restartOnCrash": {
               "type": "boolean",
-              "description": "An external window whose engine crashed starts again by itself with its last page, at\nmost three times in a row with a growing wait; a window you closed stays closed until\nyou open it again (RB-080-38; `autoRestart` before 0.8).",
+              "description": "An external window whose engine crashed starts again by itself with its last page, at\nmost three times in a row with a growing wait; a window you closed stays closed until\nyou open it again (RB-080-38).",
               "default": true,
               "x-category": "engines",
               "x-section": "external",

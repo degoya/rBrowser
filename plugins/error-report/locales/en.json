@@ -88,12 +88,12 @@
         },
         "sinceNavigation": {
           "description": "Only what a view reported since its page last loaded counts; off, everything still in the capture does.",
-          "help": "Only what a view reported since its page last loaded counts. Off includes everything still in the capture, across navigations.",
+          "help": "Only what a view reported since its page last loaded counts. When off, it includes everything still in the capture, across navigations.",
           "label": "Since the page loaded"
         },
         "thirdParty": {
           "description": "Errors of resources and scripts from other sites than the view's page count too.",
-          "help": "Errors of resources and scripts from other sites than the view's page count too. Off reports the site's own only.",
+          "help": "Errors of resources and scripts from other sites than the view's page count too. When off, it reports the site's own only.",
           "label": "Include third-party origins"
         },
         "option": {

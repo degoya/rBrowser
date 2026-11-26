@@ -6,7 +6,8 @@
 //! may ask for one of its plugin's panels ([`super::open`]). A command that opened no panel has
 //! no effect the host can see, so its end is named in the status bar, and a command of the
 //! Checks group also opens the findings, where its findings went (RB-080-18) - in the panels
-//! page (RB-080-69).
+//! page (RB-080-69), a dock folded to its rail opened, its end naming how many it found
+//! (RB-099-25).
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
@@ -28,6 +29,9 @@ use crate::shell::page_url;
 pub const ROUTE_PANELS: &str = "panels";
 /// The status message after a plugin command that opened no panel (`{command}`: its title).
 pub const COMMAND_DONE_KEY: &str = "plugins.notice.command_done";
+/// The status message after a plugin's check that reported its findings (`{command}`: its
+/// title, `{count}`: the findings of this run), RB-099-25.
+pub const CHECK_DONE_KEY: &str = "plugins.notice.check_done";
 /// The status message when a plugin's check starts (`{command}`: its title), RB-090-85.
 pub const COMMAND_STARTED_KEY: &str = "plugins.notice.command_started";
 
@@ -88,6 +92,12 @@ fn register_into<'a>(
         }
         for def in defs {
             let command = def.id.as_str().rsplit('.').next().unwrap_or_default();
+            // RB-099-10: a command of the views the grid shows, `$scope` when its call has none.
+            let scope = manifest
+                .commands
+                .iter()
+                .find(|entry| entry.id == command)
+                .and_then(|entry| entry.scope.clone());
             let handler = handler(
                 me.clone(),
                 Arc::downgrade(runtime),
@@ -95,6 +105,7 @@ fn register_into<'a>(
                 command,
                 &def.title_key,
                 def.group,
+                scope,
             );
             if let Err(error) = registry.register_plugin(def, handler) {
                 // Never silent: a command left out on a live replace keeps an old handler.
@@ -117,6 +128,7 @@ fn handler(
     command: &str,
     title_key: &str,
     group: Group,
+    scope: Option<rb_config::ViewScope>,
 ) -> Handler {
     let (plugin, command, title_key) =
         (plugin.to_owned(), command.to_owned(), title_key.to_owned());
@@ -125,7 +137,11 @@ fn handler(
         let core = core.upgrade().ok_or_else(closed)?;
         let runtime = runtime.upgrade().ok_or_else(closed)?;
         let args = if args.is_null() { json!({}) } else { args };
+        let args = crate::run_scope::with_default_scope(&args, scope.as_ref());
+        let args = crate::run_scope::plugin_args(&core.host().config(), &args)
+            .map_err(|error| CommandError::InvalidArgs(error.to_string()))?;
         report_started(&core, &plugin, &title_key, group);
+        let reports = crate::checks::reported::mark(&plugin);
         let (answer, noted) = block_on(runtime.run_command_noted(&plugin, &command, &args))
             .map_err(|error| CommandError::Failed(error.to_string()))?
             .map_err(|failure| command_error(&plugin, failure))?;
@@ -136,7 +152,11 @@ fn handler(
         // colour picker's "click a pixel, Esc to stop" was replaced by "Pick a colour: done"),
         // nor one that showed a report (RB-091-02).
         if !panel_opened && !noted && !shown {
-            report_done(&core, &plugin, &title_key, group);
+            // A check names the findings of its own run (RB-099-25).
+            let found = (group == Group::Checks)
+                .then(|| crate::checks::reported::reported_since(&plugin, reports))
+                .flatten();
+            report_done(&core, &plugin, &title_key, group, found);
         }
         Ok(answer)
     })
@@ -173,14 +193,29 @@ pub fn open_asked(core: &Core, args: &Value, group: Group) -> Value {
     }
 }
 
-/// Names the end of plugin `plugin`'s command titled `title_key` in the status bar; a command
-/// of the Checks group first opens the findings, where its findings went - in the panels page
-/// (RB-080-69).
-fn report_done(core: &Core, plugin: &str, title_key: &str, group: Group) {
+/// Names the end of plugin `plugin`'s command titled `title_key` in the status bar - with the
+/// `found` findings of this run when it reported them ([`CHECK_DONE_KEY`], 0 reads "nothing
+/// found"). A command of the Checks group first opens the findings, where its findings went - in
+/// the panels page (RB-080-69): a person ran it (no MCP tool runs a plugin command; a tool's
+/// check answers with its findings), so a dock folded to its rail opens at them (RB-099-25). A
+/// side effect - another group's `$open`, a plugin's own report - keeps the fold.
+fn report_done(core: &Core, plugin: &str, title_key: &str, group: Group, found: Option<usize>) {
     if group == Group::Checks {
-        crate::panel_dock::core_panels::open(core, crate::panel_dock::core_panels::FINDINGS);
+        crate::panel_dock::core_panels::open_unfolded(
+            core,
+            crate::panel_dock::core_panels::FINDINGS,
+        );
     }
-    notify_command(core, COMMAND_DONE_KEY, plugin, title_key);
+    match found {
+        Some(count) => notify_command_with(
+            core,
+            CHECK_DONE_KEY,
+            plugin,
+            title_key,
+            [("count".to_owned(), count.to_string())],
+        ),
+        None => notify_command(core, COMMAND_DONE_KEY, plugin, title_key),
+    }
 }
 
 /// Names the start of plugin `plugin`'s check titled `title_key` in the status bar: a check
@@ -192,13 +227,26 @@ fn report_started(core: &Core, plugin: &str, title_key: &str, group: Group) {
 }
 
 fn notify_command(core: &Core, message_key: &str, plugin: &str, title_key: &str) {
+    notify_command_with(core, message_key, plugin, title_key, []);
+}
+
+/// [`notify_command`] with further arguments of the message beside `{command}`.
+fn notify_command_with<const N: usize>(
+    core: &Core,
+    message_key: &str,
+    plugin: &str,
+    title_key: &str,
+    more: [(String, String); N],
+) {
     let title = rb_i18n::plugin_texts(plugin)
         .remove(title_key)
         .unwrap_or_else(|| title_key.to_owned());
+    let mut args = std::collections::BTreeMap::from([("command".to_owned(), title)]);
+    args.extend(more);
     core.notify(CoreToShell::Notification(Notification {
         level: NotificationLevel::Info,
         message_key: message_key.to_owned(),
-        args: std::collections::BTreeMap::from([("command".to_owned(), title)]),
+        args,
         settings_key: None,
     }));
 }

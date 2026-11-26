@@ -4,6 +4,7 @@ import { IpcClient } from '../ipc/client';
 import { sampleState } from '../ipc/mockState';
 import type { CoreToShell, FlowRunState, FlowSummary, ShellToCore } from '../ipc/protocol';
 import { mountWithShell, settle } from '../test/mountShell';
+import ScopePicker from '../scope/ScopePicker.vue';
 import FlowsPage from './FlowsPage.vue';
 
 const FLOWS: FlowSummary[] = [{ name: 'login', description: 'Log in as the test user' }, { name: 'cart' }];
@@ -48,6 +49,8 @@ let current: VueWrapper | null = null;
 afterEach(() => {
   current?.unmount();
   current = null;
+  // The scope the panel remembers (RB-099-10) is the test's own.
+  window.localStorage.removeItem('rb.scope.flows');
 });
 
 /** The panel's clock in the tests. */
@@ -59,6 +62,8 @@ async function mounted(
   pollMs = 1000,
   /** `automation.flows.confirmDelete`; the core answers no settings when absent. */
   confirmDelete?: boolean,
+  /** The shell's state: its views and breakpoints. */
+  shellState = sampleState(),
 ) {
   const listeners = new Set<(message: CoreToShell) => void>();
   const subscribe = (listener: (message: CoreToShell) => void) => {
@@ -92,7 +97,7 @@ async function mounted(
     subscribe: () => () => undefined,
   });
   const result = await mountWithShell(FlowsPage, {
-    mock: { state: sampleState() },
+    mock: { state: shellState },
     mount: { props: { client, subscribe, pollMs, now: () => NOW } },
   });
   current = result.wrapper;
@@ -116,27 +121,63 @@ async function mounted(
 const commands = (asked: ShellToCore[]) => asked.filter((message) => message.type === 'runCommand');
 
 describe('the Flows panel (RB-090-60)', () => {
-  it('lists the project flows and runs one in every view, in one view, or all of them', async () => {
+  it('lists the project flows and runs one or all of them in every view or the views chosen', async () => {
     const { wrapper, asked } = await mounted();
     const login = wrapper.get('[data-testid="flow-login"]');
     expect(login.text()).toContain('login');
     expect(login.text()).toContain('Log in as the test user');
     await login.get('[data-testid="flow-run"]').trigger('click');
     await settle();
-    const view = sampleState().views[0];
-    if (view === undefined) {
-      throw new Error('the sample has views');
-    }
-    await wrapper.get(`[data-testid="flow-target"] [role="radio"][value="${view.id}"]`).trigger('click');
+    // RB-099-10: the scope pick list - chosen breakpoints, then the visible views.
+    wrapper.getComponent(ScopePicker).vm.$emit('update:modelValue', { mode: 'chosen', breakpoints: ['mobile'] });
     await settle();
     await wrapper.get('[data-testid="flow-cart"] [data-testid="flow-run"]').trigger('click');
+    await wrapper.get('[data-testid="flows-run-all"]').trigger('click');
+    wrapper.getComponent(ScopePicker).vm.$emit('update:modelValue', { mode: 'visible', breakpoints: [] });
+    await settle();
     await wrapper.get('[data-testid="flows-run-all"]').trigger('click');
     await settle();
     expect(commands(asked)).toEqual([
       { type: 'runCommand', id: 'flows.run', args: { name: 'login' } },
-      { type: 'runCommand', id: 'flows.run', args: { name: 'cart', views: [view.id] } },
-      { type: 'runCommand', id: 'flows.run_all' },
+      { type: 'runCommand', id: 'flows.run', args: { name: 'cart', scope: ['mobile'] } },
+      { type: 'runCommand', id: 'flows.run_all', args: { scope: ['mobile'] } },
+      { type: 'runCommand', id: 'flows.run_all', args: { scope: 'visible' } },
     ]);
+  });
+
+  // Review: one view stays a choice, a view of a free size without a breakpoint too.
+  it('runs a flow and all flows in one view chosen from the same list', async () => {
+    const shellState = sampleState();
+    shellState.breakpoints = [];
+    shellState.views = shellState.views.slice(0, 1).map((view) => ({ ...view, breakpoint: null, cellBreakpoint: null, label: '500x800' }));
+    const { wrapper, asked } = await mounted(LAST, FLOWS, 1000, undefined, shellState);
+    const picker = wrapper.getComponent(ScopePicker);
+    expect(picker.props('views')).toEqual([{ id: shellState.views[0]!.id, label: '500x800' }]);
+    picker.vm.$emit('update:view', shellState.views[0]!.id);
+    await settle();
+    await wrapper.get('[data-testid="flow-login"] [data-testid="flow-run"]').trigger('click');
+    await wrapper.get('[data-testid="flows-run-all"]').trigger('click');
+    picker.vm.$emit('update:view', null);
+    await settle();
+    await wrapper.get('[data-testid="flow-login"] [data-testid="flow-run"]').trigger('click');
+    await settle();
+    const id = shellState.views[0]!.id;
+    expect(commands(asked)).toEqual([
+      { type: 'runCommand', id: 'flows.run', args: { name: 'login', views: [id] } },
+      { type: 'runCommand', id: 'flows.run_all', args: { views: [id] } },
+      { type: 'runCommand', id: 'flows.run', args: { name: 'login' } },
+    ]);
+  });
+
+  it('remembers the last scope and waits for a breakpoint when none is chosen', async () => {
+    window.localStorage.setItem('rb.scope.flows', JSON.stringify(['tablet']));
+    const { wrapper, asked } = await mounted();
+    expect(wrapper.getComponent(ScopePicker).props('modelValue')).toEqual({ mode: 'chosen', breakpoints: ['tablet'] });
+    wrapper.getComponent(ScopePicker).vm.$emit('update:modelValue', { mode: 'chosen', breakpoints: [] });
+    await settle();
+    expect(wrapper.get('[data-testid="flows-run-all"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="flow-login"] [data-testid="flow-run"]').attributes('disabled')).toBeDefined();
+    expect(commands(asked)).toEqual([]);
   });
 
   it('shows the last result: pass or fail per view with the step, the line and the screenshot', async () => {

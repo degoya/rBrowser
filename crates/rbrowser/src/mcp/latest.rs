@@ -30,8 +30,8 @@ pub fn screenshots(root: Option<&Path>) -> Option<Value> {
 ///
 /// # Errors
 ///
-/// `screenshots_none` without such a file (none saved, the index past the end, the file gone,
-/// a link or no PNG in its place - a link is never followed), `answer_too_large` over
+/// `screenshots.none` without such a file (none saved, the index past the end, the file gone,
+/// a link or no PNG in its place - a link is never followed), `answer.too_large` over
 /// `max_bytes`.
 pub fn screenshot_png(
     root: Option<&Path>,
@@ -60,7 +60,7 @@ pub fn screenshot_png(
     let size = metadata.len();
     let too_large = || {
         ToolFailure::new(
-            "answer_too_large",
+            "answer.too_large",
             format!(
                 "the image has more than mcp.maxAnswerBytes allows ({max_bytes} bytes before \
                  base64); open its path instead"
@@ -95,7 +95,7 @@ pub fn screenshot_png(
 }
 
 fn none(message: &str) -> ToolFailure {
-    ToolFailure::new("screenshots_none", message)
+    ToolFailure::new("screenshots.none", message)
 }
 
 #[cfg(test)]

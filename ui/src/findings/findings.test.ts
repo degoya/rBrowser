@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   REASON_LIMIT,
   countBySeverity,
+  rerunScope,
   failureParams,
   filterFindings,
   groupByRule,
@@ -10,11 +11,12 @@ import {
   moveFocus,
   nestMessages,
   onlyIn,
+  sentence,
   pluginsOf,
   showWidthRequest,
 } from './findings';
 import { sampleRun } from './testing';
-import type { MergedFinding } from './types';
+import type { FindingsRun, MergedFinding } from './types';
 
 describe('findings', () => {
   it('filters by severity, plugin and view', () => {
@@ -143,5 +145,47 @@ describe('failureParams', () => {
   it("blanks the reason of a host code and of another plugin's code", () => {
     expect(failureParams('plugins.error.crashed', 'seo', { reason: 'TypeError: x' }).reason).toBe('');
     expect(failureParams('plugin.other.errors.x', 'seo', { reason: 'spoof' }).reason).toBe('');
+  });
+});
+
+// RB-099-10 review: "Run again" takes the views of the run shown, not the panel's last choice, so
+// the core merges it into that run - after `checks.run_visible`, MCP or a reload too.
+describe('rerunScope', () => {
+  const run = (views: { id: number; breakpoint?: string }[], target: 'all' | number = 'all'): FindingsRun => ({ ...sampleRun(), target, views });
+  const ALL = ['mobile', 'tablet', 'desktop'];
+
+  it('names the breakpoints of a run over fewer views than the project has', () => {
+    expect(rerunScope(run([{ id: 1, breakpoint: 'mobile' }, { id: 3, breakpoint: 'desktop' }]), ALL)).toEqual(['mobile', 'desktop']);
+    expect(rerunScope(run([{ id: 1, breakpoint: 'mobile' }, { id: 4, breakpoint: 'mobile' }]), ALL)).toEqual(['mobile']);
+  });
+
+  it('needs none for a run over every breakpoint, one view, or a view without a breakpoint', () => {
+    expect(rerunScope(run(ALL.map((breakpoint, at) => ({ id: at + 1, breakpoint }))), ALL)).toBeNull();
+    expect(rerunScope(run([{ id: 2, breakpoint: 'tablet' }], 2), ALL)).toBeNull();
+    expect(rerunScope(run([{ id: 1, breakpoint: 'mobile' }, { id: 5 }]), ALL)).toBeNull();
+    expect(rerunScope(run([]), ALL)).toBeNull();
+    expect(rerunScope(run([{ id: 1, breakpoint: 'mobile' }]), [])).toBeNull();
+  });
+});
+
+// RB-099-06: a failure's reason continues the sentence of `findings.plugin_failed_reason`.
+describe('sentence', () => {
+  it('ends a reason without closing punctuation with a period', () => {
+    expect(sentence('Content unavailable. Resource was not cached')).toBe(
+      'Content unavailable. Resource was not cached.',
+    );
+    expect(sentence('the page is a data: URL  ')).toBe('the page is a data: URL.');
+    expect(sentence('View 1 has no source (timeout)')).toBe('View 1 has no source (timeout).');
+  });
+
+  it('keeps a reason that already ends a sentence', () => {
+    for (const done of ['Agent is not enabled.', 'Really?', 'Stop!', 'Cut\u2026', 'He said "no."', 'It failed (twice.)']) {
+      expect(sentence(done)).toBe(done);
+    }
+  });
+
+  it('leaves an empty reason empty', () => {
+    expect(sentence('')).toBe('');
+    expect(sentence('   ')).toBe('');
   });
 });

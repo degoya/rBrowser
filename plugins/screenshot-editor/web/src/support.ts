@@ -30,6 +30,7 @@ export function fakeContext(calls: Call[] = []): CanvasRenderingContext2D {
     stroke: record('stroke'),
     fillText: record('fillText'),
     setLineDash: record('setLineDash'),
+    setTransform: record('setTransform'),
     getImageData(x: number, y: number, width: number, height: number) {
       calls.push({ name: 'getImageData', args: [x, y, width, height] });
       return { data: new Uint8ClampedArray(width * height * 4).fill(255), width, height };

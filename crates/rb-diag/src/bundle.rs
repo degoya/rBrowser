@@ -3,7 +3,8 @@
 //! config and the plugin list, with every secret masked. Nothing leaves the machine; the user
 //! passes the file on by hand.
 //!
-//! Entries: `logs/<file>` (every file of the log folder, masked), `crashdumps/<file>.dmp` (the
+//! Entries: `logs/<file>` (every file of the log folder, masked; CEF's logs with their last
+//! 5 MiB only, RB-099-07), `crashdumps/<file>.dmp` (the
 //! newest `max_crash_dumps` of the Crashpad database), `versions.json`, `config.effective.json`
 //! (masked; `null` without a project), `plugins.json` and `perf.json` (the timing counters,
 //! RB-090-32). A value masked in the config (a header
@@ -20,6 +21,7 @@ use zip::CompressionMethod;
 use zip::write::{SimpleFileOptions, ZipWriter};
 
 use crate::cef::civil_from_days;
+use crate::cef_log::{BUNDLE_TAIL_BYTES, is_cef_log, tail};
 use crate::error::DiagError;
 use crate::paths::DiagPaths;
 use crate::redact::{Secrets, redact_json};
@@ -184,7 +186,7 @@ pub fn write_bundle(input: &BundleInput, out: &Path) -> Result<BundleReport, Dia
     zip.add_directory(LOGS_DIR, options)
         .map_err(|error| fail(io::Error::other(error)))?;
     for log in &logs {
-        let text = std::fs::read(log).map_err(fail)?;
+        let text = read_log(log).map_err(fail)?;
         let masked = secrets.redact(&crate::redact::redact(&String::from_utf8_lossy(&text)));
         add(
             &mut zip,
@@ -232,6 +234,23 @@ pub fn write_bundle(input: &BundleInput, out: &Path) -> Result<BundleReport, Dia
         path: out.to_path_buf(),
         entries: all,
     })
+}
+
+/// A log file for the ZIP: the core's whole (its size is held by the rotation), CEF's with its
+/// last [`BUNDLE_TAIL_BYTES`] only, under a line that says how much was left out (RB-099-07).
+fn read_log(path: &Path) -> io::Result<Vec<u8>> {
+    if !is_cef_log(&file_name(path)) {
+        return std::fs::read(path);
+    }
+    let (end, left_out) = tail(path, BUNDLE_TAIL_BYTES)?;
+    if left_out == 0 {
+        return Ok(end);
+    }
+    let mut text =
+        format!("[rBrowser: the first {left_out} bytes of this log are left out of the ZIP]\n")
+            .into_bytes();
+    text.extend(end);
+    Ok(text)
 }
 
 fn file_name(path: &Path) -> String {

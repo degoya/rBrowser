@@ -8,6 +8,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use super::NoArgs;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 use crate::backend::ToolFailure;
@@ -29,9 +30,9 @@ pub struct ViewAddAndroidParams {
 #[tool_router(router = android_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The Android devices on USB that adb sees, for Android views (Chrome on the device over ADB): enabled (engines.android.enabled, off by default - only the person switches it on), adb (the program in use and where it was found: setting, path, androidHome, sdkRoot, usualSdk or managed) and per device its serial, state (device, unauthorized - allow USB debugging on the device -, offline, noPermissions), model, ready and the breakpoint id a view of it gets (android-<serial>). reason says why nothing is listed (off, no adb). A read: it never downloads adb."
+        description = "The Android devices on USB that adb sees, for Android views: enabled (engines.android.enabled, the person's switch), adb (the program in use and where it was found) and per device serial, state (device, unauthorized, offline, noPermissions), model, ready and the breakpoint id its view gets (android-<serial>). reason says why nothing is listed. Never downloads adb."
     )]
-    pub(crate) async fn android_devices(&self) -> ToolResult {
+    pub(crate) async fn android_devices(&self, _args: Parameters<NoArgs>) -> ToolResult {
         let result = async {
             let answer = self.backend.host_tool(DEVICES_TOOL, json!({})).await?;
             Ok::<_, ToolFailure>(self.backend.mask(&answer))
@@ -41,7 +42,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Add an Android device on USB as a view: Chrome on the device over ADB with its DevTools port forwarded to 127.0.0.1 only, at the device's own size (no width emulation; the label says device size), as the breakpoint android-<serial> in config.local.json. serial from android_devices; without it the one ready device. The view follows the navigations of the grid; screenshot works on it. Answers the breakpoint, width, height, dpr, added, changed and serial. Refused with android.disabled (engines.android.enabled is off - the person's switch), android.no_adb (no adb found; the person sets engines.android.adbPath or downloads the Platform Tools in rBrowser - never over MCP), android.no_device or android.device_not_ready (with the reason, e.g. USB debugging not allowed)."
+        description = "Add an Android device on USB as a view: Chrome on the device over ADB (its DevTools port forwarded to 127.0.0.1 only) at the device's own size, as the breakpoint android-<serial> in config.local.json. serial from android_devices; the one ready device when absent. The view follows the grid's navigations. Answers breakpoint, width, height, dpr, added, changed and serial. Refused with android.disabled (engines.android.enabled), android.no_adb (the adb path or download is the person's, never MCP's), android.no_device or android.device_not_ready (with the reason)."
     )]
     pub(crate) async fn view_add_android(
         &self,
@@ -49,7 +50,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = async {
             let args = serde_json::to_value(&params)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             let answer = self.backend.host_tool(ADD_TOOL, args).await?;
             Ok::<_, ToolFailure>(self.backend.mask(&answer))
         }

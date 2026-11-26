@@ -9,6 +9,17 @@ use rb_plugin_api::{
 };
 use serde_json::json;
 
+/// A well-mixed hash of a pixel's place: noise no PNG filter or deflate makes smaller.
+pub fn noise(x: u32, y: u32) -> [u8; 4] {
+    let mut v = x.wrapping_mul(0x9E37_79B9) ^ y.wrapping_mul(0x85EB_CA6B);
+    v ^= v >> 16;
+    v = v.wrapping_mul(0x7FEB_352D);
+    v ^= v >> 15;
+    v = v.wrapping_mul(0x846C_A68B);
+    v ^= v >> 16;
+    [(v >> 24) as u8, (v >> 16) as u8, (v >> 8) as u8, 255]
+}
+
 /// A PNG of `width` x `height` RGBA pixels, each `pixel(x, y)`.
 pub fn png(width: u32, height: u32, pixel: impl Fn(u32, u32) -> [u8; 4]) -> Vec<u8> {
     let mut rgba = Vec::with_capacity((width * height * 4) as usize);
@@ -37,6 +48,20 @@ fn crc32(bytes: &[u8]) -> u32 {
         }
     }
     !crc
+}
+
+/// A PNG's signature and header (`IHDR`, 8-bit RGBA) for a `width` x `height` image, no pixels:
+/// what a size check reads, at any size.
+pub fn header_only(width: u32, height: u32) -> Vec<u8> {
+    let mut typed = b"IHDR".to_vec();
+    typed.extend_from_slice(&width.to_be_bytes());
+    typed.extend_from_slice(&height.to_be_bytes());
+    typed.extend_from_slice(&[8, 6, 0, 0, 0]);
+    let mut out = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    out.extend_from_slice(&13u32.to_be_bytes());
+    out.extend_from_slice(&typed);
+    out.extend_from_slice(&crc32(&typed).to_be_bytes());
+    out
 }
 
 /// `png` with a `tEXt` chunk (`keyword`, `text`) after its header, as a screenshot tool or a
@@ -101,11 +126,29 @@ pub fn at(data: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
 }
 
 /// [`MemoryHost`] with the real host's listing: a folder's name ends in `/`.
-pub struct FolderHost(pub MemoryHost);
+pub struct FolderHost(pub MemoryHost, pub Option<Swap>);
+
+/// A file replaced in place after so many range reads: a capture written again while the
+/// editor reads it.
+pub struct Swap {
+    pub after: usize,
+    pub path: String,
+    pub bytes: Vec<u8>,
+}
 
 impl FolderHost {
     pub fn new(host: MemoryHost) -> Self {
-        Self(host)
+        Self(host, None)
+    }
+
+    /// Replaces `path` with `bytes` once `after` range reads are done.
+    pub fn swap(mut self, after: usize, path: &str, bytes: &[u8]) -> Self {
+        self.1 = Some(Swap {
+            after,
+            path: path.to_owned(),
+            bytes: bytes.to_vec(),
+        });
+        self
     }
 
     /// Adds a project file.
@@ -152,6 +195,24 @@ impl PluginHost for FolderHost {
         self.0.project_read(path)
     }
 
+    fn project_read_range(
+        &mut self,
+        path: &str,
+        offset: u64,
+        length: u32,
+    ) -> Result<(Vec<u8>, u64), Failure> {
+        let answer = self.0.project_read_range(path, offset, length);
+        if self
+            .1
+            .as_ref()
+            .is_some_and(|swap| self.0.ranges.len() >= swap.after)
+            && let Some(swap) = self.1.take()
+        {
+            self.0.project.insert(swap.path, swap.bytes);
+        }
+        answer
+    }
+
     fn project_list(&mut self, dir: &str) -> Result<Vec<String>, Failure> {
         let names = self.0.project_list(dir)?;
         let prefix = format!("{}/", dir.trim_end_matches('/'));
@@ -180,6 +241,26 @@ impl PluginHost for FolderHost {
         self.0
             .project
             .insert(format!("{}{path}", crate::paths::OWN_ROOT), bytes.to_vec());
+        Ok(())
+    }
+
+    fn out_begin(&mut self, path: &str) -> Result<(), Failure> {
+        self.0.out_begin(path)
+    }
+
+    fn out_append(&mut self, bytes: &[u8]) -> Result<(), Failure> {
+        self.0.out_append(bytes)
+    }
+
+    fn out_commit(&mut self) -> Result<(), Failure> {
+        let staged = self.0.staged.clone();
+        self.0.out_commit()?;
+        // What is committed can be read back, as from the real host.
+        if let Some((path, bytes)) = staged {
+            self.0
+                .project
+                .insert(format!("{}{path}", crate::paths::OWN_ROOT), bytes);
+        }
         Ok(())
     }
 

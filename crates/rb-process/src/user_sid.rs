@@ -4,9 +4,10 @@
 
 use std::io;
 
+// `pub(crate)`: the DACL the tests read back names its SIDs with `platform::sid_text`.
 #[cfg(windows)]
 #[path = "user_sid_windows.rs"]
-mod platform;
+pub(crate) mod platform;
 
 #[cfg(not(windows))]
 mod platform {

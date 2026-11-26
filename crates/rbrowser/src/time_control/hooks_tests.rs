@@ -178,3 +178,21 @@ async fn a_step_runs_in_the_world_it_is_given_and_answers_how_many_moved() {
     );
     assert!(step(&router, "S1", Some(7), 100).await.is_err());
 }
+
+/// RB-099-19: a follower that lagged keeps only the views the host still has - asked per view
+/// the hooks know, under their lock, so an attach cannot slip in between (review w39).
+#[tokio::test(flavor = "multi_thread")]
+async fn forgetting_the_gone_views_asks_for_each_known_view() {
+    let (_fake, router, hooks) = setup();
+    for (view, session) in [(1, "S1"), (2, "S2"), (3, "S3")] {
+        hooks.attach(&router, ViewId(view), session).await;
+    }
+    let asked = std::sync::Mutex::new(Vec::new());
+    assert!(hooks.forget_gone(|view| {
+        lock(&asked).push(view);
+        view != ViewId(2)
+    }));
+    assert_eq!(*lock(&asked), [ViewId(1), ViewId(2), ViewId(3)]);
+    assert_eq!(hooks.rates(), [(ViewId(1), 1.0), (ViewId(3), 1.0)]);
+    assert!(!hooks.forget_gone(|_| true), "nothing more to forget");
+}

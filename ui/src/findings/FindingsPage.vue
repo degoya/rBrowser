@@ -33,6 +33,6 @@ onMounted(() => {
 
 <template>
   <div ref="host" class="h-full overflow-auto bg-default text-default" data-testid="findings-page">
-    <FindingsPanel :channel="channel" />
+    <FindingsPanel :channel="channel" :breakpoints="shell.state.value?.breakpoints ?? []" />
   </div>
 </template>

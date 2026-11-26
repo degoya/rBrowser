@@ -68,7 +68,7 @@ fn a_device_that_is_not_there_or_not_ready_is_refused_with_the_reason() {
     let missing = pick(Some("S9"), &devices).expect_err("missing");
     assert_eq!(missing.code, "android.no_device");
     let bad = pick(Some("-a"), &devices).expect_err("bad");
-    assert_eq!(bad.code, "invalid_arguments");
+    assert_eq!(bad.code, "args.invalid");
     let none = pick(None, &[]).expect_err("none");
     assert_eq!(none.code, "android.no_device");
     assert_eq!(none.message, no_device_message(cfg!(windows)));
@@ -99,7 +99,7 @@ fn no_device_names_the_steps_that_bring_one_to_adb() {
 fn several_ready_devices_need_a_serial() {
     let devices = parse_devices("List of devices attached\nA device\nB device\n");
     let refused = pick(None, &devices).expect_err("several");
-    assert_eq!(refused.code, "invalid_arguments");
+    assert_eq!(refused.code, "args.invalid");
     assert!(refused.message.contains('A') && refused.message.contains('B'));
 }
 

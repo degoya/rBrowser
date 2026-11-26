@@ -15,11 +15,11 @@ use crate::backend::ToolFailure;
 /// The prefix of a setting's deep link.
 pub const DEEP_LINK_PREFIX: &str = "rbrowser://settings/";
 /// The code of a key that is not there.
-pub const KEY_NOT_FOUND: &str = "key_not_found";
+pub const KEY_NOT_FOUND: &str = "settings.key_not_found";
 /// The code of an unknown category.
-pub const CATEGORY_NOT_FOUND: &str = "category_not_found";
+pub const CATEGORY_NOT_FOUND: &str = "settings.category_not_found";
 /// The code of an unknown section.
-pub const SECTION_NOT_FOUND: &str = "section_not_found";
+pub const SECTION_NOT_FOUND: &str = "settings.section_not_found";
 
 /// What `settings_get` was asked for.
 #[derive(Clone, Copy, Debug, Default)]

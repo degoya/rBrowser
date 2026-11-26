@@ -22,11 +22,11 @@ impl FakeLatest {
     /// The PNG `index` as the app hands it out: refused over `max_bytes`, unknown past the end.
     pub(crate) fn png(&self, index: usize, max_bytes: usize) -> Result<Vec<u8>, ToolFailure> {
         let png = self.pngs.get(index).ok_or_else(|| {
-            ToolFailure::new("screenshots_none", format!("no screenshot {index}"))
+            ToolFailure::new("screenshots.none", format!("no screenshot {index}"))
         })?;
         if png.len() > max_bytes {
             return Err(
-                ToolFailure::new("answer_too_large", "the image is too large")
+                ToolFailure::new("answer.too_large", "the image is too large")
                     .with_setting("mcp.maxAnswerBytes"),
             );
         }

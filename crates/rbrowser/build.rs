@@ -17,6 +17,14 @@ fn main() {
         embed_resource::compile("windows-resource.rc", embed_resource::NONE)
             .manifest_required()
             .expect("failed to compile Windows resources");
+        // RB-099-01: a build without debug info (the release profile) links rbrowser.dll without
+        // a PDB. The PDB names the link's temporary folder (`deps/rustcXXXXXX/symbols.o`), and
+        // /Brepro's build id is a hash over it, so two links of one commit would differ there.
+        if env::var("DEBUG").as_deref() == Ok("false")
+            && env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
+        {
+            println!("cargo:rustc-cdylib-link-arg=/DEBUG:NONE");
+        }
     }
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
         // RB-097-05: the executables find CEF's libcef.so beside themselves, in the build
@@ -222,7 +230,7 @@ BEGIN
             VALUE "FileDescription", "{description}\0"
             VALUE "FileVersion", "{version}\0"
             VALUE "InternalName", "{internal_name}\0"
-            VALUE "LegalCopyright", "Copyright (c) DEGOYA.digital\0"
+            VALUE "LegalCopyright", "Copyright (c) 2026 Alexander Herling / DEGOYA.digital\0"
             VALUE "OriginalFilename", "{original_filename}\0"
             VALUE "ProductName", "rBrowser\0"
             VALUE "ProductVersion", "{version}\0"

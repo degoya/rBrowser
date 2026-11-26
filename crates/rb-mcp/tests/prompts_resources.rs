@@ -162,6 +162,6 @@ async fn prompts_and_resources_over_http_with_the_token_only() {
         read["error"]["data"]["settingsKey"], "mcp.resources",
         "{read}"
     );
-    assert_eq!(read["error"]["data"]["code"], "resources_disabled");
+    assert_eq!(read["error"]["data"]["code"], "resources.disabled");
     handle.shutdown().await;
 }

@@ -130,8 +130,13 @@ function polyline(ctx: CanvasRenderingContext2D, points: number[][], color: stri
   ctx.stroke();
 }
 
-/** Draws one annotation; a redaction reads and writes the pixels under it. */
-export function draw(ctx: CanvasRenderingContext2D, a: ShotAnnotation, width: number, height: number): void {
+/**
+ * Draws one annotation of a `width` x `height` image; a redaction reads and writes the pixels
+ * under it. `scale` image pixels make one canvas pixel (RB-099-24, a large image's preview): the
+ * caller sets that transform for the shapes, and a redaction - which reads the canvas's own
+ * pixels - works on the canvas pixels under it, its blocks scaled as far.
+ */
+export function draw(ctx: CanvasRenderingContext2D, a: ShotAnnotation, width: number, height: number, scale = 1): void {
   const color = a.color ?? '#000000';
   const [x, y, w, h] = [a.x ?? 0, a.y ?? 0, a.w ?? 0, a.h ?? 0];
   ctx.save();
@@ -177,12 +182,13 @@ export function draw(ctx: CanvasRenderingContext2D, a: ShotAnnotation, width: nu
     ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
   } else if (a.type === 'redact') {
-    const region = clip(x, y, w, h, width, height);
+    const region = clip(x / scale, y / scale, w / scale, h / scale, Math.ceil(width / scale), Math.ceil(height / scale));
     if (region) {
       const pixels = ctx.getImageData(region.left, region.top, region.right - region.left, region.bottom - region.top);
+      const block = Math.max(1, Math.round((a.block ?? 12) / scale));
       if (a.mode === 'black') black(pixels);
-      else if (a.mode === 'blur') blur(pixels, a.block ?? 12);
-      else pixelate(pixels, a.block ?? 12);
+      else if (a.mode === 'blur') blur(pixels, block);
+      else pixelate(pixels, block);
       ctx.putImageData(pixels, region.left, region.top);
     }
   }
@@ -191,15 +197,21 @@ export function draw(ctx: CanvasRenderingContext2D, a: ShotAnnotation, width: nu
 
 export const cropOf = (items: readonly ShotAnnotation[]): ShotAnnotation | null => items.find((item) => item.type === 'crop') ?? null;
 
-/** The image with every annotation, the crop not applied. */
-export function render(ctx: CanvasRenderingContext2D, source: CanvasImageSource, items: readonly ShotAnnotation[], width: number, height: number): void {
-  ctx.clearRect(0, 0, width, height);
+/**
+ * The image with every annotation, the crop not applied: `source` at the canvas's own size, the
+ * annotations in the pixels of the `width` x `height` image, `scale` of them to a canvas pixel.
+ */
+export function render(ctx: CanvasRenderingContext2D, source: CanvasImageSource, items: readonly ShotAnnotation[], width: number, height: number, scale = 1): void {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, Math.ceil(width / scale), Math.ceil(height / scale));
   ctx.drawImage(source, 0, 0);
-  for (const item of items) draw(ctx, item, width, height);
+  ctx.setTransform(1 / scale, 0, 0, 1 / scale, 0, 0);
+  for (const item of items) draw(ctx, item, width, height, scale);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-/** The crop of `items` as a frame, the rest dimmed. */
-export function cropFrame(ctx: CanvasRenderingContext2D, items: readonly ShotAnnotation[], width: number, height: number): void {
+/** The crop of `items` as a frame, the rest dimmed; `unit` image pixels make one canvas pixel. */
+export function cropFrame(ctx: CanvasRenderingContext2D, items: readonly ShotAnnotation[], width: number, height: number, unit = 1): void {
   const crop = cropOf(items);
   const region = crop && clip(crop.x ?? 0, crop.y ?? 0, crop.w ?? 0, crop.h ?? 0, width, height);
   if (!region) return;
@@ -210,19 +222,21 @@ export function cropFrame(ctx: CanvasRenderingContext2D, items: readonly ShotAnn
   ctx.fillRect(0, region.top, region.left, region.bottom - region.top);
   ctx.fillRect(region.right, region.top, width - region.right, region.bottom - region.top);
   ctx.strokeStyle = '#ffffff';
-  ctx.setLineDash([6, 4]);
-  ctx.strokeRect(region.left + 0.5, region.top + 0.5, region.right - region.left - 1, region.bottom - region.top - 1);
+  ctx.lineWidth = unit;
+  ctx.setLineDash([6 * unit, 4 * unit]);
+  const half = unit / 2;
+  ctx.strokeRect(region.left + half, region.top + half, region.right - region.left - unit, region.bottom - region.top - unit);
   ctx.restore();
 }
 
-/** The keyboard cursor: a square, white under black, seen on any image. */
-export function cursorMark(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+/** The keyboard cursor: a square, white under black, seen on any image; `unit` as above. */
+export function cursorMark(ctx: CanvasRenderingContext2D, x: number, y: number, unit = 1): void {
   ctx.save();
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(x - 6, y - 6, 12, 12);
+  ctx.lineWidth = 3 * unit;
+  ctx.strokeRect(x - 6 * unit, y - 6 * unit, 12 * unit, 12 * unit);
   ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x - 6, y - 6, 12, 12);
+  ctx.lineWidth = unit;
+  ctx.strokeRect(x - 6 * unit, y - 6 * unit, 12 * unit, 12 * unit);
   ctx.restore();
 }

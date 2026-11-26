@@ -2,7 +2,7 @@
 //! token is full control of the views - `Runtime.evaluate`, the cookies, any navigation - past
 //! every switch the MCP tools keep (`evaluate`, the URL policy, the request composer). So the tool
 //! answers only while a person has switched on `mcp.allowEvaluate` as well as `cdp.enabled`;
-//! otherwise `evaluate_disabled`, the token never asked for (RB-090-21, threat model T5).
+//! otherwise `evaluate.disabled`, the token never asked for (RB-090-21, threat model T5).
 //! Rotating the token is a person's decision and has no tool.
 
 use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
@@ -18,7 +18,8 @@ use crate::tools::page::{ALLOW_EVALUATE, EVALUATE_DISABLED};
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CdpEndpointParams {
-    /// One view (id or breakpoint id): its page socket is added.
+    /// One view: a view id or a breakpoint id shown once; it adds that view's page socket, none
+    /// when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -26,7 +27,7 @@ pub struct CdpEndpointParams {
 #[tool_router(router = cdp_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The CDP endpoint for Playwright connectOverCDP(url, { headers }) and other CDP clients: url with its Authorization header, urlWithToken for clients without headers, the browser webSocketDebuggerUrl, with target also the page socket of that view, and wsl: the URL from WSL (Windows' own in mirrored mode, a tunnel into the distribution in NAT mode). Only the grid's views are targets. rBrowser owns each view's size: setViewportSize has no effect. Off unless a person switched the proxy on (cdp.enabled, code cdp.disabled) and allowed page JavaScript over MCP (mcp.allowEvaluate, code evaluate_disabled): the endpoint is full control of the page."
+        description = "The CDP endpoint for Playwright connectOverCDP(url, { headers }) and other CDP clients: url with its Authorization header, urlWithToken, the browser webSocketDebuggerUrl, with target that view's page socket, and wsl: the URL from WSL. Only the grid's views are targets; setViewportSize has no effect. Off unless a person switched on cdp.enabled (code cdp.disabled) and mcp.allowEvaluate (code evaluate.disabled): the endpoint is full control of the page."
     )]
     pub(crate) async fn cdp_endpoint(
         &self,

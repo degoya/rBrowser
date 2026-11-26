@@ -31,8 +31,9 @@ static LOG: OnceLock<rb_diag::LogHandle> = OnceLock::new();
 
 /// One change at a time, process-wide: [`set_setting`] reads the files, plans over what it read
 /// and writes them back, and its callers come on any thread (the shell's lane, MCP, a command
-/// handler, `project_edit`). Two at once would each write over the other's key.
-pub(super) static ONE_CHANGE: Mutex<()> = Mutex::new(());
+/// handler, `project_edit`, the shortcut editor's `control::bindings`, RB-099-19). Two at once
+/// would each write over the other's key.
+pub(crate) static ONE_CHANGE: Mutex<()> = Mutex::new(());
 
 /// Keeps the logger's handle, so a change of `logs.level` or the rotation applies at once. Called once at start.
 pub fn set_log_handle(handle: rb_diag::LogHandle) {
@@ -227,6 +228,30 @@ pub fn set_setting_off_thread(
         &runtime,
         move || set_setting(&core, &key, &value, scope, Caller::Shell),
         reply,
+    );
+}
+
+/// Another change of the user's files from the shell - the shortcut editor's `setBindings`,
+/// `resetBinding` and `importBindings` (RB-099-19): `change` on the lane of
+/// [`set_setting_off_thread`], after every change before it, and `reply` with its answer from
+/// there. The query comes in on the CEF UI thread, which writes no file this way.
+pub fn change_off_thread(
+    core: &Core,
+    change: impl FnOnce(&Core) -> Result<CoreToShell, Failure> + Send + 'static,
+    reply: impl FnOnce(Result<CoreToShell, Failure>) + Send + 'static,
+) {
+    let Some(core) = core.arc() else {
+        reply(Err((
+            rb_ipc::IpcErrorCode::Internal,
+            "the window is closed".to_owned(),
+        )));
+        return;
+    };
+    let runtime = core.runtime().clone();
+    lane::reply_in_order(
+        &runtime,
+        move || change(&core),
+        move |answer| reply(answer.and_then(|answer| answer)),
     );
 }
 

@@ -123,10 +123,12 @@ async fn a_rebuild_leaves_a_window_closed_by_hand_closed() {
         setup.windows.restart_after_rebuild(EngineKind::Firefox),
         Ok(vec![ViewId(5)])
     );
-    until(|| setup.firefox.views().len() == 3).await;
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    until(|| {
+        setup.firefox.views().len() == 3
+            && status(&setup.windows, 5) == Some(ExternalStatus::Running)
+    })
+    .await;
     assert_eq!(status(&setup.windows, 4), Some(ExternalStatus::Closed));
-    assert_eq!(status(&setup.windows, 5), Some(ExternalStatus::Running));
     assert_eq!(setup.firefox.views().len(), 3, "one new window, for view 5");
 }
 

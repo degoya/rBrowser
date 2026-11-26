@@ -17,7 +17,7 @@ const RESTORE_LAST: &str = "views.restore_last";
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RestoreLastParams {
-    /// `"all"`, a view id or a breakpoint id; every view when absent.
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -25,7 +25,7 @@ pub struct RestoreLastParams {
 #[tool_router(router = restore_last_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Open in the targeted views the pages they showed when rBrowser last closed (kept per view in the project's browser profile on this computer, never in the project files): a page that lay under an environment opens under the environment in effect now, any other page at its URL, and a view whose navigation was decoupled is decoupled again. A view of a breakpoint that is gone, or with nothing kept, stays where it is. The setting startup.restore = last does this at every start. target: \"all\", a view id or a breakpoint id; default every view. Answers views (the views that open their last page), decoupled (the views decoupled again) and stored (false when no last session is kept); never a URL."
+        description = "Open in the targeted views the pages they showed when rBrowser last closed (kept per view in the browser profile, never in the project): a page under an environment opens under the environment in effect now; a decoupled view is decoupled again; a view with nothing kept stays. Answers views, decoupled and stored (false without a last session); never a URL."
     )]
     pub(crate) async fn views_restore_last(
         &self,

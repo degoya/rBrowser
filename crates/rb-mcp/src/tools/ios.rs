@@ -3,9 +3,11 @@
 //! host answers it (`crates/rbrowser/src/engines/ios/commands.rs`). A read: it boots no
 //! simulator and changes no setting.
 
+use rmcp::handler::server::wrapper::Parameters;
 use rmcp::{tool, tool_router};
 use serde_json::json;
 
+use super::NoArgs;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 use crate::backend::ToolFailure;
@@ -16,9 +18,9 @@ const DEVICES_TOOL: &str = "ios_devices";
 #[tool_router(router = ios_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The iOS simulators and devices of this Mac for iOS views (Mobile Safari over safaridriver, macOS only): supported (false outside macOS, with reason), xcode (Xcode installed - the iOS Simulator needs it), simulators (udid, name such as \"iPhone 16\", runtime such as \"iOS 18.2\", booted), devices (iPhones and iPads on USB: udid, name), mode (engines.ios.mode: auto - the simulator when Xcode is installed, else a connected device -, simulator or device), defaultSimulator and default, the target a view without iosDevice gets (udid, label, simulator) - or reason, code and setting when there is none (engines.ios.no.way: neither Xcode nor a device; install Xcode for the simulator or connect an iPhone with Settings > Safari > Advanced > Remote Automation on). Put a name or a udid into views_set_engine { engine: \"ios\", iosDevice }. A read: it boots no simulator."
+        description = "The iOS simulators and devices of this Mac for iOS views (macOS only): supported (false elsewhere, with reason), xcode, simulators (udid, name, runtime, booted), devices (udid, name), mode (engines.ios.mode: auto, simulator, device), defaultSimulator, and default - the target a view without iosDevice gets - or reason, code and setting when there is none (engines.ios.no.way). Pass a name or udid to views_set_engine { engine: \"ios\", iosDevice }. Boots no simulator."
     )]
-    pub(crate) async fn ios_devices(&self) -> ToolResult {
+    pub(crate) async fn ios_devices(&self, _args: Parameters<NoArgs>) -> ToolResult {
         let result = async {
             let answer = self.backend.host_tool(DEVICES_TOOL, json!({})).await?;
             Ok::<_, ToolFailure>(self.backend.mask(&answer))

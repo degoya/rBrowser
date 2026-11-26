@@ -170,17 +170,110 @@ fn element_clip_keeps_its_size_at_the_page_edge() {
     assert!(element_clip(&[1.0; 6], 0, (0.0, 0.0), 1.0).is_none());
 }
 
-#[test]
-fn full_page_height_is_capped_in_device_pixels() {
-    assert_eq!(full_page_height(4000.2, 852.0, 3.0, 1.0), 4001.0);
-    assert_eq!(full_page_height(100.0, 852.0, 3.0, 1.0), 852.0);
-    assert_eq!(full_page_height(100_000.0, 852.0, 2.0, 1.0), 8192.0);
-    assert_eq!(full_page_height(100_000.0, 852.0, 0.0, 1.0), 16_384.0);
-    // A pixel ratio below 1 never raises the cap in CSS px (security review, wave 090-w23: a
-    // checked-in `dpr: 0.001` made it 16.4 million).
-    assert_eq!(full_page_height(3e7, 852.0, 0.001, 1.0), 16_384.0);
-    assert_eq!(full_page_height(3e7, 852.0, 0.5, 1.0), 16_384.0);
-    assert_eq!(full_page_height(3e7, 852.0, f64::NAN, 1.0), 16_384.0);
+/// A view `width` CSS px wide whose breakpoint has no `dpr` (the screen's) and no height.
+fn screen_target(width: u32) -> CaptureTarget {
+    CaptureTarget {
+        session: "S1".to_owned(),
+        metrics: json!({
+            "width": width, "height": 600, "deviceScaleFactor": 0.0, "mobile": false, "scale": 1.0
+        }),
+        height: 0,
+        dpr: 0.0,
+        hidden: false,
+    }
+}
+
+/// A page `css_height` CSS px tall on a screen at `ratio`; every shot answers a 1 px wide PNG of
+/// `rows` rows (a section with more rows than its plan is cut to it).
+fn long_page(script: &Scripted, css_height: f64, ratio: f64, rows: u32) {
+    script.answer(
+        "Page.getLayoutMetrics",
+        json!({
+            "cssVisualViewport": { "pageX": 0.0, "pageY": 0.0 },
+            "cssLayoutViewport": { "pageX": 0.0, "pageY": 0.0 },
+            "cssContentSize": { "width": 100.0, "height": css_height },
+            "contentSize": { "width": 100.0 * ratio, "height": css_height * ratio }
+        }),
+    );
+    let image = rb_visual::Rgba::new(1, rows, [10, 20, 30, 255]).expect("small");
+    let png = rb_visual::encode_png(&image).expect("encoded");
+    script.answer(
+        "Page.captureScreenshot",
+        json!({ "data": base64::engine::general_purpose::STANDARD.encode(png) }),
+    );
+}
+
+/// `(y, height)` of every shot's clip.
+fn clips(script: &Scripted) -> Vec<(f64, f64)> {
+    script
+        .params("Page.captureScreenshot")
+        .iter()
+        .map(|shot| {
+            let of = |key: &str| shot["clip"][key].as_f64().unwrap_or(-1.0);
+            (of("y"), of("height"))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn a_long_page_without_dpr_is_taken_in_sections_at_the_screens_ratio() {
+    // RB-099-11, the owner's find: no `dpr`, Windows at 150 %, a page of 40000 CSS px. One
+    // shot of 16384 CSS px was 24576 device px and repeated its top from row 16384 on.
+    let (script, router) = Scripted::connect();
+    long_page(&script, 40_000.0, 1.5, 15_999);
+    let restore = || Some(screen_target(1920).metrics);
+    let png = capture(
+        &router,
+        &screen_target(1920),
+        &Shot::FullPage,
+        1.0,
+        &restore,
+    )
+    .await
+    .expect("captured");
+    let overrides = script.params("Emulation.setDeviceMetricsOverride");
+    assert_eq!(
+        overrides.len(),
+        2,
+        "one viewport for every section, then the restore"
+    );
+    assert_eq!(overrides[0]["height"], 10_666.0, "one section's height");
+    assert_eq!(overrides[1], screen_target(1920).metrics);
+    assert_eq!(
+        clips(&script),
+        [
+            (0.0, 10_666.0),
+            (10_666.0, 10_666.0),
+            (21_332.0, 10_666.0),
+            (31_998.0, 8002.0)
+        ]
+    );
+    for shot in script.params("Page.captureScreenshot") {
+        assert_eq!(shot["captureBeyondViewport"], true);
+        assert_eq!(shot["clip"]["width"], 1920.0);
+    }
+    // 15999 rows three times, the last section cut to its 12003.
+    assert_eq!(rb_visual::png_size(&png), Some((1, 60_000)));
+    assert_eq!(rb_visual::truncation(&png), None);
+}
+
+#[tokio::test]
+async fn a_page_beyond_the_image_is_cut_and_its_png_says_how_tall_it_was() {
+    let (script, router) = Scripted::connect();
+    long_page(&script, 100_000.0, 1.0, 16_000);
+    let restore = || Some(screen_target(1).metrics);
+    let png = capture(&router, &screen_target(1), &Shot::FullPage, 1.0, &restore)
+        .await
+        .expect("captured");
+    assert_eq!(clips(&script).len(), 5);
+    assert_eq!(rb_visual::png_size(&png), Some((1, 65_535)));
+    assert_eq!(
+        rb_visual::truncation(&png),
+        Some(rb_visual::Truncated {
+            page_height: 100_000,
+            captured_height: 65_535,
+        })
+    );
 }
 
 #[tokio::test]

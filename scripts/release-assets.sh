@@ -15,7 +15,8 @@
 # macOS architecture, the ZIP and the DMG of scripts/package-macos.sh (RB-090-80), and the Linux
 # tarball, deb and rpm of scripts/package-linux.sh (RB-097-05) - so a release
 # never goes out with a platform missing. `downloads` is the release text's last part: which
-# package is whose, and how macOS lets an app start that is signed ad hoc and not notarised.
+# package is whose (the Windows MSI of RB-099-27 among them), and how macOS lets an app start that
+# is signed ad hoc and not notarised.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -62,7 +63,7 @@ notes() {
 # The packages of release $1, by name.
 packages() {
     local name
-    for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip \
+    for name in windows-x64.zip windows-x64.msi macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip \
         macos-x86_64.dmg linux-x64.tar.gz linux-x64.deb linux-x64.rpm; do
         printf 'rbrowser-%s-%s\n' "$1" "$name"
     done
@@ -89,7 +90,9 @@ downloads() {
 
 - **Windows** (x64): \`rbrowser-$version-windows-x64.zip\` - unpack it into a folder of your own
   and start \`rbrowser.exe\`; it is not code-signed yet, so SmartScreen asks once (More info, Run
-  anyway).
+  anyway). \`rbrowser-$version-windows-x64.msi\` installs the same program for your user only,
+  without admin rights, into %LOCALAPPDATA%\\Programs\\rBrowser with a Start menu entry; Settings >
+  Apps removes it again and leaves your settings.
 - **macOS 13 or later**: \`rbrowser-$version-macos-aarch64.dmg\` for Apple Silicon,
   \`rbrowser-$version-macos-x86_64.dmg\` for Intel Macs, each also as a ZIP; drag rBrowser into
   Applications. The app is signed ad hoc, not notarised, so macOS refuses its first start: allow

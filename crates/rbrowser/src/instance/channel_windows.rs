@@ -155,3 +155,7 @@ impl Drop for UserOnly {
         unsafe { LocalFree(self.0) };
     }
 }
+
+#[cfg(test)]
+#[path = "channel_windows_tests.rs"]
+mod tests;

@@ -13,7 +13,9 @@ as rb-mcp routes it), the prompts with their arguments and the resources with th
 tools file has them, RB-095-01), then the tools still to come and the commands no tool runs.
 
 Exit 0 when written (or, with --check, current - or no wiki, or no page yet: nothing generated
-to compare); 1 when --check finds the page stale; 2 when the data does not read.
+to compare); 1 when --check finds the page stale; 2 when the data does not read or a job id is
+left in the page (scripts/lib/wiki_text.py: a parenthesis of them is dropped; a coming tool's
+job is the planning's and not shown).
 """
 
 import json
@@ -25,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import plugin_manifests  # noqa: E402
 import settings_schema  # noqa: E402
 from settings_schema import DataError  # noqa: E402
+from wiki_text import job_ids_left, public_text  # noqa: E402
 
 PAGE = "reference/mcp-tools.md"
 TOOLS = "schema/mcp-tools.v1.json"
@@ -339,12 +342,12 @@ def render(root: Path) -> str:
             out.extend(parameters(tool))
     out.extend(prompts_resources(*read_prompts_resources(root)))
     out.append("## Coming tools\n")
-    out.append("Commands name these tools already; each arrives with its job.\n")
-    out.append("| Tool | Job | Command |")
-    out.append("| --- | --- | --- |")
+    out.append("Commands name these tools already; the tools themselves are still to come.\n")
+    out.append("| Tool | Command |")
+    out.append("| --- | --- |")
     for entry in sorted(pending, key=lambda e: e["tool"]):
         ran = ", ".join(f"`{c['id']}`" for c in runs.get(entry["tool"], [])) or "-"
-        out.append(f"| `{cell(entry['tool'])}` | {cell(entry['job'])} | {ran} |")
+        out.append(f"| `{cell(entry['tool'])}` | {ran} |")
     out.append("")
     out.append("## Commands without a tool\n")
     out.append("These commands are not reachable over MCP, each for the reason given.\n")
@@ -363,10 +366,16 @@ def main(argv: list[str]) -> int:
     root, wiki = Path(argv[1]).resolve(), Path(argv[2])
     check = "--check" in argv[3:]
     try:
-        text = render(root)
+        text = public_text(render(root))
     except DataError as error:
         print(f"!! the tool data does not read: {error}", file=sys.stderr)
         print(f"   ({TOOLS} is regenerated with {REGENERATE})", file=sys.stderr)
+        return 2
+    left = job_ids_left(text, PAGE)
+    if left:
+        print("!! a job id is left in the page; drop it from the description:", file=sys.stderr)
+        for line in left:
+            print(f"   {line}", file=sys.stderr)
         return 2
     page = wiki / PAGE
     if not wiki.is_dir():

@@ -14,6 +14,9 @@ fn shot(view: u32, path: &str) -> ShotAnswer {
         path: Some(path.to_owned()),
         png_base64: None,
         error: None,
+        truncated: false,
+        page_height: None,
+        images_pending: false,
     }
 }
 
@@ -27,7 +30,7 @@ fn the_files_of_the_last_screenshots_are_read_by_index_within_the_limit() {
         screenshot_png(Some(root), 0, 1024)
             .expect_err("none yet")
             .code,
-        "screenshots_none"
+        "screenshots.none"
     );
     let first = root.join("mobile.png");
     let overview = root.join("overview.png");
@@ -50,13 +53,13 @@ fn the_files_of_the_last_screenshots_are_read_by_index_within_the_limit() {
     assert_eq!(screenshot_png(Some(root), 0, 1024).expect("the first"), png);
     // The overview is the last file; over the limit it is refused, not cut.
     let refused = screenshot_png(Some(root), 1, 1024).expect_err("too large");
-    assert_eq!(refused.code, "answer_too_large");
+    assert_eq!(refused.code, "answer.too_large");
     assert_eq!(refused.settings_key.as_deref(), Some("mcp.maxAnswerBytes"));
     assert_eq!(
         screenshot_png(Some(root), 2, 1024)
             .expect_err("past the end")
             .code,
-        "screenshots_none"
+        "screenshots.none"
     );
     // Only a PNG is answered: a file put in its place that is none is refused.
     fs::write(&first, b"not an image").expect("written");
@@ -64,7 +67,7 @@ fn the_files_of_the_last_screenshots_are_read_by_index_within_the_limit() {
         screenshot_png(Some(root), 0, 1024)
             .expect_err("no PNG")
             .code,
-        "screenshots_none"
+        "screenshots.none"
     );
     // A link put in its place is not followed, even to a PNG.
     #[cfg(unix)]
@@ -77,13 +80,13 @@ fn the_files_of_the_last_screenshots_are_read_by_index_within_the_limit() {
             screenshot_png(Some(root), 0, 1024)
                 .expect_err("a link")
                 .code,
-            "screenshots_none"
+            "screenshots.none"
         );
     }
     fs::remove_file(first).expect("removed");
     assert_eq!(
         screenshot_png(Some(root), 0, 1024).expect_err("gone").code,
-        "screenshots_none"
+        "screenshots.none"
     );
     assert!(screenshots(None).is_none(), "no project, nothing");
 }

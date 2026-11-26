@@ -8,6 +8,7 @@ import USelect from '@nuxt/ui/components/Select.vue';
 import seoCatalogue from '../../../plugins/seo/locales/en.json';
 import seoSchema from '../../../plugins/seo/settings.schema.json';
 import { shellMessages } from '../i18n';
+import { PAGES_CATALOGUE } from '../i18n/pages';
 import { takePluginTexts } from '../i18n/pluginTexts';
 import type { JsonValue } from '../ipc/protocol';
 import { enumOptions, itemsOf, kindOf, mapValuesOf, propertiesOf } from './kinds';
@@ -115,7 +116,7 @@ describe('the names of the choices', () => {
   });
 
   it('has a name for every option a core key shows', () => {
-    const messages = flatten(shellMessages());
+    const messages = flatten(shellMessages([PAGES_CATALOGUE]));
     const missing: string[] = [];
     const walk = (schema: JsonSchema, name: string): void => {
       const options = enumOptions(schema);

@@ -2,7 +2,7 @@
   "plugin": {
     "simulators": {
       "commands": {
-        "pick": "Simulators: Choose a Simulation for the Active View"
+        "pick": "Simulators: choose a simulation for the active view"
       },
       "tools": {
         "set": "Simulates a colour vision deficiency (protanopia, protanomaly, deuteranopia, deuteranomaly, tritanopia, tritanomaly, achromatopsia, achromatomaly), a vision impairment (myopia, cataract, glaucoma, macular-degeneration, low-contrast) or the surroundings (sunlight, dimmed) in the target views; \"none\" removes it. severity (0 to 1) sets the strength where a simulation has one. Without target the active view; without type it answers every view's simulation and the catalogue."
@@ -123,7 +123,7 @@
         "persist": {
           "label": "Keep simulations after a restart",
           "description": "Off: every start begins with the default simulation in every view. On: each view keeps its simulation in .rbrowser/out/simulators/ across restarts.",
-          "help": "Each view keeps its simulation in .rbrowser/out/simulators/ across restarts. Off starts every session with the default simulation."
+          "help": "Each view keeps its simulation in .rbrowser/out/simulators/ across restarts. When off, it starts every session with the default simulation."
         },
         "option": {
           "default": {

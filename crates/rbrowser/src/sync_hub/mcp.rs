@@ -38,7 +38,7 @@ pub enum SyncAction {
     /// Switch sync, a kind of it or a view on or off (`enabled`).
     #[default]
     Set,
-    /// Load the active view's URL in the target view(s); their desync badge goes.
+    /// Load the active view's URL in the target views; their desync badge goes.
     Resync,
     /// Do not sync the next click.
     SkipNextClick,

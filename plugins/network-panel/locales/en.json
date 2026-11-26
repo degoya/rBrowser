@@ -67,7 +67,7 @@
         "api_open": "Open the network panel's request in the API client",
         "api_save": "Save the network panel's shown requests as API requests",
         "breakpoints_toggle": "Switch the request breakpoints on or off",
-        "cache_toggle": "Switch the cache off or on",
+        "cache_toggle": "Switch the cache on or off",
         "endpoints": "Show the endpoints of the page",
         "endpoints_check": "Check the endpoints of the page",
         "har_export": "Export the requests as HAR",
@@ -76,7 +76,7 @@
         "site_data_clear": "Clear the site data of every view"
       },
       "compose": {
-        "badUrl": "Enter an http(s) URL.",
+        "badUrl": "Enter an http or https URL.",
         "body": "Body",
         "composed": "composed",
         "cut": "(cut)",
@@ -126,7 +126,7 @@
       "editor": {
         "action": "Action",
         "badDelay": "The delay is a whole number from 0 to 60000.",
-        "badMethod": "The method is one word of letters (GET, POST, ...).",
+        "badMethod": "The method is one word of letters (GET, POST, …).",
         "badPattern": "Enter a URL pattern of at most 2048 characters.",
         "badStatus": "The status is a number from 100 to 599.",
         "body": "Body",
@@ -293,7 +293,7 @@
         },
         "cacheDisabled": {
           "description": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space R N switches it for the session.",
-          "help": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space, R, N switches it for the session. On shows every load as a first visit.",
+          "help": "Whether the browser cache is off in every Chromium view when a session starts; Ctrl+Shift+Space, R, N switches it for the session. When on, it shows every load as a first visit.",
           "label": "Cache off at start"
         },
         "endpoints": {
@@ -309,7 +309,7 @@
           },
           "nPlusOne": {
             "description": "This many different calls of one endpoint in one page load are reported as an N+1 pattern.",
-            "help": "How many different URLs of one endpoint (/api/items/1, /api/items/2, ...) in one view's page load make an N+1 finding. Default 5.",
+            "help": "How many different URLs of one endpoint (/api/items/1, /api/items/2, …) in one view's page load make an N+1 finding. Default 5.",
             "label": "N+1 calls"
           },
           "patterns": {
@@ -330,7 +330,7 @@
         },
         "harBodies": {
           "description": "A HAR export carries the response bodies the views still hold (at most 1 MiB each).",
-          "help": "A HAR export carries the response bodies the views still hold, at most 1 MiB each. Off exports headers and timings only, for a smaller file.",
+          "help": "A HAR export carries the response bodies the views still hold, at most 1 MiB each. When off, it exports headers and timings only, for a smaller file.",
           "label": "Bodies in HAR exports"
         },
         "mapLocalRoots": {

@@ -11,6 +11,11 @@
 //! Git LFS (`visual.lfsCheck`) and names the set-up command when it is missing; only
 //! `visual.lfs_setup`, the person's own command, changes `.gitattributes` and the Git
 //! configuration. Baselines come from the project and only produce findings: no trust gate.
+//!
+//! A `scope` (`"visible"` or chosen breakpoints, [`crate::run_scope`]) narrows a run to the views
+//! of its breakpoints, held at its start: the baselines of the other breakpoints stay as they
+//! are. `visual.compare_visible` (`Leader C C`) compares the views the grid shows; a chosen
+//! breakpoint no view shows is named in a notice and as `notShown` (RB-099-10).
 
 pub mod findings;
 pub mod lfs;
@@ -23,7 +28,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rb_commands::CommandError;
-use rb_config::EngineKind;
+use rb_config::{EngineKind, ViewScope};
 use rb_engine::{EngineError, Target, ViewHost};
 use rb_ipc::{CoreToShell, Notification, NotificationLevel};
 use rb_visual::{BaselineMeta, BaselineStore, SlugStrategy, Viewport, VisualError, meta};
@@ -33,13 +38,21 @@ use crate::about::{BUILD, split_cef};
 use crate::capture::chromium::HostShooter;
 use crate::control::Core;
 use crate::host::Host;
+use crate::run_scope::{self, RunScopeError};
 use run::{RunSetup, ViewTarget, VisualOptions};
 use tool::{CompareAnswer, CompareArgs, LfsAnswer, UpdateAnswer, UpdateArgs};
 
 /// The commands of this module.
-pub const COMMANDS: [&str; 3] = [COMPARE_COMMAND, UPDATE_COMMAND, LFS_SETUP_COMMAND];
+pub const COMMANDS: [&str; 4] = [
+    COMPARE_COMMAND,
+    COMPARE_VISIBLE_COMMAND,
+    UPDATE_COMMAND,
+    LFS_SETUP_COMMAND,
+];
 /// Compare the views with their baselines.
 pub const COMPARE_COMMAND: &str = "visual.compare";
+/// Compare the views the grid shows with their baselines (RB-099-10).
+pub const COMPARE_VISIBLE_COMMAND: &str = "visual.compare_visible";
 /// Store the views as the new baselines.
 pub const UPDATE_COMMAND: &str = "visual.baseline_update";
 /// Set the project up for LFS baselines.
@@ -107,13 +120,22 @@ pub enum VisualRunError {
     /// A task ended without an answer.
     #[error("{0}")]
     Failed(String),
+    /// The scope gives no view (RB-099-10).
+    #[error(transparent)]
+    Scope(#[from] RunScopeError),
 }
 
 /// Runs the command `id` when it is this module's (`visual.*`); `None` otherwise.
 pub fn run_command(core: &Core, id: &str, args: &Value) -> Option<Result<Value, CommandError>> {
     let started = match id {
-        COMPARE_COMMAND => CompareArgs::parse(args)
+        COMPARE_COMMAND | COMPARE_VISIBLE_COMMAND => CompareArgs::parse(args)
             .map_err(CommandError::InvalidArgs)
+            .map(|mut args| {
+                if id == COMPARE_VISIBLE_COMMAND {
+                    args.scope = Some(ViewScope::Visible);
+                }
+                args
+            })
             .and_then(|args| {
                 start(core, move |core| async move {
                     report_compare(&core, &args).await
@@ -186,9 +208,21 @@ fn now() -> std::time::Duration {
         .unwrap_or_default()
 }
 
-/// The views of `target` in layout order, as a run needs them.
-fn targets(host: &Arc<Host>, target: Target) -> Result<Vec<ViewTarget>, VisualRunError> {
-    let ids = host.target_views(Some(target))?;
+/// The views of `target` in layout order, as a run needs them - the views of `scope`'s
+/// breakpoints when it narrows them -, and the chosen breakpoints no view shows.
+fn targets(
+    host: &Arc<Host>,
+    target: Target,
+    scope: Option<&ViewScope>,
+) -> Result<(Vec<ViewTarget>, Vec<String>), VisualRunError> {
+    let scoped = match scope {
+        Some(scope) => run_scope::scoped(&host.config(), &host.views(), scope)?,
+        None => None,
+    };
+    let (ids, not_shown) = match scoped {
+        Some(scoped) => (scoped.views, scoped.not_shown),
+        None => (host.target_views(Some(target))?, Vec::new()),
+    };
     let views: Vec<ViewTarget> = host
         .views()
         .into_iter()
@@ -226,7 +260,7 @@ fn targets(host: &Arc<Host>, target: Target) -> Result<Vec<ViewTarget>, VisualRu
     if views.is_empty() {
         return Err(VisualRunError::NoViews);
     }
-    Ok(views)
+    Ok((views, not_shown))
 }
 
 /// Compares the views of `args` with their baselines, reports the findings and waits: the MCP
@@ -239,8 +273,12 @@ pub async fn compare(
     let host = core.host().clone();
     let root = host.project_root().ok_or(VisualRunError::NoProject)?;
     let options = options(&host.config().visual, args.threshold);
-    let views = targets(&host, args.target.unwrap_or(Target::All))?;
+    let target = args.target.unwrap_or(Target::All);
+    let (views, not_shown) = targets(&host, target, args.scope.as_ref())?;
     core.notify(started_notice(COMPARING_KEY, views.len()));
+    if let Some(notice) = run_scope::not_shown_notice(&not_shown) {
+        core.notify(notice);
+    }
     let since = now();
     let run_id = rb_plugin_host::run_id(since.as_millis());
     let diff_dir = crate::capture::settings(core)
@@ -270,7 +308,10 @@ pub async fn compare(
         .map_err(|error| VisualRunError::Failed(error.to_string()))?
         .map_err(|error| VisualRunError::Failed(error.to_string()))?;
     let folder = diff_dir.is_dir().then(|| diff_dir.display().to_string());
-    Ok(CompareAnswer::of(run_id, comparisons, folder))
+    Ok(CompareAnswer {
+        not_shown,
+        ..CompareAnswer::of(run_id, comparisons, folder)
+    })
 }
 
 /// Stores the views of `args` as the new baselines and checks Git LFS: the MCP tool
@@ -280,8 +321,12 @@ pub async fn update(core: &Arc<Core>, args: &UpdateArgs) -> Result<UpdateAnswer,
     let host = core.host().clone();
     let root = host.project_root().ok_or(VisualRunError::NoProject)?;
     let options = options(&host.config().visual, None);
-    let views = targets(&host, args.target.unwrap_or(Target::All))?;
+    let target = args.target.unwrap_or(Target::All);
+    let (views, not_shown) = targets(&host, target, args.scope.as_ref())?;
     core.notify(started_notice(UPDATING_KEY, views.len()));
+    if let Some(notice) = run_scope::not_shown_notice(&not_shown) {
+        core.notify(notice);
+    }
     let setup = RunSetup {
         options,
         machine: machine_meta(now().as_secs()),
@@ -302,6 +347,7 @@ pub async fn update(core: &Arc<Core>, args: &UpdateArgs) -> Result<UpdateAnswer,
     Ok(UpdateAnswer {
         baselines,
         lfs: checked,
+        not_shown,
     })
 }
 

@@ -40,7 +40,7 @@ pub async fn call(core: &Arc<Core>, name: &str) -> Result<Value, ToolFailure> {
         runtime
             .spawn_blocking(move || super::flow::mcp(&core, &name))
             .await
-            .map_err(|_| ToolFailure::new("unfinished", "the update tool did not finish"))?
+            .map_err(|_| ToolFailure::new("update.unfinished", "the update tool did not finish"))?
     }
     #[cfg(not(feature = "self-update"))]
     {

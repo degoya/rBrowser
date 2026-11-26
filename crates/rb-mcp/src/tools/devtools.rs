@@ -20,7 +20,7 @@ use crate::target::{TargetArg, resolve_one};
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct InspectAtParams {
-    /// One view (id or breakpoint id); the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The point's x, in CSS px of the view's page from its top-left corner.
@@ -32,7 +32,7 @@ pub struct InspectAtParams {
 #[tool_router(router = devtools_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Open DevTools for one view (target: a view id or breakpoint id, default the active view; mode as the setting) and select the element at the point x, y - CSS px of the page, from the viewport's top-left corner - in the Elements panel, like the page's context menu entry Inspect element. rBrowser's own overlays there (rulers, guides, plugin layers) are passed over: the element is the page's. Always opens DevTools when they are closed or with another view: the setting devtools.openOnInspect holds back only the menu entry and the shortcut. Answers the view, the DevTools mode, the element's backendNodeId and selected (false in a DevTools window, which takes no selection)."
+        description = "Open DevTools for one view and select the element at x, y (CSS px of the page from the viewport's top-left) in the Elements panel, like the context menu's Inspect element; rBrowser's own overlays are passed over. Opens DevTools whatever devtools.openOnInspect says. Answers the view, the DevTools mode, the element's backendNodeId and selected (false in a DevTools window)."
     )]
     pub(crate) async fn devtools_inspect_at(
         &self,
@@ -44,7 +44,7 @@ impl RbMcpServer {
                 .all(|value| value.is_finite() && *value >= 0.0)
             {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "x and y are non-negative numbers".to_owned(),
                 ));
             }

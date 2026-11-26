@@ -54,7 +54,7 @@ afterEach(() => {
 
 describe('the security header panel', () => {
   it('compares at once and says so', () => {
-    expect($('#status')?.textContent).toBe('Reading the page in each environment...');
+    expect($('#status')?.textContent).toBe('Reading the page in each environment…');
     expect(posted.filter((m) => m.tool === 'compare')).toHaveLength(1);
   });
 

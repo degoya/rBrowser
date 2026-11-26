@@ -140,6 +140,8 @@ export function createMockTransport(options: MockOptions = {}): MockTransport {
       case 'canvasPainted': // the board's answer (RB-090-55)
       // The extension prompt's answer (RB-080-23): the mock installs nothing.
       case 'extensionDecision':
+      // The sign-in dialog's answer (RB-099-04): the mock has no request waiting.
+      case 'authPromptReply':
       // The toolbar's rows (RB-080-52): the mock has no window to make room in.
       case 'toolbarRows':
         return ACK;

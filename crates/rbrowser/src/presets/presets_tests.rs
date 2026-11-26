@@ -32,7 +32,7 @@ fn config() -> ProjectConfig {
         ],
         "layouts": {
             "presets": {
-                "wide": { "layout": { "columns": 2, "rows": 1, "cells": [
+                "wide": { "mode": "grid", "layout": { "columns": 2, "rows": 1, "cells": [
                     { "breakpoint": "desktop", "col": 1, "row": 1, "zoom": 0.5 },
                     { "breakpoint": "mobile", "col": 2, "row": 1 }
                 ] } },
@@ -50,6 +50,14 @@ struct Setup {
 }
 
 fn setup(config: ProjectConfig) -> Setup {
+    let setup = setup_at_start(config);
+    // These tests switch from the top-level grid (RB-099-26: the canvas is the start now).
+    crate::layout::test_support::start_in_grid(&setup.core);
+    setup
+}
+
+/// A core with `config` open and its start selection shown.
+fn setup_at_start(config: ProjectConfig) -> Setup {
     let (fake, router) = FakeBrowser::connect();
     let ui = Arc::new(RecordingUi::default());
     let host = Host::new(ui.clone(), router, Handle::current());
@@ -316,4 +324,38 @@ async fn an_environment_that_is_no_web_url_is_refused_and_nothing_navigates() {
         setup.core.host().shell_state().environment.as_deref(),
         Some("local")
     );
+}
+
+/// RB-099-26 (owner, 2026-11-26): a project that names no start preset - `rbrowser init`'s, one
+/// without any config - opens in the canvas, which places every view itself (no positions
+/// stored: the camera fits them all); a start preset that names the grid keeps it.
+#[tokio::test]
+async fn a_project_without_a_start_preset_opens_in_the_canvas_and_a_named_grid_stays() {
+    use crate::layout::spec::ModeKind;
+    let minimal: ProjectConfig = serde_json::from_value(crate::cli::init::minimal_config(Some(
+        "http://localhost:3000/",
+    )))
+    .expect("init's config parses");
+    for config in [config(), minimal, crate::host::state::default_config()] {
+        let setup = setup_at_start(config);
+        let host = setup.core.host();
+        let shell = host.shell_state();
+        assert_eq!((shell.preset, shell.mode), (None, LayoutMode::Canvas));
+        let spec = host.mode_spec().expect("the canvas places the views");
+        assert!(
+            matches!(&spec.kind, ModeKind::Canvas { items, camera: None, .. } if items.is_empty()),
+            "{:?}",
+            spec.kind
+        );
+        assert_eq!(spec.breakpoints.len(), host.views().len());
+    }
+    let mut named = config();
+    named.layouts.default = Some("wide".to_owned());
+    let setup = setup_at_start(named);
+    let shell = setup.core.host().shell_state();
+    assert_eq!(
+        (shell.preset.as_deref(), shell.mode),
+        (Some("wide"), LayoutMode::Grid)
+    );
+    assert!(setup.core.host().mode_spec().is_none());
 }

@@ -37,6 +37,7 @@ const STRINGS: Record<string, string> = {
   'plugin.lighthouse.panel.idle': 'No Lighthouse run yet.',
   'plugin.lighthouse.panel.last': 'Run {run}: {url}',
   'plugin.lighthouse.panel.openPage': 'Open the page',
+  'plugin.lighthouse.panel.scope.covered': 'Measured: {breakpoints}',
   'plugins.error.busy': 'The plugin is busy.',
   'plugins.panel.waiting': 'Waiting for the running check.',
 };
@@ -212,6 +213,18 @@ describe('the Lighthouse panel', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     await fromHost({ type: 'settings', strings: STRINGS, settings: { 'ui.theme': 'system' } });
     expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  // RB-099-10: the run takes the views of the scope pick list, the last run's scope shown again.
+  it('runs over the scope of the last run until another is picked, and names what it measured', async () => {
+    await fromHost({ type: 'settings', strings: STRINGS, settings: {} });
+    const latest = { ...(STATUS.latest as LighthouseSummary), scope: ['mobile'] };
+    await answerStatus({ ...STATUS, latest, breakpoints: [{ id: 'mobile', engine: 'chromium' }, { id: 'desktop', engine: 'chromium' }] });
+    expect($('#scope')).not.toBeNull();
+    expect($('#measured')?.textContent).toContain('mobile, desktop');
+    ($('#run') as HTMLButtonElement).click();
+    const run = posted.filter((m) => m.type === 'call' && m.command === 'run').at(-1);
+    expect(run?.args).toEqual({ $scope: ['mobile'] });
   });
 
   it('runs the command and cancels through the tool', async () => {

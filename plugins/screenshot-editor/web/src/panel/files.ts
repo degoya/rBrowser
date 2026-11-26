@@ -4,8 +4,12 @@
 import { clip, cropOf, render } from './draw';
 import type { ShotAnnotation, ShotImage } from './types';
 
-/** The most chunks one image takes: 8 MiB in 47 KiB chunks, and room. */
-export const MAX_CHUNKS = 256;
+/** The largest image the panel loads (src/cache.rs `MAX_BYTES`, RB-099-24): an image too large
+ * for a canvas comes as its scaled preview, so this bounds a preview or an image of at most 25
+ * megapixels. */
+export const MAX_BYTES = 128 * 1024 * 1024;
+/** The most chunks one image takes: `MAX_BYTES` in 47 KiB chunks, and room. */
+export const MAX_CHUNKS = 2800;
 
 /** One answer of the tool `load`. */
 export interface LoadAnswer {
@@ -13,10 +17,14 @@ export interface LoadAnswer {
   width?: unknown;
   height?: unknown;
   data?: unknown;
+  offset?: unknown;
   next?: number | null;
   hash?: unknown;
   annotations?: unknown;
   annotations_too_large?: unknown;
+  /** Image pixels per pixel of `data`: more than 1 for a large image's preview. */
+  scale?: unknown;
+  bytes?: unknown;
 }
 
 /**
@@ -28,27 +36,33 @@ export async function fetchImage(call: (name: string, args: Record<string, unkno
   const parts: BlobPart[] = [];
   const first = ((await call('load', path ? { image: path } : {})) ?? {}) as LoadAnswer;
   const hash = first.hash;
+  if (Number(first.bytes ?? 0) > MAX_BYTES) throw new Error('plugin.screenshot-editor.panel.too_many_chunks');
   let answer = first;
   for (let count = 0; ; count += 1) {
     parts.push(Uint8Array.from(atob(String(answer.data ?? '')), (c) => c.charCodeAt(0)));
     if (answer.next === null || answer.next === undefined) break;
-    if (count >= MAX_CHUNKS) throw new Error('plugin.screenshot-editor.errors.image_too_large');
+    if (count >= MAX_CHUNKS) throw new Error('plugin.screenshot-editor.panel.too_many_chunks');
     answer = ((await call('load', { image: first.image, offset: answer.next, hash })) ?? {}) as LoadAnswer;
     if (answer.hash !== hash) throw new Error('plugin.screenshot-editor.panel.changed');
   }
   return { first, blob: new Blob(parts, { type: 'image/png' }) };
 }
 
-/** The edited image with the crop applied, as a canvas. */
-export function finished(image: Pick<ShotImage, 'bitmap' | 'width' | 'height'>, items: readonly ShotAnnotation[]): HTMLCanvasElement | null {
+/** The open image as `finished` and `copy` need it; `scale` 1 when not named. */
+type Shown = Pick<ShotImage, 'bitmap' | 'width' | 'height'> & { scale?: number };
+
+/** The edited image with the crop applied, as a canvas - at the bitmap's resolution, so a large
+ * image's preview at 1:scale (RB-099-24); the saved file is rendered at full size. */
+export function finished(image: Shown, items: readonly ShotAnnotation[]): HTMLCanvasElement | null {
+  const scale = Math.max(1, image.scale ?? 1);
   const full = document.createElement('canvas');
-  full.width = image.width;
-  full.height = image.height;
+  full.width = Math.ceil(image.width / scale);
+  full.height = Math.ceil(image.height / scale);
   const ctx = full.getContext('2d');
   if (!ctx) return null;
-  render(ctx, image.bitmap, items, image.width, image.height);
+  render(ctx, image.bitmap, items, image.width, image.height, scale);
   const crop = cropOf(items);
-  const region = crop && clip(crop.x ?? 0, crop.y ?? 0, crop.w ?? 0, crop.h ?? 0, image.width, image.height);
+  const region = crop && clip((crop.x ?? 0) / scale, (crop.y ?? 0) / scale, (crop.w ?? 0) / scale, (crop.h ?? 0) / scale, full.width, full.height);
   if (!region) return full;
   const cut = document.createElement('canvas');
   cut.width = region.right - region.left;
@@ -58,7 +72,7 @@ export function finished(image: Pick<ShotImage, 'bitmap' | 'width' | 'height'>, 
 }
 
 /** The edited image on the system clipboard, as a PNG. */
-export async function copy(image: Pick<ShotImage, 'bitmap' | 'width' | 'height'>, items: readonly ShotAnnotation[]): Promise<void> {
+export async function copy(image: Shown, items: readonly ShotAnnotation[]): Promise<void> {
   const done = finished(image, items);
   if (!done) throw new Error('canvas');
   const blob = await new Promise<Blob>((resolve, reject) => done.toBlob((made) => (made ? resolve(made) : reject(new Error('png'))), 'image/png'));

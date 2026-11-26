@@ -3,7 +3,9 @@
 //! takes `target` like every view tool - `"all"`, a view id or a breakpoint id, resolved here
 //! and handed to the plugin as `"all"` or a view id, one call per view - and runs through the
 //! host (`Backend::host_tool`), which calls the plugin's `feature.call-tool`. A plugin tool never
-//! shadows a core tool.
+//! shadows a core tool. A tool that takes `breakpoints` (`lighthouse_run`) takes `target`
+//! `"visible"` and a list of view and breakpoint ids too (RB-099-10): one call with the scope as
+//! `$scope`, which the host turns into the breakpoints.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -17,7 +19,7 @@ use super::forward::Answers;
 use crate::RbMcpServer;
 use crate::answer::respond;
 use crate::backend::ToolFailure;
-use crate::target::TargetArg;
+use crate::run_target::{RunTarget, Split};
 
 /// One plugin tool as the host lists it.
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +36,22 @@ pub struct PluginToolInfo {
 const TARGET_DESCRIPTION: &str =
     "\"all\" (default), a view id or a breakpoint id; the plugin gets \"all\" or a view id";
 
+/// The description of `target` of a plugin tool that takes `breakpoints` (RB-099-10).
+const SCOPED_TARGET_DESCRIPTION: &str = "\"all\" (default), \"visible\" (the views the grid \
+     shows), a view id, a breakpoint id, or a list of view ids and breakpoint ids (their \
+     breakpoints; an empty list or an unknown id is an error)";
+
+/// The argument a plugin tool takes chosen breakpoints in.
+const BREAKPOINTS: &str = "breakpoints";
+
+/// Whether `schema` (a tool's arguments) takes `breakpoints`.
+fn takes_breakpoints(schema: &Value) -> bool {
+    schema
+        .get("properties")
+        .and_then(|properties| properties.get(BREAKPOINTS))
+        .is_some()
+}
+
 /// `schema` (an object schema; anything else counts as `{ "type": "object" }`) with the
 /// property `target`.
 #[must_use]
@@ -46,13 +64,25 @@ pub fn with_target(schema: &Value) -> Map<String, Value> {
         .entry("properties")
         .or_insert_with(|| Value::Object(Map::new()));
     if let Value::Object(properties) = properties {
-        properties.insert(
-            "target".to_owned(),
+        let target = if properties.contains_key(BREAKPOINTS) {
+            json!({
+                "description": SCOPED_TARGET_DESCRIPTION,
+                "anyOf": [
+                    { "type": "string" },
+                    { "type": "integer", "minimum": 0 },
+                    {
+                        "type": "array",
+                        "items": { "anyOf": [{ "type": "string" }, { "type": "integer", "minimum": 0 }] }
+                    },
+                ],
+            })
+        } else {
             json!({
                 "description": TARGET_DESCRIPTION,
                 "anyOf": [{ "type": "string" }, { "type": "integer", "minimum": 0 }],
-            }),
-        );
+            })
+        };
+        properties.insert("target".to_owned(), target);
     }
     schema
 }
@@ -82,27 +112,51 @@ fn call(context: ToolCallContext<'_, RbMcpServer>) -> Answer<'_> {
     Box::pin(async move {
         let name = context.name.to_string();
         let mut args = context.arguments.unwrap_or_default();
-        let result = match target_of(args.remove("target")) {
-            Ok(target) => {
-                context
-                    .service
-                    .host_per_target(&name, target.as_ref(), Value::Object(args), Answers::Joined)
-                    .await
+        let service = context.service;
+        let result = async {
+            let target = target_of(args.remove("target"))?;
+            match service.split_target(target.as_ref()).await? {
+                Split::Target(target) => {
+                    service
+                        .host_per_target(
+                            &name,
+                            target.as_ref(),
+                            Value::Object(args),
+                            Answers::Joined,
+                        )
+                        .await
+                }
+                Split::Scope(scope) => {
+                    let tools = service.read(|backend| backend.plugin_tools()).await?;
+                    if !tools
+                        .iter()
+                        .any(|tool| tool.name == name && takes_breakpoints(&tool.input_schema))
+                    {
+                        return Err(ToolFailure::new(
+                            "args.invalid",
+                            "this tool takes target \"all\", a view id or a breakpoint id",
+                        ));
+                    }
+                    // RB-099-10: one call; the host resolves `$scope` into `breakpoints`.
+                    args.insert("$scope".to_owned(), json!(scope));
+                    service.backend.host_tool(&name, Value::Object(args)).await
+                }
             }
-            Err(failure) => Err(failure),
-        };
+        }
+        .await;
         respond(result).map(Into::into)
     })
 }
 
 /// The `target` argument, when there is one.
-fn target_of(value: Option<Value>) -> Result<Option<TargetArg>, ToolFailure> {
+fn target_of(value: Option<Value>) -> Result<Option<RunTarget>, ToolFailure> {
     value
         .map(|value| {
             serde_json::from_value(value).map_err(|_| {
                 ToolFailure::new(
-                    "invalid_arguments",
-                    "target is \"all\", a view id or a breakpoint id",
+                    "args.invalid",
+                    "target is \"all\", a view id, a breakpoint id, \"visible\" or a list of \
+                     view ids and breakpoint ids",
                 )
             })
         })

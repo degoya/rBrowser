@@ -54,7 +54,7 @@ fn nothing_starts_by_itself_and_mcp_cannot_start_it() {
     assert!(!is_running());
     for name in ["portal_present_start", "portal_present_link"] {
         let failure = crate::portal::mcp::host_tool(&core, name, &json!({})).expect_err("refused");
-        assert_eq!(failure.code, "unknown_tool", "{name}");
+        assert_eq!(failure.code, "tool.unknown", "{name}");
     }
     let status =
         crate::portal::mcp::host_tool(&core, "portal_present_status", &json!({})).expect("answers");

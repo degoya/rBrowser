@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Fixed (RB-099-06): a view without its source as served says why in plain words - a sign-in
+  request (HTTP 401 or 407; the environment's Basic auth helps), a page still loading, or a
+  document the browser did not keep (reload, Collect network requests from the start, or the
+  rendered DOM); any other reason keeps the browser's words. Read from the page's navigation
+  status and ready state in the isolated world; a sign-in answer's body is never validated in the
+  page's place.
+- Added (RB-099-06): when the browser did not keep the document, the body the view's own network
+  log holds (`Network.getResponseBody` of the document's request, its `loaderId`) is validated -
+  from the view's memory, never a second request. New CDP domain `Network` (only that method).
 - Changed: html-validate 11.21.1 (bundled).
 - Fixed (RB-094-13): a view without its source names the browser's reason, not only the
   host's code.

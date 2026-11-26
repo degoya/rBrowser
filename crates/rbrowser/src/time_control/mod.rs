@@ -79,18 +79,34 @@ pub fn on_start(core: &Core) {
     let weak = Arc::downgrade(host);
     host.runtime().spawn(async move {
         loop {
-            let event = match events.recv().await {
-                Ok(event) => event,
-                Err(RecvError::Lagged(_)) => continue,
-                Err(RecvError::Closed) => return,
-            };
+            let event = events.recv().await;
             let Some(host) = weak.upgrade() else {
                 return;
             };
-            if let ViewEvent::Closed(view) = event {
-                HOOKS.forget(view);
-                publish(&host);
+            match event {
+                Ok(ViewEvent::Closed(view)) => {
+                    HOOKS.forget(view);
+                    publish(&host);
+                }
+                Ok(_) => {}
+                Err(RecvError::Lagged(_)) => {
+                    if reconcile(&host, &HOOKS) {
+                        publish(&host);
+                    }
+                }
+                Err(RecvError::Closed) => return,
             }
         }
     });
 }
+
+/// The follower fell behind the host's events and may have missed a `Closed`: the views the
+/// host has now decide which `hooks` keeps (RB-099-19); `true` when one was forgotten.
+fn reconcile(host: &Host, hooks: &TimeHooks) -> bool {
+    // Asked per view under the hooks' lock, not from a list taken before it (review w39).
+    hooks.forget_gone(|view| host.view(view).is_some())
+}
+
+#[cfg(test)]
+#[path = "follow_tests.rs"]
+mod tests;

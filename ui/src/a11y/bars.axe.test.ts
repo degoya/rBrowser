@@ -1,10 +1,12 @@
 // RB-090-08: the bars the toolbar's page opens over its strip (a size, a custom size, a session,
 // basic auth, a bookmark, the sitemap, a layout preset) pass axe-core's WCAG 2.2 A and AA rules
-// and the keyboard checks once open.
+// and the keyboard checks once open; so does the sign-in bar a site's or a proxy's challenge
+// opens (RB-099-21), with every part of its question shown.
 
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Component } from 'vue';
+import AuthPromptBar from '../basic-auth/AuthPromptBar.vue';
 import EnvironmentAuthBar from '../basic-auth/EnvironmentAuthBar.vue';
 import { AUTH_COMMAND } from '../basic-auth/basicAuth';
 import BookmarkBar from '../bookmarks/BookmarkBar.vue';
@@ -30,18 +32,35 @@ afterEach(() => {
   current = null;
 });
 
-const BARS: [string, Component, string][] = [
-  ['size input', SizeInputBar, SIZE_COMMAND],
-  ['custom size', NewSizeBar, CUSTOM_SIZE_COMMAND],
-  ['session', SessionBar, ASSIGN_COMMAND],
-  ['basic auth', EnvironmentAuthBar, AUTH_COMMAND],
-  ['bookmark', BookmarkBar, ADD_COMMAND],
-  ['sitemap', SitemapBar, PANEL_COMMAND],
-  ['save preset', SavePresetBar, SAVE_PRESET_COMMAND],
+const command = (id: string): CoreToShell => ({ type: 'uiCommand', id });
+
+/** The core's question that opens the sign-in bar: realm, waiting views, a save, refused, plain http. */
+const AUTH_PROMPT: CoreToShell = {
+  type: 'authPrompt',
+  id: 4,
+  origin: 'http://dev.example.test:80',
+  realm: 'Members',
+  proxy: false,
+  views: [1, 3],
+  environment: 'development',
+  refused: true,
+  insecure: true,
+};
+
+/** Each bar with the message that opens it. */
+const BARS: [string, Component, CoreToShell][] = [
+  ['size input', SizeInputBar, command(SIZE_COMMAND)],
+  ['custom size', NewSizeBar, command(CUSTOM_SIZE_COMMAND)],
+  ['session', SessionBar, command(ASSIGN_COMMAND)],
+  ['basic auth', EnvironmentAuthBar, command(AUTH_COMMAND)],
+  ['sign-in', AuthPromptBar, AUTH_PROMPT],
+  ['bookmark', BookmarkBar, command(ADD_COMMAND)],
+  ['sitemap', SitemapBar, command(PANEL_COMMAND)],
+  ['save preset', SavePresetBar, command(SAVE_PRESET_COMMAND)],
 ];
 
 describe('axe-core over the toolbar bars', () => {
-  it.each(BARS)('finds no WCAG violation in the open %s bar', async (_name, bar, command) => {
+  it.each(BARS)('finds no WCAG violation in the open %s bar', async (_name, bar, opener) => {
     let push: (message: CoreToShell) => void = () => undefined;
     const subscribe = (listener: (message: CoreToShell) => void) => {
       push = listener;
@@ -50,11 +69,29 @@ describe('axe-core over the toolbar bars', () => {
     const mounted = await mountWithShell(bar, { mount: { props: { subscribe } } });
     current = mounted.wrapper;
     await settle();
-    push({ type: 'uiCommand', id: command });
+    push(opener);
     await settle();
     expect(current.element.textContent?.trim() ?? '').not.toBe('');
     expect(await axeViolations()).toEqual([]);
     expect(unreachableControls()).toEqual([]);
     expect(unnamedFocusables()).toEqual([]);
+  });
+
+  it('finds no WCAG violation in the sign-in bar with a problem said', async () => {
+    let push: (message: CoreToShell) => void = () => undefined;
+    const subscribe = (listener: (message: CoreToShell) => void) => {
+      push = listener;
+      return () => undefined;
+    };
+    const mounted = await mountWithShell(AuthPromptBar, { mount: { props: { subscribe } } });
+    current = mounted.wrapper;
+    push(AUTH_PROMPT);
+    await settle();
+    await current.get('[data-testid="auth-prompt-save"]').trigger('click');
+    await current.get('[data-testid="auth-prompt-password"]').setValue('pw');
+    await current.get('[data-testid="auth-prompt"]').trigger('submit');
+    await settle();
+    expect(current.get('[role="alert"]').text()).not.toBe('');
+    expect(await axeViolations()).toEqual([]);
   });
 });

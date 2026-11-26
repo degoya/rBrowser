@@ -29,7 +29,7 @@
         },
         "hidden": "{count, plural, one {# image} other {# images}} without problems left out.",
         "lcpGuessed": "The page named no LCP element; the largest image of the first screen is taken for it.",
-        "loading": "Checking the images of every view...",
+        "loading": "Checking the images of every view…",
         "mark": "Show {name} in every view",
         "more": "{count, plural, one {# more image is} other {# more images are}} not listed.",
         "noProblems": "Every image fits this view's density.",
@@ -79,7 +79,7 @@
       "settings": {
         "checkLcp": {
           "description": "Check that the page's Largest Contentful Paint image loads eagerly and with fetchpriority=\"high\".",
-          "help": "The LCP image is the element the page reports as its Largest Contentful Paint; without one, the largest image of the first screen. Off leaves the loading and fetchpriority of that image unchecked.",
+          "help": "The LCP image is the element the page reports as its Largest Contentful Paint; without one, the largest image of the first screen. When off, it leaves the loading and fetchpriority of that image unchecked.",
           "label": "Check the LCP image"
         },
         "oversizeFactor": {

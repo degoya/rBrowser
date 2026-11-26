@@ -29,6 +29,9 @@ fn an_image_is_named_relative_to_the_report() {
         path: Some(folder.join("screens/day/mobile.png").display().to_string()),
         png_base64: None,
         error: None,
+        truncated: false,
+        page_height: None,
+        images_pending: false,
     };
     let image = image_of(folder, &shot);
     assert_eq!(image.view, Some(2));

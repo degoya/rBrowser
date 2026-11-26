@@ -1,6 +1,12 @@
 //! The `target` of every view tool: `"all"`, a view id, or a breakpoint id that names the
 //! views showing it (`"mobile"`). Resolved against the views of the moment; an unknown target
 //! is an error that lists the views there are.
+//!
+//! When `target` is absent (RB-099-16): a tool that reads, navigates or runs over the views takes
+//! `"all"`; one that acts in a page as a person would takes the active view
+//! (`coverage::tables::ACTIVE_DEFAULT`); a few say a default of their own (`OWN_DEFAULT`); a
+//! one-view tool takes the active view. Each tool's `target` text says which, and the coverage
+//! test holds the text to the tables (`coverage::tools::target_text_problem`).
 
 use rb_engine::{Target, ViewId, ViewInfo};
 use rmcp::schemars;
@@ -9,15 +15,15 @@ use serde::{Deserialize, Serialize};
 use crate::backend::ToolFailure;
 
 /// The code of an unknown target.
-pub const VIEW_NOT_FOUND: &str = "view_not_found";
+pub const VIEW_NOT_FOUND: &str = "view.not_found";
 
-/// What a tool's `target` says, as written.
+/// `"all"`, a view id or a breakpoint id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum TargetArg {
-    /// A view id (`views_list`).
+    /// A view id.
     Id(u32),
-    /// `"all"`, a view id as text, or a breakpoint id: every view showing that breakpoint.
+    /// `"all"`, a view id as text or a breakpoint id.
     Name(String),
 }
 
@@ -107,7 +113,7 @@ pub fn resolve_one(
         Resolved::Views(ids) if ids.len() == 1 => Ok(ids.first().copied()),
         Resolved::All if arg.is_none() => Ok(None),
         _ => Err(ToolFailure::new(
-            "target_not_single",
+            "target.not_single",
             format!(
                 "this tool acts on one view; pass a view id. Known views: {}",
                 known(views)
@@ -116,7 +122,8 @@ pub fn resolve_one(
     }
 }
 
-fn not_found(shown: &str, views: &[ViewInfo]) -> ToolFailure {
+/// The failure of a target no view matches, listing the known views.
+pub(crate) fn not_found(shown: &str, views: &[ViewInfo]) -> ToolFailure {
     ToolFailure::new(
         VIEW_NOT_FOUND,
         format!("view `{shown}` not found; known views: {}", known(views)),

@@ -15,6 +15,7 @@ fn the_anthropic_format_has_every_core_tool_as_a_custom_tool() {
         assert_eq!(tool["input_schema"]["type"], "object", "{}", tool["name"]);
         assert!(tool.get("inputSchema").is_none());
         assert!(tool.get("allowed_callers").is_none());
+        assert!(tool.get("annotations").is_none());
     }
     let script = tools
         .iter()
@@ -42,4 +43,29 @@ fn the_mcp_format_is_the_tool_list() {
     assert_eq!(first["inputSchema"]["type"], "object");
     assert!(first.get("input_schema").is_none());
     assert!(first.get("allowed_callers").is_none());
+    for tool in tools.as_array().expect("a list") {
+        assert!(
+            tool["annotations"]["openWorldHint"].is_boolean(),
+            "{}",
+            tool["name"]
+        );
+    }
+}
+
+/// RB-099-16: every AI session pays for `tools/list` before its first call. The core tools,
+/// `script_run`'s `rb.*` signatures and the annotations included, stay below this many bytes of
+/// compact JSON (152 364 before the descriptions were trimmed, without signatures or
+/// annotations); a new tool or a longer text that crosses it trims elsewhere first.
+const TOOLS_LIST_BUDGET: usize = 150_000;
+
+#[test]
+fn the_core_tool_list_stays_within_its_budget() {
+    let tools = definitions(ToolFormat::Mcp, None);
+    let bytes = serde_json::to_string(&json!({ "tools": tools }))
+        .expect("the list serialises")
+        .len();
+    assert!(
+        bytes <= TOOLS_LIST_BUDGET,
+        "tools/list is {bytes} bytes, over its budget of {TOOLS_LIST_BUDGET}"
+    );
 }

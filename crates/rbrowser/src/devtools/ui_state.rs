@@ -5,9 +5,13 @@
 //! and an older file's `dock` is ignored.
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tokio::runtime::Handle;
+
+use crate::cdp::lock;
 
 /// The file's name under the local folder.
 pub const UI_STATE_FILE: &str = "devtools.json";
@@ -92,6 +96,81 @@ pub fn save(path: &Path, state: &UiState) -> Result<(), rb_config::ConfigError> 
     }
     let value = serde_json::to_value(state).unwrap_or(Value::Null);
     rb_config::write_json(path, &value)
+}
+
+/// Writes the state to its file off the calling thread - the CEF UI thread, where the DevTools
+/// window closes (RB-099-19) - one write at a time, the newest state winning: a state saved
+/// while a write runs replaces any other still waiting.
+pub struct Saver {
+    path: PathBuf,
+    slot: Mutex<Slot>,
+}
+
+#[derive(Default)]
+struct Slot {
+    /// The newest state not written yet.
+    next: Option<UiState>,
+    /// A writer runs (or is queued on the runtime).
+    writing: bool,
+}
+
+impl Saver {
+    /// A saver of the file at `path`.
+    pub fn new(path: PathBuf) -> Arc<Self> {
+        Arc::new(Self {
+            path,
+            slot: Mutex::new(Slot::default()),
+        })
+    }
+
+    /// Saves `state` on a blocking thread of `runtime`, after the writes before it. A runtime
+    /// that shuts down refuses the task: the state is written on this thread then.
+    pub fn save(self: &Arc<Self>, runtime: &Handle, state: UiState) {
+        let start = {
+            let mut slot = lock(&self.slot);
+            slot.next = Some(state);
+            !std::mem::replace(&mut slot.writing, true)
+        };
+        if start {
+            let writer = Writer(self.clone());
+            runtime.spawn_blocking(move || drop(writer));
+        }
+    }
+
+    /// Whether a writer runs (tests).
+    #[cfg(test)]
+    pub fn writing(&self) -> bool {
+        lock(&self.slot).writing
+    }
+
+    /// Writes the waiting states until none is left; the newest is the last.
+    fn drain(&self) {
+        loop {
+            let state = {
+                let mut slot = lock(&self.slot);
+                match slot.next.take() {
+                    Some(state) => state,
+                    None => {
+                        slot.writing = false;
+                        return;
+                    }
+                }
+            };
+            if let Err(error) = save(&self.path, &state) {
+                tracing::warn!(%error, "the DevTools UI state was not saved");
+            }
+        }
+    }
+}
+
+/// The one writer of a [`Saver`]: it writes when it is dropped - on the blocking thread that
+/// ran it, or on the caller's when the runtime refused and dropped the task unrun.
+struct Writer(Arc<Saver>);
+
+impl Drop for Writer {
+    fn drop(&mut self) {
+        self.0.drain();
+    }
 }
 
 #[cfg(test)]

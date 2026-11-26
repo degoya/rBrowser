@@ -112,7 +112,7 @@ fn a_failure_is_held_to_the_cap_too() {
 
 #[test]
 fn an_uncaught_tool_error_keeps_its_code_name_tool_and_line() {
-    let failure = r#"{"code":"evaluate_disabled","name":"ToolError","message":"off","tool":"evaluate","line":2,"logs":[],"stack":"x"}"#;
+    let failure = r#"{"code":"evaluate.disabled","name":"ToolError","message":"off","tool":"evaluate","line":2,"logs":[],"stack":"x"}"#;
     let (is_error, body) = answer_json(&answer(
         Err(ScriptStop::Script(failure.to_owned())),
         RAN,
@@ -121,8 +121,9 @@ fn an_uncaught_tool_error_keeps_its_code_name_tool_and_line() {
     assert!(is_error);
     assert_eq!(
         body,
-        json!({ "code": "evaluate_disabled", "error": "off", "name": "ToolError",
-                "tool": "evaluate", "line": 2, "calls": 3, "durationMs": 42 })
+        json!({ "code": "evaluate.disabled", "error": "off", "name": "ToolError",
+                "tool": "evaluate", "line": 2, "calls": 3, "durationMs": 42,
+                "legacyCode": "evaluate_disabled" })
     );
 }
 
@@ -160,6 +161,6 @@ fn a_refusal_names_its_setting() {
         Some(super::super::ENABLED_KEY),
     ));
     assert!(is_error);
-    assert_eq!(body["code"], "scripts_disabled");
+    assert_eq!(body["code"], "script.disabled");
     assert_eq!(body["settingsKey"], "mcp.scripts.enabled");
 }

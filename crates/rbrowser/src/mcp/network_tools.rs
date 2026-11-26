@@ -39,7 +39,7 @@ pub const TOOLS: &[&str] = &[
 /// The setting that allows `network_compose` and `network_repeat`.
 pub const ALLOW_COMPOSE: &str = "network-panel.allowComposeFromMcp";
 /// The code while a compose or repeat is off.
-pub const COMPOSE_DISABLED: &str = "compose_disabled";
+pub const COMPOSE_DISABLED: &str = "network.compose_disabled";
 /// The code while the debugger does not run (no network-panel plugin).
 pub const NOT_RUNNING: &str = "network.not_running";
 /// The most bytes of a held body an answer carries.
@@ -52,7 +52,7 @@ const PLUGIN_BREAKPOINT_TOOLS: [(&str, &str); 3] = [
 ];
 
 fn invalid(message: impl Into<String>) -> ToolFailure {
-    ToolFailure::new("invalid_arguments", message)
+    ToolFailure::new("args.invalid", message)
 }
 
 fn rules_of() -> Result<Arc<Rules>, ToolFailure> {
@@ -100,7 +100,7 @@ pub async fn host_tool(core: &Arc<Core>, name: &str, args: Value) -> Result<Valu
         COMPOSE_TOOL => compose(&rules, &args).await,
         REPEAT_TOOL => repeat(&rules, &args).await,
         other => Err(ToolFailure::new(
-            "unknown_tool",
+            "tool.unknown",
             format!("the host runs no tool `{other}`"),
         )),
     }
@@ -136,7 +136,7 @@ pub fn list(rules: &Rules, bodies: bool) -> Value {
 ///
 /// # Errors
 ///
-/// `compose_disabled` or `evaluate_disabled`, naming the setting.
+/// `network.compose_disabled` or `evaluate.disabled`, naming the setting.
 pub fn plugin_gate(name: &str, allow_evaluate: bool) -> Result<(), ToolFailure> {
     match name {
         "networkpanel_compose" | "networkpanel_repeat" => {
@@ -167,7 +167,10 @@ fn resolved(
 ) -> Result<Value, ToolFailure> {
     match rules.held().resolve(id, all, resolution) {
         Ok(count) => Ok(json!({ "id": id, "resolved": count, "held": rules.held().len() })),
-        Err(error) => Err(ToolFailure::new("held_not_found", error.to_string())),
+        Err(error) => Err(ToolFailure::new(
+            "network.held_not_found",
+            error.to_string(),
+        )),
     }
 }
 
@@ -175,7 +178,7 @@ fn resolved(
 ///
 /// # Errors
 ///
-/// `invalid_arguments`, `evaluate_disabled` for edits while evaluate is off, `held_not_found`.
+/// `args.invalid`, `evaluate.disabled` for edits while evaluate is off, `network.held_not_found`.
 pub fn continue_held(
     rules: &Rules,
     allow_evaluate: bool,
@@ -206,7 +209,7 @@ pub fn continue_held(
 ///
 /// # Errors
 ///
-/// `invalid_arguments`, `held_not_found`.
+/// `args.invalid`, `network.held_not_found`.
 pub fn abort(rules: &Rules, args: &Value) -> Result<Value, ToolFailure> {
     let id = held_id(args)?;
     let all = args["allViews"] == Value::Bool(true);
@@ -257,7 +260,7 @@ fn results_json(results: &[ComposeResult]) -> Value {
 ///
 /// # Errors
 ///
-/// `compose_disabled`, `invalid_arguments`, `network.not_running` without a runner.
+/// `network.compose_disabled`, `args.invalid`, `network.not_running` without a runner.
 pub async fn compose(rules: &Rules, args: &Value) -> Result<Value, ToolFailure> {
     compose_allowed(Some(rules))?;
     let request = document::parse_request(&args["request"])
@@ -275,7 +278,7 @@ pub async fn compose(rules: &Rules, args: &Value) -> Result<Value, ToolFailure> 
 ///
 /// # Errors
 ///
-/// As [`compose`], and `request_not_found` for a request the view no longer lists.
+/// As [`compose`], and `network.request_not_found` for a request the view no longer lists.
 pub async fn repeat(rules: &Rules, args: &Value) -> Result<Value, ToolFailure> {
     compose_allowed(Some(rules))?;
     let view = view(args, "view")?.ok_or_else(|| invalid("`view` is required"))?;
@@ -295,7 +298,7 @@ pub async fn repeat(rules: &Rules, args: &Value) -> Result<Value, ToolFailure> {
     let results = runner
         .repeat(view, request_id, edits, times)
         .await
-        .map_err(|reason| ToolFailure::new("request_not_found", reason))?;
+        .map_err(|reason| ToolFailure::new("network.request_not_found", reason))?;
     Ok(results_json(&results))
 }
 

@@ -52,6 +52,15 @@ describe('the setup wizard basics', () => {
     wrapper.unmount();
   });
 
+  it('starts the project in the canvas unless the grid is chosen (RB-099-26)', async () => {
+    const api = fakeApi();
+    const wrapper = await mountStep(api, 'C:/shop');
+    expect(await control(wrapper).proceed()).toBe(true);
+    await settle();
+    expect(api.basics).toHaveBeenCalledWith('canvas', true);
+    wrapper.unmount();
+  });
+
   it('without a project sets only the theme and says why the rest is off', async () => {
     const api = fakeApi();
     const wrapper = await mountStep(api, null);

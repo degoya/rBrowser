@@ -9,6 +9,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use super::forward::joined;
 use super::object;
 use crate::RbMcpServer;
@@ -42,7 +43,7 @@ pub enum ExternalEngine {
 pub struct EngineRestartParams {
     /// `firefox`, `webkit`, `safari` or `ios` (both macOS only).
     pub engine: ExternalEngine,
-    /// `"all"` (every view of the engine, the default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. Only the views of the engine restart.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -50,7 +51,7 @@ pub struct EngineRestartParams {
 #[tool_router(router = engines_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Restart an external engine's views (engine: \"firefox\", \"webkit\", \"safari\" or \"ios\" - Safari and iOS on macOS only): every view of that engine, or those of `target` (\"all\" (default), a view id or a breakpoint id). Each view opens again with its last URL. Fails with a readable message when no view of that engine is open or the engine is not available. Answers the restarted view ids."
+        description = "Restart an external engine's views (engine firefox, webkit, safari or ios; Safari and iOS on macOS only): each opens again with its last URL. Fails with a readable message when no view of that engine is open or the engine is not available. Answers the restarted view ids."
     )]
     pub(crate) async fn engine_restart(
         &self,
@@ -60,9 +61,9 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "List the installed Firefox editions rBrowser can drive: for each its path, kind (release, esr, developer, nightly) and version, in the order rBrowser searches (the registry's App Paths and uninstall entries, then the editions' folders under Program Files and the local app data); the first is what an empty engines.firefox.path starts. Also the configured path and, when it names no file any more, missing: true. A read only; acts on no view and starts nothing."
+        description = "List the installed Firefox editions rBrowser can drive: path, kind (release, esr, developer, nightly) and version, in search order - the first is what an empty engines.firefox.path starts. Also the configured path and missing: true when it names no file. Starts nothing."
     )]
-    pub(crate) async fn engines_list(&self) -> ToolResult {
+    pub(crate) async fn engines_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.backend.host_tool(ENGINES_LIST_TOOL, json!({})).await)
     }
 }

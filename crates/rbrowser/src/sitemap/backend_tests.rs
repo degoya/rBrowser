@@ -233,8 +233,14 @@ async fn a_page_loads_waits_and_is_captured_full_page() {
     // The metrics go back to the breakpoint's after the full-page height.
     let metrics = scripted.sent("Emulation.setDeviceMetricsOverride");
     assert_eq!(metrics.last().expect("restored")["params"]["height"], 667);
-    // Without a plan the page is left as it is.
-    assert!(scripted.sent("Page.createIsolatedWorld").is_empty());
+    // Without a plan the page is left as it is (the full page's lazy-loading pre-pass runs in
+    // the capture's world, RB-099-28, but nothing prepares the page).
+    let prepared = scripted.sent("Runtime.evaluate").iter().any(|message| {
+        message["params"]["expression"]
+            .as_str()
+            .is_some_and(|expression| expression.contains("__rbCaptureClean"))
+    });
+    assert!(!prepared);
     assert!(scripted.sent("Animation.setPlaybackRate").is_empty());
 }
 

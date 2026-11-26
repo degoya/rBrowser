@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 
 use super::*;
 use crate::Emulation;
-use crate::chromium::fake::FakeBackend;
+use crate::chromium::fake::{FakeBackend, all_closed, until};
 
 const BREAKPOINTS: [&str; 4] = ["mobile", "tablet", "desktop", "wide"];
 
@@ -214,7 +214,7 @@ async fn a_batch_cancelled_while_its_views_open_leaves_none_open() {
     });
     let (summary, taken) = run(&backend, tasks(&["https://a.test/"]), options(2), cancel).await;
     assert!(summary.cancelled && taken.is_empty());
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    until(|| all_closed(&backend)).await;
     assert!(
         lock(&backend.views).is_empty(),
         "the views still opening when the batch stopped are closed"
@@ -234,7 +234,7 @@ async fn a_view_that_never_opens_times_out() {
     assert_eq!(summary.failed, 1);
     // The timeout, not the open that would have succeeded 300 ms later: no wait for the open.
     assert_eq!(results[0].1.png, Err("open: timeout".to_owned()));
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    until(|| backend.opened.load(Ordering::Relaxed) == 1 && all_closed(&backend)).await;
     assert!(lock(&backend.views).is_empty(), "the late view is closed");
 }
 

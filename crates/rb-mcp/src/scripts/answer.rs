@@ -77,11 +77,14 @@ pub fn answer(
 /// A refusal before any run: code mode off, bad arguments, no engine.
 #[must_use]
 pub fn refused(code: &str, message: &str, settings_key: Option<&str>) -> CallToolResult {
-    let mut body = json!({ "error": message, "code": code });
+    let mut body = Map::new();
+    body.insert("error".to_owned(), json!(message));
+    body.insert("code".to_owned(), json!(code));
     if let Some(key) = settings_key {
-        body["settingsKey"] = json!(key);
+        body.insert("settingsKey".to_owned(), json!(key));
     }
-    CallToolResult::error(vec![ContentBlock::text(body.to_string())])
+    crate::codes::add_legacy(&mut body);
+    CallToolResult::error(vec![ContentBlock::text(Value::Object(body).to_string())])
 }
 
 fn success(text: &str, ran: Ran, max_bytes: usize) -> CallToolResult {
@@ -143,6 +146,7 @@ fn failure(
     if let Some(key) = settings_key {
         fields.insert("settingsKey".to_owned(), json!(key));
     }
+    crate::codes::add_legacy(&mut fields);
     fit(&mut fields, "error", false, max_bytes);
     CallToolResult::error(vec![ContentBlock::text(Value::Object(fields).to_string())])
 }

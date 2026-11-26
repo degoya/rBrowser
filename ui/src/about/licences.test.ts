@@ -54,6 +54,18 @@ function npmPackages(): string[] {
 
 const key = (row: { name: string; version: string }) => `${row.name}@${row.version}`;
 
+/** The shipped packages THIRD-PARTY-LICENSES.txt (`scripts/licenses.sh`, RB-099-12) has no
+ * index line for: `  <name> <version> (<licence>): [n], ...`. */
+function withoutTexts(rows: { name: string; version: string }[], texts: string): string[] {
+  const indexed = new Set(
+    texts
+      .split('\n')
+      .filter((line) => /^ {2}\S+ \S+ \(.*\): \[\d+\]/.test(line))
+      .map((line) => line.split(' (', 1)[0]?.trim()),
+  );
+  return rows.filter((row) => !indexed.has(`${row.name} ${row.version}`)).map(key);
+}
+
 describe('the licence list', () => {
   it('accounts for every crate of the lock files', () => {
     const locked = new Set(cargoLocks().flatMap((path) => lockedCrates(read(path))));
@@ -74,6 +86,28 @@ describe('the licence list', () => {
     expect(without.map((component) => component.name)).toEqual([]);
     expect(THIRD_PARTY.rust.length).toBeGreaterThan(0);
     expect(THIRD_PARTY.npm.length).toBeGreaterThan(0);
+  });
+
+  it('gives every shipped package its licence text in THIRD-PARTY-LICENSES.txt', () => {
+    const texts = read('packaging/THIRD-PARTY-LICENSES.txt');
+    expect(withoutTexts([...THIRD_PARTY.rust, ...THIRD_PARTY.npm], texts), REGENERATE).toEqual([]);
+    for (const sample of ['ed25519-dalek', 'arrayref', 'zstd', 'vue']) {
+      expect(texts, sample).toMatch(new RegExp(`^  ${sample} \\S+ \\(`, 'm'));
+    }
+  });
+
+  it('fails for a new runtime dependency without a licence text', () => {
+    const texts = '  serde 1.0.0 (MIT OR Apache-2.0): [1], [2]\n';
+    const rows = [
+      { name: 'serde', version: '1.0.0', license: 'MIT OR Apache-2.0' },
+      { name: 'new-crate', version: '0.1.0', license: 'MIT' },
+    ];
+    expect(withoutTexts(rows, texts)).toEqual(['new-crate@0.1.0']);
+  });
+
+  it('lists nothing the packaging leaves out of the sidecar (RB_SIDECAR_EXCLUDED)', () => {
+    const names = THIRD_PARTY.npm.map((row) => row.name);
+    expect(names.filter((name) => name === 'sentry' || name.startsWith('@sentry/'))).toEqual([]);
   });
 
   it('lists Vue and Nuxt UI among the npm packages', () => {

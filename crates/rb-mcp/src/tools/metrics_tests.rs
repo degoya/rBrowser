@@ -62,7 +62,7 @@ async fn an_unknown_target_is_refused_before_the_host() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("view_not_found"));
+    assert_eq!(answer["code"], json!("view.not_found"));
     assert!(fake.calls().is_empty());
 }
 

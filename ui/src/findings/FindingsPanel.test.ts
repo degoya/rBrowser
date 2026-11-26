@@ -1,10 +1,13 @@
 import USelect from '@nuxt/ui/components/Select.vue';
 import ui from '@nuxt/ui/vue-plugin';
 import { mount, type VueWrapper } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createShellI18n } from '../i18n';
 import { settle } from '../test/mountShell';
+import FindingsFilters from './FindingsFilters.vue';
 import FindingsPanel from './FindingsPanel.vue';
+import VisualStart from './VisualStart.vue';
+import ScopePicker from '../scope/ScopePicker.vue';
 import { fakeChannel, sampleMessages, sampleRun } from './testing';
 
 function mountPanel() {
@@ -19,7 +22,8 @@ function mountPanel() {
 
 /** The filter selects in their order: plugin, then view. */
 function filterSelect(wrapper: VueWrapper, which: 'plugin' | 'view') {
-  const selects = wrapper.findAllComponents(USelect);
+  // The filters' own selects: the scope pick lists above them are others (RB-099-10).
+  const selects = wrapper.getComponent(FindingsFilters).findAllComponents(USelect);
   expect(selects).toHaveLength(2);
   return selects[which === 'plugin' ? 0 : 1]!;
 }
@@ -218,6 +222,75 @@ describe('FindingsPanel', () => {
     await wrapper.find('[data-testid="finding-b"]').trigger('keydown', { key: 'ArrowUp' });
     await settle();
     expect(document.activeElement?.getAttribute('data-testid')).toBe('finding-a');
+    wrapper.unmount();
+  });
+});
+
+describe('FindingsPanel scope (RB-099-10)', () => {
+  const BREAKPOINTS = [
+    { id: 'mobile', label: 'Mobile', width: 393, height: 852 },
+    { id: 'desktop', label: 'Desktop', width: 1440, height: 900 },
+  ];
+
+  function mountScoped() {
+    const core = fakeChannel();
+    const wrapper = mount(FindingsPanel, {
+      props: { channel: core.channel, breakpoints: BREAKPOINTS },
+      attachTo: document.body,
+      global: { plugins: [ui, createShellI18n()] },
+    });
+    return { core, wrapper };
+  }
+
+  afterEach(() => {
+    window.localStorage.removeItem('rb.scope.checks');
+    window.localStorage.removeItem('rb.scope.visual');
+  });
+
+  it('runs the checks over the scope chosen and names the views checked', async () => {
+    const { core, wrapper } = mountScoped();
+    const [checks] = wrapper.findAllComponents(ScopePicker);
+    checks!.vm.$emit('update:modelValue', { mode: 'chosen', breakpoints: ['mobile'] });
+    await settle();
+    await wrapper.find('[data-testid="run"]').trigger('click');
+    await settle();
+    expect(core.sent).toEqual([{ type: 'runChecks', target: 'all', scope: ['mobile'] }]);
+    core.emit({ type: 'findings', run: sampleRun(), messages: sampleMessages });
+    await settle();
+    expect(wrapper.find('[data-testid="checked"]').exists()).toBe(true);
+    checks!.vm.$emit('update:modelValue', { mode: 'chosen', breakpoints: [] });
+    await settle();
+    expect(wrapper.find('[data-testid="run"]').attributes('disabled')).toBeDefined();
+    wrapper.unmount();
+  });
+
+  // Review: a run from `checks.run_visible` (K 3) or MCP over two of three breakpoints - "Run
+  // again" stays on those views, so the core merges it.
+  it('runs a check again over the views of the run shown', async () => {
+    const { core, wrapper } = mountScoped();
+    const shown = { ...sampleRun(), views: [{ id: 1, breakpoint: 'mobile' }] };
+    core.emit({ type: 'findings', run: shown, messages: sampleMessages });
+    await settle();
+    wrapper.getComponent(FindingsFilters).findAllComponents(USelect)[0]!.vm.$emit('update:modelValue', 'seo');
+    await settle();
+    await wrapper.get('[data-testid="rerun-filtered"]').trigger('click');
+    await settle();
+    expect(core.sent).toEqual([{ type: 'runChecks', target: 'all', plugins: ['seo'], scope: ['mobile'] }]);
+    wrapper.unmount();
+  });
+
+  it('starts visual regression over its own scope', async () => {
+    const { core, wrapper } = mountScoped();
+    const visual = wrapper.getComponent(VisualStart);
+    await visual.find('[data-testid="visual-compare"]').trigger('click');
+    visual.getComponent(ScopePicker).vm.$emit('update:modelValue', { mode: 'visible', breakpoints: [] });
+    await settle();
+    await visual.find('[data-testid="visual-update"]').trigger('click');
+    await settle();
+    expect(core.sent).toEqual([
+      { type: 'runCommand', id: 'visual.compare' },
+      { type: 'runCommand', id: 'visual.baseline_update', args: { scope: 'visible' } },
+    ]);
     wrapper.unmount();
   });
 });

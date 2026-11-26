@@ -25,7 +25,7 @@ pub struct CatalogParams {
 #[tool_router(router = plugin_catalogue_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "List the plugin catalogue: the repositories (the official one and the ones the person added) with their state, every plugin they offer with each origin, version, capabilities, publisher and whether it runs on this rBrowser, the updates of the plugins installed from it, and the installed plugins. refresh fetches the signed indexes again first. Installing a plugin or adding a repository is a person's decision in rBrowser, never over MCP."
+        description = "List the plugin catalogue: the repositories with their state, every plugin they offer (origin, version, capabilities, publisher, whether it runs on this rBrowser), the updates of plugins installed from it, and the installed plugins. refresh fetches the signed indexes first. Installing a plugin or adding a repository is a person's decision, never MCP's."
     )]
     pub(crate) async fn plugins_catalog_list(
         &self,

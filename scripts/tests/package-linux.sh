@@ -56,7 +56,7 @@ mkdir -p "$STAGE/locales" "$STAGE/ui" "$STAGE/node/bin" "$STAGE/sidecar/dist" "$
     "$STAGE/plugins"
 for path in rbrowser libcef.so chrome-sandbox icudtl.dat v8_context_snapshot.bin \
     locales/en-US.pak ui/index.html node/bin/node node/LICENSE sidecar/dist/main.js NOTICE \
-    LICENSE licenses/chromium-credits.html crash_reporter.cfg; do
+    THIRD-PARTY-LICENSES.txt LICENSE licenses/chromium-credits.html crash_reporter.cfg; do
     printf '%s' "$path" > "$STAGE/$path"
 done
 printf 'rBrowser 9.9.9\ncommit abc\nbuilt now\ntarget x86_64-unknown-linux-gnu, profile release\n' \

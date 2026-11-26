@@ -93,7 +93,7 @@
           "fetch_failed": "The page could not be fetched ({code}).",
           "noindex_header": "The X-Robots-Tag header keeps the page out of the index: \"{value}\".",
           "noindex_meta": "A meta robots tag keeps the page out of the index: \"{value}\".",
-          "redirect": "The page redirects {hops} time(s) before it answers: {chain}. Link to {target} directly.",
+          "redirect": "Redirects before the page answers: {hops} ({chain}). Link to {target} directly.",
           "redirect_location": "A redirect points to a location that cannot be followed: {location}",
           "redirect_loop": "The redirects loop or go on too long after {hops, plural, one {# hop} other {# hops}}: {chain}",
           "robots_blocked": "robots.txt ({robots}) disallows this page for search engines.",
@@ -193,7 +193,7 @@
           "small": "Small image card",
           "text": "Text only"
         },
-        "loading": "Loading the previews...",
+        "loading": "Loading the previews…",
         "no_image": "No share image",
         "no_title": "(no title)",
         "page": "Page: {url}",
@@ -453,14 +453,14 @@
         "head": {
           "enabled": {
             "description": "Run the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body.",
-            "help": "Runs the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body. Off skips it.",
+            "help": "Runs the head group on the raw HTML: charset, viewport, title, preconnect, scripts before CSS, head elements in the body. When off, it skips it.",
             "label": "Check the head order"
           }
         },
         "hreflang": {
           "checkContentLanguage": {
             "description": "Guess the language of each page's text and report one that differs from its hreflang (a warning).",
-            "help": "Guesses the language of each page's text and reports one that differs from its hreflang, as a warning. Off trusts the hreflang.",
+            "help": "Guesses the language of each page's text and reports one that differs from its hreflang, as a warning. When off, it trusts the hreflang.",
             "label": "Check the text's language"
           }
         },
@@ -488,7 +488,7 @@
         },
         "locales": {
           "description": "hreflang codes the language set has to have, such as de or en-GB; a bare language accepts any of its regions.",
-          "help": "The hreflang codes the language set has to have, such as de or en-GB; a bare language accepts any of its regions. Empty checks no parity.",
+          "help": "The hreflang codes the language set has to have, such as de or en-GB; a bare language accepts any of its regions. If empty, it checks no parity.",
           "label": "Expected locales"
         },
         "maxPages": {
@@ -499,7 +499,7 @@
         "microdata": {
           "enabled": {
             "description": "Run the microdata group: types, required properties and contradictions to the JSON-LD.",
-            "help": "Runs the microdata group: Microdata and RDFa types, required properties and contradictions to the JSON-LD. Off skips it.",
+            "help": "Runs the microdata group: Microdata and RDFa types, required properties and contradictions to the JSON-LD. When off, it skips it.",
             "label": "Check Microdata and RDFa"
           }
         },
@@ -517,7 +517,7 @@
         },
         "requireXDefault": {
           "description": "Report a hreflang set without an x-default page.",
-          "help": "Reports a hreflang set without an x-default page, which search engines use for unmatched languages. Off accepts sets without it.",
+          "help": "Reports a hreflang set without an x-default page, which search engines use for unmatched languages. When off, it accepts sets without it.",
           "label": "Require x-default"
         },
         "rules": {
@@ -528,7 +528,7 @@
         "social": {
           "enabled": {
             "description": "Run the social group: Open Graph, the share image, the Twitter card and og:url.",
-            "help": "Runs the social group: Open Graph tags, the share image, the Twitter card and og:url. Off skips them.",
+            "help": "Runs the social group: Open Graph tags, the share image, the Twitter card and og:url. When off, it skips them.",
             "label": "Check social tags"
           },
           "imageMinHeight": {
@@ -542,7 +542,7 @@
             "label": "Least share image width"
           },
           "platforms": {
-            "description": "The platforms the social preview shows. Empty shows all.",
+            "description": "The platforms the social preview shows. If empty, it shows all.",
             "help": "The platforms the social preview shows cards for, each with the card its rule picks. The default is Facebook, X, LinkedIn, Slack, WhatsApp, Discord and iMessage; empty shows all.",
             "label": "Preview platforms"
           }
@@ -562,7 +562,7 @@
         "wellknown": {
           "enabled": {
             "description": "Fetch the site's /llms.txt and /.well-known/security.txt once per run and check them.",
-            "help": "Fetches the site's /llms.txt and /.well-known/security.txt once per run and checks them. Off skips both.",
+            "help": "Fetches the site's /llms.txt and /.well-known/security.txt once per run and checks them. When off, it skips both.",
             "label": "Check llms.txt and security.txt"
           },
           "maxLinks": {
@@ -604,7 +604,7 @@
         },
         "serpPreview": {
           "description": "The search result previews the SEO panel shows: Desktop and mobile, Desktop, Mobile or Off.",
-          "help": "The SEO panel shows the page as a Google search result on a desktop and on a phone, title and description cut at the search's pixel widths. Off hides them; the tool seo_social_preview answers the result either way.",
+          "help": "The SEO panel shows the page as a Google search result on a desktop and on a phone, title and description cut at the search's pixel widths. When off, it hides them; the tool seo_social_preview answers the result either way.",
           "label": "Search result preview"
         }
       },

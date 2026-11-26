@@ -14,7 +14,9 @@
 #   or darwin-x64 tarball held to its SHA-256 pin, RB-097-01), sidecar/ (dist/main.js and
 #   dist/flow-worker.js built from sidecar/, its package.json and the production node_modules, as
 #   the Windows package has them: scripts/lib/package-stage.sh), README.txt (start, Gatekeeper),
-#   LICENSE, NOTICE, CHANGELOG.md, VERSION.txt and licenses/ (Chromium's credits, CEF's licence);
+#   LICENSE, NOTICE (packaging/NOTICE.in), THIRD-PARTY-LICENSES.txt (the licence texts of every
+#   crate and npm package, scripts/licenses.sh), CHANGELOG.md, VERSION.txt and licenses/
+#   (Chromium's credits, CEF's licence);
 # signed ad hoc (`codesign --sign -`, inside out: the framework's libraries, the framework, the
 # helpers, the Node runtime, the app), not notarised: Gatekeeper asks once (README.txt, the wiki's
 # installation page); Developer ID signing and notarisation are RB-110-06. The structure test
@@ -162,7 +164,8 @@ elif ! tar -xjOf "$CEF_PATH/$RB_CEF_VERSION/$cef_archive" "${cef_archive%.tar.bz
     echo "!! no LICENSE.txt in $cef_dir or $cef_archive: the licences cannot be shipped" >&2
     exit 1
 fi
-install -m 644 packaging/macos/README.txt packaging/macos/NOTICE LICENSE CHANGELOG.md "$resources/"
+install -m 644 packaging/macos/README.txt packaging/macos/NOTICE packaging/THIRD-PARTY-LICENSES.txt \
+    LICENSE CHANGELOG.md "$resources/"
 if ((${#plugins[@]})); then
     mkdir -p "$resources/plugins"
     install -m 644 "${plugins[@]}" "$resources/plugins/"

@@ -65,7 +65,7 @@ afterEach(() => {
 
 describe('the responsive images panel', () => {
   it('checks every view at once, within its message limit, and says so', () => {
-    expect($('#status')?.textContent).toBe('Checking the images of every view...');
+    expect($('#status')?.textContent).toBe('Checking the images of every view…');
     expect(posted.find((m) => m.tool === 'check')?.args).toEqual({ budget: 1024 * 1024 - 5536 });
   });
 

@@ -65,8 +65,13 @@ pub struct FakeBackend {
 /// The fake records a host tool `name` as the command `host:<name>` ([`FakeBackend::calls`])
 /// and answers what [`FakeBackend::answer`] set for that id.
 pub const HOST_TOOL_PREFIX: &str = "host:";
-/// One `flow_run` the fake was asked for: name, views, wait.
-pub type FlowRun = (String, Option<Vec<ViewId>>, bool);
+/// One `flow_run` the fake was asked for: name, views, scope (RB-099-10), wait.
+pub type FlowRun = (
+    String,
+    Option<Vec<ViewId>>,
+    Option<rb_config::ViewScope>,
+    bool,
+);
 
 /// What the fake's mask replaces: any string holding this.
 pub const SECRET_MARK: &str = "SECRET";
@@ -312,7 +317,7 @@ impl Backend for FakeBackend {
     async fn cdp(&self, view: ViewId, method: &str, params: Value) -> Result<Value, ToolFailure> {
         if !lock(&self.views).iter().any(|info| info.id == view) {
             return Err(ToolFailure::new(
-                "view_not_found",
+                "view.not_found",
                 format!("unknown view {view}"),
             ));
         }
@@ -373,10 +378,11 @@ impl Backend for FakeBackend {
         &self,
         name: &str,
         views: Option<Vec<ViewId>>,
+        scope: Option<rb_config::ViewScope>,
         wait: bool,
     ) -> Result<Value, ToolFailure> {
         let answer = lock(&self.flows).clone().ok_or_else(untrusted)?;
-        lock(&self.flow_runs).push((name.to_owned(), views, wait));
+        lock(&self.flow_runs).push((name.to_owned(), views, scope, wait));
         Ok(answer)
     }
 

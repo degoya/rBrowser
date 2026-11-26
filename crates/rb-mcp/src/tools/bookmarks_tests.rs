@@ -26,7 +26,12 @@ async fn the_host_lists_the_bookmarks_and_a_secret_in_a_url_is_masked() {
             ]
         })),
     );
-    let (error, answer) = answer_json(&server(&fake).bookmarks_list().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .bookmarks_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["bookmarks"][0]["relative"], true);
     assert_eq!(answer["bookmarks"][0]["path"], "/shop/cart");
@@ -48,7 +53,7 @@ async fn make_relative_runs_the_command_and_answers_the_number() {
     );
     let (error, answer) = answer_json(
         &server(&fake)
-            .bookmarks_make_relative()
+            .bookmarks_make_relative(crate::tools::no_args())
             .await
             .expect("answer"),
     );

@@ -9,19 +9,25 @@
 // (the width sweep's) offers "Show at N px", its plugin's `show` command (RB-093-01). The logic is `findings.ts`
 // and `progress.ts`; the IPC is a `FindingsChannel` (`types.ts`). Every control is Nuxt UI
 // (RB-080-88): the filters are `FindingsFilters.vue`, each rule a `UAccordion` item, open until
-// the reader folds it, and what the project turned off a `UCollapsible`. Export writes the run as a
+// the reader folds it, and what the project turned off a `UCollapsible` (`ProjectOffNote.vue`). Export writes the run as a
 // file (`FindingsExport.vue`, RB-092-05). One check or a selection runs again from the progress
 // details or the plugin filter over the last run's target and page; the core merges the result
-// into the last run (RB-094-17).
+// into the last run (RB-094-17). RB-099-10: Run checks and visual regression (`VisualStart.vue`)
+// each run over the views of their scope pick list (`ScopePicker.vue`), the last choice kept per
+// function; a run again takes the scope of the run before, and the run names the views checked.
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UAccordion from '@nuxt/ui/components/Accordion.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
-import UCollapsible from '@nuxt/ui/components/Collapsible.vue';
 import ExternalLink from '../links/ExternalLink.vue';
+import ScopePicker from '../scope/ScopePicker.vue';
+import { useScope } from '../scope/useScope';
+import { scopeOf, withScope } from '../../../plugins/web-common/panel-ui/src/scope';
 import FindingsExport from './FindingsExport.vue';
 import FindingsFilters from './FindingsFilters.vue';
 import FindingsProgress from './FindingsProgress.vue';
+import ProjectOffNote from './ProjectOffNote.vue';
+import VisualStart from './VisualStart.vue';
 import { EXPORT_COMMAND, exportRequest, type ExportFormat } from './exporting';
 import { FINDINGS_ICONS } from './icons';
 import {
@@ -36,9 +42,11 @@ import {
   nestMessages,
   onlyIn,
   pluginsOf,
+  rerunScope,
+  sentence,
   showWidthRequest,
 } from './findings';
-import type { IgnoreEntry, ProjectOff } from '../ipc/protocol';
+import type { BreakpointSummary, JsonValue, ProjectOff } from '../ipc/protocol';
 import type {
   CheckFailure,
   CheckedView,
@@ -52,7 +60,7 @@ import type {
   Severity,
 } from './types';
 
-const props = defineProps<{ channel: FindingsChannel }>();
+const props = withDefaults(defineProps<{ channel: FindingsChannel; breakpoints?: BreakpointSummary[] }>(), { breakpoints: () => [] });
 const { t, mergeLocaleMessage } = useI18n();
 
 const run = ref<FindingsRun | null>(null);
@@ -69,6 +77,7 @@ const severities = ref<Severity[]>([...SEVERITIES]);
 const plugin = ref('');
 const view = ref<number | ''>('');
 const list = ref<HTMLElement | null>(null);
+const scope = useScope('checks', () => props.breakpoints.map((breakpoint) => breakpoint.id));
 
 function show(event: FindingsEvent): void {
   mergeLocaleMessage('en', nestMessages(event.messages));
@@ -163,7 +172,6 @@ watch(
   },
   { immediate: true },
 );
-const offOpen = ref(false);
 const counts = computed(() => countBySeverity(run.value?.findings ?? []));
 const plugins = computed(() => (run.value === null ? [] : pluginsOf(run.value)));
 const viewChoices = computed(() => (run.value?.views ?? []).map((checked) => ({ id: checked.id, name: viewName(checked) })));
@@ -182,12 +190,8 @@ function onlyInText(finding: MergedFinding): string | null {
   return views === null ? null : t('findings.only_in', { breakpoints: views.map(viewName).join(', ') });
 }
 
-/** An ignore entry as one line: its globs, `*` for one left out. */
-function ignoreText(entry: IgnoreEntry): string {
-  return [entry.rule, entry.url, entry.selector].map((glob) => glob ?? '*').join(' \u00b7 ');
-}
-
-const offCount = computed(() => (projectOff.value === null ? 0 : projectOff.value.rules.length + projectOff.value.ignore.length));
+/** The views the run checked, by breakpoint: views not named here were not checked. */
+const checked = computed(() => ((run.value?.views.length ?? 0) === 0 ? null : t('findings.checked', { views: run.value?.views.map(viewName).join(', ') ?? '' })));
 
 function message(finding: MergedFinding): string {
   return t(finding.message.key, finding.message.params ?? {});
@@ -237,9 +241,19 @@ async function runChecks(): Promise<void> {
   failed.value = false;
   running.value = true;
   progress.value = null;
-  if (!(await send({ type: 'runChecks', target: 'all' }))) {
+  const request = withScope<Extract<FindingsRequest, { type: 'runChecks' }>>({ type: 'runChecks', target: 'all' }, scope.value);
+  if (!(await send(request))) {
     running.value = false;
   }
+}
+
+/** The breakpoints of the run shown, when it covered fewer than the project's (RB-099-10). */
+function rerunViews(last: FindingsRun | null): string[] | null {
+  return last === null ? null : rerunScope(last, props.breakpoints.map((breakpoint) => breakpoint.id));
+}
+
+function runVisual(id: string, args: Record<string, JsonValue> | null): void {
+  void send(args === null ? { type: 'runCommand', id } : { type: 'runCommand', id, args });
 }
 
 /** Runs `plugins` again over the last run's target and page, merged into it by the core
@@ -253,11 +267,13 @@ async function rerunChecks(plugins: string[]): Promise<void> {
   running.value = true;
   progress.value = null;
   const last = run.value;
+  const views = rerunViews(last);
   const request: FindingsRequest = {
     type: 'runChecks',
     target: last?.target ?? 'all',
     plugins,
     ...(last?.url === undefined ? {} : { url: last.url }),
+    ...(views === null ? {} : { scope: views }),
   };
   if (!(await send(request))) {
     running.value = false;
@@ -280,8 +296,9 @@ function failureText(failure: CheckFailure): string {
   }
   const checked = run.value?.views.find((view) => view.id === failure.view);
   const where = checked === undefined ? '' : t('findings.plugin_failed_view', { view: viewName(checked) });
-  // The code's parameters, the host's names of the plugin last, a plugin's own reason only.
-  const reason = t(failure.code, failureParams(failure.code, failure.plugin, failure.params));
+  // The code's parameters, the host's names of the plugin last, a plugin's own reason only; one
+  // sentence, its end punctuated, before the panel's closing one (RB-099-06).
+  const reason = sentence(t(failure.code, failureParams(failure.code, failure.plugin, failure.params)));
   return t('findings.plugin_failed_reason', { plugin: failure.plugin, where, reason });
 }
 
@@ -336,7 +353,7 @@ const severityClass: Record<Severity, string> = {
         ref="runButton"
         size="sm"
         :loading="running"
-        :disabled="running"
+        :disabled="running || scopeOf(scope) === null"
         data-testid="run"
         @click="runChecks"
       >
@@ -354,29 +371,12 @@ const severityClass: Record<Severity, string> = {
       <p v-if="run && !running" class="text-sm text-muted" data-testid="summary">
         {{ t('findings.summary_count', { total: run.summary.total, plugins: run.plugins.length }) }}
       </p>
+      <ScopePicker v-model="scope" :breakpoints="breakpoints" :disabled="running" class="w-full" />
+      <p v-if="run && !running && checked" class="w-full text-xs text-muted" data-testid="checked">{{ checked }}</p>
     </header>
 
-    <UCollapsible v-if="offCount > 0 && projectOff" v-model:open="offOpen" class="text-sm text-muted" data-testid="project-off">
-      <UButton
-        size="sm"
-        variant="link"
-        color="neutral"
-        class="px-0"
-        data-testid="project-off-toggle"
-        :trailing-icon="FINDINGS_ICONS.checkDetails"
-        :ui="{ trailingIcon: offOpen ? 'rotate-180 transition-transform' : 'transition-transform' }"
-      >
-        {{ t('findings.project_off.note', { count: String(offCount) }) }}
-      </UButton>
-      <template #content>
-        <ul class="mt-1 list-disc pl-5">
-          <li v-for="rule in projectOff.rules" :key="`rule-${rule}`">{{ t('findings.project_off.rule', { rule }) }}</li>
-          <li v-for="(entry, index) in projectOff.ignore" :key="`ignore-${index}`">
-            {{ t('findings.project_off.ignore', { entry: ignoreText(entry) }) }}
-          </li>
-        </ul>
-      </template>
-    </UCollapsible>
+    <ProjectOffNote :project-off="projectOff" />
+    <VisualStart :breakpoints="breakpoints" :busy="running" @run="runVisual" />
 
     <FindingsProgress
       v-if="progress"

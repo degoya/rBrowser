@@ -8,6 +8,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use rb_engine::ViewId;
 use rb_ipc::{CoreToShell, NotificationLevel};
 use serde_json::{Value, json};
 use tokio::sync::oneshot;
@@ -181,9 +182,10 @@ where
     refused
 }
 
-/// `flows.run_all`: every flow, one after the other, in its own views. A flow that does not
-/// start ends the queue with a notice naming why and the flows that did not run.
-pub(super) fn run_all(core: &Arc<Core>) -> Result<Value, FlowError> {
+/// `flows.run_all`: every flow, one after the other, in its own views - in `views` when the run
+/// names them (a scope, RB-099-10). A flow that does not start ends the queue with a notice
+/// naming why and the flows that did not run.
+pub(super) fn run_all(core: &Arc<Core>, views: Option<Vec<ViewId>>) -> Result<Value, FlowError> {
     let setup = setup(core)?;
     let names: Vec<String> = catalog::list(&setup.root, &setup.settings.dir)?
         .into_iter()
@@ -196,7 +198,7 @@ pub(super) fn run_all(core: &Arc<Core>) -> Result<Value, FlowError> {
     let tally = Arc::new(Mutex::new(Tally::default()));
     // One layout for the whole batch (`hiddenViews: layout`), the one before at its end.
     super::run_layout::batch_begin();
-    let first_run = start(core, first, None, None).inspect_err(|_| {
+    let first_run = start(core, first, views.clone(), None).inspect_err(|_| {
         super::run_layout::batch_end(core);
     })?;
     let started = tallied(core, first, first_run, &tally);
@@ -210,7 +212,8 @@ pub(super) fn run_all(core: &Arc<Core>) -> Result<Value, FlowError> {
         let _ = started.done.await;
         let cancelled = move || cancelled_since(since);
         let next = |name: &str| {
-            start(&core, name, None, None).map(|started| tallied(&core, name, started, &tally))
+            start(&core, name, views.clone(), None)
+                .map(|started| tallied(&core, name, started, &tally))
         };
         if let Some(refused) = run_queue(rest, cancelled, next).await {
             let args = refused.notice_args();

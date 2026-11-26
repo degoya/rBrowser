@@ -25,8 +25,8 @@ const PLAY_TOOL: &str = "recorder_play";
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RecorderStartParams {
-    /// One view to record from (a view id or a breakpoint id shown once): it becomes the active
-    /// view first. The active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent. It becomes
+    /// the active view first.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The recording's name (`[A-Za-z0-9_-]`, at most 64 characters); a timestamped one when
@@ -103,7 +103,7 @@ pub struct RecorderPlayParams {
     /// The recording (`recorder_stop` answers its name); the last saved one when absent.
     #[serde(default)]
     pub recording_id: Option<String>,
-    /// `"all"`, a view id or a breakpoint id; when absent, the views of the breakpoints the
+    /// `"all"`, a view id or a breakpoint id; when absent the views of the breakpoints the
     /// recording was made in, else all.
     #[serde(default)]
     pub target: Option<TargetArg>,
@@ -122,7 +122,7 @@ pub struct RecorderPlayParams {
 #[tool_router(router = recorder_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Start recording one view's interactions (clicks, typing, keys, form changes, navigations) as a cleaned flow, or resume a paused recording. `target`: one view (a view id or a breakpoint id shown once) that becomes the active view first; the active view when absent. `name` ([A-Za-z0-9_-], at most 64 characters) names the file; a timestamped name when absent. Password fields and the configured secret fields are recorded as {{secret:<name>}}, never in clear. Refused while a flow runs (recorder.flow_running): its navigations would become steps. continueFrom { recordingId, stepId } continues a stored recording from that step instead: its steps up to there play first at the pace fast (a failure there starts no recording and the notice says why), then the new steps land after it and the stop writes them into that recording. Answers the recorder's state, the name and the step count."
+        description = "Start recording one view's interactions (clicks, typing, keys, form changes, navigations) as a cleaned flow, or resume a paused recording. name ([A-Za-z0-9_-], at most 64) names the file; timestamped when absent. Password and secret fields are recorded as {{secret:<name>}}, never in clear. Refused while a flow runs (recorder.flow_running). continueFrom { recordingId, stepId } replays a stored recording up to that step (pace fast), then records after it into that recording. Answers the recorder's state, the name and the step count."
     )]
     pub(crate) async fn recorder_start(
         &self,
@@ -146,7 +146,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Stop the recording and write it to the project's recordings folder (automation.recorder.dir, default .rbrowser/out/recordings/<name>.json); an existing file is never overwritten - the next free <name>-<n> is taken. With pause: true the recording only pauses, or resumes when paused. Answers the state, the name (the recordingId of recorder_export), the step count and, after a stop, the file relative to the project root."
+        description = "Stop the recording and write it to the recordings folder (automation.recorder.dir, default .rbrowser/out/recordings/<name>.json; never overwritten - the next free <name>-<n> is taken). pause: true pauses, or resumes a paused one. Answers the state, the name (the recordingId), the step count and, after a stop, the file."
     )]
     pub(crate) async fn recorder_stop(
         &self,
@@ -161,7 +161,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Export a stored recording as an rBrowser flow (format \"flow\", <name>.ts with page, view and expect injected), as a Playwright test (\"spec\", <name>.spec.ts plus playwright.config.ts with one project per breakpoint) or both (\"both\", the default). recordingId names the recording (recorder_stop answers it); the last saved one when absent. name renames the export. The files go into a new folder of automation.recorderExport.dir (default .rbrowser/out/exports/<name>/); nothing is overwritten. Secrets stay placeholders: the code reads process.env.RB_SECRET_<NAME>, and the answer is masked like the log. Answers the folder and each file's path and content."
+        description = "Export a stored recording as an rBrowser flow (format flow: <name>.ts), a Playwright test (spec: <name>.spec.ts and playwright.config.ts with a project per breakpoint) or both (default). recordingId: the last saved one when absent; name renames the export. The files go into a new folder of automation.recorderExport.dir (default .rbrowser/out/exports/<name>/); nothing is overwritten. Secrets stay placeholders (process.env.RB_SECRET_<NAME>); the answer is masked. Answers the folder and each file's path and content."
     )]
     pub(crate) async fn recorder_export(
         &self,
@@ -169,7 +169,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = async {
             let args = serde_json::to_value(&params)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             let answer = self.backend.host_tool(EXPORT_TOOL, args).await?;
             Ok(self.backend.mask(&answer))
         }
@@ -178,7 +178,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Play a stored recording back in every chosen view at once, without exporting it: the recording becomes the same flow recorder_export writes (format \"flow\") and runs through the flows runner, held in memory - nothing is written to the flows folder. recordingId names the recording (recorder_stop answers it); the last saved one when absent. pace \"recorded\" waits the pause before each step as recorded (at most 10 s), \"fast\" runs them back to back; automation.recorder.playbackPace when absent. Answers per view passed, failed, skipped (Firefox and WebKit views, with the reason) or timedOut, with duration, steps, the error with its step and line, and a screenshot file on failure - the result.json of a flow run. Refused with flows.untrusted until a person trusts the workspace; one run at a time (flows.busy), none while a recording takes steps (flows.recording)."
+        description = "Play a stored recording back in every chosen view at once, as the flow recorder_export would write, held in memory (nothing is written). recordingId: the last saved one when absent. pace recorded (the recorded pauses, at most 10 s) or fast; automation.recorder.playbackPace when absent. Answers per view passed, failed, skipped (Firefox and WebKit, with the reason) or timedOut, with duration, steps, the error with its step and line and a screenshot on failure. Refused with flows.untrusted until a person trusts the workspace; one run at a time (flows.busy), none while recording (flows.recording)."
     )]
     pub(crate) async fn recorder_play(
         &self,

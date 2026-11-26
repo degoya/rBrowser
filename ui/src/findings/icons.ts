@@ -16,4 +16,6 @@ export const FINDINGS_ICONS = {
   showWidth: 'i-lucide-move-horizontal',
   /** "Run <check> again" in the progress details and beside the plugin filter (RB-094-17). */
   rerun: 'i-lucide-rotate-cw',
+  /** Visual regression's "Update baselines", the secondary action beside Compare (RB-099-10). */
+  baselines: 'i-lucide-camera',
 } as const;

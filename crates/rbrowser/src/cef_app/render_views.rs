@@ -171,7 +171,10 @@ wrap_client! {
         }
 
         fn request_handler(&self) -> Option<RequestHandler> {
-            Some(super::popup::PopupRequests::new())
+            // Basic auth from the store only: nobody watches a render view (review w35).
+            Some(super::popup::PopupRequests::new(
+                crate::basic_auth::later::Requester::Render,
+            ))
         }
 
         fn life_span_handler(&self) -> Option<LifeSpanHandler> {

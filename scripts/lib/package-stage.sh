@@ -21,10 +21,13 @@
 #   rb_stage_updater "$build_dir" "$STAGE"                # rbrowser-updater.exe beside it
 #   rb_patch_exe "$STAGE/rbrowser.exe" <ico> <version> "$cache"   # icon + version (rcedit)
 #   rb_write_crash_reporter_cfg <template> "$STAGE" <version>
+#   rb_trim_locales "$STAGE/locales"                      # only RB_PACKAGE_LOCALES stay
+#   rb_check_stage "$STAGE" <content list> [plugins/<package>...]   # the package's content
 #   rb_package_sizes "$STAGE" "$ZIP"                      # MB per part
 #
 # Tests: scripts/tests/package-stage.sh (fakes for curl and rcedit), scripts/tests/package.sh
-# (a fake npm), scripts/tests/macos-node.sh (the macOS runtime).
+# (a fake npm), scripts/tests/macos-node.sh (the macOS runtime), scripts/tests/windows-paket.sh
+# (the locales and the content list).
 
 # shellcheck source=scripts/lib/tool-versions.sh
 source "$(dirname "${BASH_SOURCE[0]}")/tool-versions.sh"
@@ -164,55 +167,16 @@ RB_SIDECAR_PACKAGES=(playwright-core playwright @playwright/test lighthouse pupp
 # Left out with what only they need: Lighthouse's error reporting (@sentry/node and its tree, the
 # `sentry` package under the FSL), loaded only with `enableErrorReporting`, which the sidecar never
 # sets (sidecar/src/modules/lighthouse/real.ts). A name ending in `/` is a scope.
+# scripts/lib/licenses.py reads this line: the About list and THIRD-PARTY-LICENSES.txt leave out
+# the same packages.
 RB_SIDECAR_EXCLUDED=(@sentry/ sentry)
 
 # Prints the package paths (`node_modules/...`) of the production tree that lock file $1 names and
 # rb_stage_sidecar stages: everything the root's dependencies reach, by Node's lookup, but the
-# RB_SIDECAR_EXCLUDED packages and what only they reach. Reads the lock file alone - a dry listing.
+# RB_SIDECAR_EXCLUDED packages and what only they reach (scripts/lib/sidecar_packages.py, which
+# scripts/lib/licenses.py shares). Reads the lock file alone - a dry listing.
 rb_sidecar_packages() {
-    python3 -I - "$1" "${RB_SIDECAR_EXCLUDED[@]}" << 'PY'
-import json
-import sys
-
-lock, excluded = sys.argv[1], sys.argv[2:]
-with open(lock, encoding="utf-8") as handle:
-    packages = json.load(handle)["packages"]
-
-
-def name_of(path):
-    return path.rsplit("node_modules/", 1)[-1]
-
-
-def left_out(name):
-    return any(name.startswith(x) if x.endswith("/") else name == x for x in excluded)
-
-
-def resolve(start, name):
-    base = start
-    while True:
-        candidate = f"{base}/node_modules/{name}" if base else f"node_modules/{name}"
-        if candidate in packages:
-            return candidate
-        if not base:
-            return None
-        cut = base.rfind("/node_modules/")
-        base = base[:cut] if cut >= 0 else ""
-
-
-def needs(path):
-    entry = packages[path]
-    return [*entry.get("dependencies", {}), *entry.get("optionalDependencies", {})]
-
-
-staged, todo = set(), [resolve("", name) for name in needs("")]
-while todo:
-    path = todo.pop()
-    if path is None or path in staged or left_out(name_of(path)):
-        continue
-    staged.add(path)
-    todo.extend(resolve(path, name) for name in needs(path))
-print("\n".join(sorted(staged)))
-PY
+    python3 -I "$(dirname "${BASH_SOURCE[0]}")/sidecar_packages.py" "$1" "${RB_SIDECAR_EXCLUDED[@]}"
 }
 
 # Removes from the staged node_modules $1 what no package needs at run time (RB-080-25): source
@@ -227,7 +191,8 @@ rb_prune_sidecar_extras() {
 # Stages the sidecar of folder $1 (built: dist/main.js and dist/flow-worker.js) into $2: both
 # bundles, its package.json (an ES module) and its production dependencies, installed with
 # `npm ci --omit=dev` in a scratch folder (so the source tree keeps its development install) and
-# held to rb_sidecar_packages: every other installed package and the `.bin` links are removed,
+# held to rb_sidecar_packages: no `.bin` links (`--no-bin-links`; the package takes no symbolic
+# link), every other installed package removed,
 # then rb_prune_sidecar_extras takes the source maps, declarations and prose.
 rb_stage_sidecar() {
     local src="$1" dest="$2" prod bundle pkg path keep
@@ -239,7 +204,7 @@ rb_stage_sidecar() {
     done
     prod="$(mktemp -d)"
     cp "$src/package.json" "$src/package-lock.json" "$prod/"
-    if ! (cd "$prod" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund) >&2; then
+    if ! (cd "$prod" && npm ci --omit=dev --ignore-scripts --no-bin-links --no-audit --no-fund) >&2; then
         rm -rf "$prod"
         echo "!! the sidecar's production dependencies did not install" >&2
         return 1
@@ -340,7 +305,7 @@ rb_patch_exe() {
         --set-version-string FileDescription "rBrowser" \
         --set-version-string FileVersion "$version" \
         --set-version-string InternalName "rbrowser" \
-        --set-version-string LegalCopyright "Copyright (c) DEGOYA.digital" \
+        --set-version-string LegalCopyright "Copyright (c) 2026 Alexander Herling / DEGOYA.digital" \
         --set-version-string OriginalFilename "rbrowser.exe" \
         --set-version-string ProductName "rBrowser" \
         --set-version-string ProductVersion "$version"; then
@@ -361,6 +326,74 @@ rb_write_crash_reporter_cfg() {
     fi
 }
 
+# The CEF locales a package ships (RB-099-01): English, the language of the interface, and the
+# three that follow in phase 2. Chromium falls back to en-US.pak for any other system language.
+RB_PACKAGE_LOCALES=(en-US de es fr)
+
+# Removes from the locales folder $1 every pack but those of RB_PACKAGE_LOCALES - `<locale>.pak`
+# and its gendered variants `<locale>_<GENDER>.pak`; a folder without en-US.pak is a failure.
+rb_trim_locales() {
+    local dir="$1" file name locale keep
+    if [[ ! -f "$dir/en-US.pak" ]]; then
+        echo "!! $dir has no en-US.pak, the locale Chromium falls back to" >&2
+        return 1
+    fi
+    for file in "$dir"/*; do
+        name="$(basename "$file")"
+        keep=0
+        for locale in "${RB_PACKAGE_LOCALES[@]}"; do
+            [[ "$name" == "$locale.pak" || "$name" == "${locale}_"*.pak ]] && keep=1
+        done
+        [[ "$keep" == 1 ]] || rm -rf "$file"
+    done
+}
+
+# Holds the stage $1 to the content list $2 (packaging/windows/package-content.txt): every
+# required entry is there, every entry at the top of the stage is listed, locales\ holds only
+# RB_PACKAGE_LOCALES and the sidecar no .bin links; $3... are further required paths (the
+# bundled plugins, `plugins/<package>`). Names every finding; nothing is changed.
+rb_check_stage() {
+    local stage="$1" list="$2"
+    shift 2
+    python3 -I - "$stage" "$list" "${RB_PACKAGE_LOCALES[*]}" "$@" << 'PY'
+import os
+import sys
+
+stage, listing, locales, extra = sys.argv[1], sys.argv[2], sys.argv[3].split(), sys.argv[4:]
+required, known = list(extra), {"plugins"} if extra else set()
+with open(listing, encoding="utf-8") as lines:
+    for line in lines:
+        entry = line.split("#", 1)[0].strip()
+        if not entry:
+            continue
+        optional = entry.startswith("? ")
+        entry = entry[2:].strip() if optional else entry
+        known.add(entry.rstrip("/").split("/", 1)[0])
+        if not optional:
+            required.append(entry)
+found = []
+for entry in required:
+    path = os.path.join(stage, *entry.rstrip("/").split("/"))
+    if not (os.path.isdir(path) if entry.endswith("/") else os.path.isfile(path)):
+        found.append(f"missing: {entry}")
+for entry in sorted(os.listdir(stage)):
+    if entry not in known:
+        found.append(f"not in {os.path.basename(listing)}: {entry}")
+if os.path.isdir(os.path.join(stage, "locales")):
+    for entry in sorted(os.listdir(os.path.join(stage, "locales"))):
+        if not any(entry == f"{locale}.pak" or (entry.startswith(f"{locale}_") and entry.endswith(".pak"))
+                   for locale in locales):
+            found.append(f"a locale the package does not ship: locales/{entry}")
+if os.path.exists(os.path.join(stage, "sidecar", "node_modules", ".bin")):
+    found.append("the sidecar's links: sidecar/node_modules/.bin")
+if found:
+    print(f"!! the package's content differs from {listing}:", file=sys.stderr)
+    for line in found:
+        print(f"   {line}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 # The size report: MB per part of the stage $1 and, when given, of the ZIP $2.
 rb_package_sizes() {
     python3 -I - "$1" "${2:-}" << 'PY'
@@ -373,7 +406,8 @@ folders = {"locales": "CEF locales", "ui": "shell UI", "node": "Node runtime",
 files = {"rbrowser.exe": "rbrowser.exe", "rbrowser.com": "rbrowser.com",
          "rbrowser.dll": "rbrowser.dll", "rbrowser.pdb": "rbrowser.dll",
          "rbrowser-wsl": "rbrowser-wsl", "rbrowser-updater.exe": "rbrowser-updater.exe"}
-docs = {"LICENSE", "NOTICE", "README.txt", "CHANGELOG.md", "VERSION.txt", "crash_reporter.cfg"}
+docs = {"LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt", "README.txt", "CHANGELOG.md", "VERSION.txt",
+        "crash_reporter.cfg"}
 order = ["rbrowser.exe", "rbrowser.com", "rbrowser.dll", "rbrowser-wsl", "rbrowser-updater.exe",
          "CEF runtime",
          "CEF locales", "shell UI", "Node runtime", "plugins", "sidecar", "docs, notices, config"]

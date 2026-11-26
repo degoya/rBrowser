@@ -4,7 +4,7 @@
 // inside. This file holds the frame's geometry and its pointer and Enter handling on the canvas;
 // the session (`session.ts`) keeps the draft.
 import { clip } from './draw';
-import { toImage } from './input';
+import { imageSize, toImage } from './input';
 import type { ShotAnnotation, ShotRegion } from './types';
 
 /** The handles, clockwise from the top left. */
@@ -102,7 +102,7 @@ export function place(bar: HTMLElement, frame: ShotAnnotation, zoom: number, can
   // Layout read first, then written (review of RB-080-63: no forced reflow between).
   const [height, left, top] = [bar.offsetHeight, canvas.offsetLeft, canvas.offsetTop];
   const bottom = ((frame.y ?? 0) + (frame.h ?? 0)) * zoom;
-  const room = canvas.height * zoom - height - 4;
+  const room = imageSize(canvas).height * zoom - height - 4;
   bar.style.left = `${left + Math.max((frame.x ?? 0) * zoom, 0)}px`;
   bar.style.top = `${top + Math.max(Math.min(bottom + 6, room), 0)}px`;
 }
@@ -140,7 +140,7 @@ export function attach(canvas: HTMLCanvasElement, hooks: CropHooks): void {
   let grab: { handle: string; from: number[]; frame: ShotAnnotation } | null = null;
   const scale = (): number => {
     const rect = canvas.getBoundingClientRect();
-    return rect.width > 0 ? canvas.width / rect.width : 1;
+    return rect.width > 0 ? imageSize(canvas).width / rect.width : 1;
   };
   const handleAt = (event: MouseEvent): string | null => {
     const frame = hooks.active() ? hooks.frame() : null;
@@ -165,7 +165,8 @@ export function attach(canvas: HTMLCanvasElement, hooks: CropHooks): void {
       return false;
     }
     event.stopImmediatePropagation();
-    hooks.change(drag(grab.frame, grab.handle, grab.from, toImage(canvas, event), canvas.width, canvas.height));
+    const { width, height } = imageSize(canvas);
+    hooks.change(drag(grab.frame, grab.handle, grab.from, toImage(canvas, event), width, height));
     return true;
   };
   canvas.addEventListener('pointermove', move);

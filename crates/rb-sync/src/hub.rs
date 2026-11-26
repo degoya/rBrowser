@@ -126,6 +126,11 @@ impl Hub {
         }
     }
 
+    /// The leader of the open follow: a submit it routed waits for its load.
+    pub fn follow_leader(&self) -> Option<ViewId> {
+        self.follow.as_ref().map(|follow| follow.leader)
+    }
+
     /// The active view.
     pub fn active(&self) -> Option<ViewId> {
         self.active

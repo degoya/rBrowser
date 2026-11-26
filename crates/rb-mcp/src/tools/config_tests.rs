@@ -158,7 +158,7 @@ async fn config_set_refuses_a_parent_write_that_drops_a_protected_key() {
     );
 }
 
-/// Review of wave 097-w33: a protected key is refused as `config_key_protected` before the file
+/// Review of wave 097-w33: a protected key is refused as `config.key_protected` before the file
 /// is read - also with no project open or the file unreadable (the fake's `null` document).
 #[tokio::test]
 async fn config_set_refuses_a_protected_key_before_reading_the_file() {

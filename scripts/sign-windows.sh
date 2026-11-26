@@ -93,10 +93,13 @@ sign_planned() {
 }
 
 # The ZIP $1: unpacked into the scratch folder, signed, packed again and put in its place only
-# when every file is signed.
+# when every file is signed. The members keep the ZIP's date (the commit's, RB-099-01), so two
+# signed builds of one commit still match, and a SHA256SUMS beside the ZIP is written again.
 sign_zip() {
-    local zip="$1" work folder name
+    local zip="$1" work folder name epoch sums
     zip="$(cd "$(dirname "$zip")" && pwd)/$(basename "$zip")"
+    epoch="$("$PYTHON" -I -c 'import calendar, sys, zipfile
+print(calendar.timegm(max(i.date_time for i in zipfile.ZipFile(sys.argv[1]).infolist()) + (0, 0, 0)))' "$zip")" || return 1
     work="$TMP/zip"
     rm -rf "$work"
     mkdir -p "$work"
@@ -104,9 +107,16 @@ sign_zip() {
     name="$(basename "$folder")"
     echo "==> $(basename "$zip"): signing $name"
     sign_planned "$folder" || return 1
-    rb_package_zip "$work" "$name" "$work/signed.zip" || return 1
+    SOURCE_DATE_EPOCH="$epoch" rb_package_zip "$work" "$name" "$work/signed.zip" || return 1
     mv -f "$work/signed.zip" "$zip"
     rm -rf "$work"
+    sums="$(dirname "$zip")/SHA256SUMS"
+    if [[ -f "$sums" ]]; then
+        local names=()
+        mapfile -t names < <(sed 's/^[0-9a-f]*  //' "$sums")
+        rb_package_sums "$(dirname "$zip")" "${names[@]}" || return 1
+        echo "==> $(basename "$sums") written again"
+    fi
     echo "==> $(basename "$zip") packed again"
 }
 

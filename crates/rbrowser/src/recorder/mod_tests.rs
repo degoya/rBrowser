@@ -96,10 +96,13 @@ async fn a_recording_is_written_with_its_steps_and_without_the_password() {
         emit_from(&setup, 1, &typed(seq as u64 + 1, "#password", value, true));
     }
     emit_from(&setup, 1, &typed(10, "#name", "Ada", false));
+    // View 3 misses every element: a failed replay of the typing desyncs it, and from then on
+    // the hub routes past it - the click never runs there, so it is not in the click's
+    // `onlyIn` (the outcome of a replay that did run is the recorder's unit tests').
+    let sync = crate::sync_hub::for_host(setup.core.host()).expect("sync runs");
+    until(|| sync.hub().with(|hub| hub.desynced().contains(&ViewId(3)))).await;
     emit_from(&setup, 1, &click(11, "#burger"));
     until(|| recorder.outcome().steps == base + 3).await;
-    // View 3's replay of the click fails: it drops out of the click's `onlyIn`.
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     let stopped = run(&setup, STOP, Value::Null).expect("stops");
     assert_eq!(stopped["state"], "idle");
     assert_eq!(stopped["path"], ".rbrowser/out/recordings/login.json");
@@ -119,7 +122,7 @@ async fn a_recording_is_written_with_its_steps_and_without_the_password() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn pause_suppresses_steps_and_a_second_stop_takes_a_new_name() {
-    let (setup, root, _replay) = project().await;
+    let (setup, root, replay) = project().await;
     run(&setup, START, json!({ "name": "flow" })).expect("starts");
     let paused = run(&setup, PAUSE, Value::Null).expect("pauses");
     assert_eq!(paused["state"], "paused");
@@ -128,7 +131,9 @@ async fn pause_suppresses_steps_and_a_second_stop_takes_a_new_name() {
         Some(RecorderPhase::Paused)
     );
     emit_from(&setup, 1, &click(1, "#ignored"));
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // The recorder hears a routed event before its replays are queued: once view 2 replayed
+    // the click, the paused recorder has passed it by.
+    until(|| !replay.calls_for(ViewId(2)).is_empty()).await;
     let resumed = run(&setup, PAUSE, Value::Null).expect("resumes");
     let recorder = for_host(setup.core.host()).expect("made");
     let base = recorder.outcome().steps;

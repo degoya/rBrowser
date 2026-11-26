@@ -9,13 +9,18 @@
 // rBrowser's report window (the command `open_report`), the history lists every run on disk
 // (the tool `reports`) with a delete that asks first (the command `delete_run`), and two runs
 // of a breakpoint compare by scores and metrics. A failure that names a setting links there from
-// the status line (RB-094-21).
+// the status line (RB-094-21). RB-099-10: `Run` runs over the scope pick list's views - every view,
+// the visible ones or chosen breakpoints (panel-ui's `ScopeSelect.vue`) - sent as `$scope`, which
+// the host resolves into `breakpoints`; the last run's summary keeps the scope, the choice the
+// panel shows again, and the measured breakpoints are named.
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePanel } from '../../../../web-common/panel-ui/src/mount';
 import { format } from '../../../../web-common/panel-ui/src/format';
 import type { StatusLine } from '../../../../web-common/panel-ui/src/status';
 import IconAction from '../../../../web-common/panel-ui/src/components/IconAction.vue';
 import PanelFrame from '../../../../web-common/panel-ui/src/components/PanelFrame.vue';
+import ScopeSelect from '../../../../web-common/panel-ui/src/components/ScopeSelect.vue';
+import { allViews, choiceOf, keepKnown, scopeOf, withScope, type ScopeChoice } from '../../../../web-common/panel-ui/src/scope';
 import { moveCell, pageLink, rows as scoreRows, settingOf, signed, type LighthouseStatus, type ScoreCell } from './model';
 import type { HistoryRun } from './history';
 import History from './History.vue';
@@ -44,6 +49,27 @@ const table = computed(() => scoreRows(latest.value));
 const running = computed(() => status.value?.sidecar?.running ?? null);
 const link = computed(() => pageLink(latest.value?.url ?? latest.value?.breakpoints?.[0]?.url));
 const lastUrl = computed(() => latest.value?.url ?? latest.value?.breakpoints?.[0]?.url ?? '');
+/** The views of the next run; the last run's scope until the person picks (RB-099-10). */
+const scope = ref<ScopeChoice>(allViews());
+let picked = false;
+const shown = computed(() => status.value?.breakpoints ?? []);
+const scopeTexts = computed(() => {
+  void panel.strings.value;
+  const text = (name: string) => t('panel.scope.' + name);
+  return { label: text('label'), all: text('all'), visible: text('visible'), chosen: text('chosen'), breakpoints: text('breakpoints'), pick: text('pick'), none: text('none') };
+});
+/** The breakpoints the last run measured: views not named here were not measured. */
+const measured = computed(() => (latest.value?.breakpoints ?? []).map((entry) => entry.breakpoint).join(', '));
+watch(
+  () => [latest.value?.scope, shown.value] as const,
+  ([last, known]) => {
+    if (!picked) scope.value = keepKnown(choiceOf(last), known.map((entry) => entry.id));
+  },
+);
+function pick(choice: ScopeChoice): void {
+  picked = true;
+  scope.value = choice;
+}
 
 async function refresh(): Promise<void> {
   if (inFlight) return;
@@ -161,7 +187,7 @@ function run(): void {
   runFailure.value = null;
   runCode.value = null;
   starting.value = true;
-  panel.call({ command: 'run' }).then(
+  panel.call({ command: 'run' }, withScope({}, scope.value, '$scope')).then(
     () => refresh(),
     (error: unknown) => {
       const code = codeOf(error);
@@ -227,10 +253,12 @@ onBeforeUnmount(() => clearInterval(timer));
   <PanelFrame :title="t('panels.lighthouse')" icon="i-lucide-gauge" :status="line">
     <template #actions>
       <IconAction id="cancel" icon="i-lucide-circle-stop" :label="t('panel.cancel')" :disabled="!running" @click="cancel" />
-      <IconAction id="run" icon="i-lucide-play" :label="t('panel.run')" primary @click="run" />
+      <IconAction id="run" icon="i-lucide-play" :label="t('panel.run')" primary :disabled="scopeOf(scope) === null" @click="run" />
     </template>
 
     <div class="flex flex-col gap-3">
+      <ScopeSelect id="scope" :model-value="scope" :breakpoints="shown" :texts="scopeTexts" @update:model-value="pick" />
+      <p v-if="latest && measured" id="measured" class="text-xs text-muted">{{ t('panel.scope.covered', { breakpoints: measured }) }}</p>
       <p v-if="latest" id="last" class="flex flex-wrap items-center gap-1.5 text-sm text-muted">
         <UIcon name="i-lucide-clock" class="size-4 shrink-0" />
         <span class="break-all">{{ t('panel.last', { run: latest.runId, url: lastUrl }) }}</span>

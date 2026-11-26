@@ -125,7 +125,13 @@ async fn a_plugin_command_without_a_panel_reports_its_end_and_a_check_opens_the_
     use crate::host::ui::recording::UiCall;
     let (ui, core) = core();
     crate::panel_dock::tests::float(&core);
-    report_done(&core, "seo", "plugin.seo.commands.check", Group::Checks);
+    report_done(
+        &core,
+        "seo",
+        "plugin.seo.commands.check",
+        Group::Checks,
+        None,
+    );
     let items = core.status_log().items();
     let last = items.last().expect("a status message");
     assert_eq!(last.message_key, COMMAND_DONE_KEY);
@@ -147,6 +153,7 @@ async fn a_plugin_command_without_a_panel_reports_its_end_and_a_check_opens_the_
         "overlays",
         "plugin.overlays.commands.outlines",
         Group::Overlays,
+        None,
     );
     assert_eq!(
         core.status_log().items().last().expect("logged").args["command"],
@@ -215,4 +222,52 @@ async fn a_panel_command_opens_the_folded_dock_and_a_side_effect_keeps_the_fold(
             dock.url
         );
     }
+}
+
+/// RB-099-25: "Validate the HTML of every view" from the palette said "done" in the status bar
+/// and opened the findings in the dock folded to its rail (the default at start) - the result
+/// was nowhere to be seen. A check is a person's (no MCP tool runs a plugin command): the folded
+/// dock opens at the findings, and the end names how many this run found, 0 as "nothing found".
+#[tokio::test]
+async fn a_check_opens_the_folded_dock_at_the_findings_and_names_their_count() {
+    use crate::panel_dock::PanelSide;
+    use crate::panel_dock::tests::{docks, setup_with};
+    let title = "plugin.html-validate.commands.validate";
+    for (found, key, count) in [
+        (Some(3), CHECK_DONE_KEY, Some("3")),
+        (Some(0), CHECK_DONE_KEY, Some("0")),
+        (None, COMMAND_DONE_KEY, None),
+    ] {
+        let mut user = rb_config::UserSettings::default();
+        user.panels.dock = rb_config::PanelDock::Left;
+        user.panels.dock_state = rb_config::PanelDockState::Rail;
+        let docked = setup_with(user);
+        report_done(&docked.core, "html-validate", title, Group::Checks, found);
+        let dock = docks(&docked.ui).last().cloned().flatten().expect("docked");
+        assert_eq!(
+            (dock.side, dock.collapsed),
+            (PanelSide::Left, false),
+            "{found:?}"
+        );
+        assert!(dock.url.ends_with("#/panels/findings"), "{}", dock.url);
+        let items = docked.core.status_log().items();
+        let last = items.last().expect("a status message");
+        assert_eq!(last.message_key, key, "{found:?}");
+        assert_eq!(last.args.get("count").map(String::as_str), count);
+        assert_eq!(last.args["command"], title);
+    }
+}
+
+/// RB-099-25: the end of a check in the catalogue's words - the count as an ICU plural.
+#[test]
+fn the_end_of_a_check_reads_its_count() {
+    let text = |count: &str| {
+        rb_i18n::t_with(
+            CHECK_DONE_KEY,
+            &[("command", "Validate HTML"), ("count", count)],
+        )
+    };
+    assert_eq!(text("0"), "Validate HTML: nothing found");
+    assert_eq!(text("1"), "Validate HTML: 1 finding");
+    assert_eq!(text("12"), "Validate HTML: 12 findings");
 }

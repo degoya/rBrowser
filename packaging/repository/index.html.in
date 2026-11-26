@@ -24,5 +24,6 @@ sudo apt install rbrowser</pre>
 sudo dnf install rbrowser</pre>
 <p>Signing key: <a href="rbrowser-packages.asc"><code>@FINGERPRINT@</code></a>. The last @KEEP@ versions of each package stay for a downgrade.
 Installation handbook: <a href="https://github.com/@REPOSITORY@/wiki/installation">wiki/installation</a>.</p>
+<footer><p>Published by DEGOYA.digital: <a href="https://degoya.digital/impressum">Imprint</a> · <a href="https://degoya.digital/datenschutz">Privacy policy</a>.</p></footer>
 </body>
 </html>

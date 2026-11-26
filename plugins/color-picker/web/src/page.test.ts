@@ -3,7 +3,7 @@
 // and `rbrowser-color-picker-marks`.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type FakePlugin, type Message, fakePlugin, runPageScripts, settle } from './support';
+import { advance, type FakePlugin, type Message, fakePlugin, runPageScripts, useVirtualTimers } from './support';
 import { calibrateAnswer, tileAnswer } from './tile';
 
 const GRID = Array.from({ length: 121 }, (_, index) => (index === 60 ? '#1e88e5' : '#ffffff'));
@@ -31,11 +31,12 @@ function sent(type: string): Message[] {
   return plugin.sent.filter((message) => message.type === type);
 }
 
-/** Lets the page script's promises, its two-frame waits and the pointer's rest settle. */
-async function idle(ms = 50): Promise<void> {
-  await settle();
-  await new Promise((resolve) => setTimeout(resolve, ms));
-  await settle();
+/**
+ * Lets the page script's promises, its frame waits and the pointer's rest settle, on the virtual
+ * clock: 100 ms hold the four frames of a first take (16 ms each), short of the rest (`REST_MS`).
+ */
+async function idle(ms = 100): Promise<void> {
+  await advance(ms);
 }
 
 function key(name: string, shiftKey = false): KeyboardEvent {
@@ -45,6 +46,7 @@ function key(name: string, shiftKey = false): KeyboardEvent {
 }
 
 beforeEach(() => {
+  useVirtualTimers();
   document.body.innerHTML = '<main><p id="text">Some text</p><p>More</p></main>';
   plugin = fakePlugin(answer);
   ({ picker: shadow, marks: marksShadow } = runPageScripts(plugin));
@@ -52,6 +54,7 @@ beforeEach(() => {
 
 afterEach(() => {
   plugin.stop();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 

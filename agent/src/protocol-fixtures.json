@@ -143,6 +143,17 @@
     {
       "kind": "vitals", "v": 1, "top": true, "segment": 2, "soft": true,
       "url": "http://localhost:5173/cart", "unsupported": ["cls", "inp"]
+    },
+    {
+      "kind": "media", "v": 1, "top": true, "url": "http://localhost:5173/", "tag": "video", "code": 4,
+      "message": "DEMUXER_ERROR_NO_SUPPORTED_STREAMS: FFmpegDemuxer: no supported streams",
+      "src": "http://localhost:5173/media/clip.mp4", "plays": { "h264": false, "aac": false, "hevc": false },
+      "path": "main > video"
+    },
+    {
+      "kind": "media", "v": 1, "top": false, "frame": ["iframe#player"], "url": "http://localhost:5173/player",
+      "tag": "source", "src": "http://localhost:5173/media/clip.mp4", "type": "video/mp4; codecs=\"avc1.42E01E\"",
+      "canPlay": "", "plays": { "h264": false, "aac": false, "hevc": false }, "path": "video > source:nth-of-type(1)"
     }
   ],
   "coreToAgent": [

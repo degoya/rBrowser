@@ -7,10 +7,12 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use super::forward::Answers;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 use crate::backend::ToolFailure;
+use crate::run_target::{RunTarget, Split, with_scope};
 use crate::target::TargetArg;
 
 /// What `screenshot` captures of each view.
@@ -74,9 +76,10 @@ pub struct PointParam {
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChecksRunParams {
-    /// `"all"` (default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. Also `"visible"` (the views the grid shows)
+    /// or a list of view ids and breakpoint ids.
     #[serde(default, skip_serializing)]
-    pub target: Option<TargetArg>,
+    pub target: Option<RunTarget>,
     /// Only these check plugins (ids); every enabled one when absent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plugins: Option<Vec<String>>,
@@ -105,13 +108,14 @@ pub struct SessionClearParams {
 }
 
 fn args_of(params: &impl Serialize) -> Result<Value, ToolFailure> {
-    serde_json::to_value(params).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(params)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[tool_router(router = capture_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Capture views as PNG: the viewport at the breakpoint's size, the full page, or one element (CSS selector, or `at` {x, y} in CSS px of the page for the element under that point, one view; with padding), from the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent). overview: one image of all views side by side with label and size, views out of sight included. delayMs waits first (at most 60000). save (default true) writes the files under the project's screenshot folder and answers their paths; save false answers the PNGs as base64 instead, all views together at most mcp.maxAnswerBytes (error answer_too_large otherwise). hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after)."
+        description = "Capture views as PNG: mode viewport (the breakpoint's size), full page (scrolled through first so lazy images load, then back; stacked sections, at most 65535 px and 256 megapixels; a longer page is cut and says truncated: true with pageHeight; images still loading after 4 s say imagesPending: true) or one element (selector, or `at` {x, y} in CSS px of the page; one view; with padding). overview: one image of all views side by side. delayMs waits first (at most 60000). save (default true) writes under the project's screenshot folder and answers the paths; save false answers base64 PNGs, at most mcp.maxAnswerBytes together (answer.too_large). hideBanners and freezeAnimations override the capture.* settings."
     )]
     pub(crate) async fn screenshot(
         &self,
@@ -134,31 +138,39 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Run every enabled check plugin (SEO, accessibility, console, ...) over the views of `target` (\"all\" (default), a view id or a breakpoint id) and answer the merged findings - deduplicated across views and plugins, each with a stable id - a summary per severity and plugin, and how each plugin x view job ended (jobs: done with its count, failed with its code, skipped with the reason). `plugins` limits the run to those plugin ids, `url` checks that page instead of the views' own. checks_cancel stops a run in progress (cancelled: true). The run is also written to .rbrowser/out/checks/."
+        description = "Run every enabled check plugin (SEO, accessibility, console, ...) over the targeted views; plugins limits it to those plugin ids, url checks that page instead of the views' own. Answers the views checked (breakpoints no view shows as notShown), the merged findings - deduplicated across views and plugins, each with a stable id -, a summary per severity and plugin, and jobs (each plugin x view: done with its count, failed with its code, skipped with the reason). checks_cancel stops a run (cancelled: true). Also written to .rbrowser/out/checks/."
     )]
     pub(crate) async fn checks_run(
         &self,
         Parameters(params): Parameters<ChecksRunParams>,
     ) -> ToolResult {
-        let result = match args_of(&params) {
-            Ok(args) => {
-                let target = params.target.clone().unwrap_or_else(TargetArg::all);
-                self.per_target("checks.run_all", Some(&target), args).await
+        let result = async {
+            let args = args_of(&params)?;
+            match self.split_target(params.target.as_ref()).await? {
+                Split::Target(target) => {
+                    let target = target.unwrap_or_else(TargetArg::all);
+                    self.per_target("checks.run_all", Some(&target), args).await
+                }
+                // RB-099-10: one run over the views of the scope's breakpoints.
+                Split::Scope(scope) => {
+                    self.command("checks.run_all", with_scope(&args, &scope))
+                        .await
+                }
             }
-            Err(failure) => Err(failure),
-        };
+        }
+        .await;
         respond(result)
     }
 
     #[tool(
-        description = "Cancel the check run in progress (checks_run, the findings panel's Run checks): jobs not started are skipped, running ones are dropped; the findings of the jobs that finished stay and are the run's answer, with cancelled: true. Answers cancelled: false when no run is in progress. Acts on no view."
+        description = "Cancel the check run in progress: jobs not started are skipped, running ones dropped; the findings of finished jobs stay and are the run's answer, with cancelled: true. Answers cancelled: false when no run is in progress."
     )]
-    pub(crate) async fn checks_cancel(&self) -> ToolResult {
+    pub(crate) async fn checks_cancel(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.command("checks.cancel", Value::Null).await)
     }
 
     #[tool(
-        description = "Move views into a session (\"default\" or one of the project's `sessions`): each view is created anew in the session's own cookie and storage context and loads its current URL again. target: \"all\", a view id or a breakpoint id; the active view when absent. Answers the views moved (from, view)."
+        description = "Move the targeted views into a session (\"default\" or one of the project's sessions): each view is created anew in the session's own cookie and storage context and loads its URL again. Answers the views moved (from, view)."
     )]
     pub(crate) async fn session_assign(
         &self,

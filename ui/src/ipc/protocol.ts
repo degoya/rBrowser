@@ -53,7 +53,11 @@ import type { BugReportCoreMessage, BugReportShellMessage } from './bugReport';
 export type * from './mcpSetup';
 import type { McpSetupCoreMessage, McpSetupShellMessage } from './mcpSetup';
 export type * from './basicAuth';
+export type * from './authPrompt';
+import type { AuthPromptEvent, AuthPromptShellMessage } from './authPrompt';
 import type { BasicAuthCoreMessage, BasicAuthShellMessage } from './basicAuth';
+export type * from './sitemapDiscovery';
+import type { SitemapStartCoreMessage, SitemapStartShellMessage } from './sitemapDiscovery';
 import type { ExtensionEvent, ExtensionRequest } from './extensions';
 import type { SettingsEvent, SettingsRequest } from './settingsMessages';
 import type { NativeMenuEvent, NativeMenuRequest } from './nativeMenu';
@@ -75,7 +79,6 @@ import type { DevicesMenu } from './devices';
 import type { BindingCheck, CommandInfo, TrustInfo, TrustPrompt, WhichKey } from './payloads';
 export type * from './payloads';
 
-export const PROTOCOL_VERSION = 1;
 export const EVENT_NAME = 'rb-ipc';
 
 /** `onFailure` codes. */
@@ -254,7 +257,7 @@ export type ShellToCore =
   /** Answered with `ack`; writes `config.json` (RB-010-13). */
   | { type: 'applyBreakpoints'; proposalId: number; selected: string[]; replace: boolean }
   // RB-060-01: answered with `ack`, the run follows as `findings`.
-  | { type: 'runChecks'; target: CheckTarget; plugins?: string[]; url?: string }
+  | { type: 'runChecks'; target: CheckTarget; plugins?: string[]; url?: string; scope?: ViewScope }
   | { type: 'highlightFinding'; findingId: string; selector: string; views: ViewId[] }
   /** Answered with `ack`: marks the element behind a view's Web Vital (RB-060-10). */
   | { type: 'highlightVital'; view: ViewId; metric: VitalMetric }
@@ -293,7 +296,9 @@ export type ShellToCore =
   | SetupShellMessage // `./setup.ts` (RB-091-05)
   | BugReportShellMessage // `./bugReport.ts` (RB-093-04)
   | McpSetupShellMessage // `./mcpSetup.ts` (RB-091-09)
-  | BasicAuthShellMessage; // `./basicAuth.ts` (RB-094-29)
+  | BasicAuthShellMessage // `./basicAuth.ts` (RB-094-29)
+  | SitemapStartShellMessage // `./sitemapDiscovery.ts` (RB-099-09)
+  | AuthPromptShellMessage; // `./authPrompt.ts` (RB-099-04)
 
 // ---- core -> shell ------------------------------------------------------------------------
 
@@ -316,6 +321,10 @@ export interface LayoutState {
   /** The minimap switched for this session in any mode; absent while the setting holds (RB-090-82). */
   minimap?: boolean;
 }
+
+/** rb_config `ViewScope` (RB-099-10): the views a test run takes - every view, the ones the grid
+ * shows, or the views of these breakpoint ids. */
+export type ViewScope = 'all' | 'visible' | string[];
 
 /** A breakpoint of the config as the shell lists it. */
 export interface BreakpointSummary {
@@ -479,4 +488,6 @@ export type CoreToShell =
   | SetupCoreMessage // `./setup.ts` (RB-091-05)
   | BugReportCoreMessage // `./bugReport.ts` (RB-093-04)
   | McpSetupCoreMessage // `./mcpSetup.ts` (RB-091-09)
-  | BasicAuthCoreMessage; // `./basicAuth.ts` (RB-094-29)
+  | BasicAuthCoreMessage // `./basicAuth.ts` (RB-094-29)
+  | SitemapStartCoreMessage // `./sitemapDiscovery.ts` (RB-099-09)
+  | AuthPromptEvent; // `./authPrompt.ts` (RB-099-04)

@@ -352,7 +352,7 @@ pub fn tool_args(args: &Value) -> Result<(), rb_mcp::ToolFailure> {
         Value::Null => Ok(()),
         Value::Object(fields) if fields.is_empty() => Ok(()),
         _ => Err(rb_mcp::ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             "video_list takes no arguments",
         )),
     }
@@ -367,7 +367,7 @@ pub fn tool_args(args: &Value) -> Result<(), rb_mcp::ToolFailure> {
 pub fn host_tool(core: &Core, args: &Value) -> Result<Value, rb_mcp::ToolFailure> {
     tool_args(args)?;
     serde_json::to_value(list_in(core, registry::default_dir().as_deref()))
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[cfg(test)]

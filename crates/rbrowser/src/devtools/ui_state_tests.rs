@@ -59,3 +59,45 @@ fn only_usable_window_bounds_are_opened_at() {
     state.window = None;
     assert_eq!(state.window_bounds(), None);
 }
+
+fn state_at(x: i32) -> UiState {
+    UiState {
+        window: Some(bounds(x, 0, 800, 600)),
+    }
+}
+
+/// RB-099-19: the saves leave the calling thread one after the other, and the file ends with
+/// the newest state however many came in meanwhile.
+#[tokio::test(flavor = "multi_thread")]
+async fn saves_run_off_the_caller_and_the_newest_wins() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("local").join(UI_STATE_FILE);
+    let saver = Saver::new(path.clone());
+    for x in 0..50 {
+        saver.save(&tokio::runtime::Handle::current(), state_at(x));
+    }
+    for _ in 0..400 {
+        if !saver.writing() && load(&path) == state_at(49) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    panic!("the newest state was not written: {:?}", load(&path));
+}
+
+/// A runtime that shuts down refuses the blocking task: the state is written on the calling
+/// thread then, not lost (the window closing with the app).
+#[test]
+fn a_runtime_that_is_gone_still_gets_the_state_written() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join(UI_STATE_FILE);
+    let gone = tokio::runtime::Builder::new_multi_thread()
+        .build()
+        .expect("runtime");
+    let handle = gone.handle().clone();
+    gone.shutdown_background();
+    let saver = Saver::new(path.clone());
+    saver.save(&handle, state_at(7));
+    assert_eq!(load(&path), state_at(7));
+    assert!(!saver.writing(), "the saver is free again");
+}

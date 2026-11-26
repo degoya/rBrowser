@@ -22,7 +22,7 @@ fn the_header_names_the_size_before_any_pixel_is_decoded() {
         refused.code(),
         Some("plugin.screenshot-editor.errors.image_too_large")
     );
-    assert_eq!(refused.param("width"), Some("16385"));
+    assert_eq!(refused.param("width"), Some("65536"));
     assert!(decode(&wide).is_err());
 }
 
@@ -112,4 +112,33 @@ fn a_png_over_the_limit_is_compressed_harder_or_refused_clearly() {
         refused.param("limit"),
         Some((best.len() - 1).to_string().as_str())
     );
+}
+
+#[test]
+fn every_size_the_capture_writes_opens_and_one_past_it_names_the_limit() {
+    // RB-099-24: `rb_visual::raster`'s limits, from the header alone.
+    assert_eq!(MAX_SIDE, 65_535);
+    assert_eq!(MAX_PIXELS, 256 * 1024 * 1024);
+    for (width, height) in [
+        (2880, 24_576),
+        (4096, 65_535),
+        (65_535, 4096),
+        (16_384, 16_384),
+    ] {
+        assert_eq!(
+            dimensions(&crate::testing::header_only(width, height)),
+            Ok((width, height)),
+            "{width} x {height}"
+        );
+    }
+    for (width, height) in [(1, 65_536), (65_536, 1), (16_385, 16_384)] {
+        let refused = dimensions(&crate::testing::header_only(width, height))
+            .expect_err("over the capture's limit");
+        assert_eq!(
+            refused.code(),
+            Some("plugin.screenshot-editor.errors.image_too_large")
+        );
+        assert_eq!(refused.param("max_side"), Some("65535"));
+        assert_eq!(refused.param("max_pixels"), Some("268435456"));
+    }
 }

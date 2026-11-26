@@ -2,9 +2,9 @@
   "plugin": {
     "rulers-guides": {
       "commands": {
-        "toggle": "Rulers: Show or Hide",
-        "grid": "Rulers: Show or Hide the Baseline Grid",
-        "columns": "Rulers: Show or Hide the Column Overlay"
+        "toggle": "Rulers: show or hide",
+        "grid": "Rulers: show or hide the baseline grid",
+        "columns": "Rulers: show or hide the column overlay"
       },
       "tools": {
         "set": "Sets the guides, the column overlay per breakpoint, the baseline grid, the colours (#rrggbb or #rrggbbaa per element: ruler, ticks, guide, columnFill, columnEdge, baseline) and what is shown in every view, and answers the state. Without arguments it answers the state unchanged."
@@ -76,7 +76,7 @@
         "error_busy": "rBrowser is still busy with earlier requests of the rulers. Try again in a moment.",
         "error_timed_out": "The rulers took too long and were stopped. Try again; the rBrowser log has the details.",
         "error_no_answer": "The rulers did not answer in time. Try again in a moment.",
-        "error_suspended": "The rulers failed repeatedly and are paused. Resume them in Settings > Plugins.",
+        "error_suspended": "The rulers failed repeatedly and are paused. Resume them in Settings › Plugins.",
         "error_other": "The rulers could not apply the change. The rBrowser log has the details.",
         "setting_link": "Open the setting"
       },

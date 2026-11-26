@@ -25,6 +25,7 @@ import {
   removeMessage,
   saveMessage,
   settingsMessage,
+  storeParams,
   storedText,
   storedUsers,
   usersOf,
@@ -218,7 +219,7 @@ async function openSettings(): Promise<void> {
       role="status"
       data-testid="basic-auth-hint"
     >
-      {{ problem ? t(problem) : t('auth.bar.hint') }}
+      {{ problem ? t(problem) : t('auth.bar.hint', storeParams(t)) }}
     </span>
     <UButton type="button" size="sm" color="neutral" variant="link" class="shrink-0" data-testid="basic-auth-settings" @click="openSettings">
       {{ t('auth.bar.settings') }}

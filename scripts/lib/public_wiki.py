@@ -12,6 +12,9 @@ import posixpath
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wiki_text import JOB_CLEANUP, outside_code  # noqa: E402
+
 if len(sys.argv) != 2 or not os.path.isdir(sys.argv[1]):
     print("usage: public_wiki.py <staged wiki tree>", file=sys.stderr)
     sys.exit(2)
@@ -175,14 +178,11 @@ def convert(page, target):
 
 
 # The public reader has no use for the planning's job ids or the internal test's status (RB-090-12;
-# rCommander's and rDownloader's handbooks carry neither): a parenthesis of nothing but job ids
-# goes, a job id inside another parenthesis goes with its separator, and so does a parenthesis
-# that marks something as in the internal test. Prose only; code stays as written.
-JOB = r"RB-\d{3}-\d{2}"
-PUBLIC_CLEANUP = [
-    (re.compile(rf"\s*\*?\((?:{JOB})(?:(?:,\s*|\s+and\s+|/){JOB})*\)\*?"), ""),
-    (re.compile(rf"[,;]\s*{JOB}(?=[^()]*\))"), ""),
-    (re.compile(rf"(?<=\()\s*{JOB}[,;]\s*"), ""),
+# rCommander's and rDownloader's handbooks carry neither): the job ids that read as a reference go
+# (scripts/lib/wiki_text.py), and so does a parenthesis that marks something as in the internal
+# test. Prose only; code - a fenced block or an inline span - stays as written. A job id left in
+# prose is refused by export-public-wiki.sh (wiki_text.py names its page and line).
+PUBLIC_CLEANUP = JOB_CLEANUP + [
     (re.compile(r"\s*\*?\((?:[^()]*?,\s*)?internal test(?:[;,][^()]*)?\)\*?"), ""),
 ]
 
@@ -206,7 +206,7 @@ for page in sorted(pages.values()):
         if prose:
             text = LINK.sub(
                 lambda m: f"{m.group(1)}({convert(page, m.group(2))}{m.group(3)})",
-                public_text("\n".join(prose)),
+                outside_code("\n".join(prose), public_text),
             )
             text = REFERENCE.sub(lambda m: m.group(1) + convert(page, m.group(2)), text)
             text = HTML.sub(

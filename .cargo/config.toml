@@ -1,8 +1,10 @@
 # The Windows binary links the C runtime statically, so it runs without the Visual C++
 # redistributable installed. LNK4099 (no PDB for the prebuilt libcmt/libvcruntime objects that
-# xwin ships) is noise in every link and is silenced.
+# xwin ships) is noise in every link and is silenced. /Brepro makes the link reproducible: the
+# PE header's time stamp and the PDB's id are a hash of the output instead of the clock, so two
+# builds of one commit pack the same bytes (RB-099-01, scripts/package-windows.sh).
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=/IGNORE:4099"]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=/IGNORE:4099", "-C", "link-arg=/Brepro"]
 
 # rbrowser-wsl, the helper that runs inside WSL (inotify watcher, CDP tunnel), is a static binary
 # so it starts in any distribution without a matching glibc. musl and its start files come with

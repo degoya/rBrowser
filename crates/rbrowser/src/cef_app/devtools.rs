@@ -93,6 +93,7 @@ fn arrange(area: &DockArea) {
         return;
     };
     content.remove_all_child_views();
+    crate::host::rebuild_watch::note("the DevTools dock was laid out anew".to_owned());
     let right = area
         .shown
         .as_ref()

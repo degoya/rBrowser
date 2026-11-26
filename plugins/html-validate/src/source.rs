@@ -5,7 +5,9 @@
 //! answers the document the view loaded: the bytes it rendered from, with its cookies and
 //! session, without a second request (which could answer differently, or not at all behind a
 //! login or a POST). This is the markup, as the W3C validator reads it. The host lets
-//! `getResourceContent` through for a web URL only (`cdp_policy`).
+//! `getResourceContent` through for a web URL only (`cdp_policy`). When the view does not hold the
+//! document, `unserved` says why in words a person can act on, or reads its body from the view's
+//! network log (RB-099-06).
 //!
 //! **Rendered** ([`rendered`], RB-094-06): the DOM after rendering - what scripts built, and what
 //! the browser's parser made of the markup - serialized in the view's isolated world by
@@ -31,14 +33,14 @@ pub struct Served {
     pub text: String,
 }
 
-fn no_source(view: ViewId, reason: &str) -> Failure {
+pub(crate) fn no_source(view: ViewId, reason: &str) -> Failure {
     Failure::coded(FailureKind::NotFound, &key("errors", "no_source"))
         .with_param("view", view)
         .with_param("reason", reason)
 }
 
 /// Why the host failed: its own reason when it gives one (the browser's words), else its code.
-fn reason(failure: &Failure) -> String {
+pub(crate) fn reason(failure: &Failure) -> String {
     failure
         .param("reason")
         .filter(|reason| !reason.is_empty())
@@ -78,8 +80,17 @@ pub fn from_answer(view: ViewId, answer: &str) -> Result<String, Failure> {
         .ok_or_else(|| no_source(view, "no content"))
 }
 
-/// The main frame of the page in `view`: its id and its URL without the fragment.
-fn main_frame(host: &mut dyn PluginHost, view: ViewId) -> Result<(String, String), Failure> {
+/// The main frame of the page in `view`.
+struct MainFrame {
+    id: String,
+    /// The document's loader, the id of its request in the view's network log.
+    loader: Option<String>,
+    /// Without the fragment.
+    url: String,
+}
+
+/// The main frame of the page in `view`.
+fn main_frame(host: &mut dyn PluginHost, view: ViewId) -> Result<MainFrame, Failure> {
     let tree = host
         .cdp_send(view, "Page.getFrameTree", "{}")
         .map_err(|failure| {
@@ -103,7 +114,11 @@ fn main_frame(host: &mut dyn PluginHost, view: ViewId) -> Result<(String, String
                 .with_param("url", url.chars().take(200).collect::<String>()),
         );
     }
-    Ok((id.to_owned(), url))
+    Ok(MainFrame {
+        id: id.to_owned(),
+        loader: frame["loaderId"].as_str().map(str::to_owned),
+        url,
+    })
 }
 
 /// The served source of the page in `view`.
@@ -112,14 +127,15 @@ fn main_frame(host: &mut dyn PluginHost, view: ViewId) -> Result<(String, String
 ///
 /// The host's refusal of a view whose engine has no CDP, unchanged (the check runner shows such
 /// a view skipped); `errors.not_web` for a page that is no web page; `errors.no_source` when the
-/// view has no source; `errors.too_large` beyond [`MAX_SOURCE_BYTES`].
+/// view has no source, or why (`unserved::explain`); `errors.too_large` beyond
+/// [`MAX_SOURCE_BYTES`].
 pub fn served(host: &mut dyn PluginHost, view: ViewId) -> Result<Served, Failure> {
-    let (id, url) = main_frame(host, view)?;
+    let MainFrame { id, loader, url } = main_frame(host, view)?;
     let params = json!({ "frameId": id, "url": url }).to_string();
-    let answer = host
-        .cdp_send(view, "Page.getResourceContent", &params)
-        .map_err(|failure| no_source(view, &reason(&failure)))?;
-    let text = from_answer(view, &answer)?;
+    let text = match host.cdp_send(view, "Page.getResourceContent", &params) {
+        Ok(answer) => from_answer(view, &answer)?,
+        Err(failure) => crate::unserved::explain(host, view, loader.as_deref(), &failure)?,
+    };
     if text.len() > MAX_SOURCE_BYTES {
         return Err(too_large(view, text.len()));
     }
@@ -149,7 +165,7 @@ pub fn render_script() -> String {
 /// As [`served`] for the main frame; `errors.no_source` when the view answers no DOM;
 /// `errors.too_large` beyond [`MAX_SOURCE_BYTES`].
 pub fn rendered(host: &mut dyn PluginHost, view: ViewId) -> Result<Served, Failure> {
-    let (_, url) = main_frame(host, view)?;
+    let MainFrame { url, .. } = main_frame(host, view)?;
     let answer = host
         .evaluate(view, &render_script())
         .map_err(|failure| no_source(view, &reason(&failure)))?;

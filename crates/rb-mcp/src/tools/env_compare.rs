@@ -25,9 +25,8 @@ const CANCEL_TOOL: &str = "env_compare_cancel";
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EnvCompareParams {
-    /// `"all"`, a view id or a breakpoint id: the views whose breakpoints (and the first one's
-    /// page) are compared; the active view's page and the setting envCompare.breakpoints when
-    /// absent.
+    /// `"all"`, a view id or a breakpoint id; when absent the active view's page at the breakpoints
+    /// of the setting envCompare.breakpoints.
     #[serde(default, skip_serializing)]
     pub target: Option<TargetArg>,
     /// Environment ids (at least two); envCompare.environments, else every environment, when
@@ -68,8 +67,8 @@ pub struct EnvCompareResultParams {
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EnvCompareLiveParams {
-    /// One view (a view id, or a breakpoint id shown once) whose breakpoint and page are
-    /// compared; the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent. Its
+    /// breakpoint and page are compared.
     #[serde(default, skip_serializing)]
     pub target: Option<TargetArg>,
     /// Environment ids; envCompare.environments, else every environment, when absent.
@@ -81,13 +80,14 @@ pub struct EnvCompareLiveParams {
 }
 
 fn args_of(params: &impl Serialize) -> Result<serde_json::Value, ToolFailure> {
-    serde_json::to_value(params).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(params)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[tool_router(router = env_compare_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Compare the same pages in two or more environments (local, staging, prod) pixel by pixel. target (\"all\" or views; the active view's page when absent) picks the breakpoints and the page; optional environments (ids, at least two), paths (/about or a URL under an environment; a foreign host is refused), breakpoints, fullPage, threshold (0 to 1). Each path is captured in every environment and breakpoint in hidden render views (the grid stays usable) and every environment pair is diffed. Answers at once with runId, the folder .rbrowser/out/env-compare/<runId>/ (PNGs, diff images, report.json, report.html) and the shots and diffs; follow it with env_compare_result. One run at a time. hideBanners and freezeAnimations override capture.hideBanners and capture.freezeAnimations (banners hidden, animations frozen before each capture, undone after)."
+        description = "Compare the same pages in two or more environments (local, staging, prod) pixel by pixel: environments (ids, at least two), paths (/about or a URL under an environment; a foreign host is refused), breakpoints, fullPage, threshold (0 to 1). Each path is captured in every environment and breakpoint in hidden render views and every pair is diffed. Answers at once with runId, the folder .rbrowser/out/env-compare/<runId>/ (PNGs, diffs, report.json, report.html); follow it with env_compare_result. One run at a time. hideBanners and freezeAnimations override the capture.* settings."
     )]
     pub(crate) async fn env_compare(
         &self,
@@ -99,7 +99,7 @@ impl RbMcpServer {
                 .is_some_and(|threshold| !(0.0..=1.0).contains(&threshold))
             {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "threshold must be a number from 0 to 1",
                 ));
             }
@@ -121,7 +121,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "The state of an environment comparison (runId; the latest when absent): running or finished, the shots taken and failed, the pairs that differ, the folder and report.html once written, and per path, environment pair and breakpoint the status (same, differs, sizeMismatch, failed, pending), the share of differing pixels in percent and the diff image."
+        description = "The state of an environment comparison (runId; the latest when absent): running or finished, the shots taken and failed, the folder and report.html once written, and per path, environment pair and breakpoint the status (same, differs, sizeMismatch, failed, pending), the percent of differing pixels and the diff image."
     )]
     pub(crate) async fn env_compare_result(
         &self,
@@ -137,7 +137,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Show one view's breakpoint once per environment side by side (target: one view; the active view when absent), each on the page the view shows under its own environment, synced: a click on an internal link moves every view to the same path under its own host, a link to another host is not rewritten. Optional environments (ids), enabled (false returns to the grid before; toggles when absent). Answers whether it shows and each view's environment and URL."
+        description = "Show one view's breakpoint once per environment side by side, each on the view's page under its own environment, synced: an internal link moves every view to the same path under its own host. environments (ids); enabled false returns to the grid, absent toggles. Answers whether it shows and each view's environment and URL."
     )]
     pub(crate) async fn env_compare_live(
         &self,
@@ -159,7 +159,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Cancel a running environment comparison (runId; the running one when absent). The shots taken stay, report.json and report.html are written for what was compared, and the run's state becomes cancelled. Answers the runId and whether it was still running."
+        description = "Cancel a running environment comparison (runId; the running one when absent). The shots taken stay and the reports are written for what was compared. Answers the runId and whether it was still running."
     )]
     pub(crate) async fn env_compare_cancel(
         &self,

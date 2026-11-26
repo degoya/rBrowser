@@ -2,9 +2,9 @@
 // or the canvas area cuts (RB-090-40): two markers beside the person's pointer, which is where the
 // view is seen; without it, a failed measurement waits for it quietly; a map that starts before
 // the image's corner is measured again when the pointer comes back.
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type FakePlugin, type Message, fakePlugin, runPageScripts, settle } from './support';
+import { advance, type FakePlugin, type Message, fakePlugin, runPageScripts, useVirtualTimers } from './support';
 import { calibrateAnswer, tileAnswer } from './tile';
 
 let plugin: FakePlugin;
@@ -25,9 +25,7 @@ const pointerAt = (type: string, x: number, y: number) => layer().dispatchEvent(
 
 /** Lets the page script's promises, its frame waits and the pointer's rest settle. */
 async function idle(ms = 300): Promise<void> {
-  await settle();
-  await new Promise((resolve) => setTimeout(resolve, ms));
-  await settle();
+  await advance(ms);
 }
 
 /** The viewport without its scroll bars, as page/markers.js keeps the markers in it. */
@@ -37,6 +35,7 @@ const room = () => ({
 });
 
 beforeEach(() => {
+  useVirtualTimers();
   document.body.innerHTML = '<main><p>Some text</p></main>';
   measure = (message) => calibrateAnswer(message);
   plugin = fakePlugin(answer);
@@ -45,6 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
   plugin.stop();
+  vi.useRealTimers();
 });
 
 describe('the markers beside the pointer', () => {

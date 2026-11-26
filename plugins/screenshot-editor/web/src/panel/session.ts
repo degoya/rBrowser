@@ -123,21 +123,26 @@ export function createSession(panel: Panel) {
     const frame = shownFrame();
     if (frame) Crop.place(parts.cropBar, frame, state.zoom, parts.canvas);
     const items = history.items;
+    // The canvases hold the bitmap's pixels: the image's, or a large one's preview at 1:scale
+    // (RB-099-24); what is drawn on them is in image pixels.
+    const { scale } = image;
     if (baseItems !== items) {
-      base.width = image.width;
-      base.height = image.height;
+      [base.width, base.height] = [parts.canvas.width, parts.canvas.height];
       const baseCtx = base.getContext('2d');
-      if (baseCtx) render(baseCtx, image.bitmap, items, image.width, image.height);
+      if (baseCtx) render(baseCtx, image.bitmap, items, image.width, image.height, scale);
       baseItems = items;
     }
-    ctx.clearRect(0, 0, image.width, image.height);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, parts.canvas.width, parts.canvas.height);
     ctx.drawImage(base, 0, 0);
-    if (progress && progress.type !== 'crop') draw(ctx, progress, image.width, image.height);
+    ctx.setTransform(1 / scale, 0, 0, 1 / scale, 0, 0);
+    if (progress && progress.type !== 'crop') draw(ctx, progress, image.width, image.height, scale);
     if (frame) {
-      cropFrame(ctx, [frame], image.width, image.height);
+      cropFrame(ctx, [frame], image.width, image.height, scale);
       Crop.drawHandles(ctx, frame, 1 / state.zoom);
     }
-    if (cursor) cursorMark(ctx, cursor[0] ?? 0, cursor[1] ?? 0);
+    if (cursor) cursorMark(ctx, cursor[0] ?? 0, cursor[1] ?? 0, scale);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   /** Apply and Cancel at the frame, with its size; Apply waits for the drag to end. */
@@ -263,7 +268,7 @@ export function createSession(panel: Panel) {
         repaint();
       },
       // The keyboard cursor starts in the middle of what shows (review of RB-080-63).
-      start: () => Crop.middle(cropped() ?? { left: 0, top: 0, right: canvas.width, bottom: canvas.height }),
+      start: () => Crop.middle(cropped() ?? { left: 0, top: 0, right: image?.width ?? canvas.width, bottom: image?.height ?? canvas.height }),
       askText(point) {
         textPoint = point;
         state.text = '';
@@ -279,9 +284,14 @@ export function createSession(panel: Panel) {
     try {
       const { first, blob } = await fetchImage((name, args) => panel.call({ tool: name }, args), path);
       const bitmap = await createImageBitmap(blob);
-      image = { path: String(first.image), bitmap, width: Number(first.width), height: Number(first.height) };
+      const scale = Math.max(1, Math.round(Number(first.scale) || 1));
+      image = { path: String(first.image), bitmap, width: Number(first.width), height: Number(first.height), scale };
       const canvas = els?.canvas;
-      if (canvas) [canvas.width, canvas.height] = [image.width, image.height];
+      if (canvas) {
+        // The bitmap's size: a large image's preview is `scale` times smaller than the image.
+        [canvas.width, canvas.height] = scale > 1 ? [bitmap.width, bitmap.height] : [image.width, image.height];
+        [canvas.dataset.width, canvas.dataset.height] = [String(image.width), String(image.height)];
+      }
       state.image = { path: image.path, width: image.width, height: image.height };
       baseItems = null;
       const annotations = Array.isArray(first.annotations) ? (first.annotations as ShotAnnotation[]) : [];
@@ -293,6 +303,7 @@ export function createSession(panel: Panel) {
       fit();
       update();
       if (first.annotations_too_large === true) status(t('panel.annotations_too_large'), 'warn');
+      else if (scale > 1) status(t('panel.loaded_scaled', { image: image.path, width: image.width, height: image.height, scale }));
       else status(t('panel.loaded', { image: image.path, width: image.width, height: image.height }));
     } catch (error) {
       failed(error);
@@ -348,7 +359,9 @@ export function createSession(panel: Panel) {
     if (!image) return status(t('panel.no_image'), 'error');
     try {
       await copyImage(image, history.items);
-      status(t('panel.copied'), 'ok');
+      // A large image is copied as the editor shows it; the saved file has its full size.
+      if (image.scale > 1) status(t('panel.copied_scaled', { scale: image.scale }), 'ok');
+      else status(t('panel.copied'), 'ok');
     } catch (error) {
       status(t('panel.copy_failed', { error: (error as Error | null)?.message ?? '' }), 'error');
     }

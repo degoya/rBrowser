@@ -47,6 +47,11 @@ Installed (the default):
   settings   %APPDATA%\rBrowser
   logs       %LOCALAPPDATA%\rBrowser\logs
 
+Installed with the MSI (rbrowser-<version>-windows-x64.msi, per user, no admin
+rights): the program lives in %LOCALAPPDATA%\Programs\rBrowser and the Start
+menu has an "rBrowser" entry. Uninstalling it (Settings > Apps) removes the
+program only; settings and logs stay where they are listed above.
+
 Portable mode: create an empty file named "portable" (no extension) next to
 rbrowser.exe. Settings, logs and browser profiles then live in the "data"
 folder next to rbrowser.exe instead. Delete the file to switch back; the
@@ -88,4 +93,5 @@ and you decide whom to send the ZIP to.
 -----------
 rBrowser is licensed under the GNU General Public License v3.0 or later
 (LICENSE). It bundles the Chromium Embedded Framework, Chromium and Node.js;
-NOTICE names them and their licences.
+NOTICE names them and their licences. THIRD-PARTY-LICENSES.txt holds the full
+licence texts of the Rust crates and npm packages rBrowser is built from.

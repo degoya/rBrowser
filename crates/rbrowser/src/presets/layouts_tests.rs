@@ -148,9 +148,12 @@ fn focus_mode_toggles_on_at_the_active_breakpoint_and_back_to_the_grid_preset() 
     assert_eq!(on.preset.as_deref(), Some("wide"));
     assert_eq!(on.focus.as_deref(), Some("mobile"));
     assert_eq!(on.toggled_focus(&config, None), wide);
-    // Leaving a focus preset falls back to the top-level grid.
+    // Leaving a focus preset falls back to the top-level layout in the built-in mode, the
+    // canvas (RB-099-26).
     let focus = Selection::preset(&config, "focus").expect("known");
-    assert_eq!(focus.toggled_focus(&config, None), Selection::default());
+    let back = focus.toggled_focus(&config, None);
+    assert_eq!(back, Selection::default());
+    assert_eq!((back.preset, back.mode), (None, LayoutMode::Canvas));
 }
 
 #[test]

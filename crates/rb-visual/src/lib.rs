@@ -14,6 +14,10 @@
 //!
 //! Sitemap capture (RB-050-05): the state of a run, which resumes without taking a shot twice
 //! ([`sitemap`]), and its folder below `.rbrowser/out/sitemap-capture` ([`sitemap_store`]).
+//!
+//! Long pages (RB-099-11): the sections of a full-page capture stacked into one PNG, a cut page
+//! recorded in it ([`stitch`]). Lazy images (RB-099-28): a full page captured with images still
+//! loading says so in its PNG ([`note`]).
 
 pub mod baseline;
 pub mod compare;
@@ -23,6 +27,7 @@ mod font;
 pub mod lfs;
 pub mod meta;
 pub mod naming;
+pub mod note;
 pub mod overview;
 pub mod prepare;
 pub mod raster;
@@ -31,6 +36,7 @@ pub mod settings;
 pub mod sitemap;
 pub mod sitemap_store;
 pub mod slug;
+pub mod stitch;
 pub mod store;
 
 pub use baseline::{Baseline, BaselineStore};
@@ -39,11 +45,13 @@ pub use delay::Delay;
 pub use diff::{DiffOptions, DiffOutcome, PixelDiff, Size, diff};
 pub use meta::{BaselineMeta, MetaMismatch, Viewport};
 pub use naming::{PathVars, Stamp, expand, size_text};
+pub use note::images_pending;
 pub use overview::{OverviewOptions, Tile, compose};
 pub use prepare::{CleanOverrides, CleanPlan, CleanSettings};
 pub use raster::{Rgba, decode_png, encode_png, png_size};
 pub use settings::CaptureSettings;
 pub use slug::{SlugStrategy, slug};
+pub use stitch::{Truncated, decode_top, stitch, truncation};
 pub use store::save_png;
 
 /// What can go wrong between a captured PNG and the file on disk.

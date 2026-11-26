@@ -118,14 +118,21 @@ fn cef_log_severity_follows_the_level() {
         CefLogSeverity::Verbose
     );
     assert_eq!(CefLogSeverity::from(LogLevel::Debug), CefLogSeverity::Info);
-    assert_eq!(
-        CefLogSeverity::from(LogLevel::Info),
-        CefLogSeverity::Warning
-    );
-    assert_eq!(
-        CefLogSeverity::from(LogLevel::Warn),
-        CefLogSeverity::Warning
-    );
-    assert_eq!(CefLogSeverity::from(LogLevel::Error), CefLogSeverity::Error);
     assert_eq!(CefLogSeverity::Warning.raw(), 3);
+}
+
+/// RB-099-07: Chromium's warnings are noise at the default level - `ui/aura/window.cc` warns
+/// for every stacking move of a browser view's window - so `info` and `warn` give CEF only its
+/// errors; `debug` and `trace` bring its warnings back.
+#[test]
+fn cef_writes_only_errors_up_to_our_warn_level() {
+    use crate::settings::LogLevel;
+    for level in [LogLevel::Error, LogLevel::Warn, LogLevel::Info] {
+        assert_eq!(
+            CefLogSeverity::from(level),
+            CefLogSeverity::Error,
+            "{level:?}"
+        );
+    }
+    assert_eq!(CefLogSeverity::Error.raw(), 4);
 }

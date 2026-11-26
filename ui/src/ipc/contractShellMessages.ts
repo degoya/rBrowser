@@ -6,6 +6,8 @@ import { recordingShellMessages } from './contractRecordingMessages';
 import { bugReportShellMessages } from './contractBugReportMessages';
 import { mcpSetupShellMessages } from './contractMcpSetupMessages';
 import { basicAuthShellMessages } from './contractBasicAuthMessages';
+import { sitemapStartShellMessages } from './contractSitemapStartMessages';
+import { authPromptShellMessages } from './contractAuthPromptMessages';
 
 export const shellToCore = [
   { type: 'getState' },
@@ -106,4 +108,6 @@ export const shellToCore = [
   ...bugReportShellMessages, // RB-093-04
   ...mcpSetupShellMessages, // RB-091-09
   ...basicAuthShellMessages, // RB-094-29
+  ...sitemapStartShellMessages, // RB-099-09
+  ...authPromptShellMessages, // RB-099-04
 ] satisfies ShellToCore[];

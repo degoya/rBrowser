@@ -90,7 +90,9 @@ pub fn reply_timeout(request: &Request) -> Duration {
     match request {
         Request::Screenshot { args, .. } => protocol::screenshot_budget(args) + REPLY_TIMEOUT,
         Request::Open { .. } | Request::Reload { .. } | Request::FlowRun { .. } => REPLY_TIMEOUT,
-        Request::SitemapCapture { .. } => crate::sitemap::app::DISCOVER_BUDGET + REPLY_TIMEOUT,
+        Request::SitemapCapture { .. } | Request::SitemapDiscover { .. } => {
+            crate::sitemap::app::DISCOVER_BUDGET + REPLY_TIMEOUT
+        }
         Request::Check { .. } => crate::checks::export::check::CHECK_BUDGET + REPLY_TIMEOUT,
     }
 }

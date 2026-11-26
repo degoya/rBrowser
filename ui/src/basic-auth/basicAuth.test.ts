@@ -7,6 +7,9 @@ import {
   removeMessage,
   saveMessage,
   settingsMessage,
+  statusesOf,
+  storeNameKey,
+  storeParams,
   storedText,
   storedUsers,
   usersOf,
@@ -67,5 +70,28 @@ describe('the stored credentials', () => {
   it('takes the users from a pushed status and ignores every other message', () => {
     expect(usersOf({ type: 'basicAuthStatus', environments: statuses })).toEqual({ local: null, staging: 'ada' });
     expect(usersOf({ type: 'ack' })).toBeNull();
+  });
+});
+
+describe('the credential store the texts name (RB-099-05)', () => {
+  const t = (key: string): string => `<${key}>`;
+
+  it('names each platform\'s store by its own key, and the system\'s while unknown', () => {
+    expect(storeNameKey('windowsCredentialManager')).toBe('auth.store.windowsCredentialManager');
+    expect(storeNameKey('macosKeychain')).toBe('auth.store.macosKeychain');
+    expect(storeNameKey('secretService')).toBe('auth.store.secretService');
+    expect(storeNameKey('none')).toBe('auth.store.system');
+    expect(storeNameKey(undefined)).toBe('auth.store.system');
+  });
+
+  it('follows the store the core named last, in an answer or a push', () => {
+    const environments = [{ environment: 'staging', stored: false }];
+    expect(statusesOf({ type: 'basicAuthStatus', environments, store: 'secretService' })).toEqual(environments);
+    expect(storeParams(t)).toEqual({ store: '<auth.store.secretService>' });
+    usersOf({ type: 'basicAuthStatus', environments, store: 'macosKeychain' });
+    expect(storeParams(t)).toEqual({ store: '<auth.store.macosKeychain>' });
+    // An older core says nothing about it: the store named before stays.
+    usersOf({ type: 'basicAuthStatus', environments });
+    expect(storeParams(t)).toEqual({ store: '<auth.store.macosKeychain>' });
   });
 });

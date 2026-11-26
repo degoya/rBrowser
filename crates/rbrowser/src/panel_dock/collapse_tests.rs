@@ -102,9 +102,10 @@ async fn toggle_on_a_closed_dock_opens_it() {
     assert_eq!((open.side, open.collapsed), (PanelSide::Right, false));
 }
 
-/// Review point 2: a check run opened the findings by `show`, which unfolded the dock and wrote
-/// `panels.dockCollapsed = false` without the person. An open that is no person's choice keeps
-/// the fold and writes nothing; the page marks the entry in the strip.
+/// Review point 2: an open of the findings by `show` unfolded the dock and wrote
+/// `panels.dockCollapsed = false` without the person. An open that is no person's choice (a
+/// side effect; a person's check opens them unfolded, RB-099-25) keeps the fold and writes
+/// nothing; the page marks the entry in the strip.
 #[tokio::test]
 async fn an_open_by_a_command_keeps_the_fold_and_writes_nothing() {
     let mut user = UserSettings::default();

@@ -79,3 +79,24 @@ fn the_tools_are_core_tools_without_a_prefix() {
     assert_eq!(UPDATE_TOOL, "visual_baseline_update");
     assert!(!COMPARE_DESCRIPTION.is_empty() && !UPDATE_DESCRIPTION.is_empty());
 }
+
+/// RB-099-10: both runs take a scope; the answers name the breakpoints no view shows.
+#[test]
+fn compare_and_update_take_a_scope() {
+    let args = CompareArgs::parse(&json!({ "scope": "visible" })).expect("args");
+    assert_eq!(args.scope, Some(ViewScope::Visible));
+    let args = UpdateArgs::parse(&json!({ "scope": ["mobile"] })).expect("args");
+    assert_eq!(
+        args.scope,
+        Some(ViewScope::Breakpoints(vec!["mobile".to_owned()]))
+    );
+    assert!(CompareArgs::parse(&json!({ "scope": "hidden" })).is_err());
+    let answer = CompareAnswer {
+        not_shown: vec!["tablet".to_owned()],
+        ..CompareAnswer::default()
+    };
+    let shown = serde_json::to_value(&answer).expect("serializes");
+    assert_eq!(shown["notShown"], json!(["tablet"]));
+    let none = serde_json::to_value(UpdateAnswer::default()).expect("serializes");
+    assert!(none.get("notShown").is_none());
+}

@@ -29,7 +29,7 @@ fn the_install_and_remove_tools_take_an_id_or_a_store_url() {
     ] {
         for tool in [INSTALL_TOOL, REMOVE_TOOL] {
             let error = tool_args(&bad, tool).expect_err("refused");
-            assert_eq!(error.code, "invalid_arguments", "{bad}");
+            assert_eq!(error.code, "args.invalid", "{bad}");
             assert!(error.message.contains(tool), "{}", error.message);
         }
     }

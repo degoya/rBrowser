@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{Registry, WINDOW, names, percentile};
+use super::{Gauge, Registry, WINDOW, names, percentile};
 
 fn ms(n: u64) -> Duration {
     Duration::from_millis(n)
@@ -118,4 +118,24 @@ fn the_global_registry_and_the_start_mark_are_one_each() {
             .iter()
             .any(|series| series.name == names::PLUGIN_WAIT && series.count >= 1)
     );
+}
+
+/// RB-099-19: a gauge goes up and down, never below zero, and keeps its highest level.
+#[test]
+fn a_gauge_tracks_its_level_and_its_peak() {
+    let gauge = Gauge::new();
+    assert_eq!(gauge.add(100), 100);
+    assert_eq!(gauge.add(50), 150);
+    gauge.sub(120);
+    assert_eq!((gauge.now(), gauge.peak()), (30, 150));
+    gauge.sub(1_000);
+    assert_eq!((gauge.now(), gauge.peak()), (0, 150));
+}
+
+#[test]
+fn a_reset_gauge_is_at_zero_and_keeps_its_peak() {
+    let gauge = Gauge::new();
+    gauge.add(40);
+    gauge.reset();
+    assert_eq!((gauge.now(), gauge.peak()), (0, 40));
 }

@@ -9,6 +9,11 @@ use crate::tools::page::ALLOW_EVALUATE;
 /// settings window makes key by key.
 pub const WITHOUT_COMMAND: &[(&str, &str)] = &[
     (
+        "sitemap_discover",
+        "the first step of the start page sitemap.capture opens (RB-099-09): a read of the \
+         site's pages, no command finds them alone",
+    ),
+    (
         "recorder_step_update",
         "changes one step of a stored recording's file; in the Recorder panel a person edits the \
          draft and saves it, no command changes a step (RB-092-01)",
@@ -208,6 +213,10 @@ pub const UNTARGETED: &[(&str, &str)] = &[
         "sitemap_capture",
         "hidden render views of its own, per breakpoint",
     ),
+    (
+        "sitemap_discover",
+        "a site's sitemaps, read by the sitemap-capture plugin",
+    ),
     ("sitemap_gallery", "a sitemap capture run's gallery window"),
     ("sitemap_status", "a sitemap capture run"),
     ("status_messages", "the window's message history"),
@@ -256,6 +265,29 @@ pub const SINGLE_VIEW: &[&str] = &[
     "view_set_breakpoint",
 ];
 
+/// The view tools whose `target` is the active view when absent (RB-099-16): they act in a page
+/// as a person would - input, emulation, engine, zoom, session, forced states, pseudo-locale -
+/// and `screenshot`, whose answer would otherwise carry every view. Every other view tool takes
+/// `"all"` when `target` is absent, or says a default of its own ([`OWN_DEFAULT`]).
+pub const ACTIVE_DEFAULT: &[&str] = &[
+    "click",
+    "emulation_set",
+    "hover",
+    "press_key",
+    "pseudo_locale",
+    "screenshot",
+    "scroll",
+    "session_assign",
+    "type",
+    "view_page_zoom",
+    "views_force_state",
+    "views_set_engine",
+];
+
+/// The view tools whose absent `target` means a choice of their own, said after "when absent":
+/// the setting's breakpoints, the flow's `// @views`, the recording's breakpoints.
+pub const OWN_DEFAULT: &[&str] = &["env_compare", "flow_run", "recorder_play"];
+
 /// A tool with a guard: a setting that must be on, or keys it refuses.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Guard {
@@ -273,13 +305,13 @@ pub const GUARDS: &[Guard] = &[
         tool: "breakpoint_add",
         setting: None,
         note: "Request headers are guarded by workspace trust and refused with code \
-               config_key_protected.",
+               config.key_protected.",
     },
     Guard {
         tool: "breakpoint_update",
         setting: None,
         note: "Request headers are guarded by workspace trust and refused with code \
-               config_key_protected.",
+               config.key_protected.",
     },
     Guard {
         tool: "bug_report",
@@ -292,7 +324,7 @@ pub const GUARDS: &[Guard] = &[
         tool: "cdp_endpoint",
         setting: Some("cdp.enabled"),
         note: "Off until a person switches on the setting cdp.enabled (code cdp.disabled) and \
-               mcp.allowEvaluate (code evaluate_disabled): the endpoint is full control of the \
+               mcp.allowEvaluate (code evaluate.disabled): the endpoint is full control of the \
                page.",
     },
     Guard {
@@ -308,13 +340,13 @@ pub const GUARDS: &[Guard] = &[
         note: "Keys guarded by workspace trust (headers, network, plugins, extensions), the \
                protected keys of the core and of every installed plugin, and a write at a \
                parent key that would remove or change one are refused with code \
-               config_key_protected.",
+               config.key_protected.",
     },
     Guard {
         tool: "script_run",
         setting: Some(crate::scripts::ENABLED_KEY),
         note: "Off until a person switches on the setting mcp.scripts.enabled (code \
-               scripts_disabled); every rb.* call inside runs through the same router and guards \
+               script.disabled); every rb.* call inside runs through the same router and guards \
                as a direct call, script_run itself is refused there (script.recursion), and a run \
                is bounded by mcp.scripts.timeoutMs and mcp.scripts.maxCalls in a sandbox without \
                file system, network or process.",
@@ -323,7 +355,7 @@ pub const GUARDS: &[Guard] = &[
         tool: "evaluate",
         setting: Some(ALLOW_EVALUATE),
         note: "Off until a person switches on the setting mcp.allowEvaluate; while off it \
-               answers code evaluate_disabled.",
+               answers code evaluate.disabled.",
     },
     Guard {
         tool: "extension_install",
@@ -343,19 +375,19 @@ pub const GUARDS: &[Guard] = &[
         tool: "network_continue",
         setting: Some(ALLOW_EVALUATE),
         note: "Edits (method, URL, headers, body, status) only while mcp.allowEvaluate is on \
-               (code evaluate_disabled); a plain continue always.",
+               (code evaluate.disabled); a plain continue always.",
     },
     Guard {
         tool: "network_compose",
         setting: Some("network-panel.allowComposeFromMcp"),
         note: "Off until a person switches on the protected setting \
-               network-panel.allowComposeFromMcp (code compose_disabled): it sends with the \
+               network-panel.allowComposeFromMcp (code network.compose_disabled): it sends with the \
                cookies of the person's views.",
     },
     Guard {
         tool: "network_repeat",
         setting: Some("network-panel.allowComposeFromMcp"),
-        note: "As network_compose (code compose_disabled).",
+        note: "As network_compose (code network.compose_disabled).",
     },
     Guard {
         tool: "flow_run",
@@ -384,7 +416,7 @@ pub const GUARDS: &[Guard] = &[
     Guard {
         tool: "update_check",
         setting: Some("updates.enabled"),
-        note: "Off while updates.enabled is off (problem update.disabled); it reaches the \
+        note: "Off while updates.enabled is off (code update.disabled); it reaches the \
                release host and installs nothing.",
     },
     Guard {
@@ -433,6 +465,9 @@ pub fn named() -> Vec<(&'static str, &'static str)> {
     );
     named.extend(UNTARGETED.iter().map(|(tool, _)| ("UNTARGETED", *tool)));
     named.extend(SINGLE_VIEW.iter().map(|tool| ("SINGLE_VIEW", *tool)));
+    named.extend(ACTIVE_DEFAULT.iter().map(|tool| ("ACTIVE_DEFAULT", *tool)));
+    named.extend(OWN_DEFAULT.iter().map(|tool| ("OWN_DEFAULT", *tool)));
+    named.extend(crate::annotations::named());
     named.extend(GUARDS.iter().map(|guard| ("GUARDS", guard.tool)));
     named
 }

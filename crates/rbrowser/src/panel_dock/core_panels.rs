@@ -52,10 +52,10 @@ pub fn open(core: &Core, key: &str) {
 }
 
 /// Opens the panels at core panel `key` because a person asked for that panel - its command
-/// from a menu row, its shortcut or the palette, never a check or MCP (RB-090-71,
-/// [`super::show_unfolded`]): a dock folded to its rail (the default at start) or hidden opens
-/// at its size. In their own window the panels open as [`open`] opens them. A key that is none
-/// opens nothing.
+/// from a menu row, its shortcut or the palette, or a check they ran, whose findings they want
+/// to see (RB-099-25); never MCP (RB-090-71, [`super::show_unfolded`]): a dock folded to its
+/// rail (the default at start) or hidden opens at its size. In their own window the panels open
+/// as [`open`] opens them. A key that is none opens nothing.
 pub fn open_unfolded(core: &Core, key: &str) {
     let Some(url) = url(key) else {
         return;

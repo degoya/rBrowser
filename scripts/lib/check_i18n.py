@@ -18,7 +18,9 @@ It fails (exit 1, one line per problem) when
 * a text of any catalogue, a plugin's included, sets an error code in (`{code}`) or writes a
   count without its plural form (`{n} views`) - i18n_texts.py (RB-080-90).
 * a plugin command has no title text in its plugin's catalogue (i18n_plugin_commands.py,
-  RB-080-82).
+  RB-080-82);
+* a text breaks the typography (three dots, a `>` path, a pseudo-plural `(s)`) or a command
+  title the pattern of command titles (i18n_style.py, RB-099-22).
 
 The catalogue it checks against is en.json together with the parts not merged yet, so a job's
 branch passes with its keys in its part. Another language may only hold keys en.json has.
@@ -33,6 +35,7 @@ from i18n_catalogue import dump, flatten, nest  # noqa: E402
 from i18n_sources import raw_texts, scan  # noqa: E402
 from i18n_texts import problems as text_problems  # noqa: E402
 import i18n_plugin_commands  # noqa: E402
+import i18n_style  # noqa: E402
 
 # Families looked up by a key computed from an id at run time and held complete by their own
 # lints: settings labels (RB-010-02, from the schema), command titles and groups (RB-010-17,
@@ -94,10 +97,11 @@ def check_catalogues(root, problems):
         problems += [f"{other}: `{key}` is not in {english_path}"
                      for key in flat if key not in catalogue]
     problems += text_problems(catalogue, "locales/en.json (with the parts)")
+    problems += i18n_style.text_problems(catalogue, "locales/en.json (with the parts)")
     for locale in files_under(root, "plugins", (".json",)):
         if os.path.basename(os.path.dirname(locale)) == "locales":
             flat, found = flatten(read(root, locale), locale)
-            problems += found + text_problems(flat, locale)
+            problems += found + text_problems(flat, locale) + i18n_style.text_problems(flat, locale)
     return catalogue
 
 
@@ -136,6 +140,7 @@ def main(argv):
                     if key not in used and not key.startswith(tuple(dynamic)))
     problems += [f"locales/en.json: `{key}` is used nowhere" for key in unused]
     i18n_plugin_commands.check(root, problems)
+    i18n_style.check_titles(root, catalogue, problems)
     for problem in problems:
         print(f"!! {problem}")
     if problems:

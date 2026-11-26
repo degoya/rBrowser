@@ -20,6 +20,66 @@ use crate::cdp::lock;
 use crate::page_window::PageWindow;
 use crate::settings_window::guard::{KnownBrowsers, QueryOrigin, request_allowed};
 
+/// A shell page that may query the core, in its own browser.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ShellPage {
+    Shell,
+    Pages,
+    Palette,
+    Panels,
+    PanelsDock,
+    History,
+    StatusBar,
+    Board,
+    Gallery,
+}
+
+#[cfg(test)]
+impl ShellPage {
+    /// Every page, for the tests.
+    const ALL: [ShellPage; 9] = [
+        ShellPage::Shell,
+        ShellPage::Pages,
+        ShellPage::Palette,
+        ShellPage::Panels,
+        ShellPage::PanelsDock,
+        ShellPage::History,
+        ShellPage::StatusBar,
+        ShellPage::Board,
+        ShellPage::Gallery,
+    ];
+}
+
+/// The browsers allowed to query, each page's id from `id_of` (0 while it has no browser).
+fn known_browsers(id_of: impl Fn(ShellPage) -> i32) -> KnownBrowsers {
+    KnownBrowsers {
+        shell: id_of(ShellPage::Shell),
+        pages: id_of(ShellPage::Pages),
+        palette: id_of(ShellPage::Palette),
+        panels: id_of(ShellPage::Panels),
+        panels_dock: id_of(ShellPage::PanelsDock),
+        history: id_of(ShellPage::History),
+        status_bar: id_of(ShellPage::StatusBar),
+        board: id_of(ShellPage::Board),
+        gallery: id_of(ShellPage::Gallery),
+    }
+}
+
+/// The browser of `page` now; 0 while it has none.
+fn browser_id_of(page: ShellPage) -> i32 {
+    match page {
+        ShellPage::Shell => SHELL_BROWSER.load(Ordering::Acquire),
+        ShellPage::Pages => settings_window::browser_id(),
+        ShellPage::Palette => page_windows::browser_id(PageWindow::Palette),
+        ShellPage::Panels => page_windows::browser_id(PageWindow::Panels),
+        ShellPage::PanelsDock => super::panel_dock::browser_id(),
+        ShellPage::History => page_windows::browser_id(PageWindow::History),
+        ShellPage::StatusBar => super::status_bar::browser_id(),
+        ShellPage::Board => canvas_board::browser_id(),
+        ShellPage::Gallery => super::gallery_window::browser_id(),
+    }
+}
+
 struct ShellQueries;
 
 impl BrowserSideHandler for ShellQueries {
@@ -32,17 +92,7 @@ impl BrowserSideHandler for ShellQueries {
         _persistent: bool,
         callback: Arc<Mutex<dyn BrowserSideCallback>>,
     ) -> bool {
-        let known = KnownBrowsers {
-            shell: SHELL_BROWSER.load(Ordering::Acquire),
-            pages: settings_window::browser_id(),
-            palette: page_windows::browser_id(PageWindow::Palette),
-            panels: page_windows::browser_id(PageWindow::Panels),
-            panels_dock: super::panel_dock::browser_id(),
-            history: page_windows::browser_id(PageWindow::History),
-            status_bar: super::status_bar::browser_id(),
-            board: canvas_board::browser_id(),
-            gallery: super::gallery_window::browser_id(),
-        };
+        let known = known_browsers(browser_id_of);
         let url = frame
             .as_ref()
             .map(|frame| CefString::from(&frame.url()).to_string())
@@ -85,3 +135,7 @@ pub fn install() {
         tracing::error!("the shell query handler could not be installed");
     }
 }
+
+#[cfg(test)]
+#[path = "queries_tests.rs"]
+mod tests;

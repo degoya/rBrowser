@@ -44,10 +44,15 @@ export interface ShotRegion {
   bottom: number;
 }
 
-/** The open image: its path below `.rbrowser/out/`, the decoded pixels and its size. */
+/**
+ * The open image: its path below `.rbrowser/out/`, the decoded pixels and its size. `scale` is
+ * how many image pixels one pixel of `bitmap` stands for: 1, or more for the scaled preview of
+ * an image too large for a canvas (RB-099-24); annotations are always in image pixels.
+ */
 export interface ShotImage {
   path: string;
   bitmap: CanvasImageSource;
   width: number;
   height: number;
+  scale: number;
 }

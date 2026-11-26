@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // The setup wizard's basics (RB-091-05), each at its default: rBrowser's theme (the user setting,
 // through the registry's `ui.theme.set`), and for the project the wizard set up - else the open
-// one - the layout it starts with (grid or canvas) and whether input is synced, written into its
-// config. Without a project the two say why they are off. Nothing changes before the wizard's
+// one - the layout it starts with (the canvas, rBrowser's built-in mode since RB-099-26, or the
+// grid) and whether input is synced, written into its config. Without a project the two say why they are off. Nothing changes before the wizard's
 // "Apply & continue" (RB-091-08: the footer button, `next`, carries it out).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -23,7 +23,7 @@ const emit = defineEmits<{ applied: [choice: BasicsChoice] }>();
 const { t, te } = useI18n();
 
 const theme = ref<ThemeSetting>('system');
-const layout = ref<SetupLayout>('grid');
+const layout = ref<SetupLayout>('canvas');
 const sync = ref(true);
 const busy = ref(false);
 const failure = ref<string | null>(null);

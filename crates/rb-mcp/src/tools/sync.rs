@@ -19,7 +19,7 @@ use crate::target::TargetArg;
 pub enum SyncAction {
     /// Switch sync, a kind of it or a view on or off (`enabled`).
     Set,
-    /// The target view(s) load the active view's URL; their desync badge goes.
+    /// The target views load the active view's URL; their desync badge goes.
     Resync,
     /// Do not sync the next click.
     SkipNextClick,
@@ -59,8 +59,9 @@ pub enum ScrollMode {
 #[derive(Debug, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SyncSetParams {
-    /// `"all"` (default: sync as a whole or one kind of it), a view id or a breakpoint id (that
-    /// view in or out of sync, or its navigation with `feature: "navigation"`).
+    /// `"all"` (default), a view id or a breakpoint id. `"all"` switches sync as a whole or one
+    /// kind of it; a view or breakpoint puts that view in or out of sync (its navigation with
+    /// `feature: "navigation"`).
     #[serde(default, skip_serializing)]
     pub target: Option<TargetArg>,
     /// `set` (default), `resync` or `skipNextClick`.
@@ -226,7 +227,8 @@ pub struct BusSendParams {
 /// `params` as the host tool's arguments (without `target`, which [`RbMcpServer::host_per_target`]
 /// sets).
 fn args_of(params: &impl Serialize) -> Result<Value, ToolFailure> {
-    serde_json::to_value(params).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(params)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 impl RbMcpServer {
@@ -248,7 +250,7 @@ impl RbMcpServer {
 #[tool_router(router = sync_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Switch the synchronisation between the views: action \"set\" (default) with `enabled` turns sync on or off as a whole (target \"all\"), one kind of it (`feature`: navigation, scroll, click, input, keyboard, hover) or one view (target a view id: out of sync while off; with feature \"navigation\" only its navigation, which then neither leads nor follows); action \"resync\" has a desynced view (or every one, target \"all\") load the active view's URL; action \"skipNextClick\" leaves the next click unsynced. `scrollMode` (\"anchor\" or \"wheel\") switches how scroll sync moves the views until the project's settings change. Answers the sync state: the switches, the excluded and the desynced views with the reason and the selector that failed."
+        description = "Switch the synchronisation between the views. action set (default) with enabled turns sync on or off as a whole, one feature (navigation, scroll, click, input, keyboard, hover) or one view (out of sync while off; with feature navigation only its navigation). action resync has a desynced view (or every one) load the active view's URL; skipNextClick leaves the next click unsynced. scrollMode (anchor or wheel) switches how scroll sync moves the views. Answers the sync state: the switches, the excluded and the desynced views with reason and selector."
     )]
     pub(crate) async fn sync_set(
         &self,
@@ -259,7 +261,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Click an element (CSS `selector`) as real input in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): `button` left (default), middle or right, `clickCount` 1 to 3, `modifiers` (Alt, Control, Meta, Shift). Touch views get a tap. Answers per view done, notFound, notVisible or a failure."
+        description = "Click an element (CSS selector) as real input in the targeted views: button left (default), middle or right, clickCount 1 to 3, modifiers (Alt, Control, Meta, Shift). Touch views get a tap. Answers per view done, notFound, notVisible or a failure."
     )]
     pub(crate) async fn click(&self, Parameters(params): Parameters<ClickParams>) -> ToolResult {
         self.host("click", params.target.as_ref(), &params, Answers::Joined)
@@ -268,7 +270,7 @@ impl RbMcpServer {
 
     #[tool(
         name = "type",
-        description = "Type `text` as real input in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): into the element of `selector` after a click on it, else into the focused element. Works with every keyboard layout. Answers per view; the text never appears in the answer."
+        description = "Type text as real input in the targeted views: into the element of selector after a click on it, else into the focused element; works with every keyboard layout. Answers per view; the text never appears in the answer."
     )]
     pub(crate) async fn type_text(&self, Parameters(params): Parameters<TypeParams>) -> ToolResult {
         self.host("type", params.target.as_ref(), &params, Answers::Joined)
@@ -276,7 +278,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Move the mouse onto an element (CSS `selector`) in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent), so :hover styles and hover menus open. Answers per view."
+        description = "Move the mouse onto an element (CSS selector) in the targeted views, so :hover styles and hover menus open. Answers per view."
     )]
     pub(crate) async fn hover(&self, Parameters(params): Parameters<HoverParams>) -> ToolResult {
         self.host("hover", params.target.as_ref(), &params, Answers::Joined)
@@ -284,7 +286,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Press a key in the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent): `key` is a key name (Enter, Tab, Escape, Backspace, Delete, ArrowUp/Down/Left/Right, Home, End, PageUp, PageDown, F1-F24, \" \") or one letter or digit, `modifiers` Alt, Control, Meta, Shift. Enter runs the default action (a form submit). Text goes through `type`. Answers per view."
+        description = "Press a key in the targeted views: key is a key name (Enter, Tab, Escape, Backspace, Delete, arrows, Home, End, PageUp, PageDown, F1-F24, \" \") or one letter or digit; modifiers Alt, Control, Meta, Shift. Enter runs the default action (a form submit). Text goes through type. Answers per view."
     )]
     pub(crate) async fn press_key(
         &self,
@@ -300,7 +302,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Scroll the views of `target` (\"all\", a view id or a breakpoint id; the active view when absent) the way scroll sync does, so every view shows the same content: `to` \"top\" or \"bottom\", `element` (CSS selector) brought to the top edge, or `percentY` / `percentX` (0 to 100) of the scroll range; the other axis goes to its start. `container` (CSS selector) scrolls that element instead of the page. Answers per view done, notFound, notVisible or a failure."
+        description = "Scroll the targeted views the way scroll sync does, so every view shows the same content: to top or bottom, element (CSS selector) brought to the top edge, or percentY / percentX (0 to 100) of the scroll range; the other axis goes to its start. container (CSS selector) scrolls that element instead of the page. Answers per view done, notFound, notVisible or a failure."
     )]
     pub(crate) async fn scroll(&self, Parameters(params): Parameters<ScrollParams>) -> ToolResult {
         self.host("scroll", params.target.as_ref(), &params, Answers::Joined)
@@ -308,7 +310,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Send a message on the page API's message bus (window.__rbrowser.bus) to the pages of `target` (\"all\" (default), a view id or a breakpoint id): their bus.on(type) handlers get `payload` with from: null. `type` is 1 to 64 of A-Z a-z 0-9 _ . : / -; `payload` any JSON value up to bus.maxPayloadBytes. Answers the views whose page took it (delivered) and the ones that did not (skipped): a page with the bus or the page API off, or without the sync agent."
+        description = "Send a message on the page API's bus (window.__rbrowser.bus) to the targeted pages: their bus.on(type) handlers get payload with from: null. type: 1 to 64 of A-Z a-z 0-9 _ . : / -; payload: any JSON up to bus.maxPayloadBytes. Answers delivered and skipped (a page with the bus or the page API off, or without the sync agent)."
     )]
     pub(crate) async fn bus_send(
         &self,

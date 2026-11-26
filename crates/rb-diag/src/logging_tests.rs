@@ -184,3 +184,18 @@ fn the_rotation_changes_at_runtime() {
     assert!(!dir.path().join("rbrowser.2.log").exists());
     assert!(log_of(dir.path()).contains("scroll event number 19"));
 }
+
+/// RB-099-07: CEF's log guard shares the core log's rotation, so a settings change reaches it.
+#[test]
+fn the_handle_shares_its_rotation() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (_dispatch, guard) =
+        build(&config(dir.path(), LogLevel::Info, 1 << 20), None).expect("build");
+    let shared = guard.handle().rotation();
+    let policy = RotationPolicy {
+        max_bytes: 4_096,
+        max_files: 3,
+    };
+    guard.handle().set_rotation(policy);
+    assert_eq!(shared.get(), policy);
+}

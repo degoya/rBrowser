@@ -79,7 +79,7 @@ fn apply_with(core: &Core, selection: &Selection, fit: bool, rebuild: bool) -> D
         // Horizontal, split and canvas place the views of the preset's grid (RB-080-04).
         crate::layout::actions::show(core, &selection, &layout)?;
     } else if rebuild
-        || selection != Selection::default()
+        || selection != top_level_grid()
         || fit
         || layout != layout_for(&config)
         || host.mode_spec().is_some()
@@ -107,6 +107,16 @@ fn apply_with(core: &Core, selection: &Selection, fit: bool, rebuild: bool) -> D
         shell.focus = selection.focus;
     });
     Ok(())
+}
+
+/// The top-level layout in the grid: the selection whose grid the host builds from the config
+/// itself, so showing it again rebuilds nothing (no longer the default selection, which is the
+/// canvas, RB-099-26).
+fn top_level_grid() -> Selection {
+    Selection {
+        mode: LayoutMode::Grid,
+        ..Selection::default()
+    }
 }
 
 /// `layout.select_preset` (`id`, or the next preset in config order) and the IPC message.

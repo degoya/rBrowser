@@ -55,15 +55,48 @@ fn the_server_offers_the_backends_plugin_tools() {
 }
 
 #[test]
-fn a_target_is_all_a_view_id_or_a_breakpoint_id() {
+fn a_target_is_all_a_view_id_a_breakpoint_id_or_a_list() {
     assert_eq!(target_of(None).expect("none"), None);
     assert_eq!(
         target_of(Some(json!(3))).expect("an id"),
-        Some(TargetArg::Id(3))
+        Some(RunTarget::Id(3))
     );
     assert_eq!(
         target_of(Some(json!("mobile"))).expect("a name"),
-        Some(TargetArg::Name("mobile".to_owned()))
+        Some(RunTarget::Name("mobile".to_owned()))
+    );
+    assert_eq!(
+        target_of(Some(json!(["mobile", 2]))).expect("a list"),
+        Some(RunTarget::List(vec![
+            crate::run_target::TargetItem::Name("mobile".to_owned()),
+            crate::run_target::TargetItem::Id(2),
+        ]))
     );
     assert!(target_of(Some(json!({ "x": 1 }))).is_err());
+}
+
+/// RB-099-10: a tool that takes `breakpoints` says its target takes "visible" and a list.
+#[test]
+fn a_tool_taking_breakpoints_takes_visible_and_a_list_as_its_target() {
+    let scoped = json!({
+        "type": "object",
+        "properties": { "breakpoints": { "type": "array", "items": { "type": "string" } } },
+    });
+    assert!(takes_breakpoints(&scoped));
+    let schema = with_target(&scoped);
+    let target = &schema["properties"]["target"];
+    assert!(
+        target["description"]
+            .as_str()
+            .is_some_and(|text| text.contains("\"visible\"") && text.contains("\"all\""))
+    );
+    assert_eq!(target["anyOf"][2]["type"], "array");
+    let plain = with_target(&json!({ "type": "object" }));
+    assert!(!takes_breakpoints(&json!({ "type": "object" })));
+    assert_eq!(
+        plain["properties"]["target"]["anyOf"]
+            .as_array()
+            .map(Vec::len),
+        Some(2)
+    );
 }

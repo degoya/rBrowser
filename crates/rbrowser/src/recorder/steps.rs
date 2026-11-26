@@ -185,7 +185,7 @@ pub async fn host_tool(
         _ => toggle(&blocking, &args),
     })
     .await
-    .map_err(|_| ToolFailure::new("internal", "the tool did not finish"))?
+    .map_err(|_| ToolFailure::new("mcp.internal", "the tool did not finish"))?
     .map_err(ToolFailure::from)
 }
 

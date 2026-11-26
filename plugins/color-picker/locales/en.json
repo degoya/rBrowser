@@ -11,7 +11,7 @@
         "sample": "The rendered colour at a viewport point (x, y in CSS pixels) of the targeted view (default: the active view) as HEX, rgb(), hsl() and oklch(), read from the view's image as it is shown, with the image pixel it was read from and the image pixels per CSS pixel (dpr; the view's device pixel ratio when it is shown at it). Chromium views only.",
         "contrast": "The WCAG 2.x contrast ratio of a foreground and a background colour (any CSS colour text: hex, rgb(), hsl(), oklch()) and whether it passes AA and AAA for normal and large text. A translucent foreground is blended over the background.",
         "palette": "The colours the targeted view's page uses (computed text, background and border colours of every rendered element), near colours grouped, sorted by use, each with its uses and its computed values. mark: a list of computed values outlines the elements using them in every view; an empty list clears the outlines.",
-        "measure_text": "Characters per line of the elements a selector matches (default: Settings > Colour picker & measuring > Elements to measure) in every view or the targeted one: lines, average (last lines left out), maximum, lines above the warning limit and a rating against the optimal range; long lines are marked in the views. choose lets a person click the element in a view; clear removes the marks."
+        "measure_text": "Characters per line of the elements a selector matches (default: Settings › Colour picker & measuring › Elements to measure) in every view or the targeted one: lines, average (last lines left out), maximum, lines above the warning limit and a rating against the optimal range; long lines are marked in the views. choose lets a person click the element in a view; clear removes the marks."
       },
       "panels": {
         "picker": "Colour picker"
@@ -122,14 +122,14 @@
         "use_as_background": "Use {value} as the background",
         "marks_clear": "Clear marks",
         "cleared": "Marks cleared.",
-        "reading": "Reading...",
+        "reading": "Reading…",
         "no_view": "no view",
         "measure": "Characters per line",
         "selector": "Elements (CSS selector)",
         "measure_run": "Measure in every view",
         "measure_choose": "Choose an element",
         "choosing": "Click the element to measure in a view; Esc cancels.",
-        "measuring": "Measuring...",
+        "measuring": "Measuring…",
         "measure_hint": "{selector}: comfortable {min} to {max, plural, one {# character} other {# characters}} per line; lines above {warn} are marked.",
         "view": "View",
         "lines": "Lines",

@@ -122,14 +122,14 @@ impl<D: Dispatch> ScriptTools for Bridge<D> {
             Ok(Value::Null) => Map::new(),
             _ => {
                 return Err(refusal(
-                    "invalid_arguments",
+                    "args.invalid",
                     "the arguments of a tool call are one JSON object",
                 ));
             }
         };
         if !self.dispatch.has_tool(tool) {
             return Err(refusal(
-                "tool_not_found",
+                "tool.not_found",
                 &format!("this rBrowser has no tool {tool}"),
             ));
         }
@@ -140,10 +140,15 @@ impl<D: Dispatch> ScriptTools for Bridge<D> {
     }
 }
 
-/// A refusal as the engine reads it.
+/// A refusal as the engine reads it: `{code, message, legacyCode?}` - the flat code a dotted one
+/// replaced, until 1.0 ([`crate::codes`]), so a script's `error.legacyCode` still finds it.
 #[must_use]
 pub fn refusal(code: &str, message: &str) -> String {
-    json!({ "code": code, "message": message }).to_string()
+    let mut body = Map::new();
+    body.insert("code".to_owned(), json!(code));
+    body.insert("message".to_owned(), json!(message));
+    crate::codes::add_legacy(&mut body);
+    Value::Object(body).to_string()
 }
 
 /// A tool's response as the script gets it: the JSON of its text (one block: the value, several:
@@ -171,11 +176,11 @@ fn answer_of(response: Result<CallToolResponse, ErrorData>) -> Result<String, St
 /// The stable code of a JSON-RPC error the router answered.
 fn code_of(code: ErrorCode) -> &'static str {
     if code.0 == ErrorCode::METHOD_NOT_FOUND.0 {
-        "tool_not_found"
+        "tool.not_found"
     } else if code.0 == ErrorCode::INVALID_PARAMS.0 {
-        "invalid_arguments"
+        "args.invalid"
     } else {
-        "tool_failed"
+        "tool.failed"
     }
 }
 
@@ -187,7 +192,7 @@ fn content_of(result: &CallToolResult) -> Result<String, String> {
         .unwrap_or_default();
     if wire["isError"].as_bool().unwrap_or(false) {
         let first = values.first().cloned().unwrap_or(Value::Null);
-        let code = first["code"].as_str().unwrap_or("tool_failed");
+        let code = first["code"].as_str().unwrap_or("tool.failed");
         let message = first["error"]
             .as_str()
             .map(str::to_owned)

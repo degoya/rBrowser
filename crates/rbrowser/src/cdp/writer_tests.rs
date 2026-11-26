@@ -46,3 +46,62 @@ fn after_a_failed_write_every_send_fails() {
     }
     panic!("the writer still took frames after its write failed");
 }
+
+/// RB-099-19: the frames waiting for the writer are counted in bytes until written; past the
+/// threshold the writer warns once and still takes every frame.
+#[test]
+fn waiting_bytes_are_counted_and_warned_about_once() {
+    let (release, gate) = mpsc::channel::<()>();
+    let writer = ThreadWriter::spawn_warning_above("rb-test-writer", 10, move |_: &[u8]| {
+        let _ = gate.recv();
+        Ok(())
+    });
+    writer.send(vec![0; 6]).expect("taken");
+    assert_eq!(writer.pending_bytes(), 6);
+    assert!(!writer.warned(), "below the threshold");
+    writer.send(vec![0; 6]).expect("taken past the threshold");
+    assert_eq!(writer.pending_bytes(), 12);
+    assert!(writer.warned());
+    writer.send(vec![0; 6]).expect("taken");
+    for _ in 0..3 {
+        release.send(()).expect("the writer waits");
+    }
+    for _ in 0..200 {
+        if writer.pending_bytes() == 0 {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    panic!(
+        "{} bytes still counted after the writes",
+        writer.pending_bytes()
+    );
+}
+
+/// Review w39: a writer that stopped after a failed write counts nothing - the frames still
+/// queued then went with it.
+#[test]
+fn a_writer_that_stopped_counts_no_waiting_bytes() {
+    let (release, gate) = mpsc::channel::<()>();
+    let writer = ThreadWriter::spawn("rb-test-writer", move |_: &[u8]| {
+        let _ = gate.recv();
+        Err(EngineError::Closed)
+    });
+    for _ in 0..3 {
+        writer
+            .send(vec![0; 8])
+            .expect("taken while the first write waits");
+    }
+    assert_eq!(writer.pending_bytes(), 24);
+    release.send(()).expect("the writer waits");
+    for _ in 0..200 {
+        if writer.pending_bytes() == 0 {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    panic!(
+        "{} bytes still counted after the writer stopped",
+        writer.pending_bytes()
+    );
+}

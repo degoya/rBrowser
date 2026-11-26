@@ -6,9 +6,9 @@
 # (locales/parts/*.json) added and the changed texts of a wave (locales/parts/*.changed, a JSON
 # object of key -> text after `//` header lines) applied. Then:
 #
-#   - no text says "footer", except the one note "formerly called the footer";
-#   - that note is there, and the strip's names (command, menus, toolbar, settings) say
-#     "Breakpoint bar";
+#   - no text says "footer", not even as the old name: the texts describe the current state
+#     (RB-099-22);
+#   - the strip's names (command, menus, toolbar, settings) say "Breakpoint bar";
 #   - the keys and ids stay (`ui.viewFooter.*`, `view_footer`, `footer.*`): nothing migrates;
 #   - a changed text names a key en.json has (a new key belongs in a part, not here).
 #
@@ -53,12 +53,9 @@ for changed in sorted(glob.glob(os.path.join(root, "locales", "parts", "*.change
             failures.append(f"{os.path.basename(changed)}: `{key}` is no key of en.json")
         texts[key] = text
 
-NOTE = "formerly called the footer"
 for key, text in sorted(texts.items()):
-    if re.search(r"footer", text.replace(NOTE, ""), re.IGNORECASE):
+    if re.search(r"footer", text, re.IGNORECASE):
         failures.append(f"`{key}` still says footer: {text[:120]!r}")
-if not any(NOTE in text for text in texts.values()):
-    failures.append(f"no help text names the old name ({NOTE!r})")
 
 NAMES = [
     "commands.ui.view_footer.toggle",

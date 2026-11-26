@@ -6,3 +6,4 @@ export interface BundleSpec {
 }
 export const BUNDLES: BundleSpec[];
 export function bundle(spec: BundleSpec): Promise<string>;
+export function thirdPartyLicences(): Promise<string>;

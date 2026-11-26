@@ -1,6 +1,7 @@
 //! The commands of sitemap capture for the one registry (RB-050-05): ids, groups, default leader
 //! chords and MCP coverage. `sitemap.capture` (`Leader C M`) starts a run with the call's
-//! arguments (the project's start URL and every breakpoint without), `sitemap.cancel`
+//! arguments (the project's start URL and every breakpoint without), `sitemap.capture_visible`
+//! (`Leader C J`, RB-099-08) the same with only the breakpoints the grid shows, `sitemap.cancel`
 //! (`Leader C X`) cancels the one in progress, `sitemap.gallery` (`Leader C I`, RB-090-83) opens
 //! a run's gallery in its own window, `panels.sitemap` (`Leader P G`) shows the run in the
 //! toolbar strip and answers its status.
@@ -18,6 +19,8 @@ use crate::control::Core;
 
 /// Start (or resume) a capture.
 pub const CAPTURE: &str = "sitemap.capture";
+/// Start a capture of only the breakpoints the grid shows (RB-099-08).
+pub const CAPTURE_VISIBLE: &str = "sitemap.capture_visible";
 /// Cancel the capture in progress.
 pub const CANCEL: &str = "sitemap.cancel";
 /// Open a run's gallery (RB-090-83).
@@ -26,8 +29,10 @@ pub const GALLERY: &str = "sitemap.gallery";
 pub const PANEL: &str = "panels.sitemap";
 
 /// Id, group, the keys after the leader, MCP tool.
-const ROWS: [(&str, Group, [char; 2], &str); 4] = [
+const ROWS: [(&str, Group, [char; 2], &str); 5] = [
     (CAPTURE, Group::Capture, ['C', 'M'], CAPTURE_TOOL),
+    // `sitemap_capture` with `views: "visible"`; J is one of leader C's last free keys.
+    (CAPTURE_VISIBLE, Group::Capture, ['C', 'J'], CAPTURE_TOOL),
     (CANCEL, Group::Capture, ['C', 'X'], CANCEL_TOOL),
     // I for images: G is `visual.lfs_setup`'s.
     (GALLERY, Group::Capture, ['C', 'I'], GALLERY_TOOL),

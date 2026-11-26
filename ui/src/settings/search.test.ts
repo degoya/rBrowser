@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { shellMessages } from '../i18n';
+import { PAGES_CATALOGUE } from '../i18n/pages';
 import type { SettingValue } from '../ipc/protocol';
 import { filterOf, matchFields, matches } from './search';
 import { realDefs } from './test/fakeCore';
 
-const catalogue = shellMessages();
+const catalogue = shellMessages([PAGES_CATALOGUE]);
 function t(key: string): string {
   const found = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], catalogue);
   return typeof found === 'string' ? found : key;

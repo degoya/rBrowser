@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // The Flows panel (RB-090-60, RB-040-07's panel), a core panel of the panels page
 // (`panels/core.ts`, `panels.flows`, Ctrl+Shift+Space F F): the project's flows
-// (`.rbrowser/flows/<name>.ts`, `listFlows`) with "Run" in all views or in the view chosen above
-// the list, "Run all", the run going on with each view's status (waiting, running, passed,
+// (`.rbrowser/flows/<name>.ts`, `listFlows`) with "Run" and "Run all" in the views of the scope
+// chosen above the list - every view, the visible ones or chosen breakpoints, the one pick list
+// (`ScopePicker.vue`, remembered as `flows`, RB-099-10) -, the run going on with each view's status (waiting, running, passed,
 // failed, skipped), how long it runs and the flows of "Run all" still waiting - asked again every
 // second while it runs - and "Stop"; while it runs the Run buttons wait and say why (RB-090-71).
 // Then the last result: passed or failed per view, where a failed
@@ -16,12 +17,14 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UBadge from '@nuxt/ui/components/Badge.vue';
 import UButton from '@nuxt/ui/components/Button.vue';
-import URadioGroup from '@nuxt/ui/components/RadioGroup.vue';
 import type { IpcClient } from '../ipc/client';
 import type { FlowRunState, FlowSummary, JsonValue } from '../ipc/protocol';
 import { elapsedSeconds } from '../activity/activities';
 import { clock } from '../portal/portal';
 import { RECORDER_ICONS } from '../recorder/icons';
+import ScopePicker from '../scope/ScopePicker.vue';
+import { useScope } from '../scope/useScope';
+import { scopeOf, withScope } from '../../../plugins/web-common/panel-ui/src/scope';
 import { useShell } from '../state/shell';
 import { windowEvents, type Subscribe } from '../whichkey/whichkey';
 import { FLOWS_CONFIRM_KEY, confirmsDelete } from './confirmDelete';
@@ -49,19 +52,37 @@ const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle
 const flows = ref<FlowSummary[] | null>(null);
 const state = ref<FlowRunState | null>(null);
 const error = ref<string | null>(null);
-/** Where "Run" runs: `all`, or a view's id. */
-const target = ref('all');
+/** One view instead of the scope (a view of a free size too), as the panel always offered. */
+const view = ref<number | null>(null);
+/** Where "Run" and "Run all" run. */
+const scope = useScope('flows', () => (shell.state.value?.breakpoints ?? []).map((breakpoint) => breakpoint.id));
 /** "Delete" asks first (`automation.flows.confirmDelete`). */
 const confirmDelete = ref(true);
 
 const views = computed(() => shell.state.value?.views ?? []);
-const targets = computed(() => [
-  { value: 'all', label: t('flows.panel.all_views') },
-  ...views.value.map((view) => ({ value: String(view.id), label: view.label })),
-]);
-const targetName = computed(
-  () => targets.value.find((item) => item.value === target.value)?.label ?? t('flows.panel.all_views'),
+const breakpoints = computed(() => shell.state.value?.breakpoints ?? []);
+/** The scope chosen, in words: "Run login in Visible views". */
+const targetName = computed(() =>
+  view.value !== null
+    ? (views.value.find((item) => item.id === view.value)?.label ?? String(view.value))
+    : scope.value.mode === 'chosen'
+    ? scope.value.breakpoints.join(', ')
+    : scope.value.mode === 'all'
+      ? t('flows.panel.all_views')
+      : t('scope.picker.visible'),
 );
+/** Chosen breakpoints without one: nothing to run. */
+const noScope = computed(() => view.value === null && scopeOf(scope.value) === null);
+/** The single views offered beside the scopes. */
+const viewChoices = computed(() => views.value.map((item) => ({ id: item.id, label: item.label })));
+/** The arguments of a run: the view chosen, else the scope's. */
+function where(args: Record<string, JsonValue>): Record<string, JsonValue> {
+  return view.value === null ? withScope<Record<string, JsonValue>>(args, scope.value) : { ...args, views: [view.value] };
+}
+// A view that closed is no choice any more: back to the scope.
+watch(views, (now) => {
+  if (view.value !== null && !now.some((item) => item.id === view.value)) view.value = null;
+});
 const running = computed(() => state.value?.running ?? null);
 const last = computed(() => state.value?.last ?? null);
 /** The clock of the elapsed time; ticks with each poll while a run goes on. */
@@ -114,8 +135,12 @@ function run(id: string, args?: JsonValue): void {
 }
 
 function runFlow(name: string): void {
-  const view = Number(target.value);
-  run('flows.run', target.value === 'all' || Number.isNaN(view) ? { name } : { name, views: [view] });
+  run('flows.run', where({ name }));
+}
+
+function runAll(): void {
+  const args = where({});
+  run('flows.run_all', Object.keys(args).length === 0 ? undefined : args);
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -171,9 +196,9 @@ onBeforeUnmount(() => {
           size="sm"
           :label="t('flows.panel.run_all')"
           :title="busy ?? undefined"
-          :disabled="(flows?.length ?? 0) === 0 || running !== null"
+          :disabled="(flows?.length ?? 0) === 0 || running !== null || noScope"
           data-testid="flows-run-all"
-          @click="run('flows.run_all')"
+          @click="runAll"
         />
       </span>
     </header>
@@ -186,13 +211,13 @@ onBeforeUnmount(() => {
       {{ t('flows.panel.no_project') }}
     </p>
     <template v-else-if="state !== null">
-      <URadioGroup
-        v-if="views.length > 0"
-        v-model="target"
-        :items="targets"
-        :legend="t('flows.panel.target')"
-        orientation="horizontal"
-        size="sm"
+      <ScopePicker
+        v-if="breakpoints.length > 0 || views.length > 0"
+        v-model="scope"
+        v-model:view="view"
+        :views="viewChoices"
+        :breakpoints="breakpoints"
+        :label="t('flows.panel.target')"
         class="border-b border-default px-3 py-2"
         data-testid="flow-target"
       />
@@ -217,7 +242,7 @@ onBeforeUnmount(() => {
             variant="outline"
             :label="t('flows.panel.run')"
             :title="busy ?? t('flows.panel.run_flow', { flow: flow.name, target: targetName })"
-            :disabled="running !== null"
+            :disabled="running !== null || noScope"
             data-testid="flow-run"
             @click="runFlow(flow.name)"
           />

@@ -88,10 +88,11 @@ fn removing_a_missing_credential_is_no_error() {
     assert_eq!(store.read(&name), Ok(None));
 }
 
-#[cfg(not(windows))]
+/// A platform without a store rBrowser uses keeps nothing anywhere (RB-099-05 holds the real
+/// stores away from the tests: none of them touches the keyring of the machine running them).
 #[test]
 fn without_a_credential_store_nothing_is_kept_anywhere() {
-    let store = platform_store();
+    let store = NoStore;
     let name = target_name("p", &origin("https://staging.example.test/"));
     let credential = Credential::new("ada", "pw-1234").expect("valid");
     assert_eq!(
@@ -112,4 +113,18 @@ fn a_password_too_short_to_be_masked_is_refused() {
         Err(CredentialError::Password)
     );
     assert!(Credential::new("ada", &"p".repeat(min)).is_ok());
+}
+
+#[test]
+fn each_platform_names_its_own_store() {
+    let expected = if cfg!(windows) {
+        rb_ipc::CredentialStoreKind::WindowsCredentialManager
+    } else if cfg!(target_os = "macos") {
+        rb_ipc::CredentialStoreKind::MacosKeychain
+    } else if cfg!(target_os = "linux") {
+        rb_ipc::CredentialStoreKind::SecretService
+    } else {
+        rb_ipc::CredentialStoreKind::None
+    };
+    assert_eq!(kind(), expected);
 }

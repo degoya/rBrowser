@@ -297,13 +297,19 @@ async fn a_stopped_portal_listens_no_more() {
     let (server, _) = start(Duration::from_secs(300), 5);
     let address = server.address();
     server.stop();
-    tokio::time::sleep(Duration::from_millis(50)).await;
     assert!(server.is_stopped());
-    let refused = tokio::time::timeout(Duration::from_secs(2), TcpStream::connect(address)).await;
-    assert!(
-        !matches!(refused, Ok(Ok(_))),
-        "nobody accepts after the stop"
-    );
+    // The accept loop hears the stop on its own time: asked again until it is gone.
+    let mut refused = false;
+    for _ in 0..200 {
+        let connected =
+            tokio::time::timeout(Duration::from_secs(2), TcpStream::connect(address)).await;
+        if !matches!(connected, Ok(Ok(_))) {
+            refused = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert!(refused, "nobody accepts after the stop");
 }
 
 #[test]

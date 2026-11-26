@@ -68,13 +68,13 @@ expect_output "the failure names the version" "no section ## [2.0.0]"
 # --- complete: every package of the release, RB-090-80 ---
 release="$SCRATCH/release"
 mkdir -p "$release"
-for name in windows-x64.zip macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip macos-x86_64.dmg \
+for name in windows-x64.zip windows-x64.msi macos-aarch64.zip macos-aarch64.dmg macos-x86_64.zip macos-x86_64.dmg \
     linux-x64.tar.gz linux-x64.deb linux-x64.rpm; do
     echo package > "$release/rbrowser-1.1.0-$name"
 done
 run_status "$SCRIPT" complete "$release" 1.1.0
 expect_status "a release with every package is complete" 0
-expect_output "the packages are counted" "8 package(s) of rBrowser 1.1.0"
+expect_output "the packages are counted" "9 package(s) of rBrowser 1.1.0"
 rm "$release/rbrowser-1.1.0-macos-x86_64.dmg"
 run_status "$SCRIPT" complete "$release" 1.1.0
 expect_status "a release without a macOS DMG is refused" 1

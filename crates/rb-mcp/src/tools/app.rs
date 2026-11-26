@@ -4,6 +4,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use super::object;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, json_result, respond};
@@ -42,7 +43,7 @@ pub struct AppPerfParams {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DevtoolsParams {
-    /// One view (id or breakpoint id); the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// `docked-bottom`, `docked-right` or `window`; the setting's mode when absent.
@@ -55,7 +56,7 @@ impl RbMcpServer {
     #[tool(
         description = "rBrowser's version, commit, build time and platform, the engine versions (CEF/Chromium, Firefox, WebKit, Node), the API versions and the data and log folders - the facts of Settings > About, without the licence texts."
     )]
-    pub(crate) async fn app_info(&self) -> ToolResult {
+    pub(crate) async fn app_info(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.read(|backend| backend.app_info()).await)
     }
 
@@ -72,7 +73,7 @@ impl RbMcpServer {
             }
             Some(other) => {
                 return respond::<Value>(Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     format!("action is info or restart, not `{other}`"),
                 )));
             }
@@ -94,7 +95,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "rBrowser's timing counters (release builds too; setting performance.counters): per counter name, count, window (samples covered, at most window), p50Ms, p95Ms, maxMs and meanMs, plus enabled and uptimeMs. Counters: sync.wait (event routed to replay start), sync.replay.<engine> (routed to replay answered; chromium is K1, firefox and webkit K11), sync.navigation (a load sync gave until it committed), plugin.wait and plugin.call, ipc.query (shell query to answer), startup.firstView (process start to the first view's first load). reset: true empties the counters after the answer."
+        description = "rBrowser's timing counters (performance.counters): per counter count, window, p50Ms, p95Ms, maxMs and meanMs, plus enabled and uptimeMs. Counters: sync.wait, sync.replay.<engine>, sync.navigation, plugin.wait, plugin.call, ipc.query, startup.firstView. reset: true empties them after the answer."
     )]
     pub(crate) async fn app_perf(
         &self,
@@ -106,7 +107,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Open DevTools for one view (target: a view id or breakpoint id, default the active view); mode docked-bottom, docked-right or window (default the setting)."
+        description = "Open DevTools for one view; mode docked-bottom, docked-right or window (default the setting)."
     )]
     pub(crate) async fn devtools_open(
         &self,
@@ -126,9 +127,9 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason when one did not load), permissions, MCP prefix, tools and the number of commands and settings; `missing` names the plugins the project's config uses that are not installed, `available` the bundled first-party plugins not chosen. Installing, enabling or trusting a plugin is a person's decision in rBrowser (the first-run wizard or Settings > Plugins > Catalog), never over MCP."
+        description = "List the installed plugins - loaded, disabled and refused: id, name, version, description, source (bundled, user, project), signature, state (with the reason), permissions, MCP prefix, tools and the number of commands and settings; missing (used by the project, not installed) and available (bundled, not chosen). Installing, enabling or trusting a plugin is a person's decision, never MCP's."
     )]
-    pub(crate) async fn plugins_list(&self) -> ToolResult {
+    pub(crate) async fn plugins_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.command("plugins.list", Value::Null).await)
     }
 }

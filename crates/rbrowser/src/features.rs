@@ -143,6 +143,8 @@ pub fn on_start(core: &Core) {
     crate::vitals::on_start(core);
     // The Framework DevTools probe and hooks follow the user settings (RB-080-24).
     crate::sync_agent::framework_tasks::on_start(core);
+    // Media in a format this build does not play: a notice and a finding (RB-099-29).
+    crate::media_codec::on_start(core);
     // The page clock and the animation rates forget closed views (RB-094-07).
     crate::time_control::on_start(core);
     crate::cookies::on_start(core);

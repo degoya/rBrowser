@@ -207,9 +207,9 @@ async fn the_page_detaching_ends_the_connection() {
     let setup = setup();
     let ticket = setup.endpoint.grant(ViewId(5), "T5").expect("ticket");
     let _ws = connect(&ws_url(&ticket), None).await.expect("admitted");
+    // The relay subscribed to the browser's events before it sent the attach: the detach that
+    // follows waits for it in its queue, whenever its loop gets to it.
     until(|| !setup.fake.sent("Target.attachToTarget").is_empty()).await;
-    // Let the relay subscribe and settle before the browser drops the session.
-    tokio::time::sleep(Duration::from_millis(20)).await;
     setup.fake.emit(json!({
         "method": "Target.detachedFromTarget",
         "params": { "sessionId": "S1" }
@@ -254,6 +254,13 @@ async fn an_inspect_request_reaches_the_frontend_once_it_enabled_the_overlay() {
     .expect("sends");
     assert_eq!(next_json(&mut ws).await, json!({ "id": 3, "result": {} }));
     setup.endpoint.inspect().request(ViewId(2), 44);
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // The barrier: the relay answers a call after the request, so it has looked at the request
+    // since - had it revealed it, the event would have been taken.
+    ws.send(Message::text(
+        json!({ "id": 4, "method": "DOM.enable" }).to_string(),
+    ))
+    .await
+    .expect("sends");
+    assert_eq!(next_json(&mut ws).await, json!({ "id": 4, "result": {} }));
     assert_eq!(setup.endpoint.inspect().pending(ViewId(2)), Some(44));
 }

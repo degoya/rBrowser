@@ -32,6 +32,7 @@ mod backend;
 )]
 mod board_pan;
 mod canvas_board;
+mod cef_log;
 mod cell_footers;
 mod cell_info;
 mod cell_labels;
@@ -331,6 +332,13 @@ fn run(
         || launch.1.join(rb_diag::paths::CEF_LOG_FILE_NAME),
         rb_diag::DiagPaths::cef_log_file,
     );
+    // CEF never rotates its log: it keeps to the core log's size, trimmed now and once a minute
+    // by the rotation the settings give (RB-099-07).
+    let rotation = _log.as_ref().map_or_else(
+        || rb_diag::rotate::SharedRotation::new(log_settings.rotation()),
+        |guard| guard.handle().rotation(),
+    );
+    cef_log::keep_small(&cef_log, rotation);
     let mut switches = launch::browser_switches(
         launch.0.pipe.map(|ends| ends.switch_value()).as_deref(),
         &launch.0.config.network,
@@ -361,7 +369,7 @@ fn run(
         // Session cookies end with the app unless the user keeps them (RB-020-07).
         persist_session_cookies: i32::from(crate::sessions::persist_session_cookies()),
         log_file: cef_path(&cef_log),
-        log_severity: log_severity(log_settings.level),
+        log_severity: cef_log::severity(log_settings.level),
         // The render views of a sitemap capture or an environment comparison are windowless
         // browsers (RB-090-83, `render_views.rs`): a hidden target paints no frame to capture.
         windowless_rendering_enabled: 1,
@@ -471,16 +479,6 @@ fn prepare(
         setup,
     };
     Some((launch, profile, runtime))
-}
-
-/// CEF's own log severity for our level: one step quieter (rb-diag).
-fn log_severity(level: rb_diag::LogLevel) -> LogSeverity {
-    match rb_diag::CefLogSeverity::from(level) {
-        rb_diag::CefLogSeverity::Verbose => LogSeverity::VERBOSE,
-        rb_diag::CefLogSeverity::Info => LogSeverity::INFO,
-        rb_diag::CefLogSeverity::Warning => LogSeverity::WARNING,
-        rb_diag::CefLogSeverity::Error => LogSeverity::ERROR,
-    }
 }
 
 fn cef_path(path: &Path) -> CefString {

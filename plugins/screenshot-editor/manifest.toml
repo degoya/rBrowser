@@ -25,32 +25,38 @@ en = "locales/en.json"
 
 # project-read: the images below `.rbrowser/out/` and the saved annotations (no glob: nothing
 # outside `.rbrowser/`, never `config.local.json`; the component opens `.rbrowser/out/**/*.png`
-# only). out-write: the edited image and its annotations, below `.rbrowser/out/screenshot-editor/`
-# only. No views, no CDP: the editor works on files.
+# only), an image over one read in ranges (`project-range`, RB-099-24). out-write: the edited
+# image (written in parts and committed at once, `out-stream`) and its annotations, below
+# `.rbrowser/out/screenshot-editor/` only. No views, no CDP: the editor works on files.
 [capabilities]
 project-read = true
 out-write = true
 
-# A full-page screenshot decodes to up to 100 MB of pixels (25 megapixels), and rendering and
-# encoding it takes longer than the default call.
+# Every image the capture writes (RB-099-24: 65535 rows, 256 megapixels - 1 GiB as RGBA) is
+# decoded, rendered and encoded in bands: at most 128 MiB of rows and their copy at once, the
+# codecs' buffers and the panel's preview beside them. A 256-megapixel render takes some 1e11
+# instructions; the host credits its file calls back to the timeout.
 [limits]
-memory_bytes = 402653184
-fuel = 40000000000
-timeout_milliseconds = 30000
+memory_bytes = 469762048
+fuel = 200000000000
+timeout_milliseconds = 300000
 
 [settings]
 schema = "settings.schema.json"
 
-# MCP `shot_annotate`: renders annotations onto an image below `.rbrowser/out/` and writes the
-# result below `.rbrowser/out/screenshot-editor/` (or `out` there); answers the path.
+# MCP `shot_annotate`: renders annotations onto an image below `.rbrowser/out/` (up to the
+# capture's 65535 px a side and 256 megapixels) and writes the result below
+# `.rbrowser/out/screenshot-editor/` (or `out` there); answers the path.
 [[tools]]
 name = "annotate"
 description = "plugin.screenshot-editor.tools.annotate"
 input = { type = "object", required = ["image", "annotations"], properties = { image = { type = "string", maxLength = 512 }, annotations = { type = "array", maxItems = 1000, items = { type = "object", required = ["type"], properties = { type = { type = "string", enum = ["rect", "arrow", "line", "freehand", "text", "marker", "highlight", "redact", "crop"] } } } }, out = { type = "string", maxLength = 512 } } }
 
-# MCP `shot_load`: one chunk (base64) of an image below `.rbrowser/out/`, the first with its size
-# and saved annotations; no `image` is the newest screenshot. A later chunk names the first one's
-# `hash` and comes from the version cut then (`src/cache.rs`). The panel loads its image with it.
+# MCP `shot_load`: one chunk (base64) of an image below `.rbrowser/out/`, the first with its size,
+# `scale` and saved annotations; no `image` is the newest screenshot. An image over 16384 px a
+# side or 25 megapixels comes as its preview, `scale` times smaller (`src/preview.rs`). A later
+# chunk names the first one's `hash` and comes from the version cut then (`src/cache.rs`). The
+# panel loads its image with it.
 [[tools]]
 name = "load"
 description = "plugin.screenshot-editor.tools.load"

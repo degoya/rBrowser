@@ -16,7 +16,13 @@
 //!   `Leader C X`, `sitemap.gallery` `Leader C I`, `panels.sitemap` `Leader P G`), the MCP tools'
 //!   entry points ([`tool`]) and the shell's progress; [`feedback`] the notices of a start,
 //!   [`gallery`] the gallery's own window and [`gallery_page`] the run and the images the page
-//!   in it shows (RB-090-86); [`http`] is the plugins' HTTP transport.
+//!   in it shows (RB-090-86); [`http`] holds the request timeout and headers the plugins' HTTP
+//!   transport (`plugins::services::http`) sends.
+//!
+//! - [`discover`]: the two-step start (RB-099-09) - `sitemap.capture` without arguments opens
+//!   the start page, which finds the pages first ([`discovery`] keeps them, [`tree`] orders them
+//!   by path segments) and captures the pages chosen; the MCP tool `sitemap_discover`
+//!   ([`discover_tool`]).
 //!
 //! Output: `.rbrowser/out/sitemap-capture/<run>/<page>/<breakpoint>.png`, `run.json`,
 //! `index.html`.
@@ -24,6 +30,9 @@
 pub mod app;
 pub mod backend;
 pub mod defs;
+pub mod discover;
+pub mod discover_tool;
+pub mod discovery;
 pub mod feedback;
 pub mod gallery;
 pub mod gallery_page;
@@ -38,5 +47,6 @@ pub mod settings;
 pub mod sink;
 pub mod status;
 pub mod tool;
+pub mod tree;
 
 pub use defs::register;

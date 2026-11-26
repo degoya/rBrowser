@@ -44,13 +44,14 @@ fn a_foreign_host_or_origin_is_refused_before_the_token() {
     let token = McpToken::from_text("t".repeat(64));
     let good = format!("Bearer {}", "t".repeat(64));
     let refusal = check(&token, &headers("evil.test:4000", Some(&good), None)).expect_err("host");
-    assert_eq!(refusal.code, "host_rejected");
+    assert_eq!(refusal.code, "http.host_rejected");
     let refusal = check(
         &token,
         &headers("127.0.0.1:4000", Some(&good), Some("https://evil.test")),
     )
     .expect_err("origin");
-    assert_eq!(refusal.code, "origin_rejected");
+    assert_eq!(refusal.code, "http.origin_rejected");
+    assert_eq!(refusal.body()["legacyCode"], "origin_rejected");
     assert!(
         check(
             &token,

@@ -44,7 +44,7 @@ pub struct ApplyParams {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SetSizeParams {
-    /// One view (id or breakpoint id); the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// A breakpoint or device preset id.
@@ -140,7 +140,7 @@ impl LayoutParams {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CanvasPlaceParams {
-    /// The view: a view id or a breakpoint id; the active view when absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The view's left edge on the canvas, in canvas DIP (snapped).
@@ -196,7 +196,7 @@ pub struct EnvironmentParams {
 #[tool_router(router = layout_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Find the breakpoints a site's CSS uses (media queries, container queries) and propose views for them; writes nothing. urls: the pages (default the start URL), mode: all, simplified or edges. The answer carries a proposalId for breakpoints_apply."
+        description = "Find the breakpoints a site's CSS uses (media queries, container queries) and propose views for them; writes nothing. urls: the pages (default the start URL); mode all, simplified or edges. Answers a proposalId for breakpoints_apply."
     )]
     pub(crate) async fn breakpoints_detect(
         &self,
@@ -225,7 +225,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Set one view (target: a view id or breakpoint id, default the active view) to a breakpoint or device preset, or to a free width/height/dpr; newView opens a new view instead."
+        description = "Set one view to a breakpoint or device preset, or to a free width/height/dpr; newView opens a new view instead."
     )]
     pub(crate) async fn view_set_breakpoint(
         &self,
@@ -249,7 +249,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Change the emulation of the targeted views live (\"all\", a view id or a breakpoint id; default the active view): fields as in a breakpoint's emulation - dir (ltr, rtl, auto) and lang (BCP 47) set <html dir> and <html lang> of the page without a reload (Chromium views); null for colorScheme, dir or lang drops the live override. Answers the views changed and whether a reload is needed."
+        description = "Change the emulation of the targeted views live: fields as in a breakpoint's emulation; dir (ltr, rtl, auto) and lang (BCP 47) set <html dir> and <html lang> without a reload (Chromium); null for colorScheme, dir or lang drops the live override. Answers the views changed and whether a reload is needed."
     )]
     pub(crate) async fn emulation_set(
         &self,
@@ -285,7 +285,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Change the layout: preset selects a layout preset of the config; focusMode true shows one breakpoint large (focus names it), false the grid again; mode switches the current preset to grid, focus, horizontal (height, gap), split (orientation, ratio, primary, secondary) or canvas (snap) - the fields are written into the current preset when it has that mode, else into the top-level layout's `layout.modes`."
+        description = "Change the layout: preset selects a layout preset of the config; focusMode true shows one breakpoint large (focus names it), false the grid again; mode switches the current preset to grid, focus, horizontal (height, gap), split (orientation, ratio, primary, secondary) or canvas (snap), written into the current preset (else layout.modes)."
     )]
     pub(crate) async fn layout_set(
         &self,
@@ -298,14 +298,14 @@ impl RbMcpServer {
             && params.mode.is_none()
         {
             return Ok(error_result(&ToolFailure::new(
-                "invalid_arguments",
+                "args.invalid",
                 "pass preset, focusMode, focus or mode",
             )));
         }
         let mode_command = match params.mode.as_deref() {
             None if mode_args.is_some() => {
                 return Ok(error_result(&ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "the mode's fields need mode",
                 )));
             }
@@ -322,7 +322,7 @@ impl RbMcpServer {
             )),
             Some(other) => {
                 return Ok(error_result(&ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     format!("unknown mode {other}: grid, focus, horizontal, split or canvas"),
                 )));
             }
@@ -352,7 +352,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Canvas layout: move one view (target: a view id or breakpoint id, default the active view) to x/y on the canvas in DIP, optionally with its zoom (0.1 to 1). The place snaps to the preset's grid and to neighbouring views' edges and is written into the current canvas preset, else into the top-level layout's `layout.modes.canvas`; the answer has the snapped x/y and whether the view is in sight."
+        description = "Canvas layout: move one view to x/y on the canvas in DIP, optionally with its zoom (0.1 to 1). The place snaps to the preset's grid and the neighbours' edges and is written into the current canvas preset (else layout.modes.canvas). Answers the snapped x/y and whether the view is in sight."
     )]
     pub(crate) async fn canvas_place(
         &self,
@@ -374,7 +374,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Canvas layout: zoom the canvas. level is the active view's page zoom - 1 shows its page at its real size (100 %), 0.5 at half, at most 2 (the largest view stays at 200 % at most) - or \"fit\" for every view in sight; 100 % when absent. The active view stays in the middle of the area. Answers { level }, the level set. Fails outside the canvas layout."
+        description = "Canvas layout: zoom the canvas. level is the active view's page zoom (1 = its real size, 0.5 half, at most 2) or \"fit\" for every view in sight; 100 % when absent. The active view stays in the middle. Answers { level }. Fails outside the canvas layout."
     )]
     pub(crate) async fn canvas_zoom(
         &self,
@@ -391,7 +391,7 @@ impl RbMcpServer {
             }
             Some(_) => {
                 return Ok(error_result(&ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "level is a zoom above 0 (1 = 100 %) or \"fit\"",
                 )));
             }
@@ -400,7 +400,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Save the layout shown now as a named layout preset and select it: the mode with its fields - the canvas with every view's place (not the camera), the split's ratio and sides, the strip's height, the grid in effect, focus mode's breakpoint. file is local (config.local.json, the default unless the user setting layoutModes.savePresetTo says project) or project (config.json, shared with the team); a preset of that id in that file is replaced. Answers { id, file, mode }."
+        description = "Save the layout shown now as a named layout preset and select it: the mode with its fields (canvas places, split ratio and sides, strip height, the grid, focus mode's breakpoint). file local (config.local.json; the default unless layoutModes.savePresetTo says project) or project (config.json); a preset of that id in that file is replaced. Answers { id, file, mode }."
     )]
     pub(crate) async fn layout_save_preset(
         &self,

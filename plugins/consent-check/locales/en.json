@@ -61,7 +61,7 @@
           "script": "script",
           "style": "style sheet"
         },
-        "loading": "Checking the page...",
+        "loading": "Checking the page…",
         "mode": {
           "session": "A fresh session of the check's own, deleted afterwards.",
           "view": "The view as it is, read only."
@@ -110,7 +110,7 @@
         },
         "rejectStep": {
           "description": "After the first capture, click the banner's \"Reject all\" in the check's own session and capture again.",
-          "help": "On, the check clicks the \"Reject all\" button of a known consent banner in its own session and records what the page still loads and sets; the differences are shown. Off, it records the page before consent only.",
+          "help": "When on, the check clicks the \"Reject all\" button of a known consent banner in its own session and records what the page still loads and sets; the differences are shown. When off, it records the page before consent only.",
           "label": "Check after \"Reject all\""
         }
       },

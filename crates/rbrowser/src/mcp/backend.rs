@@ -149,7 +149,8 @@ impl Backend for CoreBackend {
         crate::session_state::refuse_mcp(id)?;
         // Installing a plugin is a person's (RB-094-13).
         crate::plugins::bundle_install::refuse_mcp(id)?;
-        core.run_command(id, args)
+        // A command a person runs too tells the tool's call apart (RB-099-25).
+        super::origin::as_mcp(|| core.run_command(id, args))
     }
 
     fn views(&self) -> Vec<ViewInfo> {
@@ -166,7 +167,7 @@ impl Backend for CoreBackend {
     async fn host_tool(&self, name: &str, args: Value) -> Result<Value, ToolFailure> {
         let core = self
             .core()
-            .ok_or_else(|| ToolFailure::new("closed", "the window is closed"))?;
+            .ok_or_else(|| ToolFailure::new("window.closed", "the window is closed"))?;
         super::host_tools::call(&core, name, args).await
     }
 
@@ -223,7 +224,7 @@ impl Backend for CoreBackend {
     ) -> Result<(), ToolFailure> {
         let core = self
             .core()
-            .ok_or_else(|| ToolFailure::new("closed", "the window is closed"))?;
+            .ok_or_else(|| ToolFailure::new("window.closed", "the window is closed"))?;
         let shortcut = super::shortcuts::is_shortcut_key(key);
         // A shortcut's value lives in `shortcuts.bindings`, one key for every command.
         let audited = if shortcut {
@@ -289,11 +290,11 @@ impl Backend for CoreBackend {
     async fn cdp(&self, view: ViewId, method: &str, params: Value) -> Result<Value, ToolFailure> {
         let core = self
             .core()
-            .ok_or_else(|| ToolFailure::new("closed", "the window is closed"))?;
+            .ok_or_else(|| ToolFailure::new("window.closed", "the window is closed"))?;
         core.host()
             .cdp_send(view, method, params)
             .await
-            .map_err(|error| ToolFailure::new("cdp_failed", masked_text(&error.to_string())))
+            .map_err(|error| ToolFailure::new("cdp.failed", masked_text(&error.to_string())))
     }
 
     fn mask(&self, value: &Value) -> Value {
@@ -374,14 +375,14 @@ impl Backend for CoreBackend {
     async fn cdp_endpoint(&self, view: Option<ViewId>) -> Result<Value, ToolFailure> {
         let core = self
             .core()
-            .ok_or_else(|| ToolFailure::new("closed", "the window is closed"))?;
+            .ok_or_else(|| ToolFailure::new("window.closed", "the window is closed"))?;
         let server =
             crate::cdp_proxy::current().ok_or_else(crate::cdp_proxy::endpoint::disabled)?;
         let page = match view {
             None => None,
             Some(view) => {
                 let target = core.host().target_id(view).ok_or_else(|| {
-                    ToolFailure::new("view_not_attached", format!("view {view} has no page yet"))
+                    ToolFailure::new("view.not_attached", format!("view {view} has no page yet"))
                 })?;
                 Some((view, target))
             }
@@ -411,9 +412,16 @@ impl Backend for CoreBackend {
         &self,
         name: &str,
         views: Option<Vec<ViewId>>,
+        scope: Option<rb_config::ViewScope>,
         wait: bool,
     ) -> Result<Value, ToolFailure> {
         let core = self.core().ok_or_else(closed)?;
+        // RB-099-10: the views of the scope's breakpoints, resolved once at the start.
+        let views = match (views, scope) {
+            (None, Some(scope)) => crate::flows::scoped::scope_views(&core, &scope)
+                .map_err(|error| flow_failure(&error))?,
+            (views, _) => views,
+        };
         let started = crate::flows::app::start(&core, name, views, None)
             .map_err(|error| flow_failure(&error))?;
         if !wait {

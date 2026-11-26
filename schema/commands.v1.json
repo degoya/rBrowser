@@ -1363,6 +1363,17 @@
       }
     },
     {
+      "id": "sitemap.capture_visible",
+      "titleKey": "commands.sitemap.capture_visible",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C J"
+      ],
+      "mcp": {
+        "covered": "sitemap_capture"
+      }
+    },
+    {
       "id": "sitemap.gallery",
       "titleKey": "commands.sitemap.gallery",
       "group": "capture",
@@ -1390,6 +1401,17 @@
       "group": "capture",
       "defaultBindings": [
         "Ctrl+Shift+Space C R"
+      ],
+      "mcp": {
+        "covered": "visual_compare"
+      }
+    },
+    {
+      "id": "visual.compare_visible",
+      "titleKey": "commands.visual.compare_visible",
+      "group": "capture",
+      "defaultBindings": [
+        "Ctrl+Shift+Space C C"
       ],
       "mcp": {
         "covered": "visual_compare"
@@ -1434,6 +1456,17 @@
       "group": "checks",
       "defaultBindings": [
         "Ctrl+Shift+Space K K"
+      ],
+      "mcp": {
+        "covered": "checks_run"
+      }
+    },
+    {
+      "id": "checks.run_visible",
+      "titleKey": "commands.checks.run_visible",
+      "group": "checks",
+      "defaultBindings": [
+        "Ctrl+Shift+Space K 3"
       ],
       "mcp": {
         "covered": "checks_run"
@@ -1764,6 +1797,17 @@
       "group": "flows",
       "defaultBindings": [
         "Ctrl+Shift+Space F A"
+      ],
+      "mcp": {
+        "covered": "flow_run"
+      }
+    },
+    {
+      "id": "flows.run_all_visible",
+      "titleKey": "commands.flows.run_all_visible",
+      "group": "flows",
+      "defaultBindings": [
+        "Ctrl+Shift+Space F G"
       ],
       "mcp": {
         "covered": "flow_run"

@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  RB-099-28: a full-page screenshot of this page shows every image below the fold - 20 with
+  loading="lazy" and 4 an IntersectionObserver loads only once they are scrolled into view
+  (rootMargin 0, as many sites do). The status line at the end counts the images loaded.
+  never.html adds one image the fixture server never answers (server.py): the screenshot is
+  taken after the pre-pass's deadline anyway, its answer says imagesPending: true.
+
+    python3 tests/fixtures/lazy-images/server.py [port]   # http://127.0.0.1:18768/
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lazy images</title>
+  <style>
+    body { margin: 0; font: 16px/1.4 sans-serif; color: #1f2937; background: #f9fafb; }
+    .hero { min-height: 150vh; display: grid; place-items: center; background: #e5e7eb; }
+    main { display: grid; gap: 48px; justify-items: center; padding: 48px 16px; }
+    figure { margin: 0; text-align: center; }
+    img { display: block; width: 320px; height: 200px; background: #d1d5db; }
+    #status { padding: 24px; text-align: center; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <section class="hero"><h1>Lazy images: scroll down</h1></section>
+  <main>
+    <figure><img loading="lazy" src="img/lazy-01.svg" width="320" height="200" alt="lazy 1"><figcaption>loading="lazy" 1</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-02.svg" width="320" height="200" alt="lazy 2"><figcaption>loading="lazy" 2</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-03.svg" width="320" height="200" alt="lazy 3"><figcaption>loading="lazy" 3</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-04.svg" width="320" height="200" alt="lazy 4"><figcaption>loading="lazy" 4</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-05.svg" width="320" height="200" alt="lazy 5"><figcaption>loading="lazy" 5</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-06.svg" width="320" height="200" alt="lazy 6"><figcaption>loading="lazy" 6</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-07.svg" width="320" height="200" alt="lazy 7"><figcaption>loading="lazy" 7</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-08.svg" width="320" height="200" alt="lazy 8"><figcaption>loading="lazy" 8</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-09.svg" width="320" height="200" alt="lazy 9"><figcaption>loading="lazy" 9</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-10.svg" width="320" height="200" alt="lazy 10"><figcaption>loading="lazy" 10</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-11.svg" width="320" height="200" alt="lazy 11"><figcaption>loading="lazy" 11</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-12.svg" width="320" height="200" alt="lazy 12"><figcaption>loading="lazy" 12</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-13.svg" width="320" height="200" alt="lazy 13"><figcaption>loading="lazy" 13</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-14.svg" width="320" height="200" alt="lazy 14"><figcaption>loading="lazy" 14</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-15.svg" width="320" height="200" alt="lazy 15"><figcaption>loading="lazy" 15</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-16.svg" width="320" height="200" alt="lazy 16"><figcaption>loading="lazy" 16</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-17.svg" width="320" height="200" alt="lazy 17"><figcaption>loading="lazy" 17</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-18.svg" width="320" height="200" alt="lazy 18"><figcaption>loading="lazy" 18</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-19.svg" width="320" height="200" alt="lazy 19"><figcaption>loading="lazy" 19</figcaption></figure>
+    <figure><img loading="lazy" src="img/lazy-20.svg" width="320" height="200" alt="lazy 20"><figcaption>loading="lazy" 20</figcaption></figure>
+    <figure><img class="observed" data-src="img/observed-1.svg" width="320" height="200" alt="observed 1"><figcaption>IntersectionObserver 1</figcaption></figure>
+    <figure><img class="observed" data-src="img/observed-2.svg" width="320" height="200" alt="observed 2"><figcaption>IntersectionObserver 2</figcaption></figure>
+    <figure><img class="observed" data-src="img/observed-3.svg" width="320" height="200" alt="observed 3"><figcaption>IntersectionObserver 3</figcaption></figure>
+    <figure><img class="observed" data-src="img/observed-4.svg" width="320" height="200" alt="observed 4"><figcaption>IntersectionObserver 4</figcaption></figure>
+  </main>
+  <p id="status">loaded: 0 of 24</p>
+  <script>
+    const images = Array.from(document.images);
+    const status = document.getElementById('status');
+    const count = () => {
+      const loaded = images.filter((img) => img.complete && img.naturalWidth > 0).length;
+      status.textContent = `loaded: ${loaded} of ${images.length}`;
+    };
+    images.forEach((img) => img.addEventListener('load', count));
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.src = entry.target.dataset.src;
+        observer.unobserve(entry.target);
+      }
+    });
+    document.querySelectorAll('img.observed').forEach((img) => observer.observe(img));
+    count();
+  </script>
+</body>
+</html>

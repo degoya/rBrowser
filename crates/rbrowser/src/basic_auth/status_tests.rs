@@ -38,7 +38,8 @@ async fn the_shell_asks_for_every_environment() {
     assert_eq!(
         answer,
         Ok(CoreToShell::BasicAuthStatus {
-            environments: expected
+            environments: expected,
+            store: crate::basic_auth::store::kind(),
         })
     );
     assert!(ipc(&core, &ShellToCore::GetState).is_none());
@@ -54,4 +55,27 @@ async fn a_change_reaches_every_shell_page() {
         ),
         "the status is sent to the shell"
     );
+}
+
+/// Review w35: the store may wait for an unlock prompt, so the status and the dialog's answer
+/// are answered on a blocking thread, never on the thread the query came in on.
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn the_store_is_never_read_on_the_query_thread() {
+    let (_ui, core) = core();
+    assert!(is_off_thread(&ShellToCore::GetBasicAuthStatus));
+    assert!(is_off_thread(&ShellToCore::AuthPromptReply(
+        rb_ipc::AuthPromptReply {
+            id: 1,
+            sign_in: None
+        }
+    )));
+    assert!(!is_off_thread(&ShellToCore::GetState));
+    let (sent, answered) = tokio::sync::oneshot::channel();
+    let caller = std::thread::current().id();
+    dispatch_off_thread(&core, ShellToCore::GetBasicAuthStatus, move |answer| {
+        let _ = sent.send((answer, std::thread::current().id()));
+    });
+    let (answer, thread) = answered.await.expect("answered");
+    assert!(matches!(answer, Ok(CoreToShell::BasicAuthStatus { .. })));
+    assert_ne!(thread, caller);
 }

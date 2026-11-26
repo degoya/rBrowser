@@ -16,14 +16,16 @@
 /// - `struct <Name>;` with the attributes given (a doc comment), implementing
 ///   [`crate::PluginHost`]: `host` always; each interface named in `grants` through its
 ///   binding; every other one refused with [`crate::Capability::denied`] (`settings` answers
-///   `None`, `project-write` keeps the trait's refusal).
+///   `None`; `project-write`, `project-range` and `out-stream` keep the trait's refusal).
 /// - `from_wit`, `to_wit`, `severity_to_wit` and `finding_to_wit`, the conversions the plugin's
 ///   `Guest` implementations use (`.map_err(to_wit)`).
 ///
 /// The grants, in any order: `settings` (the manifest declares a settings schema), `views`,
 /// `evaluate`, `cdp`, `http`, `project` (`read` and `list`), `project_read` (`read` alone: a
-/// plugin that reads known files and never lists keeps the `list` import out), `project_write`,
-/// `out`, `findings`, `sidecar`. Anything else is a compile error.
+/// plugin that reads known files and never lists keeps the `list` import out), `project_range`
+/// (`project-range.read`, RB-099-24), `project_write`, `out`, `out_stream` (`out-stream`'s
+/// `begin`, `append` and `commit`, RB-099-24), `findings`, `sidecar`. Anything else is a compile
+/// error.
 ///
 /// ```ignore
 /// wit_bindgen::generate!({ /* the plugin's world */ generate_all });
@@ -66,8 +68,10 @@ macro_rules! guest_host {
             $crate::__guest_grant!(fetch [$($grant)*]);
             $crate::__guest_grant!(project_read [$($grant)*]);
             $crate::__guest_grant!(project_list [$($grant)*]);
+            $crate::__guest_grant!(project_range [$($grant)*]);
             $crate::__guest_grant!(project_write [$($grant)*]);
             $crate::__guest_grant!(out_write [$($grant)*]);
+            $crate::__guest_grant!(out_stream [$($grant)*]);
             $crate::__guest_grant!(report_findings [$($grant)*]);
             $crate::__guest_grant!(sidecar_call [$($grant)*]);
         }
@@ -86,16 +90,18 @@ macro_rules! __guest_known {
     (http $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (project $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (project_read $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
+    (project_range $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (project_write $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (out $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
+    (out_stream $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (findings $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     (sidecar $($rest:ident)*) => { $crate::__guest_known!($($rest)*); };
     ($other:ident $($rest:ident)*) => {
         compile_error!(concat!(
             "guest_host!: unknown grant `",
             stringify!($other),
-            "` (settings, views, evaluate, cdp, http, project, project_read, project_write, out, \
-             findings, sidecar)"
+            "` (settings, views, evaluate, cdp, http, project, project_read, project_range, \
+             project_write, out, out_stream, findings, sidecar)"
         ));
     };
 }
@@ -336,6 +342,22 @@ macro_rules! __guest_grant {
         }
     };
 
+    (project_range [project_range $($rest:ident)*]) => {
+        fn project_read_range(
+            &mut self,
+            path: &str,
+            offset: u64,
+            length: u32,
+        ) -> Result<(Vec<u8>, u64), $crate::Failure> {
+            rbrowser::plugin::project_range::read(path, offset, length).map_err(from_wit)
+        }
+    };
+    (project_range [$other:ident $($rest:ident)*]) => {
+        $crate::__guest_grant!(project_range [$($rest)*]);
+    };
+    // Not granted: the trait's own refusal.
+    (project_range []) => {};
+
     (project_write [project_write $($rest:ident)*]) => {
         fn project_write(
             &mut self,
@@ -365,6 +387,25 @@ macro_rules! __guest_grant {
             Err($crate::Capability::OutWrite.denied())
         }
     };
+
+    (out_stream [out_stream $($rest:ident)*]) => {
+        fn out_begin(&mut self, path: &str) -> Result<(), $crate::Failure> {
+            rbrowser::plugin::out_stream::begin(path).map_err(from_wit)
+        }
+
+        fn out_append(&mut self, bytes: &[u8]) -> Result<(), $crate::Failure> {
+            rbrowser::plugin::out_stream::append(bytes).map_err(from_wit)
+        }
+
+        fn out_commit(&mut self) -> Result<(), $crate::Failure> {
+            rbrowser::plugin::out_stream::commit().map_err(from_wit)
+        }
+    };
+    (out_stream [$other:ident $($rest:ident)*]) => {
+        $crate::__guest_grant!(out_stream [$($rest)*]);
+    };
+    // Not granted: the trait's own refusals.
+    (out_stream []) => {};
 
     (report_findings [findings $($rest:ident)*]) => {
         fn report_findings(&mut self, items: &[$crate::Finding]) -> Result<(), $crate::Failure> {
@@ -404,3 +445,7 @@ macro_rules! __guest_grant {
 #[cfg(test)]
 #[path = "guest_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "guest_large_tests.rs"]
+mod large_tests;

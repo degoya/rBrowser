@@ -42,8 +42,8 @@ pub struct RecorderStepAddParams {
     /// Add it switched off.
     #[serde(default)]
     pub disabled: Option<bool>,
-    /// The view `x`/`y` are in (a view id or a breakpoint id shown once); the active one when
-    /// absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent. The view
+    /// `x`/`y` are in.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// CSS px of the page: the element there becomes the step's.
@@ -88,8 +88,8 @@ pub struct RecorderStepTryParams {
     pub recording_id: String,
     /// The step's id.
     pub step_id: u32,
-    /// The view to try it in (a view id or a breakpoint id shown once); the active one when
-    /// absent.
+    /// One view: a view id or a breakpoint id shown once; the active view when absent. The view to
+    /// try the step in.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -97,7 +97,7 @@ pub struct RecorderStepTryParams {
 #[tool_router(router = recorder_steps_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Add a step to a stored recording (recordingId) after the step `after` (0: before the first; the end when absent). action is the step as recording.v1 writes it (click, dblclick, hover, fill, select, check, uncheck, press, scroll, navigate, waitForUrl, waitFor, wait { ms <= 10000 }, assert { visible | text | value | url }); with x and y (CSS px of the page in the view `target`, the active one when absent) the element at that point becomes the action's target, named as a recorded click names it, and onlyIn the breakpoints whose views have it. pauseMs is the pause before it at the pace recorded (automation.recorder.insertedStepPauseMs when absent). A secret field's fill (secret: true) is the recorder's own and refused (recorder.secret_step). The file is written over, checked against recording.v1; an open Recorder panel with unsaved edits keeps its draft. Answers the recording, the new step's id and the step count."
+        description = "Add a step to a stored recording (recordingId) after the step `after` (0: first; the end when absent). action is the step as recording.v1 writes it (click, dblclick, hover, fill, select, check, uncheck, press, scroll, navigate, waitForUrl, waitFor, wait { ms <= 10000 }, assert { visible | text | value | url }); with x and y (CSS px in the target view) the element at that point becomes its target and onlyIn the breakpoints that have it. pauseMs: the pause before it (automation.recorder.insertedStepPauseMs). A secret fill is refused (recorder.secret_step). Answers the recording, the new step's id and the step count."
     )]
     pub(crate) async fn recorder_step_add(
         &self,
@@ -130,7 +130,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Change one step of a stored recording: patch names what changes - name (null removes it), action (as recording.v1 writes it), onlyIn, disabled, pauseMs (null: the recorded pause; at most 10000). An action that adds or changes a secret field's fill is refused (recorder.secret_step). The file is written over, checked against recording.v1. Answers the recording and the step's id."
+        description = "Change one step of a stored recording: patch names what changes - name (null removes it), action (as recording.v1 writes it), onlyIn, disabled, pauseMs (null: the recorded pause; at most 10000). A secret field's fill is refused (recorder.secret_step). Answers the recording and the step's id."
     )]
     pub(crate) async fn recorder_step_update(
         &self,
@@ -138,7 +138,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = async {
             let args = serde_json::to_value(&params)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             self.step_tool("recorder_step_update", args).await
         }
         .await;
@@ -169,7 +169,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = async {
             let args = serde_json::to_value(&params)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             self.step_tool("recorder_step_toggle", args).await
         }
         .await;
@@ -177,7 +177,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Try one step of a stored recording alone in one view (target; the active one when absent), at the pace fast, as recorder_play plays it - even a step switched off. The page must be where the step expects it. Answers the run's result as recorder_play does; refused with flows.untrusted until a person trusts the workspace."
+        description = "Try one step of a stored recording alone in one view, at the pace fast, as recorder_play plays it - even a step switched off; the page must be where the step expects it. Answers as recorder_play; refused with flows.untrusted until a person trusts the workspace."
     )]
     pub(crate) async fn recorder_step_try(
         &self,

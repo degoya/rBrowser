@@ -165,3 +165,87 @@ fn project_headers_wait_for_trust() {
     let trusted = breakpoints(&args(json!(null)), &config, &[], true).expect("plan");
     assert_eq!(trusted.specs["mobile"].emulation.headers.len(), 1);
 }
+
+fn names(plan: &Breakpoints) -> Vec<&str> {
+    plan.run.iter().map(|bp| bp.name.as_str()).collect()
+}
+
+fn with_tablet(mut config: ProjectConfig) -> ProjectConfig {
+    config
+        .breakpoints
+        .insert(1, breakpoint("tablet", 768, EngineKind::Chromium));
+    config
+}
+
+#[test]
+fn visible_views_leave_out_the_hidden_selection() {
+    let mut config = with_tablet(config());
+    config.layout.hidden = vec!["tablet".to_owned(), "desktop".to_owned()];
+    let visible = args(json!({ "views": "visible" }));
+    let plan = breakpoints(&visible, &config, &[], true).expect("plan");
+    assert_eq!(names(&plan), ["mobile"]);
+    assert_eq!(plan.skipped, ["fox"]);
+    let all = breakpoints(&args(json!({ "views": "all" })), &config, &[], true).expect("plan");
+    assert_eq!(names(&all), ["mobile", "tablet", "desktop"]);
+}
+
+#[test]
+fn visible_views_follow_a_chosen_presets_hidden() {
+    let mut config = with_tablet(config());
+    let preset: rb_config::LayoutPreset =
+        serde_json::from_value(json!({ "mode": "grid", "hidden": ["mobile"] })).expect("preset");
+    // Choosing the preset writes its `hidden` as the selection (RB-080-41).
+    config.layout.hidden = preset.hidden.clone().expect("hidden");
+    config.layouts.presets.insert("wide".to_owned(), preset);
+    let plan = breakpoints(&args(json!({ "views": "visible" })), &config, &[], true).expect("plan");
+    assert_eq!(names(&plan), ["tablet", "desktop"]);
+}
+
+#[test]
+fn visible_views_in_a_grid_with_cells_are_the_cells() {
+    let mut config = with_tablet(config());
+    config.layout = serde_json::from_value(json!({
+        "columns": 2, "rows": 1,
+        "cells": [
+            { "breakpoint": "desktop", "col": 1, "row": 1 },
+            { "breakpoint": "tablet", "col": 2, "row": 1 }
+        ]
+    }))
+    .expect("layout");
+    let plan = breakpoints(&args(json!({ "views": "visible" })), &config, &[], true).expect("plan");
+    assert_eq!(names(&plan), ["tablet", "desktop"]);
+}
+
+#[test]
+fn no_visible_chromium_breakpoint_is_refused_naming_visible() {
+    let mut config = config();
+    config.layout = serde_json::from_value(json!({
+        "cells": [{ "breakpoint": "fox", "col": 1, "row": 1 }]
+    }))
+    .expect("layout");
+    let error =
+        breakpoints(&args(json!({ "views": "visible" })), &config, &[], true).expect_err("none");
+    assert_eq!(error, PlanError::NoVisibleBreakpoints);
+    assert_eq!(error.code(), "sitemap.error.no_breakpoints");
+    assert!(error.to_string().contains("visible"), "{error}");
+    let all = breakpoints(&args(json!(null)), &config, &[], true).expect("all");
+    assert_eq!(names(&all), ["mobile", "desktop"]);
+}
+
+#[test]
+fn run_json_keeps_the_list_resolved_at_the_start() {
+    let mut config = with_tablet(config());
+    config.layout.hidden = vec!["mobile".to_owned()];
+    let plan = breakpoints(&args(json!({ "views": "visible" })), &config, &[], true).expect("plan");
+    let run = rb_visual::sitemap::SitemapRun::new("r", "s", plan.run.clone(), &[], 0);
+    // A layout change after the start touches neither the plan nor what run.json records.
+    config.layout.hidden.clear();
+    let recorded = serde_json::to_value(&run).expect("serialises");
+    let recorded: Vec<&str> = recorded["breakpoints"]
+        .as_array()
+        .expect("breakpoints")
+        .iter()
+        .filter_map(|bp| bp["name"].as_str())
+        .collect();
+    assert_eq!(recorded, ["tablet", "desktop"]);
+}

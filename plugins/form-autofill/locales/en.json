@@ -7,7 +7,7 @@
         "capture": "Take form as preset"
       },
       "errors": {
-        "profile_unknown": "The autofill profile {name} is not in the settings (Settings > DevTools & Debugging > Form autofill > Profiles) or among the presets taken from forms.",
+        "profile_unknown": "The autofill profile {name} is not in the settings (Settings › DevTools & Debugging › Form autofill › Profiles) or among the presets taken from forms.",
         "capture_unsupported": "A {engine} view's form cannot be read yet; take it from a Chromium view.",
         "preset_exists": "A preset named {name} exists already.",
         "preset_in_settings": "{name} is a profile in the settings; choose another name.",
@@ -41,7 +41,7 @@
         "noProfile": "None",
         "profile": "Profile",
         "results": "Results",
-        "running": "Filling the views...",
+        "running": "Filling the views…",
         "seed": "Seed",
         "selector": "Form",
         "skipped": "skipped ({reason})",
@@ -118,7 +118,7 @@
           "truncated": "Only the first 300 fields were read.",
           "save": "Save preset",
           "cancel": "Cancel",
-          "reading": "Reading the form...",
+          "reading": "Reading the form…",
           "saved": "Saved the preset {name} with {count, plural, one {# field} other {# fields}}.",
           "readFailed": "The form could not be read: {text}",
           "saveFailed": "The preset was not saved: {text}",
@@ -156,7 +156,7 @@
       "settings": {
         "activeProfile": {
           "description": "The profile a fill uses when it names none - a settings profile, else a preset taken from a form; empty fills generated values only.",
-          "help": "The profile a fill uses when the command names none: a settings profile or a preset taken from a form. Example: qa. Empty fills generated values only.",
+          "help": "The profile a fill uses when the command names none: a settings profile or a preset taken from a form. Example: qa. If empty, it fills generated values only.",
           "label": "Profile used"
         },
         "invalidStrategy": {
@@ -165,8 +165,8 @@
           "label": "Invalid values"
         },
         "profiles": {
-          "description": "Test users with fixed values, each a name and its values by field kind (email, givenName, familyName, name, username, street, postalCode, city, region, country, phone, organization, url, birthday, ...), field name or field id. A profile replaces the generated value of the fields it names in a valid fill; password fields always get a generated password.",
-          "help": "Test users with fixed values: a name and values by field kind (email, givenName, street, ...), field name or field id. A profile overrides generated values; passwords are always generated. Example: name qa, values email qa@example.com.",
+          "description": "Test users with fixed values, each a name and its values by field kind (email, givenName, familyName, name, username, street, postalCode, city, region, country, phone, organization, url, birthday, …), field name or field id. A profile replaces the generated value of the fields it names in a valid fill; password fields always get a generated password.",
+          "help": "Test users with fixed values: a name and values by field kind (email, givenName, street, …), field name or field id. A profile overrides generated values; passwords are always generated. Example: name qa, values email qa@example.com.",
           "label": "Profiles"
         },
         "seed": {
@@ -176,7 +176,7 @@
         },
         "skipHidden": {
           "description": "Leaves fields alone that the view does not show (display: none, hidden), so each breakpoint fills what it shows.",
-          "help": "Leaves fields alone the view does not show (display: none, hidden), so each breakpoint fills what it shows. Off fills hidden fields too.",
+          "help": "Leaves fields alone the view does not show (display: none, hidden), so each breakpoint fills what it shows. When off, it fills hidden fields too.",
           "label": "Skip hidden fields"
         },
         "option": {
@@ -191,7 +191,7 @@
         },
         "captureHiddenInputs": {
           "label": "Take hidden inputs",
-          "description": "Takes the values of hidden inputs (type=hidden) into a preset taken from a form, and lets a fill set them from a profile or preset. Off leaves them out of both. A hidden input whose name looks like a token or secret is never taken.",
+          "description": "Takes the values of hidden inputs (type=hidden) into a preset taken from a form, and lets a fill set them from a profile or preset. When off, it leaves them out of both. A hidden input whose name looks like a token or secret is never taken.",
           "help": "Takes hidden inputs (type=hidden) into a preset taken from a form and fills them from it. Inputs named like a token or secret are never taken."
         },
         "settleMilliseconds": {
@@ -205,13 +205,13 @@
           "help": "How often one fill reads the form again for fields that appeared or became enabled; a later pass fills only empty fields. Example: 3."
         },
         "fillBudgetSeconds": {
-          "label": "Time for one fill (s)",
+          "label": "Time for one fill (seconds)",
           "description": "The most seconds one fill takes in all, every view and pass together. Past it no further pass and no further view starts, and the answer says the fill ran out of time.",
           "help": "Seconds one fill may take across all views and passes; a slow page stops at this limit and says so. Example: 30."
         },
         "tickConsent": {
           "label": "Tick consent boxes",
-          "description": "Ticks the checkboxes a valid fill finds asking for consent - privacy, terms, GDPR - even when the page does not mark them required, since a page often enables its submit button only then. A newsletter or marketing box is never one of them and stays left to the seed. Off leaves consent boxes to the seed too; required boxes are always ticked.",
+          "description": "Ticks the checkboxes a valid fill finds asking for consent - privacy, terms, GDPR - even when the page does not mark them required, since a page often enables its submit button only then. A newsletter or marketing box is never one of them and stays left to the seed. When off, it leaves consent boxes to the seed too; required boxes are always ticked.",
           "help": "Ticks privacy, terms and GDPR checkboxes in a valid fill, so a form that enables its submit button only then can be sent. Newsletter and marketing boxes are not ticked by this."
         }
       },

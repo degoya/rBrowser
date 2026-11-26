@@ -133,6 +133,12 @@ pub enum Request {
         /// As the MCP tool `sitemap_capture` takes them.
         args: crate::sitemap::tool::CaptureArgs,
     },
+    /// `rbrowser capture sitemap --list` (RB-099-09): find the pages without capturing one; the
+    /// answer is the discovery (`sitemap_discover`'s).
+    SitemapDiscover {
+        /// As the MCP tool `sitemap_discover` takes them.
+        args: crate::sitemap::discover_tool::DiscoverArgs,
+    },
     /// `rbrowser check` (RB-092-05): run the checks over every view, export the run and answer
     /// the `CheckAnswer`; the CLI decides its exit code from it.
     Check {
@@ -304,6 +310,10 @@ pub fn check(line: &[u8], nonce: &str) -> Result<Request, Refusal> {
         }
         Request::SitemapCapture { args } => match args.check() {
             Ok(()) => Ok(Request::SitemapCapture { args }),
+            Err(_) => Err(Refusal::BadRequest),
+        },
+        Request::SitemapDiscover { args } => match args.check() {
+            Ok(()) => Ok(Request::SitemapDiscover { args }),
             Err(_) => Err(Refusal::BadRequest),
         },
         Request::Check { args } => match args.check() {

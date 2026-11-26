@@ -11,6 +11,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 
@@ -40,9 +41,9 @@ pub struct ExtensionRemoveParams {
 #[tool_router(router = extensions_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The Chrome extensions of the Chromium views: enabled (engines.chromium.extensions.enabled), each unpacked folder of the person's list and each extension installed from the Chrome Web Store (source webStore) with its name, version, id, whether this start loaded it or why it is refused, restartNeeded when the set changed since the start, webStore (engines.chromium.extensions.allowWebStore), and a trusted project's recommendations (folders inside the project; a Web Store entry with installable true can be installed with extension_install). A read: no tool loads or removes an unpacked folder - that is the person's command in rBrowser (Extensions: load an unpacked extension, Ctrl+Shift+Space X O); a Web Store extension is removed with extension_remove after the person's word."
+        description = "The Chrome extensions of the Chromium views: enabled (engines.chromium.extensions.enabled), each unpacked folder of the person's list and each Web Store extension (source webStore) with name, version, id, whether this start loaded it or why it is refused, restartNeeded, webStore (engines.chromium.extensions.allowWebStore), and a trusted project's recommendations (installable true: extension_install takes it). Loading or removing an unpacked folder is the person's command, never a tool's."
     )]
-    pub(crate) async fn extension_list(&self) -> ToolResult {
+    pub(crate) async fn extension_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         let result = async {
             let answer: Value = self.backend.host_tool(LIST_TOOL, json!({})).await?;
             Ok(self.backend.mask(&answer))
@@ -52,7 +53,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Install an extension from the Chrome Web Store (id: the extension id or its store page URL). rBrowser downloads it from Google's update server, checks its CRX3 signatures (the developer's key is the id, the Web Store's key the publisher) and then asks the person in its window; only their Install unpacks it, and it loads into every Chromium view at the next start (restartNeeded true). Declined or not answered within ten minutes: code extensions.declined. Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off, settingsKey). No tool grants the confirmation."
+        description = "Install an extension from the Chrome Web Store (id: the extension id or its store URL). rBrowser downloads it, checks its CRX3 signatures and asks the person in its window; only their Install unpacks it, and it loads at the next start (restartNeeded). Declined or no answer within ten minutes: extensions.declined. Off while engines.chromium.extensions.allowWebStore is off (extensions.web_store_off)."
     )]
     pub(crate) async fn extension_install(
         &self,
@@ -70,7 +71,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Remove an extension installed from the Chrome Web Store (id: the extension id or its store page URL). rBrowser names it in its window and deletes its folder under the local store (every version, the pointer, staging leftovers) only on the person's Remove; what this start loaded stays loaded until the next start (restartNeeded true then). Not installed from the store: code extensions.not_installed; declined or not answered within ten minutes: code extensions.declined. Off while engines.chromium.extensions.allowWebStore is off (code extensions.web_store_off, settingsKey). Unpacked folders are never removed. No tool grants the confirmation."
+        description = "Remove an extension installed from the Chrome Web Store (id: the extension id or its store URL). rBrowser deletes it only on the person's Remove in its window (extensions.declined otherwise, also after ten minutes); what this start loaded stays until the next start (restartNeeded). Not from the store: extensions.not_installed. Off while engines.chromium.extensions.allowWebStore is off (extensions.web_store_off). Unpacked folders are never removed."
     )]
     pub(crate) async fn extension_remove(
         &self,

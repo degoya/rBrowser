@@ -26,12 +26,22 @@ export interface Input {
 
 const clamp = (value: number, low: number, high: number): number => Math.min(Math.max(value, low), high);
 
+/**
+ * The open image's size in image pixels. The canvas holds the image's pixels, or the scaled
+ * preview of a large one (RB-099-24); the session names the image's own size on the canvas then
+ * (`data-width`, `data-height`).
+ */
+export function imageSize(canvas: HTMLCanvasElement): { width: number; height: number } {
+  return { width: Number(canvas.dataset.width) || canvas.width, height: Number(canvas.dataset.height) || canvas.height };
+}
+
 /** The image pixel under the pointer. */
 export function toImage(canvas: HTMLCanvasElement, event: MouseEvent): number[] {
   const rect = canvas.getBoundingClientRect();
-  const sx = rect.width > 0 ? canvas.width / rect.width : 1;
-  const sy = rect.height > 0 ? canvas.height / rect.height : 1;
-  return [clamp((event.clientX - rect.left) * sx, 0, canvas.width), clamp((event.clientY - rect.top) * sy, 0, canvas.height)];
+  const { width, height } = imageSize(canvas);
+  const sx = rect.width > 0 ? width / rect.width : 1;
+  const sy = rect.height > 0 ? height / rect.height : 1;
+  return [clamp((event.clientX - rect.left) * sx, 0, width), clamp((event.clientY - rect.top) * sy, 0, height)];
 }
 
 const STEPS: Record<string, number[]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -110,8 +120,8 @@ export function attach(canvas: HTMLCanvasElement, hooks: InputHooks): Input {
       const distance = event.shiftKey ? 10 : 1;
       const from = cursor ?? hooks.start();
       cursor = [
-        clamp((from[0] ?? 0) + (step[0] ?? 0) * distance, 0, canvas.width),
-        clamp((from[1] ?? 0) + (step[1] ?? 0) * distance, 0, canvas.height),
+        clamp((from[0] ?? 0) + (step[0] ?? 0) * distance, 0, imageSize(canvas).width),
+        clamp((from[1] ?? 0) + (step[1] ?? 0) * distance, 0, imageSize(canvas).height),
       ];
       if (points[0]) points = extend(cursor);
       showProgress();

@@ -49,6 +49,28 @@ async fn an_error_reply_becomes_a_cdp_error() {
     }
 }
 
+/// RB-099-19: the result is taken out of the message, not copied - the caller gets it whole,
+/// and a reply without one answers null.
+#[tokio::test]
+async fn a_reply_hands_over_its_whole_result_or_null() {
+    let router = CdpRouter::new(Arc::new(Silent));
+    let result = json!({"tree": {"children": [{"id": 1}, {"id": 2}]}, "data": "x".repeat(4096)});
+    let call = router.call("DOM.getDocument", json!({}), None);
+    let answer = async {
+        tokio::task::yield_now().await;
+        router.on_message(json!({"id": 1, "result": result.clone(), "sessionId": "S1"}));
+    };
+    let (got, ()) = tokio::join!(call, answer);
+    assert_eq!(got.expect("answered"), result);
+    let call = router.call("Page.enable", json!({}), None);
+    let answer = async {
+        tokio::task::yield_now().await;
+        router.on_message(json!({"id": 2}));
+    };
+    let (got, ()) = tokio::join!(call, answer);
+    assert_eq!(got.expect("answered"), Value::Null);
+}
+
 #[tokio::test]
 async fn events_reach_every_subscriber_with_their_session() {
     let (fake, router) = FakeBrowser::connect();

@@ -21,10 +21,20 @@ async fn the_status_and_the_check_are_the_hosts_answers() {
         Ok(json!({ "installed": "0.9.0-beta.2", "offered": "0.9.0-beta.3", "state": "available" })),
     );
     let server = server(&fake);
-    let (error, status) = answer_json(&server.update_status().await.expect("answer"));
+    let (error, status) = answer_json(
+        &server
+            .update_status(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{status}");
     assert_eq!(status["state"], "idle");
-    let (error, checked) = answer_json(&server.update_check().await.expect("answer"));
+    let (error, checked) = answer_json(
+        &server
+            .update_check(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{checked}");
     assert_eq!(checked["offered"], "0.9.0-beta.3");
     assert_eq!(
@@ -45,7 +55,12 @@ async fn the_install_only_asks_the_person() {
         &host("update_install"),
         Ok(json!({ "asked": true, "installed": false, "offered": "0.9.0-beta.3" })),
     );
-    let (error, answer) = answer_json(&server(&fake).update_install().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .update_install(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["installed"], false);
     assert_eq!(fake.calls(), [(host("update_install"), json!({}))]);

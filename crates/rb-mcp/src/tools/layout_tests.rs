@@ -73,7 +73,7 @@ async fn view_set_breakpoint_targets_one_view() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], "target_not_single");
+    assert_eq!(answer["code"], "target.not_single");
 }
 
 /// A free size for one view: width, height and dpr reach `view.set_size` (RB-010-16).

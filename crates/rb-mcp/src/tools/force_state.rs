@@ -15,8 +15,8 @@ use crate::target::TargetArg;
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ForceStateParams {
-    /// `"all"`, a view id or a breakpoint id: the views to force in; the active view when
-    /// absent (every view for a `clear` without an element).
+    /// `"all"`, a view id or a breakpoint id; the active view when absent. A `clear` without an
+    /// element clears every view.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The states the element gets, replacing what it had: `hover`, `active`, `focus`,
@@ -46,7 +46,7 @@ pub struct ForceStateParams {
 #[tool_router(router = force_state_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Force CSS pseudo-class states on a page element so it stays styled as hovered, focused or active while nothing touches it - e.g. keep a CSS hover menu (li:hover > ul) open in every view to measure or screenshot it. Chromium's CSS.forcePseudoState: hover, active and focus-within reach every ancestor too, as a real hover does; menus that open only through JavaScript (mouseenter) do not react. The element: a point (x, y in CSS px of the page's viewport, in `view`; rBrowser's own overlays are passed over) - the same element is found in the other targeted views by the sync's selectors - or a CSS selector, matched in each view. states: hover, active, focus, focus-visible, focus-within, visited, target; default [\"hover\"], [] takes the element's back. clear: true takes the element's states back, or without point and selector every forced state of the target (default then every view). States stay until cleared or the page navigates; the status bar says while states are forced. Only Chromium views. target: \"all\", a view id or a breakpoint id; default the active view. Answers views: [{ view, states } | { view, missing: true } | { view, error }] and forced: the views with forced states."
+        description = "Force CSS pseudo-class states (Chromium's CSS.forcePseudoState) on a page element so it stays styled as hovered, focused or active - e.g. keep a CSS hover menu open to measure or screenshot it; menus opened only by JavaScript do not react. The element: x/y in CSS px of the viewport of `view` (found in the other targeted views by the sync's selectors) or a CSS selector, matched in each view. states default [\"hover\"]; [] or clear: true takes them back, clear without point and selector clears every forced state. States stay until cleared or the page navigates. Only Chromium views. Answers views: [{ view, states } | { view, missing: true } | { view, error }] and forced."
     )]
     pub(crate) async fn views_force_state(
         &self,
@@ -108,7 +108,7 @@ impl RbMcpServer {
 }
 
 fn invalid(text: &str) -> ToolFailure {
-    ToolFailure::new("invalid_arguments", text)
+    ToolFailure::new("args.invalid", text)
 }
 
 #[cfg(test)]

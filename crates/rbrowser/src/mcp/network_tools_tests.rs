@@ -61,7 +61,7 @@ fn a_continue_with_edits_needs_evaluate_and_without_edits_does_not() {
     let (id, rx) = rules.held().hold(held("https://a.test/api"));
     let edited = json!({ "id": id, "edits": { "status": 500 } });
     let refused = continue_held(&rules, false, &edited).expect_err("refused");
-    assert_eq!(refused.code, "evaluate_disabled");
+    assert_eq!(refused.code, "evaluate.disabled");
     assert_eq!(refused.settings_key.as_deref(), Some("mcp.allowEvaluate"));
     assert_eq!(rules.held().len(), 1, "still held");
     assert!(
@@ -89,7 +89,7 @@ fn a_continue_with_edits_needs_evaluate_and_without_edits_does_not() {
         matches!(rx.blocking_recv(), Ok(Resolution::Continue(edits)) if edits.status == Some(500))
     );
     let missing = abort(&rules, &json!({ "id": "h99" })).expect_err("unknown");
-    assert_eq!(missing.code, "held_not_found");
+    assert_eq!(missing.code, "network.held_not_found");
     assert!(abort(&rules, &json!({})).is_err());
 }
 
@@ -202,7 +202,7 @@ async fn compose_and_repeat_are_gated_by_the_setting_and_answer_masked() {
     let gone = repeat(&rules, &json!({ "view": 1, "requestId": "gone" }))
         .await
         .expect_err("gone");
-    assert_eq!(gone.code, "request_not_found");
+    assert_eq!(gone.code, "network.request_not_found");
     assert!(
         repeat(&rules, &json!({ "requestId": "known" }))
             .await
@@ -232,7 +232,7 @@ fn held_bodies_stay_back_without_evaluate_and_the_plugins_tools_keep_the_gates()
         plugin_gate("networkpanel_debug", false)
             .expect_err("gated")
             .code,
-        "evaluate_disabled"
+        "evaluate.disabled"
     );
     assert!(plugin_gate("networkpanel_debug", true).is_ok());
     assert!(plugin_gate("networkpanel_list", false).is_ok());

@@ -1,6 +1,11 @@
 //! Draws the annotations onto the image, in their order, and crops last. The geometry (arrow
 //! heads, markers, the highlight's opacity) is the panel's too (`web/src/panel/draw.ts`), so the
 //! preview and the file agree.
+//!
+//! [`draw_all`] draws onto a band of the image as well (RB-099-24, `crate::band`): its row 0 is
+//! the image's row `top`, every shape moved up by `top` whole pixels. Shapes and rectangles are
+//! filled as paths either way (a rectangle too: tiny-skia's own rectangle fill rounds otherwise
+//! than its path fill), so a band draws what the whole image draws.
 
 use rb_plugin_api::Failure;
 use tiny_skia::{
@@ -43,7 +48,7 @@ fn stroke(width: f32, round: bool) -> Stroke {
     }
 }
 
-fn polyline(pixmap: &mut Pixmap, points: &[[f32; 2]], color: Rgb, width: f32) {
+fn polyline(pixmap: &mut Pixmap, at: Transform, points: &[[f32; 2]], color: Rgb, width: f32) {
     let mut builder = PathBuilder::new();
     let Some(first) = points.first() else {
         return;
@@ -51,13 +56,7 @@ fn polyline(pixmap: &mut Pixmap, points: &[[f32; 2]], color: Rgb, width: f32) {
     builder.move_to(first[0], first[1]);
     if points.len() == 1 {
         if let Some(dot) = PathBuilder::from_circle(first[0], first[1], width / 2.0) {
-            pixmap.fill_path(
-                &dot,
-                &paint(color, 255),
-                FillRule::Winding,
-                Transform::identity(),
-                None,
-            );
+            pixmap.fill_path(&dot, &paint(color, 255), FillRule::Winding, at, None);
         }
         return;
     }
@@ -65,18 +64,12 @@ fn polyline(pixmap: &mut Pixmap, points: &[[f32; 2]], color: Rgb, width: f32) {
         builder.line_to(point[0], point[1]);
     }
     if let Some(path) = builder.finish() {
-        pixmap.stroke_path(
-            &path,
-            &paint(color, 255),
-            &stroke(width, true),
-            Transform::identity(),
-            None,
-        );
+        pixmap.stroke_path(&path, &paint(color, 255), &stroke(width, true), at, None);
     }
 }
 
 /// A line from `from` to the base of a filled head whose tip is `to`.
-fn arrow(pixmap: &mut Pixmap, from: [f32; 2], to: [f32; 2], color: Rgb, width: f32) {
+fn arrow(pixmap: &mut Pixmap, at: Transform, from: [f32; 2], to: [f32; 2], color: Rgb, width: f32) {
     let (dx, dy) = (to[0] - from[0], to[1] - from[1]);
     let length = dx.hypot(dy);
     if length < 1.0 {
@@ -85,7 +78,7 @@ fn arrow(pixmap: &mut Pixmap, from: [f32; 2], to: [f32; 2], color: Rgb, width: f
     let (ux, uy) = (dx / length, dy / length);
     let head = (width * ARROW_HEAD_WIDTHS).max(ARROW_HEAD_MIN).min(length);
     let base = [to[0] - ux * head, to[1] - uy * head];
-    polyline(pixmap, &[from, base], color, width);
+    polyline(pixmap, at, &[from, base], color, width);
     let half = head / 2.0;
     let mut builder = PathBuilder::new();
     builder.move_to(to[0], to[1]);
@@ -93,45 +86,55 @@ fn arrow(pixmap: &mut Pixmap, from: [f32; 2], to: [f32; 2], color: Rgb, width: f
     builder.line_to(base[0] + uy * half, base[1] - ux * half);
     builder.close();
     if let Some(path) = builder.finish() {
-        pixmap.fill_path(
-            &path,
-            &paint(color, 255),
-            FillRule::Winding,
-            Transform::identity(),
-            None,
-        );
+        pixmap.fill_path(&path, &paint(color, 255), FillRule::Winding, at, None);
     }
 }
 
-fn fill_rect(pixmap: &mut Pixmap, rect: [f32; 4], color: Rgb, alpha: u8) {
+fn fill_rect(pixmap: &mut Pixmap, at: Transform, rect: [f32; 4], color: Rgb, alpha: u8) {
     if let Some(rect) = Rect::from_xywh(rect[0], rect[1], rect[2], rect[3]) {
-        pixmap.fill_rect(rect, &paint(color, alpha), Transform::identity(), None);
+        let path = PathBuilder::from_rect(rect);
+        pixmap.fill_path(&path, &paint(color, alpha), FillRule::Winding, at, None);
     }
 }
 
-fn marker(pixmap: &mut Pixmap, x: f32, y: f32, number: u32, color: Rgb, size: f32) {
+/// `at` moves a shape up to the pixmap's rows; the number's glyphs move as far (`-at.ty`).
+fn marker(pixmap: &mut Pixmap, at: Transform, x: f32, y: f32, number: u32, color: Rgb, size: f32) {
     if let Some(circle) = PathBuilder::from_circle(x, y, size * MARKER_RADIUS) {
-        pixmap.fill_path(
-            &circle,
-            &paint(color, 255),
-            FillRule::Winding,
-            Transform::identity(),
-            None,
-        );
+        pixmap.fill_path(&circle, &paint(color, 255), FillRule::Winding, at, None);
     }
     let label = number.to_string();
     let em = size * MARKER_TEXT;
     let left = x - text::width(&label, em) / 2.0;
-    let top = y + DIGIT_HALF * em - em * text::ASCENT / text::UNITS_PER_EM;
-    text::draw(pixmap, left, top, &label, em, Rgb(255, 255, 255));
+    let glyph_top = y + DIGIT_HALF * em - em * text::ASCENT / text::UNITS_PER_EM + at.ty;
+    text::draw(pixmap, left, glyph_top, &label, em, Rgb(255, 255, 255));
 }
 
-/// `annotations` drawn onto `pixmap` in order, the crop (if any) applied last. A crop that
-/// leaves nothing of the image is `bad_annotation` with reason `crop`.
-pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, Failure> {
-    let (width, height) = (pixmap.width(), pixmap.height());
+/// The crop of `annotations` (the last one, as the panel applies it) as the whole pixels it
+/// keeps of a `width` x `height` image, with its index; a crop that leaves nothing of the image
+/// is `bad_annotation` with reason `crop`.
+pub fn crop_of(
+    annotations: &[Annotation],
+    width: u32,
+    height: u32,
+) -> Result<Option<(usize, Region)>, Failure> {
     let mut crop = None;
     for (index, annotation) in annotations.iter().enumerate() {
+        if let Annotation::Crop { x, y, w, h } = annotation {
+            let region = Region::clip(*x, *y, *w, *h, width, height)
+                .ok_or_else(|| bad_annotation(index, "crop"))?;
+            crop = Some((index, region));
+        }
+    }
+    Ok(crop)
+}
+
+/// Every annotation but the crop drawn in order onto `pixmap`, which holds the rows from `top`
+/// of an image `height` rows high (and as wide as the pixmap).
+pub fn draw_all(pixmap: &mut Pixmap, top: u32, height: u32, annotations: &[Annotation]) {
+    let width = pixmap.width();
+    let at = Transform::from_translate(0.0, -(top as f32));
+    let shift = top as f32;
+    for annotation in annotations {
         match annotation {
             Annotation::Rect {
                 x,
@@ -143,14 +146,14 @@ pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, 
                 fill,
             } => {
                 if *fill {
-                    fill_rect(&mut pixmap, [*x, *y, *w, *h], *color, 255);
+                    fill_rect(pixmap, at, [*x, *y, *w, *h], *color, 255);
                 } else if let Some(rect) = Rect::from_xywh(*x, *y, *w, *h) {
                     let path = PathBuilder::from_rect(rect);
                     pixmap.stroke_path(
                         &path,
                         &paint(*color, 255),
                         &stroke(*width, false),
-                        Transform::identity(),
+                        at,
                         None,
                     );
                 }
@@ -162,7 +165,7 @@ pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, 
                 y2,
                 color,
                 width,
-            } => arrow(&mut pixmap, [*x1, *y1], [*x2, *y2], *color, *width),
+            } => arrow(pixmap, at, [*x1, *y1], [*x2, *y2], *color, *width),
             Annotation::Line {
                 x1,
                 y1,
@@ -170,28 +173,28 @@ pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, 
                 y2,
                 color,
                 width,
-            } => polyline(&mut pixmap, &[[*x1, *y1], [*x2, *y2]], *color, *width),
+            } => polyline(pixmap, at, &[[*x1, *y1], [*x2, *y2]], *color, *width),
             Annotation::Freehand {
                 points,
                 color,
                 width,
-            } => polyline(&mut pixmap, points, *color, *width),
+            } => polyline(pixmap, at, points, *color, *width),
             Annotation::Text {
                 x,
                 y,
                 text: words,
                 color,
                 size,
-            } => text::draw(&mut pixmap, *x, *y, words, *size, *color),
+            } => text::draw(pixmap, *x, *y - shift, words, *size, *color),
             Annotation::Marker {
                 x,
                 y,
                 number,
                 color,
                 size,
-            } => marker(&mut pixmap, *x, *y, *number, *color, *size),
+            } => marker(pixmap, at, *x, *y, *number, *color, *size),
             Annotation::Highlight { x, y, w, h, color } => {
-                fill_rect(&mut pixmap, [*x, *y, *w, *h], *color, HIGHLIGHT_ALPHA);
+                fill_rect(pixmap, at, [*x, *y, *w, *h], *color, HIGHLIGHT_ALPHA);
             }
             Annotation::Redact {
                 x,
@@ -203,19 +206,23 @@ pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, 
             } => {
                 if let Some(region) = Region::clip(*x, *y, *w, *h, width, height) {
                     match mode {
-                        RedactMode::Pixelate => redact::pixelate(&mut pixmap, region, *block),
-                        RedactMode::Blur => redact::blur(&mut pixmap, region, *block),
-                        RedactMode::Black => redact::black(&mut pixmap, region),
+                        RedactMode::Pixelate => redact::pixelate(pixmap, region, *block, top),
+                        RedactMode::Blur => redact::blur(pixmap, region, *block, top),
+                        RedactMode::Black => redact::black(pixmap, region, top),
                     }
                 }
             }
-            Annotation::Crop { x, y, w, h } => {
-                let region = Region::clip(*x, *y, *w, *h, width, height)
-                    .ok_or_else(|| bad_annotation(index, "crop"))?;
-                crop = Some((index, region));
-            }
+            Annotation::Crop { .. } => {}
         }
     }
+}
+
+/// `annotations` drawn onto `pixmap` in order, the crop (if any) applied last. A crop that
+/// leaves nothing of the image is `bad_annotation` with reason `crop`.
+pub fn render(mut pixmap: Pixmap, annotations: &[Annotation]) -> Result<Pixmap, Failure> {
+    let (width, height) = (pixmap.width(), pixmap.height());
+    let crop = crop_of(annotations, width, height)?;
+    draw_all(&mut pixmap, 0, height, annotations);
     let Some((index, region)) = crop else {
         return Ok(pixmap);
     };

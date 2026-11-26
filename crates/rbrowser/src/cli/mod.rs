@@ -13,6 +13,7 @@
 //! findings exported and an exit code from them ([`check`], RB-092-05).
 
 pub mod capture;
+pub mod capture_list;
 pub mod check;
 pub mod console;
 pub mod engines;

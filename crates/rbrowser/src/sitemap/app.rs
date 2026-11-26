@@ -16,14 +16,15 @@ use rb_visual::sitemap_store::OUT_DIR;
 use rb_visual::{BaselineStore, DiffOptions};
 use serde_json::{Value, json};
 
-use super::defs::{CANCEL, CAPTURE, GALLERY, PANEL};
+use super::defs::{CANCEL, CAPTURE, CAPTURE_VISIBLE, GALLERY, PANEL};
+use super::discover_tool::DISCOVER_TOOL;
 use super::plan::{self, PlanError};
 use super::runs::{Ended, NewRun, PluginTools, RunError, RunEvents, Runs, Services, Setup, Start};
 use super::settings::Effective;
 use super::sink::CompareWith;
 use super::tool::{
-    CANCEL_TOOL, CAPTURE_TOOL, CancelAnswer, CaptureArgs, CaptureStarted, GALLERY_TOOL, RunArgs,
-    STATUS_TOOL, StatusAnswer,
+    CANCEL_TOOL, CAPTURE_TOOL, CancelAnswer, CaptureArgs, CaptureStarted, CaptureViews,
+    GALLERY_TOOL, RunArgs, STATUS_TOOL, StatusAnswer,
 };
 use super::{feedback, gallery};
 use crate::control::Core;
@@ -202,6 +203,11 @@ pub async fn capture(core: &Arc<Core>, args: CaptureArgs) -> Result<CaptureStart
                 specs: breakpoints.specs,
             }
         }
+        None if args.chooses_pages() => {
+            // The pages chosen from a discovery, or listed in a file (RB-099-09).
+            let breakpoints = plan::breakpoints(&args, &config, &devices, trusted)?;
+            super::discover::selected_run(core, &args, breakpoints).await?
+        }
         None => {
             let breakpoints = plan::breakpoints(&args, &config, &devices, trusted)?;
             let (call, project, folder) = (args.clone(), config.clone(), root.clone());
@@ -292,16 +298,41 @@ fn failed(error: &RunError) -> CommandError {
     CommandError::Failed(error.to_string())
 }
 
+/// The capture arguments of command `id`: `sitemap.capture_visible` (RB-099-08) is
+/// `sitemap.capture` with `views: "visible"`, whatever `views` the call names.
+fn command_args(id: &str, args: &Value) -> Result<CaptureArgs, String> {
+    let mut args = CaptureArgs::parse(args)?;
+    if id == CAPTURE_VISIBLE {
+        args.views = Some(CaptureViews::Visible);
+        args.check()?;
+    }
+    Ok(args)
+}
+
 /// Runs the command `id` (registered by `super::defs`). `sitemap.capture` answers at once and
 /// goes on on the core's runtime (a command may come from the CEF UI thread); a start that fails
-/// is a notice, a start while a capture runs shows that one (`super::feedback::busy`).
+/// is a notice, a start while a capture runs shows that one (`super::feedback::busy`). The start
+/// page's call (with `discovery`) waits for the start and answers its refusal (RB-099-09).
 pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
     match id {
-        CAPTURE => {
-            let args = CaptureArgs::parse(args).map_err(CommandError::InvalidArgs)?;
+        CAPTURE | CAPTURE_VISIBLE => {
+            let args = command_args(id, args).map_err(CommandError::InvalidArgs)?;
+            if id == CAPTURE && args == CaptureArgs::default() {
+                // The person's start finds the pages first, in the start page (RB-099-09).
+                super::discover::open_start(core);
+                return Ok(json!({ "opened": super::discover::START_ROUTE }));
+            }
+            let from_page = args.discovery.is_some();
             let core = core
                 .arc()
                 .ok_or_else(|| CommandError::Failed("the window is closed".to_owned()))?;
+            if from_page {
+                // The start page waits for the start, not the run, and shows a refusal itself;
+                // it closes once the run has started (RB-099-09). A command runs off the UI thread.
+                let started = capture_blocking(&core, args).map_err(CommandError::Failed)?;
+                core.ui().close_settings_window();
+                return Ok(started);
+            }
             let runtime = core.runtime().clone();
             runtime.spawn(async move {
                 match capture(&core, args).await {
@@ -374,15 +405,21 @@ pub fn capture_blocking(core: &Arc<Core>, args: CaptureArgs) -> Result<Value, St
 }
 
 /// The MCP tools the host runs here.
-pub const TOOLS: [&str; 4] = [CAPTURE_TOOL, STATUS_TOOL, CANCEL_TOOL, GALLERY_TOOL];
+pub const TOOLS: [&str; 5] = [
+    CAPTURE_TOOL,
+    STATUS_TOOL,
+    CANCEL_TOOL,
+    GALLERY_TOOL,
+    DISCOVER_TOOL,
+];
 
 fn invalid(message: String) -> rb_mcp::ToolFailure {
-    rb_mcp::ToolFailure::new("invalid_arguments", message)
+    rb_mcp::ToolFailure::new("args.invalid", message)
 }
 
 fn tool_answer(answer: &impl serde::Serialize) -> Result<Value, rb_mcp::ToolFailure> {
     serde_json::to_value(answer)
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 /// Runs the MCP tool `name` (one of [`TOOLS`]) with `args`; the capture on the core's runtime.
@@ -403,7 +440,7 @@ pub async fn host_tool(
                 .runtime()
                 .spawn(async move { capture(&run, args).await })
                 .await
-                .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+                .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
                 .map_err(|error| tool_failure(&error))?;
             tool_answer(&started)
         }
@@ -415,13 +452,14 @@ pub async fn host_tool(
             let args = RunArgs::parse(&args).map_err(invalid)?;
             tool_answer(&cancel(core, &args).map_err(|error| tool_failure(&error))?)
         }
+        DISCOVER_TOOL => super::discover::host_tool(core, args).await,
         GALLERY_TOOL => {
             let args = RunArgs::parse(&args).map_err(invalid)?;
             let opened = gallery::open(core, &args, gallery::Caller::Agent);
             tool_answer(&opened.map_err(|error| tool_failure(&error))?)
         }
         other => Err(rb_mcp::ToolFailure::new(
-            "unknown_tool",
+            "tool.unknown",
             format!("the host runs no tool `{other}`"),
         )),
     }

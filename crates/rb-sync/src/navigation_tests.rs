@@ -48,6 +48,22 @@ fn lead(nav: &mut NavigationSync, from: &str, to: &str) -> u64 {
     settle.generation
 }
 
+/// RB-099-18: what a test waits on - every commit is noted, only a leading one arms a check.
+#[test]
+fn every_commit_is_noted_and_only_a_leading_one_counts_as_armed() {
+    let mut nav = nav();
+    assert_eq!((nav.url(MOBILE), nav.generation()), (None, 0));
+    assert!(nav.committed(MOBILE, "http://a.test/x", false).is_none());
+    assert_eq!(nav.url(MOBILE), Some("http://a.test/x"));
+    assert_eq!(nav.generation(), 0, "a follower's commit arms nothing");
+    let settle = nav
+        .committed(LEADER, "http://a.test/y", true)
+        .expect("armed");
+    assert_eq!(nav.url(LEADER), Some("http://a.test/y"));
+    assert_eq!(nav.generation(), settle.generation);
+    assert_eq!(nav.generation(), 1);
+}
+
 #[test]
 fn only_the_leaders_navigation_arms_the_settle_check() {
     let mut nav = nav();

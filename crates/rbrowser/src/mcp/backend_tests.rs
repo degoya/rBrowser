@@ -155,7 +155,7 @@ async fn cdp_to_a_view_without_a_session_fails_cleanly() {
         .cdp(view, "Runtime.evaluate", json!({ "expression": "1" }))
         .await
         .expect_err("not attached");
-    assert_eq!(failure.code, "cdp_failed");
+    assert_eq!(failure.code, "cdp.failed");
     assert_eq!(backend.options().max_answer_bytes, 262_144);
     let masked = backend.mask(&json!({ "url": "https://u:topsecretpw@a.test/" }));
     assert!(!masked.to_string().contains("topsecretpw"));
@@ -178,4 +178,26 @@ async fn mcp_cannot_add_a_portal_asset_origin() {
         .expect_err("a person's decision");
     assert!(refused.to_string().contains("MCP cannot"), "{refused}");
     assert_eq!(std::fs::read_to_string(&path).expect("on disk"), before);
+}
+
+/// RB-099-25: the backend runs a tool's command marked as MCP's. A person's check run opens the
+/// dock folded to its rail (the default at start) at the findings; `checks_run` - the same
+/// command from a tool - answers with them and keeps the fold.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_mcp_check_run_keeps_the_fold_and_a_persons_opens_it() {
+    use rb_config::PanelDockState;
+    let core = core();
+    assert_eq!(core.user_settings().panels.dock_state, PanelDockState::Rail);
+    let backend = CoreBackend::new(&core, Arc::new(LogStore::default()));
+    backend
+        .run_command(crate::checks::RUN_ALL_COMMAND, Value::Null)
+        .expect("runs without any check plugin");
+    assert_eq!(core.user_settings().panels.dock_state, PanelDockState::Rail);
+    assert!(
+        !crate::mcp::origin::is_mcp(),
+        "the mark ended with the call"
+    );
+    core.run_command(crate::checks::RUN_ALL_COMMAND, Value::Null)
+        .expect("runs without any check plugin");
+    assert_eq!(core.user_settings().panels.dock_state, PanelDockState::Open);
 }

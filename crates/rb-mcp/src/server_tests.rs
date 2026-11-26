@@ -92,6 +92,7 @@ const CORE_TOOLS: &[&str] = &[
     "settings_set",
     "sitemap_cancel",
     "sitemap_capture",
+    "sitemap_discover",
     "sitemap_gallery",
     "sitemap_status",
     "snapshot",

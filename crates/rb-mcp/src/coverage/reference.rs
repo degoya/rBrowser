@@ -1,5 +1,5 @@
-//! `schema/mcp-tools.v1.json`: every tool as an agent sees it (name, description, the schema of
-//! its arguments) plus what the coverage tables say about it (area, `target`, guard, why no
+//! `schema/mcp-tools.v1.json`: every tool as an agent sees it (name, description, annotations,
+//! the schema of its arguments) plus what the coverage tables say about it (area, `target`, guard, why no
 //! command runs it), the pending tools with their jobs, and the prompts and resources with their
 //! arguments and URIs (RB-095-01). A test writes it
 //! (`RB_UPDATE_SCHEMA=1`) and fails while it is stale; `scripts/mcp-reference.sh` renders the
@@ -28,6 +28,10 @@ pub fn document() -> String {
             entry.insert("name".to_owned(), json!(name));
             entry.insert("area".to_owned(), json!(area));
             entry.insert("description".to_owned(), json!(tool.description));
+            entry.insert(
+                "annotations".to_owned(),
+                json!(crate::annotations::of(name)),
+            );
             let target = target_support(&tool).map_or("invalid", |support| support.as_str());
             entry.insert("target".to_owned(), json!(target));
             if let Some(acts_on) = tables::untargeted(name) {

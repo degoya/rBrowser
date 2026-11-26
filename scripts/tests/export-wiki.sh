@@ -3,7 +3,8 @@
 # scripts/export-wiki.sh against a wiki in a temp directory: it writes
 # reference/configuration.md from the checked-in schemas, a second run changes nothing, --check
 # passes on a fresh page and fails on a stale or missing one, --dry-run writes nothing, a
-# missing wiki is skipped by --check and refused by a write, and a broken schema is exit 2.
+# missing wiki is skipped by --check and refused by a write, and a broken schema is exit 2. The
+# page carries no job id: a parenthesis of them goes, one left in prose is exit 2 (RB-099-22).
 #
 # Pure bash and python: it runs at once. check.sh --preflight runs it.
 #
@@ -35,6 +36,7 @@ expect_true "it marks a protected key" \
 expect_true "it lists list entries and required fields" \
     'grep -qF "| \`breakpoints[].id\` | string, required |" "$PAGE"'
 expect_true "the example comes from the fixture" 'grep -qF "\"desktop-ff\"" "$PAGE"'
+expect_true "the page names no job id" '! grep -qE "RB-[0-9]{3}-[0-9]{2}" "$PAGE"'
 
 before="$(cat "$PAGE")"
 run_status "$ROOT/scripts/export-wiki.sh"
@@ -72,6 +74,22 @@ echo "{" > "$FAKE/schema/config.v1.json"
 run_status python3 -I "$ROOT/scripts/lib/export_wiki.py" "$FAKE" "$WIKI"
 expect_status "a broken schema is exit 2" 2
 expect_output "naming the file" "config.v1.json"
+
+cat > "$FAKE/schema/config.v1.json" <<'EOF'
+{ "type": "object", "properties": {
+  "a": { "type": "boolean", "description": "Kept on (RB-010-05)." },
+  "b": { "type": "boolean", "description": "Off (a print view, RB-080-10)." } } }
+EOF
+run_status python3 -I "$ROOT/scripts/lib/export_wiki.py" "$FAKE" "$WIKI"
+expect_status "job ids in parentheses are dropped" 0
+expect_true "the parenthesis of a job id goes" 'grep -qF "| Kept on. |" "$PAGE"'
+expect_true "and a job id inside another one" 'grep -qF "| Off (a print view). |" "$PAGE"'
+cat > "$FAKE/schema/config.v1.json" <<'EOF'
+{ "type": "object", "properties": { "a": { "type": "boolean", "description": "RB-094-23: kept." } } }
+EOF
+run_status python3 -I "$ROOT/scripts/lib/export_wiki.py" "$FAKE" "$WIKI"
+expect_status "a job id left in prose is exit 2" 2
+expect_output "naming it" "names the job id RB-094-23"
 
 run_status "$ROOT/scripts/export-wiki.sh" --bogus
 expect_status "an unknown option is exit 2" 2

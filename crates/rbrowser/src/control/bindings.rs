@@ -125,7 +125,6 @@ impl Core {
         Ok(self.commands_sent())
     }
 
-    /// Keeps the user settings in step with the registry and writes them back.
     /// The registry's commands after an edit of the bindings, sent to the shell as well: its
     /// tooltips name shortcuts and follow the edit at once (RB-080-60).
     fn commands_sent(&self) -> CoreToShell {
@@ -134,7 +133,12 @@ impl Core {
         commands
     }
 
+    /// Keeps the user settings in step with the registry and writes them back - under the
+    /// settings' one-change lock (RB-099-19): a setting change reads the user file and
+    /// the settings in effect and writes them back whole, so a binding written beside it would be
+    /// put back to the old one.
     fn bindings_changed(&self) {
+        let _one_at_a_time = lock(&crate::settings_window::ONE_CHANGE);
         let mut bindings = lock(&self.skipped).clone();
         bindings.extend(lock(&self.registry).user_bindings());
         lock(&self.user).shortcuts.bindings = bindings.clone();
@@ -277,3 +281,7 @@ pub fn write_key(path: &Path, key: &[&str], value: Value) -> Result<(), rb_confi
     }
     rb_config::write_json(path, &document)
 }
+
+#[cfg(test)]
+#[path = "bindings_tests.rs"]
+mod tests;

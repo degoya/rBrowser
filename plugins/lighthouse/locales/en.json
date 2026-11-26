@@ -4,14 +4,15 @@
       "commands": {
         "run": "Run Lighthouse in every breakpoint",
         "open_report": "Open the Lighthouse report",
-        "delete_run": "Delete a Lighthouse run"
+        "delete_run": "Delete a Lighthouse run",
+        "run_visible": "Run Lighthouse in the visible views"
       },
       "errors": {
         "bad_answer": "Lighthouse's answer for {breakpoint} could not be read: {reason}",
         "bad_args": "Lighthouse got arguments it cannot read: {reason}",
-        "browser_missing": "The Lighthouse browser chosen in Settings > Engines > Node runtime > Lighthouse browser cannot be started: {reason}. Choose an installed Chrome or Edge there, or clear the setting to let rBrowser find one.",
-        "no_browser": "Lighthouse found no Chromium-based browser to run in: no Google Chrome, Microsoft Edge or Playwright Chromium. Install Chrome or Edge, or choose the browser in Settings > Engines > Node runtime > Lighthouse browser.",
-        "no_sidecar": "Lighthouse runs in the Node sidecar, which is not available ({reason}). Check Settings > Engines > Node runtime.",
+        "browser_missing": "The Lighthouse browser chosen in Settings › Engines › Node runtime › Lighthouse browser cannot be started: {reason}. Choose an installed Chrome or Edge there, or clear the setting to let rBrowser find one.",
+        "no_browser": "Lighthouse found no Chromium-based browser to run in: no Google Chrome, Microsoft Edge or Playwright Chromium. Install Chrome or Edge, or choose the browser in Settings › Engines › Node runtime › Lighthouse browser.",
+        "no_sidecar": "Lighthouse runs in the Node sidecar, which is not available ({reason}). Check Settings › Engines › Node runtime.",
         "no_targets": "There is no Chromium breakpoint with a web page to run Lighthouse in.",
         "sidecar_failed": "The Node sidecar could not run Lighthouse: {reason}",
         "timed_out": "Lighthouse took longer than {seconds} s for {breakpoint} and was stopped.",
@@ -51,7 +52,7 @@
         },
         "reasons": {
           "engine": "Lighthouse runs only in Chromium; this breakpoint uses {engine}",
-          "not_found": "there is no such breakpoint",
+          "not_found": "no view shows this breakpoint",
           "too_large": "the report is larger than 8 MiB",
           "url": "the view shows no http or https page"
         },
@@ -104,7 +105,17 @@
           "cumulative-layout-shift": "Cumulative Layout Shift",
           "speed-index": "Speed Index"
         },
-        "setting_link": "Open the setting"
+        "setting_link": "Open the setting",
+        "scope": {
+          "label": "Run in",
+          "all": "All views",
+          "visible": "Visible views",
+          "chosen": "Chosen breakpoints",
+          "breakpoints": "Breakpoints",
+          "pick": "Choose breakpoints",
+          "none": "Choose at least one breakpoint.",
+          "covered": "Measured: {breakpoints}"
+        }
       },
       "panels": {
         "lighthouse": "Lighthouse"
@@ -296,7 +307,7 @@
       },
       "tools": {
         "cancel": "Cancels the Lighthouse run going on and every queued breakpoint; answers how many were cancelled.",
-        "run": "Runs Lighthouse for every Chromium breakpoint (or those named in breakpoints, or the view of target) with its own emulation, one after another, in a headless browser of its own - the views do not navigate. categories (performance, accessibility, best-practices, seo) overrides the project's checks.lighthouse.categories; url overrides each view's page, on a site the views show unless a person switched on plugins.lighthouseAnyUrl (else plugins.error.sidecar_url_denied). Answers the scores per breakpoint (0-100), the paths of the HTML and JSON reports under .rbrowser/out/lighthouse/, the number of failed audits, and the breakpoints skipped with the reason (Firefox and WebKit).",
+        "run": "Runs Lighthouse for every Chromium breakpoint (or those named in breakpoints, or the views of target: \"visible\" for the views the grid shows, a view id, a breakpoint id or a list of view ids and breakpoint ids) with its own emulation, one after another, in a headless browser of its own - the views do not navigate. categories (performance, accessibility, best-practices, seo) overrides the project's checks.lighthouse.categories; url overrides each view's page, on a site the views show unless a person switched on plugins.lighthouseAnyUrl (else plugins.error.sidecar_url_denied). Answers the scores per breakpoint (0-100), the paths of the HTML and JSON reports under .rbrowser/out/lighthouse/, the number of failed audits, and the breakpoints skipped with the reason (Firefox and WebKit).",
         "status": "Answers the Lighthouse run going on (the breakpoint measured, how many wait) and the scores of the last run with the previous run's for comparison.",
         "reports": "The Lighthouse runs on disk and their reports. action list (the default) answers every run, newest first, with its start time, breakpoints, scores and report paths below .rbrowser/out/lighthouse/; open shows a report in rBrowser's report window (run: YYYYMMDD-HHMMSS, else the newest; breakpoint, else the target view's or the active view's), only in a trusted project; compare answers two runs of one breakpoint (runs: two run ids, else the two newest) with the scores and the metrics FCP, LCP, TBT, CLS and Speed Index, each with its change. Deleting runs is not offered."
       }

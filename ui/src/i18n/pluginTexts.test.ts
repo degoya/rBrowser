@@ -54,7 +54,7 @@ describe('the plugin texts the core sends (RB-080-82)', () => {
       },
     });
     expect(t(title)).toBe('Image Overlay: Add Design…');
-    expect(t('commands.sync.toggle')).toBe('Sync on/off');
+    expect(t('commands.sync.toggle')).toBe('Switch sync on or off');
   });
 });
 

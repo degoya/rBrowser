@@ -59,6 +59,6 @@ async fn an_unknown_target_runs_nothing() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("view_not_found"));
+    assert_eq!(answer["code"], json!("view.not_found"));
     assert!(fake.calls().is_empty());
 }

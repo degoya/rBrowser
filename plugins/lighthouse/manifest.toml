@@ -87,6 +87,16 @@ shortcut = "Ctrl+Shift+Space K L"
 group = "checks"
 tool = "run"
 
+# plugin.lighthouse.run_visible (RB-099-10): the run over the views the grid shows - the host
+# hands the plugin `$scope` and the breakpoints it resolves to. Every letter after `K` is taken.
+[[commands]]
+id = "run_visible"
+title = "plugin.lighthouse.commands.run_visible"
+shortcut = "Ctrl+Shift+Space K 4"
+group = "checks"
+tool = "run"
+scope = "visible"
+
 # plugin.lighthouse.open_report: the newest run's report of the active view's breakpoint in the
 # report window (RB-091-02).
 [[commands]]

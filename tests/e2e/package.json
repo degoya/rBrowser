@@ -1,0 +1,24 @@
+{
+  "name": "rbrowser-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "RB-099-02: the end-to-end criteria K1-K12 and the milestone smokes that scripts/e2e-windows.sh runs against the Windows app; Vitest for the harness's own helpers.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": "26.13.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "e2e": "node run.ts"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}

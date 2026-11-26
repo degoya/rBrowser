@@ -18,6 +18,11 @@
 
 pub mod background;
 pub mod capped;
+/// A DACL read back from Windows, for the tests of the private folder and the instance pipe
+/// (RB-099-17); never in a shipped build.
+#[cfg(all(windows, any(test, feature = "test-support")))]
+#[path = "dacl_windows.rs"]
+pub mod dacl;
 pub mod job;
 pub mod private_dir;
 pub mod user_sid;

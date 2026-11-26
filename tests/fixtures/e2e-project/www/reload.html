@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rBrowser hot reload fixture</title>
+<link rel="stylesheet" href="reload.css">
+<!--
+  K6 (RB-030-05, RB-099-02): scripts/e2e-windows.sh copies this project into its work folder,
+  serves www/ as /reload/ and writes reload.css and reload.js while every view shows this page.
+  The page reports to the fixture server's /log, which stamps each report in the harness's own
+  clock: "load-<version>" when reload.js runs (a full reload), "css-<version>" at load and when
+  the value of --e2e-version changes (the stylesheet swapped in place). window.__e2eState is set by the run
+  before a change: still there after a CSS change means no full reload.
+-->
+</head>
+<body>
+<h1>Hot reload</h1>
+<p id="probe">The stylesheet version: <span id="version"></span></p>
+<script src="reload.js"></script>
+<script>
+  'use strict';
+  const view = `${innerWidth}x${innerHeight}`;
+  const report = (marker) =>
+    fetch('/log', { method: 'POST', body: JSON.stringify({ marker, view }), keepalive: true }).catch(() => {});
+  const probe = document.getElementById('probe');
+  const read = () => getComputedStyle(probe).getPropertyValue('--e2e-version').trim().replace(/^"|"$/g, '');
+  let seen = read();
+  document.getElementById('version').textContent = seen;
+  // A full reload reports both: the run tells it from a stylesheet swapped in place by "load-".
+  report(`load-${window.E2E_JS_VERSION ?? 'none'}`);
+  report(`css-${seen}`);
+  const watch = () => {
+    const now = read();
+    if (now !== seen) {
+      seen = now;
+      document.getElementById('version').textContent = now;
+      report(`css-${now}`);
+    }
+    requestAnimationFrame(watch);
+  };
+  requestAnimationFrame(watch);
+  window.__e2eReady = true;
+</script>
+</body>
+</html>

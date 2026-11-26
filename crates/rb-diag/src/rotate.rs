@@ -95,7 +95,7 @@ pub fn rotated_name(file_name: &str, index: usize) -> String {
 }
 
 /// The number of `candidate` when it is an archive of `file_name` as [`rotated_name`] names it.
-fn archive_index(file_name: &str, candidate: &str) -> Option<usize> {
+pub(crate) fn archive_index(file_name: &str, candidate: &str) -> Option<usize> {
     let number = match file_name.rsplit_once('.') {
         Some((stem, extension)) if !stem.is_empty() => candidate
             .strip_prefix(stem)?
@@ -147,36 +147,11 @@ impl RotatingFile {
         self.dir.join(rotated_name(&self.file_name, index))
     }
 
-    /// Deletes every archive numbered `first` or higher the folder holds - also those an
-    /// earlier, larger number of files left, and past a gap in the numbers.
-    fn remove_archives_from(&self, first: usize) -> io::Result<()> {
-        let first = first.max(1);
-        for entry in std::fs::read_dir(&self.dir)? {
-            let entry = entry?;
-            let name = entry.file_name();
-            let Some(index) = name
-                .to_str()
-                .and_then(|name| archive_index(&self.file_name, name))
-            else {
-                continue;
-            };
-            if index < first || !entry.file_type()?.is_file() {
-                continue;
-            }
-            if let Err(error) = std::fs::remove_file(entry.path())
-                && error.kind() != io::ErrorKind::NotFound
-            {
-                return Err(error);
-            }
-        }
-        Ok(())
-    }
-
     fn rotate(&mut self) -> io::Result<()> {
         self.file.flush()?;
         let current = self.path();
         let keep = self.rotation.get().max_files.max(1) - 1;
-        self.remove_archives_from(keep.max(1))?;
+        remove_archives_from(&self.dir, &self.file_name, keep.max(1))?;
         if keep == 0 {
             self.file = OpenOptions::new()
                 .write(true)
@@ -214,11 +189,36 @@ impl Write for RotatingFile {
     }
 }
 
+/// Deletes every archive of `dir/file_name` numbered `first` or higher - also those an earlier,
+/// larger number of files left, and past a gap in the numbers.
+pub(crate) fn remove_archives_from(dir: &Path, file_name: &str, first: usize) -> io::Result<()> {
+    let first = first.max(1);
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        let Some(index) = name
+            .to_str()
+            .and_then(|name| archive_index(file_name, name))
+        else {
+            continue;
+        };
+        if index < first || !entry.file_type()?.is_file() {
+            continue;
+        }
+        if let Err(error) = std::fs::remove_file(entry.path())
+            && error.kind() != io::ErrorKind::NotFound
+        {
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
 fn append(path: &Path) -> io::Result<File> {
     OpenOptions::new().create(true).append(true).open(path)
 }
 
-fn rename_if_present(from: &Path, to: &Path) -> io::Result<()> {
+pub(crate) fn rename_if_present(from: &Path, to: &Path) -> io::Result<()> {
     match std::fs::rename(from, to) {
         Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
         _ => Ok(()),

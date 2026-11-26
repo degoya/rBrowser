@@ -122,7 +122,7 @@ describe('the Outline panel', () => {
   });
 
   it('says loading, then shows the tree with a dot per view, the badge and the finding', async () => {
-    expect($('#status')?.textContent).toBe('Reading the views...');
+    expect($('#status')?.textContent).toBe('Reading the views…');
     expect(posted.find((m) => m.tool === 'get')?.args).toEqual({ sections: ['headings'], budget: 1024 * 1024 - 5536 });
     await answer('get', HEADINGS);
     expect(rows().map((row) => row.querySelector('[data-label]')?.textContent)).toEqual(['H1 Title', 'H3 Deep']);

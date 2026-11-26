@@ -1,6 +1,8 @@
 //! A host for the native tests: views with their served source (`Page.getFrameTree` and
 //! `Page.getResourceContent` answered per view), their rendered DOM (the answer of
-//! `source::render_script`), the runner's `evaluate` answers, settings, the project's rule file
+//! `source::render_script`), what the page-state probe answers (`unserved::STATE_SCRIPT`), the
+//! bodies the view's network log holds (`Network.getResponseBody` by the document's `loaderId`),
+//! the runner's `evaluate` answers, settings, the project's rule file
 //! and workspace trust (the host's gate on `project::TRUST_PROBE`), and a record of what the
 //! plugin asked for.
 
@@ -32,6 +34,12 @@ pub struct FakeHost {
     pub answer: Option<String>,
     /// Per view: what the render script answers (`{"html": ...}`), or its failure.
     pub rendered: BTreeMap<ViewId, Result<String, Failure>>,
+    /// Per view: what the page-state probe answers (`{"status": ..., "ready": ...}`), or its
+    /// failure; `{}` for a view without one.
+    pub states: BTreeMap<ViewId, Result<String, Failure>>,
+    /// Per view: what `Network.getResponseBody` of the document's request answers, or its failure;
+    /// not found for a view without one (the view's network log is off).
+    pub bodies: BTreeMap<ViewId, Result<String, Failure>>,
     /// What `project.read` of the rule file answers; not found when `None`.
     pub project: Option<Result<Vec<u8>, Failure>>,
     /// Whether the workspace is trusted.
@@ -123,6 +131,13 @@ impl PluginHost for FakeHost {
                 .cloned()
                 .unwrap_or_else(|| Err(Failure::new(FailureKind::NotFound)));
         }
+        if script == crate::unserved::STATE_SCRIPT {
+            return self
+                .states
+                .get(&view)
+                .cloned()
+                .unwrap_or_else(|| Ok("{}".to_owned()));
+        }
         match (self.answers.get(&view), &self.answer) {
             (Some(answer), _) => answer.clone(),
             (None, Some(answer)) => Ok(answer.clone()),
@@ -137,7 +152,9 @@ impl PluginHost for FakeHost {
         };
         match method {
             "Page.getFrameTree" => Ok(json!({
-                "frameTree": { "frame": { "id": format!("F{view}"), "url": url } }
+                "frameTree": {
+                    "frame": { "id": format!("F{view}"), "loaderId": format!("L{view}"), "url": url }
+                }
             })
             .to_string()),
             "Page.getResourceContent" => {
@@ -146,6 +163,16 @@ impl PluginHost for FakeHost {
                 source
                     .clone()
                     .map(|text| json!({ "content": text, "base64Encoded": false }).to_string())
+            }
+            "Network.getResponseBody" => {
+                assert_eq!(param(params, "requestId"), format!("L{view}"));
+                self.bodies.get(&view).cloned().unwrap_or_else(|| {
+                    Err(Failure::coded(
+                        FailureKind::Other,
+                        "plugins.error.host_failed",
+                    )
+                    .with_param("reason", "No resource with given identifier found"))
+                })
             }
             _ => Err(Failure::new(FailureKind::AccessDenied)),
         }

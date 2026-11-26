@@ -35,7 +35,9 @@ pub struct PresentationSettings {
     /// shown environment's start page and everything below it.
     pub allow_paths: Vec<String>,
     /// Paths a viewer never loads, even below an allowed one: they answer 404 and never reach
-    /// the dev server (`/admin` also covers `/admin/users` and `/administrator`).
+    /// the dev server (`/admin` also covers `/admin/users` and `/administrator`). A path that
+    /// begins with `.` or `__` is matched at every segment (`/.git` also covers
+    /// `/sub/.git/config`, `/__open-in-editor` also `/app/__open-in-editor`).
     pub deny_paths: Vec<String>,
     /// A short flash on the viewer's page where the presenter clicks.
     pub pointer: bool,

@@ -6,12 +6,14 @@
 // (RB-020-04); form and focus sync `forms/` (RB-020-05). The top frame's Web Vitals `vitals/`
 // (RB-060-10) and its frameworks, as the main-world probe reports them (`framework.ts`,
 // RB-080-24). The page's direction, language and pseudo-localisation `locale/` (RB-092-02).
+// Media that does not play in any frame `media.ts` (RB-099-29).
 
 import { watchBrowsersync } from './browsersync';
 import { installCapture, type CaptureGroup } from './capture';
 import { applyChange, applyFocus, isChangeState } from './forms/apply';
 import { watchFrameworks } from './framework';
 import { isPageLocale } from './locale/check';
+import { watchMedia } from './media';
 import { PageLocaleController } from './locale/apply';
 import type {
   AgentCommand,
@@ -127,6 +129,8 @@ export class Agent {
   private unwatch: (() => void) | null = null;
   private unvitals: (() => void) | null = null;
   private unframeworks: (() => void) | null = null;
+  /** Media that does not play, in every frame (RB-099-29). */
+  private unmedia: (() => void) | null = null;
   /** The page's direction, language and pseudo-localisation (RB-092-02). */
   private readonly locale: PageLocaleController;
 
@@ -163,6 +167,9 @@ export class Agent {
       uninstallRelay();
     };
     this.post({ kind: 'ready', v: PROTOCOL_VERSION, ...this.origin(), url: this.win.location.href });
+    this.unmedia = watchMedia(this.win, (failure) =>
+      this.post({ kind: 'media', v: PROTOCOL_VERSION, ...this.origin(), ...failure }),
+    );
     if (this.top) {
       this.unwatch = watchBrowsersync(this.win, () =>
         this.post({ kind: 'detected', v: PROTOCOL_VERSION, ...this.origin(), tool: 'browsersync' }),
@@ -188,6 +195,8 @@ export class Agent {
     this.unvitals = null;
     this.unframeworks?.();
     this.unframeworks = null;
+    this.unmedia?.();
+    this.unmedia = null;
     this.locale.stop();
   }
 

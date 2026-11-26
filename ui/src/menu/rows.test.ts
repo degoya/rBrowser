@@ -197,6 +197,7 @@ describe('the rows of the menus', () => {
     }
     expect(enabled(idle, 'recorder.start')).toBe(true);
     expect(enabled(idle, 'sitemap.capture')).toBe(true);
+    expect(enabled(idle, 'sitemap.capture_visible')).toBe(true);
     // The gallery of any run, also while it runs (RB-090-90); none without a run.
     expect(enabled(idle, 'sitemap.gallery')).toBe(false);
     expect(enabled(busy, 'sitemap.gallery')).toBe(true);

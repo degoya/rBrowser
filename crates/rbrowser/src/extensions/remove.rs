@@ -171,13 +171,13 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
         .with_setting(web::ALLOW_KEY));
     }
     let id = parse_ref(&written)
-        .ok_or_else(|| rb_mcp::ToolFailure::new("invalid_arguments", "id names no extension"))?;
+        .ok_or_else(|| rb_mcp::ToolFailure::new("args.invalid", "id names no extension"))?;
     let looked_up = id.clone();
     let installed = tokio::task::spawn_blocking(move || {
         store().and_then(|store| store.installed_one(&looked_up))
     })
     .await
-    .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+    .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
     .ok_or_else(|| {
         rb_mcp::ToolFailure::new(
             NOT_INSTALLED_CODE,
@@ -208,7 +208,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
     let worker = core.clone();
     let removed = tokio::task::spawn_blocking(move || remove_by_ref(&worker, &id))
         .await
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
         .map_err(|error| rb_mcp::ToolFailure::new(REMOVE_FAILED_CODE, error))?;
     core.notify(removed_notice(&removed));
     push_list(core);

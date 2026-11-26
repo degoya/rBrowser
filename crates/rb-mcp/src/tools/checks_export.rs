@@ -41,7 +41,7 @@ pub struct ChecksExportParams {
 #[tool_router(router = checks_export_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Export the last check run (checks_run, the findings panel) as a file: format sarif (SARIF 2.1.0, one run per plugin, breakpoints, views, engines and URL in each result's properties), junit (JUnit XML, one test suite per breakpoint, one test case per rule), html (one page that opens offline) or json (the run's findings.json); checks.export.defaultFormat when absent. path: a relative path lands below the export folder (checks.export.dir, else .rbrowser/out/exports); an absolute one must lie inside the project's .rbrowser/out/ or that folder - anything else, .. included, is refused. Answers { path, format }. Fails with checks.export.error.no_run before the first run. Acts on no view."
+        description = "Export the last check run as a file: format sarif (SARIF 2.1.0), junit (JUnit XML, a suite per breakpoint), html (one offline page) or json (findings.json); checks.export.defaultFormat when absent. path: relative lands below the export folder (checks.export.dir, else .rbrowser/out/exports); absolute must lie inside .rbrowser/out/ or that folder - anything else, .. included, is refused. Answers { path, format }; checks.export.error.no_run before the first run."
     )]
     pub(crate) async fn checks_export(
         &self,
@@ -49,7 +49,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = match serde_json::to_value(&params) {
             Ok(args) => self.command("checks.export", args).await,
-            Err(error) => Err(ToolFailure::new("internal", error.to_string())),
+            Err(error) => Err(ToolFailure::new("mcp.internal", error.to_string())),
         };
         respond(result)
     }

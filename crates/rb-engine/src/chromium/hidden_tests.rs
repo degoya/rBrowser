@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use super::*;
-use crate::chromium::fake::FakeBackend;
+use crate::chromium::fake::{FakeBackend, until};
 
 fn spec(breakpoint: &str) -> RenderSpec {
     RenderSpec {
@@ -93,7 +93,7 @@ async fn a_view_opened_after_its_caller_gave_up_is_closed() {
     let pool = RenderPool::new(backend.clone(), 2);
     let gave_up = tokio::time::timeout(Duration::from_millis(10), pool.acquire(&spec("a"))).await;
     assert!(gave_up.is_err(), "the caller stopped waiting");
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    until(|| lock(&backend.closed).len() == 1).await;
     assert!(lock(&backend.views).is_empty(), "the late view was closed");
     assert_eq!(lock(&backend.closed).len(), 1);
     assert_eq!(pool.open_views(), 0);
@@ -109,7 +109,7 @@ async fn a_close_cut_short_by_its_caller_still_happens() {
     let lease = pool.acquire(&spec("a")).await.expect("a");
     let cut = tokio::time::timeout(Duration::from_millis(5), pool.release(lease, false)).await;
     assert!(cut.is_err(), "the release was dropped while closing");
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    until(|| lock(&backend.closed).len() == 1).await;
     assert!(
         lock(&backend.views).is_empty(),
         "the view was closed anyway"

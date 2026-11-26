@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # The tools the GitHub workflows install beyond the runner image (RB-090-04, adapted from
-# rCommander's and rDownloader's script of the same name). Linux x86_64 only.
+# rCommander's and rDownloader's script of the same name). Linux x86_64 only, but for `wix`.
 #
 #   scripts/ci-tools.sh linters [--dest DIR]   # shellcheck, gitleaks, actionlint at their pins
 #   scripts/ci-tools.sh cross                  # the packages of docs/development.md for the
@@ -9,18 +9,22 @@
 #   scripts/ci-tools.sh linux                  # the native Linux build's (RB-097-05): CEF's
 #                                              # run-time libraries, Xvfb, strip and
 #                                              # rsvg-convert for the packages (runner only)
+#   scripts/ci-tools.sh wix                    # WiX for the MSI (RB-099-27), Windows (Git Bash)
 #
 # `linters` checks each download against its SHA-256 from scripts/lib/tool-versions.sh before it
 # is unpacked, so `scripts/check.sh --preflight` runs those stages instead of skipping them. On a
 # runner the directory is $RUNNER_TEMP/ci-bin and goes on GITHUB_PATH; elsewhere `--dest` names
 # it (nothing is put on PATH). `cross` installs with apt and puts LLVM's own bin/ (clang-cl,
-# lld-link, llvm-lib, which Ubuntu does not link into /usr/bin) on GITHUB_PATH.
+# lld-link, llvm-lib, which Ubuntu does not link into /usr/bin) on GITHUB_PATH. `wix` installs WiX
+# at RB_WIX_VERSION as a .NET tool (`dotnet tool install`; kept when that version is already
+# there) and its UI extension at the same version, the one rbrowser.wxs uses; NuGet holds each
+# version's package fixed. On a runner the .NET tools folder goes on GITHUB_PATH.
 set -euo pipefail
 
 # shellcheck source=lib/tool-versions.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/tool-versions.sh"
 
-usage() { echo "usage: scripts/ci-tools.sh linters [--dest DIR] | cross | linux" >&2; exit 2; }
+usage() { echo "usage: scripts/ci-tools.sh linters [--dest DIR] | cross | linux | wix" >&2; exit 2; }
 
 # Downloads URL $1 to file $2 and holds it to SHA-256 $3.
 fetch() {
@@ -75,13 +79,46 @@ linux() {
         libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 libcups2t64 \
         libdbus-1-3 libx11-6 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 \
         libxkbcommon0 libgbm1 libexpat1 libcairo2 libpango-1.0-0 libudev1 libasound2t64 \
-        libglib2.0-0t64 xvfb xauth binutils librsvg2-bin
+        libglib2.0-0t64 xvfb xauth binutils librsvg2-bin libdbus-1-dev pkg-config
+}
+
+# The version of the `wix` first on PATH (`5.0.2+<commit>` without the commit), or nothing.
+wix_found() {
+    command -v wix > /dev/null 2>&1 || return 0
+    wix --version 2> /dev/null | sed -n '1s/^\([0-9][0-9.]*[0-9]\).*/\1/p'
+}
+
+wix_tools() {
+    local tools have
+    # dotnet puts global tools in %USERPROFILE%\.dotnet\tools, or ~/.dotnet/tools.
+    if [[ -n "${USERPROFILE:-}" ]] && command -v cygpath > /dev/null 2>&1; then
+        tools="$(cygpath -u "$USERPROFILE")/.dotnet/tools"
+    else
+        tools="$HOME/.dotnet/tools"
+    fi
+    PATH="$tools:$PATH"
+    if [[ "$(wix_found)" != "$RB_WIX_VERSION" ]]; then
+        timeout 600 dotnet tool install --global wix --version "$RB_WIX_VERSION"
+    fi
+    have="$(wix_found)"
+    if [[ "$have" != "$RB_WIX_VERSION" ]]; then
+        echo "!! wix ${have:-(none)} answers in $tools, scripts/lib/tool-versions.sh pins $RB_WIX_VERSION" >&2
+        echo "   (another WiX installed globally: dotnet tool uninstall --global wix)" >&2
+        exit 1
+    fi
+    timeout 600 wix extension add --global "WixToolset.UI.wixext/$RB_WIX_VERSION"
+    if [[ -n "${GITHUB_PATH:-}" ]]; then
+        if command -v cygpath > /dev/null 2>&1; then cygpath -w "$tools"; else printf '%s\n' "$tools"; fi \
+            >> "$GITHUB_PATH"
+    fi
+    echo "    wix $RB_WIX_VERSION and WixToolset.UI.wixext/$RB_WIX_VERSION in $tools"
 }
 
 case "${1:-}" in
     linters) shift ;;
     cross) [[ $# -eq 1 ]] || usage; cross; exit 0 ;;
     linux) [[ $# -eq 1 ]] || usage; linux; exit 0 ;;
+    wix) [[ $# -eq 1 ]] || usage; wix_tools; exit 0 ;;
     *) usage ;;
 esac
 dest=""

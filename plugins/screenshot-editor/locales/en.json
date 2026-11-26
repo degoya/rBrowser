@@ -7,8 +7,8 @@
         "copy": "Copy edited screenshot to the clipboard"
       },
       "tools": {
-        "annotate": "Renders annotations (rect, arrow, line, freehand, text, marker, highlight, redact with mode pixelate|blur|black, crop) onto a PNG below .rbrowser/out/ and writes the edited image and its annotations below .rbrowser/out/screenshot-editor/ (or at `out` there). Redactions are rendered into the pixels; the export has no metadata. Answers the path.",
-        "load": "One chunk (base64, from `offset`) of a PNG below .rbrowser/out/. The first answer also gives its width, height, saved annotations and `hash`; when they leave no room its `data` is empty and `next` is 0, and saved annotations larger than one answer stay out (`annotations_too_large`). Pass that `hash` with every later call. Without `image` the newest screenshot.",
+        "annotate": "Renders annotations (rect, arrow, line, freehand, text, marker, highlight, redact with mode pixelate|blur|black, crop) onto a PNG below .rbrowser/out/ and writes the edited image and its annotations below .rbrowser/out/screenshot-editor/ (or at `out` there). Takes every image the capture writes: at most 65535 pixels a side and 256 megapixels (268435456 pixels), rendered at full resolution. Redactions are rendered into the pixels; the export has no metadata. Answers the path.",
+        "load": "One chunk (base64, from `offset`) of a PNG below .rbrowser/out/ - at most 65535 pixels a side and 256 megapixels. The first answer also gives its width, height, `scale`, saved annotations and `hash`; when they leave no room its `data` is empty and `next` is 0, and saved annotations larger than one answer stay out (`annotations_too_large`). An image over 16384 pixels a side or 25 megapixels comes as its preview, `scale` times smaller (each pixel the average of scale x scale); annotations stay in the image's own pixels. Pass that `hash` with every later call. Without `image` the newest screenshot.",
         "list": "The PNG files below .rbrowser/out/ the screenshot editor opens, the newest screenshots first."
       },
       "panels": {
@@ -58,7 +58,10 @@
         "path_outside": "The screenshot editor opens PNG files below .rbrowser/out/ only and writes below .rbrowser/out/screenshot-editor/ only.",
         "not_png": "The file is no readable PNG image.",
         "out_extension": "The target must be a file name ending in .png, .jpg or .jpeg.",
-        "image_too_large": "The image is too large for the editor: at most 16384 pixels a side and 25 megapixels.",
+        "image_too_large": "The image is {width} x {height} pixels; the editor opens every image the capture writes: at most {max_side, plural, one {# pixel} other {# pixels}} a side and {max_pixels, plural, one {# pixel} other {# pixels}} (256 megapixels) in all.",
+        "interlaced_too_large": "The image is an interlaced PNG of {width} x {height} pixels; the editor reads one that large only without interlacing (at most {max_pixels, plural, one {# pixel} other {# pixels}} interlaced). Save it again without interlacing.",
+        "redactions_too_large": "The redactions overlap too much for an image this wide ({width} pixels): one part of it would need {rows, plural, one {# row} other {# rows}} at once. Merge overlapping blurs or crop the image first.",
+        "preview_unavailable": "The preview of this large image could not be prepared for the editor; delete {folder} and open it again.",
         "encode_failed": "The edited image could not be encoded.",
         "output_too_large": "The edited image is larger than the 8 MiB a plugin may write, even compressed harder. Crop it or export it as JPEG.",
         "no_screenshot": "There is no screenshot in .rbrowser/out/screenshots/ yet."
@@ -108,11 +111,14 @@
         "annotations": "Annotations",
         "annotations_none": "No annotations yet.",
         "remove_named": "Remove annotation {index}: {name}",
-        "loading": "Loading {image}...",
+        "loading": "Loading {image}…",
         "loaded": "{image}: {width} x {height} px.",
+        "loaded_scaled": "{image}: {width} x {height} px, shown at 1:{scale}; it is saved at its full size.",
         "changed": "The file changed while it was loading; open it again.",
+        "too_many_chunks": "The image is larger than the editor's panel loads (128 MiB).",
         "saved": "Saved to {path}.",
         "copied": "The edited image is on the clipboard.",
+        "copied_scaled": "The edited image is on the clipboard at 1:{scale} of its size; the saved file has its full size.",
         "copy_failed": "The clipboard did not take the image ({error}). Save it and copy the file instead.",
         "failed": "Failed: {error}",
         "second_point": "Move to the second point and press Enter.",

@@ -6,8 +6,15 @@
 //! case, empty segments folded. A path that a server could read as another file is refused
 //! outright: an encoded slash or backslash, a backslash, a NUL or another control character,
 //! a `.` or `..` segment (a browser resolves those before it sends a request), an 8.3 short
-//! name (`GIT~1`, which a Windows dev server may read as `.git`), bytes that are no UTF-8. An allowed path covers its segments (`/shop` allows `/shop/cart`, not
-//! `/shopping`); a denied path is a plain prefix (`/.env` denies `/.env.local` too).
+//! name (`GIT~1`, which a Windows dev server may read as `.git`), bytes that are no UTF-8. An
+//! allowed path covers its segments (`/shop` allows `/shop/cart`, not `/shopping`); a denied path
+//! is a plain prefix (`/.env` denies `/.env.local` too). A denied path whose first segment begins
+//! with `.` or `__` names a marker - a dot file or folder, a dev server's editor launch - and is a
+//! plain prefix at every segment, not only from the root: `/sub/.git` is as secret as `/.git`, and
+//! a dev server under a base answers its editor launch below it. Inside a segment a marker matches
+//! nothing (`/a/b.env` stays shown). `/@fs/` is no marker but a path from the root: under a base
+//! Vite serves the app's own modules from `<base>/@fs/` (Nuxt's `/_nuxt/@fs/.../entry.js`), and
+//! what it reads there is bounded by its own `server.fs.allow`.
 
 use rb_util::url::origin_of;
 
@@ -47,13 +54,30 @@ impl PathRules {
         let Some(path) = normalize(path) else {
             return false;
         };
-        let denied = self.deny.iter().any(|rule| path.starts_with(rule.as_str()));
+        let denied = self.deny.iter().any(|rule| denies(rule, &path));
         let allowed = self
             .allow
             .iter()
             .any(|rule| rule == "/" || path == *rule || path.starts_with(&format!("{rule}/")));
         allowed && !denied
     }
+}
+
+/// Whether the normalized deny `rule` covers the normalized `path`: a marker rule at any segment,
+/// any other from the root.
+fn denies(rule: &str, path: &str) -> bool {
+    if !is_marker(rule) {
+        return path.starts_with(rule);
+    }
+    path.match_indices('/')
+        .any(|(index, _)| path.get(index..).is_some_and(|rest| rest.starts_with(rule)))
+}
+
+/// Whether a normalized rule names a marker: its first segment begins with `.` or `__`, the names
+/// of dot files and of dev servers' own endpoints, which no site route uses.
+fn is_marker(rule: &str) -> bool {
+    rule.strip_prefix('/')
+        .is_some_and(|name| name.starts_with('.') || name.starts_with("__"))
 }
 
 /// `path` in the normal form of the module, without a trailing slash (`/` stays `/`); `None`

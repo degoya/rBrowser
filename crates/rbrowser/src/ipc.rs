@@ -22,10 +22,11 @@ pub(crate) mod push;
 /// A failed query: the code and message for `onFailure`.
 pub type Failure = (IpcErrorCode, String);
 
-/// Answers one query of the shell through `reply`: `runCommand`, `setSetting`, `getSettings`
-/// and `listFlows` off the calling thread (the CEF UI thread; a command such as
-/// `diagnostics.create` takes a while, a setting is written to a file, the settings and the
-/// flows are read from disk - RB-090-36), the rest at once.
+/// Answers one query of the shell through `reply`: `runCommand`, `setSetting`, `getSettings`,
+/// the shortcut editor's changes and `listFlows` off the calling thread (the CEF UI thread; a
+/// command such as `diagnostics.create` takes a while, a setting or a binding is written to a
+/// file, the settings and the flows are read from disk - RB-090-36, RB-099-19), the rest at
+/// once.
 ///
 /// The time from here to the answer is the timing counter `ipc.query` (RB-090-32).
 pub fn dispatch_to(
@@ -64,15 +65,41 @@ pub fn dispatch_to(
                 reply(answer.and_then(|answer| encode(&answer)));
             });
         }
+        // The sitemap start page's discovery reads the site's sitemaps (RB-099-09).
+        Ok(message) if crate::sitemap::discover::is_request(&message) => {
+            crate::sitemap::discover::dispatch(core, message, move |answer| {
+                reply(answer.and_then(|answer| encode(&answer)));
+            });
+        }
         // A setting's file is read and written on a blocking thread, in order (RB-080-27).
         Ok(ShellToCore::SetSetting { key, value, scope }) => {
             crate::settings_window::set_setting_off_thread(core, key, value, scope, |answer| {
                 reply(answer.and_then(|answer| encode(&answer)));
             });
         }
+        // The shortcut editor's changes write the user settings file: on the same lane
+        // (RB-099-19).
+        Ok(
+            message @ (ShellToCore::SetBindings { .. }
+            | ShellToCore::ResetBinding { .. }
+            | ShellToCore::ImportBindings { .. }),
+        ) => {
+            crate::settings_window::change_off_thread(
+                core,
+                move |core| binding_change(core, message),
+                move |answer| reply(answer.and_then(|answer| encode(&answer))),
+            );
+        }
         // Read on the same lane, after every write before it (RB-090-36).
         Ok(ShellToCore::GetSettings { include_schema }) => {
             crate::settings_window::get_settings_off_thread(core, include_schema, |answer| {
+                reply(answer.and_then(|answer| encode(&answer)));
+            });
+        }
+        // The credential store may wait for an unlock prompt (Keychain, Secret Service): the
+        // Basic auth status and the sign-in dialog's answer never block the UI thread (review w35).
+        Ok(message) if crate::basic_auth::status::is_off_thread(&message) => {
+            crate::basic_auth::status::dispatch_off_thread(core, message, move |answer| {
                 reply(answer.and_then(|answer| encode(&answer)));
             });
         }
@@ -143,11 +170,11 @@ fn answer(core: &Core, message: ShellToCore) -> Result<String, Failure> {
                 None => core.settings_answer(include_schema)?,
             }
         }
-        ShellToCore::SetBindings { id, bindings } => core.set_bindings(&id, &bindings)?,
-        ShellToCore::ResetBinding { id } => core.reset_binding(id.as_deref())?,
+        message @ (ShellToCore::SetBindings { .. }
+        | ShellToCore::ResetBinding { .. }
+        | ShellToCore::ImportBindings { .. }) => binding_change(core, message)?,
         ShellToCore::CheckBinding { id, binding } => core.check_binding(&id, &binding)?,
         ShellToCore::ExportBindings => core.export_bindings(),
-        ShellToCore::ImportBindings { json } => core.import_bindings(&json)?,
         // The feature jobs of wave 0.1-w1b answer their own messages (`crate::features`).
         other => match crate::features::ipc(core, &other) {
             Some(answer) => answer?,
@@ -160,6 +187,19 @@ fn answer(core: &Core, message: ShellToCore) -> Result<String, Failure> {
         },
     };
     encode(&answer)
+}
+
+/// The shortcut editor's changes of the user's bindings, which write the user settings file.
+fn binding_change(core: &Core, message: ShellToCore) -> Result<CoreToShell, Failure> {
+    match message {
+        ShellToCore::SetBindings { id, bindings } => core.set_bindings(&id, &bindings),
+        ShellToCore::ResetBinding { id } => core.reset_binding(id.as_deref()),
+        ShellToCore::ImportBindings { json } => core.import_bindings(&json),
+        other => Err((
+            IpcErrorCode::Internal,
+            format!("{other:?} is no change of the bindings"),
+        )),
+    }
 }
 
 fn encode(answer: &CoreToShell) -> Result<String, Failure> {

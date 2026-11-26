@@ -252,13 +252,13 @@ pub fn ref_arg(args: &Value, field: &str) -> Option<String> {
 pub fn tool_args(args: &Value, tool: &str) -> Result<String, rb_mcp::ToolFailure> {
     let written = ref_arg(args, "id").ok_or_else(|| {
         rb_mcp::ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             format!("{tool} takes {{ id: <extension id or Chrome Web Store URL> }}"),
         )
     })?;
     if parse_ref(&written).is_none() {
         return Err(rb_mcp::ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             format!(
                 "{tool}: id is not an extension id (32 letters a to p) or a Chrome Web Store URL"
             ),
@@ -285,7 +285,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
     let fetcher = core.clone();
     let candidate = tokio::task::spawn_blocking(move || fetch_by_ref(&fetcher, &written))
         .await
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
         .map_err(|error| rb_mcp::ToolFailure::new("extensions.install_failed", error))?;
     let (sent, heard) = tokio::sync::oneshot::channel();
     let request = PromptRequest {
@@ -313,7 +313,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
     let worker = core.clone();
     let installed = tokio::task::spawn_blocking(move || install_candidate(&worker, &candidate))
         .await
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
         .map_err(|error| rb_mcp::ToolFailure::new("extensions.install_failed", error))?;
     super::remove::push_list(core);
     core.notify(notice(

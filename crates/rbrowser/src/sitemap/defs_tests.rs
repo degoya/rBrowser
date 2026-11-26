@@ -53,6 +53,7 @@ fn sitemap_commands_have_their_chords_and_tools() {
         summary,
         [
             row(CAPTURE, "C M", "sitemap_capture"),
+            row(CAPTURE_VISIBLE, "C J", "sitemap_capture"),
             row(CANCEL, "C X", "sitemap_cancel"),
             row(GALLERY, "C I", "sitemap_gallery"),
             row(PANEL, "P G", "sitemap_status"),

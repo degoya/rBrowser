@@ -1,8 +1,10 @@
 //! One client's WebSocket: a flat session of its own on the pipe, [`rb_cdp::ClientSession`] in
 //! between. `/devtools/browser/<id>` attaches a browser session (`Target.attachToBrowserTarget`),
 //! `/devtools/page/<targetId>` the page itself - after the filter said the page is visible.
-//! Calls go to the pipe in the client's order ([`send_ordered`]); a call naming a `targetId`
-//! asks the browser for that target first and is refused when it is hidden or unknown. When
+//! Calls go to the pipe in the client's order ([`send_ordered`]) - except a call naming a
+//! `targetId`: it asks the browser for that target first, in a task of its own, and is refused
+//! when the target is hidden or unknown; a call after it does not wait for that check and may
+//! reach the pipe first (the client matches answers by id). When
 //! the client leaves, its sessions are detached and the app re-applies the emulation of every
 //! view it attached; a rotated token ends the connection at once.
 

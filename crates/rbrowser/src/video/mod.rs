@@ -87,7 +87,7 @@ impl VideoError {
             Self::Busy => "video.busy",
             Self::NotRecording => "video.not_recording",
             Self::NoProject => "video.no_project",
-            Self::NoViews => "view_not_found",
+            Self::NoViews => "view.not_found",
             Self::Engine(_) | Self::Failed(_) => "video.failed",
         }
     }

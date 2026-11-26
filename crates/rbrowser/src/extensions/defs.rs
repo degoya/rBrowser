@@ -230,7 +230,7 @@ pub fn tool_args(args: &Value) -> Result<(), rb_mcp::ToolFailure> {
         Value::Null => Ok(()),
         Value::Object(map) if map.is_empty() => Ok(()),
         _ => Err(rb_mcp::ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             "extension_list takes no arguments",
         )),
     }
@@ -247,7 +247,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
     let reader = core.clone();
     tokio::task::spawn_blocking(move || status(&reader))
         .await
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[cfg(test)]

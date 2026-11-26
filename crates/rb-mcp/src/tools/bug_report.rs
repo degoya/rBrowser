@@ -24,7 +24,7 @@ const PATH_FIELDS: [&str; 3] = ["path", "markdown", "zip"];
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BugReportParams {
-    /// `"all"` (every view, the default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// What went wrong, in one or two sentences (at most 2000 characters); masked like the rest
@@ -36,7 +36,7 @@ pub struct BugReportParams {
 #[tool_router(router = bug_report_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Write a bug report of the views for a ticket: a screenshot of each view (password fields blacked out), the overview, the console errors and warnings and the failed requests (status 400 and above, aborted) deduplicated over the views, page, environment, breakpoint, size, emulation, engine and rBrowser version - as report.md (relative image paths, to paste into a ticket) and report.zip in a new folder below the project's .rbrowser/out/reports/ (or the folder the person chose, report.folder). The setting report.include picks the parts. While the person's setting report.preview is on (the default), the report waits until the person saves it in the preview of its texts; cancelled, nothing is saved and the call fails. Every text is masked: query values, credentials, cookie and header values never reach the report; request headers and bodies are never read. target: \"all\" (default), a view id or a breakpoint id; note: what went wrong. Answers { path, markdown, zip } - the paths only, never the content. Needs an open project; nothing leaves the machine."
+        description = "Write a bug report of the views for a ticket: a screenshot of each view (password fields blacked out), the overview, the console errors and warnings, the failed requests, and page, environment, breakpoint, size, emulation, engine and version - as report.md and report.zip in a new folder below .rbrowser/out/reports/ (or report.folder); report.include picks the parts. While report.preview is on (default) it waits until the person saves the preview; cancelled, the call fails. Every text is masked; request headers and bodies are never read. note: what went wrong. Answers { path, markdown, zip } - paths only, never the content. Needs an open project."
     )]
     pub(crate) async fn bug_report(
         &self,

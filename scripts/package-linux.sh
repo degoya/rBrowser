@@ -16,7 +16,9 @@
 #     package.json and the production node_modules (scripts/lib/package-stage.sh);
 #   - plugins/ - the bundled plugins, built, signed and checked by scripts/build-plugins.sh;
 #   - README.txt (start, the sandbox, the system's libraries), NOTICE (CEF, Chromium, Node,
-#     playwright-core and their licences), licenses/chromium-credits.html, LICENSE, CHANGELOG.md
+#     playwright-core and their licences; packaging/NOTICE.in), THIRD-PARTY-LICENSES.txt (the
+#     licence texts of every crate and npm package, scripts/licenses.sh),
+#     licenses/chromium-credits.html, LICENSE, CHANGELOG.md
 #     and VERSION.txt (version, commit, the bundled CEF and Node);
 # and prints a size report. No rbrowser-wsl (native Linux watches with inotify itself), no
 # rbrowser.com (the program is a console program already), no updater (apt, dnf or the release
@@ -151,7 +153,8 @@ mkdir -p "$STAGE/licenses"
 credits="$(rb_cef_linux_dir "$CEF_PATH")/CREDITS.html"
 [[ -f "$credits" ]] || { echo "!! no $credits: the Chromium licences cannot be shipped" >&2; exit 1; }
 install -m 644 "$credits" "$STAGE/licenses/chromium-credits.html"
-install -m 644 packaging/linux/README.txt packaging/linux/NOTICE LICENSE CHANGELOG.md "$STAGE/"
+install -m 644 packaging/linux/README.txt packaging/linux/NOTICE packaging/THIRD-PARTY-LICENSES.txt \
+    LICENSE CHANGELOG.md "$STAGE/"
 if ((${#plugins[@]})); then
     mkdir -p "$STAGE/plugins"
     install -m 644 "${plugins[@]}" "$STAGE/plugins/"

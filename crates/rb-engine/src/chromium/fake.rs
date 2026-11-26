@@ -53,6 +53,22 @@ impl FakeBackend {
     }
 }
 
+/// Lets the spawned tasks run until `done` holds, or fails the test after two seconds.
+pub(crate) async fn until(mut done: impl FnMut() -> bool) {
+    for _ in 0..400 {
+        if done() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    panic!("condition not reached");
+}
+
+/// Every view the backend opened is closed again (none opened counts too).
+pub(crate) fn all_closed(backend: &FakeBackend) -> bool {
+    lock(&backend.closed).len() == backend.opened.load(Ordering::Relaxed)
+}
+
 fn host(url: &str) -> String {
     url.split("://")
         .nth(1)

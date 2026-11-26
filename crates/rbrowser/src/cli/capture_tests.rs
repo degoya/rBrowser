@@ -44,6 +44,33 @@ fn the_command_line_becomes_the_tools_arguments() {
 }
 
 #[test]
+fn visible_takes_only_the_views_the_grid_shows() {
+    let args = parse(&["rbrowser", "capture", "sitemap", "--visible"]);
+    let capture = args.capture_args().expect("in bounds");
+    assert_eq!(
+        capture.views,
+        Some(crate::sitemap::tool::CaptureViews::Visible)
+    );
+    assert!(
+        Cli::try_parse_from([
+            "rbrowser",
+            "capture",
+            "sitemap",
+            "--visible",
+            "--breakpoints",
+            "mobile"
+        ])
+        .is_err()
+    );
+    let both = SitemapCliArgs {
+        visible: true,
+        breakpoints: vec!["mobile".to_owned()],
+        ..SitemapCliArgs::default()
+    };
+    assert!(both.capture_args().is_err());
+}
+
+#[test]
 fn bookmarks_and_a_url_exclude_each_other() {
     assert!(
         Cli::try_parse_from(["rbrowser", "capture", "sitemap", "a.xml", "--bookmarks"]).is_err()

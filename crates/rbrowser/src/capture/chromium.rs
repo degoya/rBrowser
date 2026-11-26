@@ -1,7 +1,8 @@
 //! The [`Shooter`] of the grid's Chromium views: the host's session of each view, its metrics
 //! sent again after the capture, and a hidden (out of sight, throttled) view shown to the
 //! browser for the capture and hidden again afterwards. Each capture runs on a page prepared by
-//! [`super::clean`] (RB-080-12: banners hidden, animations frozen), undone right after. Firefox and
+//! [`super::clean`] (RB-080-12: banners hidden, animations frozen), undone right after; a full
+//! page's lazy-loading pre-pass runs in the view's sync agent world (RB-099-28). Firefox and
 //! WebKit views capture through their engines once those exist (RB-040-01).
 
 use std::sync::Arc;
@@ -12,7 +13,7 @@ use rb_engine::{EngineError, ViewHost, ViewId};
 use rb_visual::CleanPlan;
 use serde_json::json;
 
-use super::cdp::{CaptureTarget, Shot, capture};
+use super::cdp::{CaptureTarget, FixedSurface, Shot, capture_in};
 use super::clean;
 use super::pick::{PICK_TIMEOUT, pick};
 use super::run::Shooter;
@@ -100,7 +101,10 @@ impl Shooter for HostShooter {
             |emulation| media_params(&emulation),
         );
         let cdp = self.host.cdp();
-        let shot = capture(cdp, &target, shot, scale, &restore);
+        // A full page's lazy-loading pre-pass scrolls in the sync agent's world: the agent sends
+        // none of it to the other views (RB-099-28).
+        let agent = self.host.sync_agents().top_context(view).ok();
+        let shot = capture_in(cdp, &target, shot, scale, &restore, &FixedSurface, agent);
         let result = clean::around(cdp, &target.session, &self.clean, &media, shot).await;
         let still_hidden = self.host.capture_target(view).is_some_and(|now| now.hidden);
         if target.hidden && still_hidden {

@@ -21,6 +21,9 @@ serde_json = "1.0.154"
 base64 = "0.23.1"
 # PNG in and out, JPEG out: the encoders write pixels only, no text chunk or other metadata.
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+# Row by row (RB-099-24): an image of the capture's size is decoded and encoded in bands, never
+# whole; the version `image` uses.
+png = "0.18.1"
 # Shapes with anti-aliasing; the text's glyphs from the embedded font (font/annotation-font.ttf).
 tiny-skia = { version = "0.12.0", default-features = false, features = ["std"] }
 ab_glyph = "0.2.32"

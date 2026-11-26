@@ -23,8 +23,10 @@
 //! setting: there is no tool for the first two, and `settings_set` writes as an MCP caller.
 
 pub mod activity;
+pub mod annotations;
 pub mod answer;
 pub mod backend;
+pub mod codes;
 pub mod config_edit;
 pub mod coverage;
 pub mod http;
@@ -34,6 +36,7 @@ pub mod logs;
 pub mod prompts;
 pub mod protected_keys;
 pub mod resources;
+pub mod run_target;
 pub mod scripts;
 pub mod secret;
 pub mod server;

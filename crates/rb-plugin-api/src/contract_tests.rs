@@ -30,10 +30,16 @@ fn every_kind_is_a_world_exporting_its_interface() {
 #[test]
 fn every_capability_interface_is_in_the_contract() {
     for capability in Capability::ALL {
-        if let Some(interface) = capability.interface() {
+        for interface in capability.interfaces() {
             assert!(
                 WIT.contains(&format!("interface {interface} {{")),
                 "interface {interface} missing"
+            );
+            // Every world may import it (RB-099-24: the additive ones too).
+            assert_eq!(
+                WIT.matches(&format!("import {interface};")).count(),
+                PluginKind::ALL.len(),
+                "every world imports {interface}"
             );
         }
     }

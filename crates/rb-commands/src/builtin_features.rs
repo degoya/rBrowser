@@ -179,6 +179,13 @@ const ROWS: &[Row] = &[
         ['K', 'K'],
         Ok("checks_run"),
     ),
+    // RB-099-10: the checks over the views the grid shows; every letter after `K` is taken.
+    (
+        "checks.run_visible",
+        Group::Checks,
+        ['K', '3'],
+        Ok("checks_run"),
+    ),
     (
         "panels.findings",
         Group::Panels,
@@ -389,6 +396,13 @@ const ROWS: &[Row] = &[
         "visual.compare",
         Group::Capture,
         ['C', 'R'],
+        Ok("visual_compare"),
+    ),
+    // RB-099-10: the comparison of the views the grid shows only; `C C` for "compare".
+    (
+        "visual.compare_visible",
+        Group::Capture,
+        ['C', 'C'],
         Ok("visual_compare"),
     ),
     (

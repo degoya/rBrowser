@@ -33,7 +33,7 @@ use crate::visual::tool::{COMPARE_TOOL, CompareArgs, UPDATE_TOOL, UpdateArgs};
 ///
 /// # Errors
 ///
-/// The tool's refusal or failure; `unknown_tool` for a name the host does not run.
+/// The tool's refusal or failure; `tool.unknown` for a name the host does not run.
 pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, ToolFailure> {
     let host = core.host().clone();
     // How long MCP waits for a view: the input tools, `sync_set`'s work.
@@ -107,7 +107,7 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
         }
         COMPARE_TOOL => {
             let args = CompareArgs::parse(&args)
-                .map_err(|message| ToolFailure::new("invalid_arguments", message))?;
+                .map_err(|message| ToolFailure::new("args.invalid", message))?;
             let run = core.clone();
             visual(
                 core,
@@ -117,7 +117,7 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
         }
         UPDATE_TOOL => {
             let args = UpdateArgs::parse(&args)
-                .map_err(|message| ToolFailure::new("invalid_arguments", message))?;
+                .map_err(|message| ToolFailure::new("args.invalid", message))?;
             let run = core.clone();
             visual(
                 core,
@@ -186,7 +186,7 @@ pub async fn call(core: &Arc<Core>, name: &str, args: Value) -> Result<Value, To
         other => match crate::plugins::mcp::call(core, other, args).await {
             Some(result) => result,
             None => Err(ToolFailure::new(
-                "unknown_tool",
+                "tool.unknown",
                 format!("the host runs no tool `{other}`"),
             )),
         },
@@ -200,14 +200,14 @@ async fn screenshot(core: &Arc<Core>, args: Value) -> Result<Value, ToolFailure>
     let padding = capture::settings(core).element_padding;
     let request = args
         .request(padding, Duration::ZERO, false)
-        .map_err(|message| ToolFailure::new("invalid_arguments", message))?;
+        .map_err(|message| ToolFailure::new("args.invalid", message))?;
     let core = core.clone();
     let runtime = core.host().runtime().clone();
     let answer = runtime
         .spawn(async move { capture::screenshot(&core, &request).await })
         .await
         .map_err(|_| unfinished())?
-        .map_err(|error| ToolFailure::new("capture_failed", error.to_string()))?;
+        .map_err(|error| ToolFailure::new("capture.failed", error.to_string()))?;
     json(&answer)
 }
 
@@ -230,8 +230,10 @@ async fn visual<T: Serialize + Send + 'static>(
 fn visual_failure(error: &VisualRunError) -> ToolFailure {
     let code = match error {
         VisualRunError::NoProject => "visual.no_project",
-        VisualRunError::NoViews => "view_not_found",
+        VisualRunError::NoViews => "view.not_found",
         VisualRunError::Busy => "visual.busy",
+        // RB-099-10: an unknown breakpoint, an empty choice or one no view shows.
+        VisualRunError::Scope(scope) => scope.code(),
         _ => "visual.failed",
     };
     ToolFailure::new(code, error.to_string())
@@ -252,15 +254,16 @@ async fn on_host<T: Send + 'static>(
 
 fn parse<T: serde::de::DeserializeOwned>(args: Value) -> Result<T, ToolFailure> {
     serde_json::from_value(args)
-        .map_err(|error| ToolFailure::new("invalid_arguments", error.to_string()))
+        .map_err(|error| ToolFailure::new("args.invalid", error.to_string()))
 }
 
 fn json(answer: &impl Serialize) -> Result<Value, ToolFailure> {
-    serde_json::to_value(answer).map_err(|error| ToolFailure::new("internal", error.to_string()))
+    serde_json::to_value(answer)
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 fn unfinished() -> ToolFailure {
-    ToolFailure::new("internal", "the tool did not finish")
+    ToolFailure::new("mcp.internal", "the tool did not finish")
 }
 
 /// What `views_list` answers: every view with its desync (`null` while in sync),

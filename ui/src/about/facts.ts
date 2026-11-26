@@ -7,6 +7,8 @@ import type { AboutInfo } from '../ipc/protocol';
 export const APP_NAME = 'rBrowser';
 /** `[workspace.package] authors`. */
 export const AUTHOR = 'Alexander Herling / DEGOYA.digital';
+/** The year of the copyright notice (NOTICE, the About tab; RB-099-12). */
+export const COPYRIGHT_YEAR = '2026';
 /** `[workspace.package] license`. */
 export const LICENSE = 'GPL-3.0-or-later';
 /** The plugin SDK templates, the WIT contract and the SDK CI workflow. */

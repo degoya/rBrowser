@@ -5,8 +5,9 @@
 // history (RB-080-15, `status-history`) load the same pages in windows of their own; the Portal
 // panel (RB-080-05, `portal`) and the setup wizard (RB-091-05, `setup`, `setup/project`) open in
 // the pages window; the sitemap gallery (RB-090-86, `sitemap-gallery?run=<id>`) loads them in its
-// own window; the bug report's preview (RB-093-04, `bug-report`) opens in the pages window. An
-// unknown route shows the settings. Each page loads when its route is first shown (RB-090-38).
+// own window; the bug report's preview (RB-093-04, `bug-report`) and the sitemap capture's start
+// page (RB-099-09, `sitemap-start`) open in the pages window. An unknown route shows the settings.
+// Each page loads when its route is first shown (RB-090-38).
 
 import { defineAsyncComponent, type Component } from 'vue';
 import { GALLERY_ROUTE } from '../sitemap/gallery/gallery';
@@ -29,6 +30,7 @@ export const PAGES: Record<string, PageLoader> = {
   setup: () => import('../firstrun/SetupWizard.vue'),
   [GALLERY_ROUTE]: () => import('../sitemap/gallery/SitemapGalleryPage.vue'),
   'bug-report': () => import('../bugreport/BugReportPreview.vue'),
+  'sitemap-start': () => import('../sitemap/start/SitemapStartPage.vue'),
 };
 
 const pages = new Map<string, Component>();

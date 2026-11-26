@@ -340,7 +340,7 @@ pub(super) fn mcp(core: &Arc<Core>, tool: &str) -> Result<Value, ToolFailure> {
             }))
         }
         other => Err(ToolFailure::new(
-            "unknown_tool",
+            "tool.unknown",
             format!("{other} is no update tool"),
         )),
     }

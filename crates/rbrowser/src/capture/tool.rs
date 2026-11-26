@@ -243,6 +243,17 @@ pub struct ShotAnswer {
     /// Why this view gave no image.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// The image ends before the page does: a full page taller than one image may be
+    /// (RB-099-11).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub truncated: bool,
+    /// The page's whole height in CSS px, when `truncated` and known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_height: Option<u32>,
+    /// A full page taken while images were still loading: its lazy-loading pre-pass ran out of
+    /// its deadline, so images may be missing (RB-099-28).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub images_pending: bool,
 }
 
 /// The answer of the tool and the commands.

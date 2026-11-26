@@ -66,7 +66,7 @@ pub struct BreakpointRemoveParams {
 #[tool_router(router = config_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Change one key of the project config (.rbrowser/config.json, or config.local.json with scope local): key dotted, value (null removes). The result is checked as the settings window checks it. Keys guarded by workspace trust (headers, network, plugins, extensions), protected keys (of the core and of every installed plugin) and a write at a parent key that would remove or change one are refused with code config_key_protected."
+        description = "Change one key of the project config (.rbrowser/config.json, or config.local.json with scope local): key dotted, value (null removes). The result is checked as the settings window checks it. Keys guarded by workspace trust (headers, network, plugins, extensions), protected keys of the core and the installed plugins, and a write at a parent key that would change one are refused with code config.key_protected."
     )]
     pub(crate) async fn config_set(
         &self,
@@ -125,7 +125,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Remove a breakpoint from the project config by id: from both project files where either defines it, with every reference to it in both (layout cells, hidden views, split and canvas fields, a preset's focus, envCompare.breakpoints). Checked before it is written; the answer counts the references removed."
+        description = "Remove a breakpoint from the project config by id - from both project files, with every reference to it (layout cells, hidden views, split and canvas fields, a preset's focus, envCompare.breakpoints). Checked before it is written; answers the references removed."
     )]
     pub(crate) async fn breakpoint_remove(
         &self,

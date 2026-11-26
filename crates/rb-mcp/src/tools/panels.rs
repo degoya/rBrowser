@@ -76,7 +76,7 @@ pub struct PanelsDockParams {
 #[tool_router(router = panels_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Place the plugin panels (Network, Console, Storage, Findings of plugins and the others): position left, right or bottom docks them in the main window, where the views make room (never covered), floating puts them in a window of their own, closed closes them - folded to the icon rail beside the views, or hidden, as the setting panels.closeTo says - and hidden hides them (no rail). Docking sets the settings panels.dock (the default position) and, with size (DIP, 120 to 4000; the views keep at least a quarter of the area), panels.dockSize for that side. collapsed true folds the dock to its icon rail so the views get the room, false opens it, absent keeps it as it is; kept in panels.dockState (open, rail or hidden). Optional plugin and panel pick the panel shown. Answers position and, docked, the size and collapsed (true: the rail); hidden answers state hidden. Acts on the window, on no view."
+        description = "Place the plugin panels (Network, Console, Storage, Findings and the others): position left, right or bottom docks them in the main window (the views make room), floating puts them in a window of their own, closed closes them (to the icon rail or hidden, as panels.closeTo says), hidden hides them. Docking sets panels.dock and, with size (DIP, 120 to 4000), panels.dockSize; collapsed true folds the dock to its rail, false opens it. plugin and panel pick the panel shown. Answers position and, docked, size and collapsed; hidden answers state hidden."
     )]
     pub(crate) async fn panels_dock(
         &self,
@@ -85,13 +85,13 @@ impl RbMcpServer {
         let result = async {
             if params.size.is_some() && !params.position.docked() {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "size goes with left, right or bottom".to_owned(),
                 ));
             }
             if params.collapsed.is_some() && !params.position.docked() {
                 return Err(ToolFailure::new(
-                    "invalid_arguments",
+                    "args.invalid",
                     "collapsed goes with left, right or bottom".to_owned(),
                 ));
             }

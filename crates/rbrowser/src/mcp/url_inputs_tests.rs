@@ -23,10 +23,18 @@ const POLICED: &[(&str, &str)] = &[
 ];
 
 /// Tools whose URL is held elsewhere, with where and why.
-const OWN_CHECK: &[(&str, &str)] = &[(
-    "sitemap_capture",
-    "sitemap::plan: an http(s) site or sitemap, or a project-relative list file inside the project",
-)];
+const OWN_CHECK: &[(&str, &str)] = &[
+    (
+        "sitemap_capture",
+        "sitemap::plan: an http(s) site or sitemap, or a project-relative list file inside the \
+         project; `urls` only pages its discovery found (sitemap::discovery::chosen)",
+    ),
+    (
+        "sitemap_discover",
+        "sitemap::plan::source, as sitemap_capture's url: an http(s) site or sitemap, or a \
+         project-relative list file inside the project",
+    ),
+];
 
 fn repo() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))

@@ -168,13 +168,14 @@ async fn a_post_to_all_views_reaches_the_plugins_page_scripts() {
         "sessionId": "S1",
         "params": { "context": { "id": 5, "name": "rbplugin-hello" } },
     }));
-    tokio::time::sleep(Duration::from_millis(20)).await;
-    let value = runtime
-        .call_tool("hello", "show", &json!({}))
-        .await
-        .expect("answers");
-    assert_eq!(value, json!({}));
+    // The post reaches the page once the pages know the world's context: the tool is called
+    // until its post shows (every call posts the same message).
     for _ in 0..200 {
+        let value = runtime
+            .call_tool("hello", "show", &json!({}))
+            .await
+            .expect("answers");
+        assert_eq!(value, json!({}));
         if !fake.sent("Runtime.evaluate").is_empty() {
             break;
         }

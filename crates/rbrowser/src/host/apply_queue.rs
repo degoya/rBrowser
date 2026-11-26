@@ -53,6 +53,12 @@ impl ApplyQueue {
         slot.again = false;
         Some(std::mem::take(&mut slot.force))
     }
+
+    /// No worker of `view` runs or is asked for (RB-099-18).
+    #[cfg(test)]
+    pub(super) fn idle(&self, view: ViewId) -> bool {
+        !lock(&self.slots).contains_key(&view)
+    }
 }
 
 impl Host {
@@ -72,6 +78,21 @@ impl Host {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+impl Host {
+    /// Every apply of `view` asked for so far has ended - the attach's and the metrics
+    /// worker's - so a call none of them sent will not come from them (RB-099-18). The attach
+    /// is marked before `on_load_end` returns, a worker's request before `spawn_apply` does.
+    pub(super) fn applies_settled(&self, view: ViewId) -> bool {
+        let attaching = self
+            .state()
+            .views
+            .get(&view)
+            .is_some_and(|entry| entry.attaching);
+        !attaching && self.applying.idle(view)
     }
 }
 

@@ -31,8 +31,10 @@ use rb_ipc::{CoreToShell, ShellToCore};
 use rb_settings::SettingsRegistry;
 use serde_json::Value;
 
+pub(crate) use apply::ONE_CHANGE;
 pub use apply::{
-    PICK_TITLE_KEY, get_settings_off_thread, set_log_handle, set_setting, set_setting_off_thread,
+    PICK_TITLE_KEY, change_off_thread, get_settings_off_thread, set_log_handle, set_setting,
+    set_setting_off_thread,
 };
 pub use project_edit::{Edit, edit_project_file};
 pub use write::Caller;

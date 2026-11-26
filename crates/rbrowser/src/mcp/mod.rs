@@ -21,6 +21,7 @@ pub mod host_tools;
 pub mod installed_keys;
 pub mod latest;
 pub mod network_tools;
+pub mod origin;
 pub mod scripts;
 pub mod settings;
 pub mod setup;

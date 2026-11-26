@@ -25,6 +25,7 @@ use crate::{
 
 pub(crate) mod cdp;
 pub(crate) mod files;
+pub(crate) mod large;
 pub(crate) mod lighthouse_url;
 pub(crate) mod trust;
 

@@ -273,3 +273,29 @@ fn the_recording_editor_has_its_chords_and_tools() {
         assert_eq!(def.title_key, format!("commands.{id}"));
     }
 }
+
+// RB-099-10: a run over the views the grid shows, beside the run over every view.
+#[test]
+fn the_visible_views_runs_have_their_chords_and_tools() {
+    let defs = definitions();
+    for (id, chord, group, tool) in [
+        (
+            "checks.run_visible",
+            "Ctrl+Shift+Space K 3",
+            Group::Checks,
+            "checks_run",
+        ),
+        (
+            "visual.compare_visible",
+            "Ctrl+Shift+Space C C",
+            Group::Capture,
+            "visual_compare",
+        ),
+    ] {
+        let def = find(&defs, id);
+        assert_eq!(def.default_bindings[0].to_string(), chord, "{id}");
+        assert_eq!(def.group, group, "{id}");
+        assert_eq!(def.mcp, McpCoverage::Covered(tool.into()), "{id}");
+        assert_eq!(def.title_key, format!("commands.{id}"));
+    }
+}

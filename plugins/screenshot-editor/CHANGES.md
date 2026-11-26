@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Large images (RB-099-24): every image the capture writes opens - up to 65535 pixels a side and
+  256 megapixels, the editor's own limits before were 16384 and 25 megapixels and an 8 MiB file.
+  The component reads the original in ranges (`project-range`), decodes it row by row, draws the
+  annotations in bands of about 8 MiB that carry the rows a mosaic or a blur reads around them,
+  crops per band and encodes band by band (PNG, or JPEG block row by block row) into a file
+  written in parts and committed at once (`out-stream`): nothing half-written shows, and the
+  plugin holds at most 128 MiB of rows. An image with an alpha channel is saved as RGBA (an
+  opaque one as RGB). The panel gets an image over 16384 pixels a side or 25 megapixels as a
+  preview scaled down by a whole factor (`shot_load`'s `scale`), draws the annotations in the
+  image's own pixels over it and copies at the preview's resolution; the saved file has full
+  resolution. Over the capture's limits the message names them; overlapping blurs too large for
+  a band, an interlaced PNG over 25 megapixels and a preview the cache cannot hold have their own
+  messages. Limits: 448 MiB, 2e11 instructions, 300 s a call.
 - Text size (RB-090-39): the panel follows the shell's text size - Windows' *Accessibility >
   Text size* while `ui.followWindowsTextSize` is on -, live; its bundle is rebuilt with
   panel-ui's root font size from `ui.textScale`.

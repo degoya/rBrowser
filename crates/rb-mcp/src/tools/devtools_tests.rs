@@ -72,6 +72,6 @@ async fn inspect_at_refuses_all_and_a_negative_point() {
             .expect("answer"),
     );
     assert!(error, "{answer}");
-    assert_eq!(answer["code"], "invalid_arguments");
+    assert_eq!(answer["code"], "args.invalid");
     assert!(fake.calls().is_empty());
 }

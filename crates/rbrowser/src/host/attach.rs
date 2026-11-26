@@ -245,20 +245,26 @@ struct Pending {
     live_headers: BTreeMap<String, String>,
     /// `pageApi.uaSuffix` in effect (RB-020-08).
     ua_suffix: bool,
+    /// The view's browser context (its session), when it has a position or a grant to take
+    /// back (RB-080-10): only then is there a grant to plan.
+    position_context: Option<String>,
 }
 
 /// Sends `view`'s device metrics and emulation where they changed (or all of it with `force`:
 /// a new session, a crashed renderer, `reapply_emulation`). Without a session nothing is sent;
 /// the attach sends it. Headers from `config.json` and `config.local.json` go out only in a
 /// trusted workspace; an untrusted one sends only those set live (`emulation.set`).
+///
+/// One apply of a view at a time, beside the other views' (RB-099-19, [`super::apply_locks`]);
+/// the geolocation grant under its browser context's lock ([`apply_position`]).
 pub(super) async fn apply_metrics(
     host: &Arc<Host>,
     view: ViewId,
     force: bool,
 ) -> Result<(), EngineError> {
-    let _serial = host.apply.lock().await;
+    let _view = host.apply.view(view).await;
     let trusted = host.shell_state().trusted;
-    let (pending, permission) = {
+    let pending = {
         let state = host.state();
         let entry = state
             .views
@@ -271,24 +277,8 @@ pub(super) async fn apply_metrics(
         let Some(session) = entry.session.clone() else {
             return Ok(());
         };
-        // The geolocation permission follows the page's origin (RB-080-10).
-        // A grant holds per browser context: only views of the same session share it.
-        let held: Vec<&str> = state
-            .views
-            .values()
-            .filter(|other| other.id != view && other.emulation.geolocation.is_some())
-            .filter(|other| other.context_session() == entry.context_session())
-            .filter_map(|other| other.geo_origin.as_deref())
-            .collect();
-        let mut permission = geolocation_permission(
-            entry.geo_origin.as_deref(),
-            &entry.url,
-            entry.emulation.geolocation.is_some(),
-            force,
-            &held,
-        );
-        in_context(&mut permission.calls, entry.browser_context.as_deref());
-        let pending = Pending {
+        let position = entry.emulation.geolocation.is_some() || entry.geo_origin.is_some();
+        Pending {
             session,
             metrics: state.metrics_of(entry),
             applied: entry.applied,
@@ -296,13 +286,9 @@ pub(super) async fn apply_metrics(
             next: entry.emulation.clone(),
             live_headers: entry.overrides.headers.clone(),
             ua_suffix: host.page.switches(&state.config).ua_suffix,
-        };
-        (pending, permission)
+            position_context: position.then(|| entry.context_session().to_owned()),
+        }
     };
-    let PermissionPlan {
-        calls: permission_calls,
-        granted,
-    } = permission;
     // `dir` and `lang` ride on the sync agent, not on a CDP call (RB-092-02).
     host.agents.follow_emulation(view, &pending.next).await;
     let Pending {
@@ -334,9 +320,7 @@ pub(super) async fn apply_metrics(
             call.params = with_brands(std::mem::take(&mut call.params), &original, engine);
         }
     }
-    if !send_metrics && calls.is_empty() && permission_calls.is_empty() {
-        return Ok(());
-    }
+    let mut sent = send_metrics || !calls.is_empty();
     if send_metrics {
         host.cdp
             .call(
@@ -346,37 +330,110 @@ pub(super) async fn apply_metrics(
             )
             .await?;
     }
-    let mut permission_failed = false;
-    let permission_count = permission_calls.len();
-    let total = calls.len() + permission_count;
-    for (index, call) in calls.into_iter().chain(permission_calls).enumerate() {
+    for call in calls {
         // One override the browser refuses (an older Chromium without safe-area insets) does
         // not stop the others.
         if let Err(error) = host.cdp.call(call.method, call.params, Some(session)).await {
             tracing::warn!(%view, method = call.method, %error, "an emulation override was not applied");
-            permission_failed |= index >= total - permission_count;
         }
     }
-    let still_current = {
+    let mut still_current = !sent || {
         let mut state = host.state();
         match state.views.get_mut(&view) {
             Some(entry) if entry.session.as_deref() == Some(session.as_str()) => {
                 entry.applied = Some(*metrics);
                 entry.applied_emulation = Some(next);
-                // A refused permission call leaves what was granted before, so the next apply
-                // tries again.
-                if !permission_failed {
-                    entry.geo_origin = granted;
-                }
                 true
             }
             _ => false,
         }
     };
-    if still_current {
+    if let Some(context) = &pending.position_context {
+        match apply_position(host, view, session, context, force).await {
+            Position::Sent { current } => {
+                sent = true;
+                still_current &= current;
+            }
+            Position::Unchanged => {}
+        }
+    }
+    if sent && still_current {
         host.emit(ViewEvent::Updated(view));
     }
     Ok(())
+}
+
+/// What [`apply_position`] did.
+enum Position {
+    /// Nothing to send.
+    Unchanged,
+    /// Grant calls went out; `current` while the view still has the session they went on.
+    Sent { current: bool },
+}
+
+/// Brings `view`'s geolocation permission to what its page needs (RB-080-10), under the lock
+/// of its browser context `context`: the plan reads which origins the context's other views
+/// hold, and a grant holds per browser context - only views of the same session share it.
+async fn apply_position(
+    host: &Arc<Host>,
+    view: ViewId,
+    session: &str,
+    context: &str,
+    force: bool,
+) -> Position {
+    let _context = host.apply.context(context).await;
+    let plan = {
+        let state = host.state();
+        // The view may have attached again, to another session or context, since the apply
+        // read it: the plan belongs under that context's lock, the next apply makes it.
+        let Some(entry) = state.views.get(&view).filter(|entry| {
+            entry.context_session() == context && entry.session.as_deref() == Some(session)
+        }) else {
+            return Position::Unchanged;
+        };
+        let held: Vec<&str> = state
+            .views
+            .values()
+            .filter(|other| other.id != view && other.emulation.geolocation.is_some())
+            .filter(|other| other.context_session() == entry.context_session())
+            .filter_map(|other| other.geo_origin.as_deref())
+            .collect();
+        let mut plan = geolocation_permission(
+            entry.geo_origin.as_deref(),
+            &entry.url,
+            entry.emulation.geolocation.is_some(),
+            force,
+            &held,
+        );
+        in_context(&mut plan.calls, entry.browser_context.as_deref());
+        plan
+    };
+    let PermissionPlan { calls, granted } = plan;
+    let sent = !calls.is_empty();
+    let mut failed = false;
+    for call in calls {
+        if let Err(error) = host.cdp.call(call.method, call.params, Some(session)).await {
+            tracing::warn!(%view, method = call.method, %error, "an emulation override was not applied");
+            failed = true;
+        }
+    }
+    let mut state = host.state();
+    let current = match state.views.get_mut(&view) {
+        Some(entry) if entry.session.as_deref() == Some(session) => {
+            // A refused permission call leaves what was granted before, so the next apply
+            // tries again.
+            if !failed {
+                entry.geo_origin = granted;
+            }
+            true
+        }
+        _ => false,
+    };
+    if sent {
+        Position::Sent { current }
+    } else {
+        Position::Unchanged
+    }
 }
 
 impl Host {

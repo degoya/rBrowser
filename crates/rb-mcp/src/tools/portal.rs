@@ -44,7 +44,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "The portal's state: whether it may run (portal.enabled) and runs, its address, and the paired devices. MCP cannot start the portal: a person starts it in rBrowser (Ctrl+Shift+Space S P), and pairs a device with the one-time QR code that never reaches MCP. Each device has id, name (user agent), ip, pairedAtMs, lastSeenMs, connected, and the counts replayed, failed and skipped (events a script on the device cannot replay: hover, keys, pointer, wheel, submit, and anything holding a password)."
+        description = "The portal's state: whether it may run (portal.enabled) and runs, its address and the paired devices (id, name, ip, pairedAtMs, lastSeenMs, connected, and the events replayed, failed and skipped). MCP cannot start the portal or pair a device: a person does, with a one-time QR code that never reaches MCP."
     )]
     pub(crate) async fn portal_devices(
         &self,

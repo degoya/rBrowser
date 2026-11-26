@@ -105,7 +105,7 @@ pub enum Group {
     Sync,
     /// `E`.
     Environments,
-    /// `D` - DevTools & Debug.
+    /// `D` - DevTools & Debugging.
     Devtools,
     /// `O`.
     Overlays,

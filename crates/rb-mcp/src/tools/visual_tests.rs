@@ -4,7 +4,7 @@ use rmcp::handler::server::wrapper::Parameters;
 use serde_json::json;
 
 use super::{BaselineUpdateParams, CompareParams};
-use crate::target::TargetArg;
+use crate::run_target::{EMPTY_SELECTION, RunTarget, TargetItem};
 use crate::testing::{FakeBackend, HOST_TOOL_PREFIX, answer_json, server, view};
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn visual_compare_is_run_by_the_host_with_its_arguments() {
         .expect("answer");
     server
         .visual_compare(Parameters(CompareParams {
-            target: Some(TargetArg::Id(2)),
+            target: Some(RunTarget::Id(2)),
             threshold: Some(0.2),
             ..CompareParams::default()
         }))
@@ -46,7 +46,7 @@ async fn a_breakpoint_shown_twice_compares_both_views_and_adds_up_the_regression
     let (error, answer) = answer_json(
         &server(&fake)
             .visual_compare(Parameters(CompareParams {
-                target: Some(TargetArg::Name("mobile".to_owned())),
+                target: Some(RunTarget::Name("mobile".to_owned())),
                 threshold: None,
                 ..CompareParams::default()
             }))
@@ -63,7 +63,7 @@ async fn visual_baseline_update_is_run_by_the_host() {
     let fake = Arc::new(FakeBackend::default());
     server(&fake)
         .visual_baseline_update(Parameters(BaselineUpdateParams {
-            target: Some(TargetArg::all()),
+            target: Some(RunTarget::Name("all".to_owned())),
             ..BaselineUpdateParams::default()
         }))
         .await
@@ -91,6 +91,60 @@ async fn a_threshold_outside_zero_to_one_is_refused_before_the_host_runs() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("invalid_arguments"));
+    assert_eq!(answer["code"], json!("args.invalid"));
+    assert!(fake.calls().is_empty());
+}
+
+/// RB-099-10: `"visible"` and a list are one host call with the scope; the host resolves it.
+#[tokio::test]
+async fn visible_and_a_list_are_one_run_over_the_scope() {
+    let fake = Arc::new(FakeBackend::default());
+    let server = server(&fake);
+    server
+        .visual_compare(Parameters(CompareParams {
+            target: Some(RunTarget::Name("visible".to_owned())),
+            ..CompareParams::default()
+        }))
+        .await
+        .expect("answer");
+    server
+        .visual_baseline_update(Parameters(BaselineUpdateParams {
+            target: Some(RunTarget::List(vec![
+                TargetItem::Id(1),
+                TargetItem::Name("tablet".to_owned()),
+            ])),
+            ..BaselineUpdateParams::default()
+        }))
+        .await
+        .expect("answer");
+    assert_eq!(
+        fake.calls(),
+        vec![
+            (
+                format!("{HOST_TOOL_PREFIX}visual_compare"),
+                json!({ "scope": "visible" })
+            ),
+            (
+                format!("{HOST_TOOL_PREFIX}visual_baseline_update"),
+                json!({ "scope": ["mobile", "tablet"] })
+            ),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn an_empty_list_is_refused_before_the_host_runs() {
+    let fake = Arc::new(FakeBackend::default());
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .visual_baseline_update(Parameters(BaselineUpdateParams {
+                target: Some(RunTarget::List(Vec::new())),
+                ..BaselineUpdateParams::default()
+            }))
+            .await
+            .expect("answer"),
+    );
+    assert!(error);
+    assert_eq!(answer["code"], json!(EMPTY_SELECTION));
     assert!(fake.calls().is_empty());
 }

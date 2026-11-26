@@ -18,10 +18,12 @@
 #                                  # reference (mcp-reference.sh --check), the action pins
 #                                  # (check-actions-pinned.sh), actionlint over .github/ and
 #                                  # sdk/ci/ (at the pinned version), and
-#                                  # `npm run build && npm test` in ui/, agent/, sidecar/ and
-#                                  # the plugins' workspace plugins/ (each only once it exists;
+#                                  # `npm run build && npm test` in ui/, agent/, sidecar/,
+#                                  # the plugins' workspace plugins/ and the end-to-end harness
+#                                  # tests/e2e/ (each only once it exists;
 #                                  # `npm ci` first when node_modules/ is missing or older than
-#                                  # package-lock.json, scripts/lib/npm.sh); no lock,
+#                                  # package-lock.json, scripts/lib/npm.sh), then the shell's
+#                                  # bundle budget over ui/'s build (bundle-budget.sh); no lock,
 #                                  # but each npm stage waits for free memory
 #   scripts/check.sh --rust        # clippy over the workspace (-D warnings), the app again with
 #                                  # `--no-default-features`, without self-update (RB-090-14),
@@ -236,10 +238,11 @@ file_length() {
 
 # The front ends that exist (ui/, agent/, sidecar/, and the plugins' npm workspace plugins/ -
 # the page-script, panel and runner projects under plugins/<id>/, one lock file and one install;
-# RB-080-25), one per line: those with a package.json.
+# RB-080-25), and the end-to-end harness tests/e2e/ (its helpers' type check and Vitest tests;
+# RB-099-02), one per line: those with a package.json.
 npm_packages() {
     local dir
-    for dir in ui agent sidecar plugins; do
+    for dir in ui agent sidecar plugins tests/e2e; do
         [[ -f "$dir/package.json" ]] && echo "$dir"
     done
     return 0
@@ -340,6 +343,10 @@ preflight() {
     while IFS= read -r dir; do
         if command -v npm > /dev/null 2>&1; then
             stage "npm-${dir//\//-}" npm_check "$dir"
+            # The bytes each shell page loads at once, read from the build just made (RB-099-20).
+            if [[ "$dir" == ui ]]; then
+                stage bundle-budget scripts/bundle-budget.sh
+            fi
         else
             missing "npm-${dir//\//-}" "npm is not installed (.nvmrc pins Node)"
         fi

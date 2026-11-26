@@ -10,7 +10,12 @@ use crate::testing::{FakeBackend, answer_json, server};
 #[tokio::test]
 async fn app_info_answers_the_facts() {
     let fake = Arc::new(FakeBackend::default());
-    let (error, answer) = answer_json(&server(&fake).app_info().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .app_info(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error);
     assert_eq!(answer["name"], "rBrowser");
 }
@@ -80,7 +85,10 @@ async fn wsl_info_restarts_only_when_asked() {
 #[tokio::test]
 async fn plugins_list_runs_its_command() {
     let fake = Arc::new(FakeBackend::default());
-    server(&fake).plugins_list().await.expect("answer");
+    server(&fake)
+        .plugins_list(crate::tools::no_args())
+        .await
+        .expect("answer");
     assert_eq!(fake.calls()[0].0, "plugins.list");
 }
 

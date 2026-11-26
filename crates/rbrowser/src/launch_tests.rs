@@ -12,6 +12,7 @@ fn the_pipe_comes_first_and_no_port_is_ever_asked_for() {
                 "remote-debugging-io-pipes".to_owned(),
                 Some("1234,5678".to_owned())
             ),
+            (LOGIN_PROMPT_OFF.to_owned(), None),
         ]
     );
     assert!(
@@ -19,7 +20,39 @@ fn the_pipe_comes_first_and_no_port_is_ever_asked_for() {
             .iter()
             .any(|(name, _)| name == "remote-debugging-port")
     );
-    assert!(browser_switches(None, &NetworkConfig::default()).is_empty());
+    assert_eq!(
+        browser_switches(None, &NetworkConfig::default()),
+        vec![(LOGIN_PROMPT_OFF.to_owned(), None)]
+    );
+}
+
+/// RB-099-04: with Chromium's sign-in prompt on, CEF hands a browser's Basic auth challenge to
+/// that prompt and never asks `GetAuthCredentials` (`ChromeContentBrowserClientCef::
+/// CreateLoginDelegate` at CEF e603d97): no stored credential could ever answer. The switch is
+/// on in every launch, whatever the project's network settings.
+#[test]
+fn every_challenge_reaches_the_apps_handler_not_chromiums_prompt() {
+    assert_eq!(LOGIN_PROMPT_OFF, "disable-chrome-login-prompt");
+    let network = NetworkConfig {
+        host_resolver_rules: Some("MAP shop.test 127.0.0.1".to_owned()),
+        ignore_certificate_errors: true,
+        proxy: Some("http://proxy:8080".to_owned()),
+    };
+    for (pipe, network) in [
+        (None, NetworkConfig::default()),
+        (Some("1,2"), NetworkConfig::default()),
+        (None, network),
+    ] {
+        let switches = browser_switches(pipe, &network);
+        assert_eq!(
+            switches
+                .iter()
+                .filter(|(name, value)| name == LOGIN_PROMPT_OFF && value.is_none())
+                .count(),
+            1,
+            "{switches:?}"
+        );
+    }
 }
 
 #[test]
@@ -38,6 +71,7 @@ fn the_project_network_settings_become_switches() {
                 Some("MAP shop.test 127.0.0.1".to_owned())
             ),
             ("ignore-certificate-errors".to_owned(), None),
+            (LOGIN_PROMPT_OFF.to_owned(), None),
         ]
     );
 }

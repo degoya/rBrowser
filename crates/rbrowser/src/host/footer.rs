@@ -417,7 +417,7 @@ impl Host {
     /// view whose footer appeared, went or changed its number of lines gets the grid again.
     fn refresh_footers_of(&self, only: Option<&BTreeSet<ViewId>>) {
         let detected = lock(&self.shell).detected.clone();
-        let changed: Option<Vec<(ViewId, CellFooter)>> = {
+        let changed: Result<Vec<(ViewId, CellFooter)>, String> = {
             let mut state = self.state();
             if state.order.is_empty() {
                 return;
@@ -428,10 +428,12 @@ impl Host {
             let reshaped = state
                 .order
                 .iter()
-                .filter(|view| only.is_none_or(|only| only.contains(*view)))
-                .any(|view| lines::reshapes(*view, state.footer.sent.get(view), next.get(view)));
-            if reshaped {
-                None
+                .copied()
+                .filter(|view| only.is_none_or(|only| only.contains(view)))
+                .find(|view| lines::reshapes(*view, state.footer.sent.get(view), next.get(view)));
+            if let Some(view) = reshaped {
+                let (sent, room) = (state.footer.sent.get(&view), widths.get(&view));
+                Err(lines::reshape_note(view, sent, next.get(&view), room))
             } else {
                 let changed: Vec<(ViewId, CellFooter)> = next
                     .into_iter()
@@ -440,23 +442,24 @@ impl Host {
                 for (view, footer) in &changed {
                     state.footer.sent.insert(*view, footer.clone());
                 }
-                Some(changed)
+                Ok(changed)
             }
         };
         match changed {
-            Some(changed) => {
+            Ok(changed) => {
                 for (view, footer) in changed {
                     self.ui.set_cell_footer(view, footer.shown().cloned());
                 }
             }
-            None => self.footer_reshaped(),
+            Err(cause) => self.footer_reshaped(cause),
         }
     }
 
-    /// A footer appeared, went or got or lost a line: the grid again with its strips as they
-    /// are now, and new metrics for the views, whose rectangles changed.
-    fn footer_reshaped(&self) {
-        self.regrid();
+    /// A footer appeared, went or got or lost a line (`cause` names it, RB-099-07): the grid
+    /// again with its strips as they are now, and new metrics for the views, whose rectangles
+    /// changed.
+    fn footer_reshaped(&self, cause: String) {
+        self.regrid(cause);
         let views = self.state().order.clone();
         for view in views {
             self.spawn_apply(view, false);

@@ -175,8 +175,37 @@ export function failureParams(
   return { ...params, id: plugin, plugin, reason };
 }
 
+/** `reason` as the end of a sentence (RB-099-06): trimmed, and a period added unless it already
+ *  ends with `.`, `!`, `?` or an ellipsis, also inside a closing quote or bracket - so the text it
+ *  is put into (`findings.plugin_failed_reason`: `{reason} Its findings are missing.`) reads
+ *  right whether a plugin's or the browser's reason ends with a period or not. */
+export function sentence(reason: string): string {
+  const text = reason.trim();
+  if (text === '' || /[.!?\u2026]["'\u2019\u201d)\]]*$/u.test(text)) {
+    return text;
+  }
+  return `${text}.`;
+}
+
 /** `text` at most `limit` characters, an ellipsis where it was cut. */
 function cutText(text: string, limit: number): string {
   const chars = [...text];
   return chars.length <= limit ? text : `${chars.slice(0, limit - 1).join('')}\u2026`;
 }
+
+/** The breakpoints "Run again" takes so the core merges it into `run` (RB-099-10): the run's
+ * views' breakpoints, once each, when it covered fewer than `all` (the project's breakpoints);
+ * `null` for a run over one view (its target says it), over every breakpoint, or with a view of
+ * no breakpoint - the run's target then names its views. */
+export function rerunScope(run: FindingsRun, all: readonly string[]): string[] | null {
+  if (run.target !== 'all' || run.views.length === 0 || all.length === 0) {
+    return null;
+  }
+  const named = run.views.map((view) => view.breakpoint);
+  if (named.some((breakpoint) => breakpoint === undefined || breakpoint === '')) {
+    return null;
+  }
+  const breakpoints = [...new Set(named as string[])];
+  return all.every((id) => breakpoints.includes(id)) ? null : breakpoints;
+}
+

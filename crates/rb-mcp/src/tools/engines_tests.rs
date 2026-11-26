@@ -72,7 +72,7 @@ async fn an_unknown_view_is_refused_before_anything_restarts() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("view_not_found"));
+    assert_eq!(answer["code"], json!("view.not_found"));
     assert!(fake.calls().is_empty());
 }
 
@@ -108,7 +108,12 @@ async fn engines_list_is_the_hosts_read_of_the_installed_firefox_editions() {
         &format!("{HOST_TOOL_PREFIX}{ENGINES_LIST_TOOL}"),
         Ok(listed.clone()),
     );
-    let (error, answer) = answer_json(&server(&fake).engines_list().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .engines_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer, listed);
     assert_eq!(

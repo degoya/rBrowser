@@ -88,3 +88,34 @@ fn the_load_test_is_a_capability_without_an_import() {
         "plugins.capability.load-test"
     );
 }
+
+#[test]
+fn project_read_and_out_write_grant_their_large_file_interfaces() {
+    // RB-099-24: additive interfaces of the same rights, the first one unchanged.
+    assert_eq!(Capability::ProjectRead.interface(), Some("project"));
+    assert_eq!(
+        Capability::ProjectRead.interfaces(),
+        &["project", "project-range"]
+    );
+    assert_eq!(Capability::OutWrite.interfaces(), &["out", "out-stream"]);
+    assert_eq!(
+        Capability::for_interface("project-range"),
+        Some(Capability::ProjectRead)
+    );
+    assert_eq!(
+        Capability::for_interface("out-stream"),
+        Some(Capability::OutWrite)
+    );
+    assert_eq!(Capability::for_interface("stream"), None);
+}
+
+#[test]
+fn the_first_interface_is_the_one_interface_names() {
+    for capability in Capability::ALL {
+        assert_eq!(
+            capability.interfaces().first().copied(),
+            capability.interface(),
+            "{capability}"
+        );
+    }
+}

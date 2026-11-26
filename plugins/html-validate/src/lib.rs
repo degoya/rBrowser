@@ -34,6 +34,7 @@ pub mod script;
 pub mod settings;
 pub mod source;
 pub mod tool;
+pub mod unserved;
 
 use rb_plugin_api::check::Check;
 use rb_plugin_api::feature::Feature;

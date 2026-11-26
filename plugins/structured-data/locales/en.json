@@ -36,7 +36,7 @@
         "finding": "Finding",
         "findingsAt": "{count, plural, one {# finding} other {# findings}} at this node",
         "jump": "Show in the tree",
-        "loading": "Reading the page...",
+        "loading": "Reading the page…",
         "noBlocks": "The page has no JSON-LD block.",
         "noFindings": "No findings: the structured data meets every rule.",
         "noView": "No view shows a page.",
@@ -47,7 +47,7 @@
         "refresh": "Read again",
         "report": "Send to the findings panel",
         "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
-        "richOff": "Rich results are not checked (Settings > Checks > Structured data).",
+        "richOff": "Rich results are not checked (Settings › Checks › Structured data).",
         "sections": {
           "findings": "Findings",
           "raw": "JSON-LD",
@@ -111,7 +111,7 @@
         },
         "richResults": {
           "description": "Check the properties the rich results of Google Search need and recommend.",
-          "help": "Holds Product, Article, BreadcrumbList, Organization, FAQ and their parts to the properties a rich result of Google Search needs (an error when missing) and recommends (a warning). Off checks the schema.org vocabulary only.",
+          "help": "Holds Product, Article, BreadcrumbList, Organization, FAQ and their parts to the properties a rich result of Google Search needs (an error when missing) and recommends (a warning). When off, it checks the schema.org vocabulary only.",
           "label": "Check rich results"
         }
       },

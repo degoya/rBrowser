@@ -168,7 +168,7 @@ pub struct RepeatParams {
 #[tool_router(router = network_debug_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "The HTTP debugger's breakpoints over every Chromium view: action list (default) answers the breakpoints, their switch (enabled) and the requests held right now - each with id, view, stage (request: method, URL, headers and body editable; response: status, headers and body), masked, the body only while mcp.allowEvaluate is on (bodyWithheld otherwise) - and timeoutMs, after which a held request goes on unchanged. action add (urlPattern as glob or regex, method, resourceType, stage, views), remove (id) and enable (id, enabled) change them; a breakpoint holds the matching request of every view it covers until network_continue or network_abort, or the timeout."
+        description = "The HTTP debugger's breakpoints over every Chromium view. action list (default) answers the breakpoints, their switch (enabled) and the requests held now - id, view, stage (request or response), masked; the body only while mcp.allowEvaluate is on (bodyWithheld) - and timeoutMs, after which a held request goes on unchanged. add (urlPattern as glob or regex, method, resourceType, stage, views), remove (id) and enable (id, enabled) change them; a matching request is held until network_continue, network_abort or the timeout."
     )]
     pub(crate) async fn network_breakpoints(
         &self,
@@ -178,7 +178,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Let a held request go on (id from network_breakpoints). allViews: the same request held in every other view too. edits (method, url, headers as [[name, value]], body or bodyBase64, status at the response stage) only while mcp.allowEvaluate is on - an edited request or response is content the page gets; a masked value sent back means as it was. Answers how many requests went on and how many stay held."
+        description = "Let a held request go on (id from network_breakpoints); allViews: the same request in every other view too. edits (method, url, headers as [[name, value]], body or bodyBase64, status at the response stage) only while mcp.allowEvaluate is on; a masked value sent back means unchanged. Answers how many went on and how many stay held."
     )]
     pub(crate) async fn network_continue(
         &self,
@@ -198,7 +198,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Send a request of your own (method, url, headers, body) from rBrowser's core - with the cookies, user agent and extra headers of view when given - times in a row (1 to 10, one after another), and answer each result: status, headers, body (cut at 256 KiB), timeMs; a redirect is answered (location), never followed. Off by default: a person switches it on with network-panel.allowComposeFromMcp, because it sends with the person's cookies; while off the answer is an error with code compose_disabled and settingsKey. Answers are masked."
+        description = "Send a request of your own (method, url, headers, body) from rBrowser's core - with the cookies, user agent and extra headers of view when given - times in a row (1 to 10); answers each status, headers, body (cut at 256 KiB) and timeMs, masked; a redirect is answered, never followed. Off until a person switches on network-panel.allowComposeFromMcp (code network.compose_disabled): it sends with the person's cookies."
     )]
     pub(crate) async fn network_compose(
         &self,
@@ -208,7 +208,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Send a captured request again (view and requestId from network_requests or networkpanel_list) from that view's context, with edits (method, url, headers, body), times in a row (1 to 10), and answer each result as network_compose does. Off by default (network-panel.allowComposeFromMcp, code compose_disabled). Answers are masked."
+        description = "Send a captured request again (view and requestId from network_requests or networkpanel_list) from that view's context, with edits (method, url, headers, body), times in a row (1 to 10); answers as network_compose, masked. Off until a person switches on network-panel.allowComposeFromMcp (code network.compose_disabled)."
     )]
     pub(crate) async fn network_repeat(
         &self,
@@ -225,7 +225,7 @@ impl RbMcpServer {
         params: &T,
     ) -> Result<Value, ToolFailure> {
         let args = serde_json::to_value(params)
-            .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+            .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
         let answer = self.backend.host_tool(tool, args).await?;
         Ok(self.backend.mask(&answer))
     }

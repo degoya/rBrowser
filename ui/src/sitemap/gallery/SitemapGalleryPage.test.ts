@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { VueWrapper } from '@vue/test-utils';
 import { IpcClient } from '../../ipc/client';
 import { IpcErrorCode, type ShellToCore, type SitemapGalleryPage as Run } from '../../ipc/protocol';
@@ -153,6 +153,11 @@ describe('the sitemap gallery page', () => {
   });
 
   it('reads a running capture again until it ends, without losing the page', async () => {
+    // Virtual timers that also run on with the clock: the refresh timer is due on demand.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     let state = 'running';
     let reads = 0;
     const client = new IpcClient({
@@ -172,7 +177,9 @@ describe('the sitemap gallery page', () => {
     state = 'finished';
     await vi.waitFor(() => expect(result.wrapper.get('[data-testid="gallery-state"]').text()).toBe('Finished'));
     const done = reads;
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Five refresh periods on the virtual clock: a timer still armed would have read again.
+    await vi.advanceTimersByTimeAsync(50);
+    await settle();
     expect(reads).toBe(done);
   });
 
@@ -184,6 +191,7 @@ describe('the sitemap gallery page', () => {
   it('says when the run is gone or cannot be read', async () => {
     const gone = await mounted(galleryRun(), new IpcError(IpcErrorCode.NotFound, 'sitemap.error.not_found: no run'));
     expect(gone.wrapper.get('[data-testid="gallery-failure"]').text()).toContain('was not found');
+    expect(gone.wrapper.get('[data-testid="gallery-failure"]').attributes('role')).toBe('alert');
     current?.unmount();
     const broken = await mounted(galleryRun(), new IpcError(IpcErrorCode.Internal, 'sitemap.error.failed: x'));
     expect(broken.wrapper.get('[data-testid="gallery-failure"]').text()).toContain('could not be read');

@@ -196,3 +196,120 @@ async fn a_requested_run_waits_for_no_one_and_is_refused_while_another_runs() {
     );
     drop(running);
 }
+
+/// RB-099-10: a scope narrows the run to the views of its breakpoints, held at the start.
+#[tokio::test]
+async fn a_scope_takes_only_the_views_of_its_breakpoints() {
+    let (_ui, core) = setup();
+    let chosen = ViewScope::Breakpoints(vec!["mobile".to_owned(), "desktop".to_owned()]);
+    let job = prepare(&core, ChecksRunArgs::default(), Some(&chosen)).expect("prepares");
+    let mut breakpoints: Vec<String> = job
+        .request
+        .views
+        .iter()
+        .filter_map(|view| view.breakpoint.clone())
+        .collect();
+    breakpoints.sort();
+    assert_eq!(breakpoints, ["desktop", "mobile"]);
+    assert!(job.not_shown.is_empty());
+    let every = prepare(&core, ChecksRunArgs::default(), None).expect("prepares");
+    assert_eq!(every.request.views.len(), core.host().views().len());
+    let all = prepare(&core, ChecksRunArgs::default(), Some(&ViewScope::All)).expect("all");
+    assert_eq!(all.request.views.len(), every.request.views.len());
+}
+
+#[tokio::test]
+async fn the_answer_names_the_views_checked() {
+    let (_ui, core) = setup();
+    let answer = run_command(&core, RUN_ALL_COMMAND, &json!({ "scope": ["tablet"] }))
+        .expect("this module's command")
+        .expect("runs");
+    let views = answer["views"].as_array().expect("the views checked");
+    assert_eq!(views.len(), 1, "{answer}");
+    assert_eq!(views[0]["breakpoint"], "tablet");
+    assert!(answer.get("notShown").is_none());
+}
+
+#[tokio::test]
+async fn checks_run_visible_is_the_run_over_the_views_the_grid_shows() {
+    let (_ui, core) = setup();
+    let answer = run_command(&core, RUN_VISIBLE_COMMAND, &Value::Null)
+        .expect("this module's command")
+        .expect("runs");
+    let views = answer["views"].as_array().expect("the views checked");
+    assert_eq!(views.len(), core.host().views().len(), "{answer}");
+    assert_eq!(visible(&json!({ "plugins": ["seo"] }))["scope"], "visible");
+}
+
+#[tokio::test]
+async fn an_unknown_breakpoint_or_an_empty_choice_is_refused_with_its_code() {
+    let (_ui, core) = setup();
+    for (scope, code) in [
+        (json!(["watch"]), "scope.error.unknown_breakpoint"),
+        (json!([]), "scope.error.empty"),
+        (json!("hidden"), "scope.error.invalid"),
+    ] {
+        let result = run_command(&core, RUN_ALL_COMMAND, &json!({ "scope": scope }))
+            .expect("this module's command");
+        match result {
+            Err(CommandError::InvalidArgs(message)) => {
+                assert!(message.starts_with(code), "{scope}: {message}");
+            }
+            other => panic!("{scope}: {other:?}"),
+        }
+    }
+    let shell = ask(
+        &core,
+        json!({ "type": "runChecks", "target": "all", "scope": ["watch"] }),
+    );
+    assert_eq!(
+        shell.map_err(|failure| failure.0),
+        Err(IpcErrorCode::BadRequest)
+    );
+}
+
+/// RB-099-25: a person's run of every check (the Checks menu, the palette, `Leader K K`) said
+/// its count in the status bar but left the dock folded to its rail, the findings out of sight.
+/// It opens the dock at the findings now; the same run from an MCP tool keeps the fold.
+#[tokio::test]
+async fn a_persons_run_opens_the_folded_dock_at_the_findings_and_a_tools_keeps_the_fold() {
+    use rb_config::{PanelDock, PanelDockState, UserSettings};
+
+    use crate::panel_dock::PanelSide;
+    use crate::panel_dock::tests::{docks, setup_with};
+    let folded = || {
+        let mut user = UserSettings::default();
+        user.panels.dock = PanelDock::Left;
+        user.panels.dock_state = PanelDockState::Rail;
+        setup_with(user)
+    };
+    for command in [RUN_ALL_COMMAND, RUN_VISIBLE_COMMAND] {
+        let person = folded();
+        run_command(&person.core, command, &Value::Null)
+            .expect("this module's command")
+            .expect("runs without any check plugin");
+        let dock = docks(&person.ui).last().cloned().flatten().expect("docked");
+        assert_eq!(
+            (dock.side, dock.collapsed),
+            (PanelSide::Left, false),
+            "{command}"
+        );
+        assert!(dock.url.ends_with("#/panels/findings"), "{}", dock.url);
+        assert_eq!(
+            person.core.user_settings().panels.dock_state,
+            PanelDockState::Open
+        );
+    }
+    let tool = folded();
+    crate::mcp::origin::as_mcp(|| run_command(&tool.core, RUN_ALL_COMMAND, &Value::Null))
+        .expect("this module's command")
+        .expect("runs without any check plugin");
+    assert!(
+        docks(&tool.ui).iter().flatten().all(|dock| dock.collapsed),
+        "a tool's run unfolds nothing"
+    );
+    assert_eq!(
+        tool.core.user_settings().panels.dock_state,
+        PanelDockState::Rail
+    );
+}

@@ -3,6 +3,12 @@
 //! all of them. Views are captured one after another; a view that fails is named in the answer
 //! and the others go on. The capture itself is a [`Shooter`] (CDP for Chromium views,
 //! `chromium.rs`), so the run is tested without a browser.
+//!
+//! A full page cut at the image's limits (RB-099-11) is named in its entry (`truncated`, the
+//! page's height), read from the PNG the stitcher marked; the overview keeps the top
+//! [`OVERVIEW_ROWS`] rows of each view and marks a longer one the same way. A full page taken
+//! while images were still loading at the lazy-loading pre-pass's deadline says so
+//! (`imagesPending`, RB-099-28), read from the PNG's note the same way.
 
 use std::path::{Path, PathBuf};
 
@@ -10,13 +16,17 @@ use async_trait::async_trait;
 use base64::Engine as _;
 use rb_engine::{EngineError, ViewId};
 use rb_visual::{
-    OverviewOptions, PathVars, Stamp, Tile, compose, decode_png, encode_png, expand, png_size,
-    save_png, size_text,
+    OverviewOptions, PathVars, Stamp, Tile, compose, decode_top, encode_png, expand,
+    images_pending, png_size, save_png, size_text, truncation,
 };
 
 use super::CaptureError;
 use super::cdp::Shot;
 use super::tool::{CaptureMode, MAX_INLINE_BYTES, ScreenshotAnswer, ShotAnswer};
+
+/// The most rows of one view in the overview: one texture, as tall as a full page was before
+/// RB-099-11; a longer page is cut there, never decoded whole.
+pub const OVERVIEW_ROWS: u32 = 16_384;
 
 /// Takes the picture of one view.
 #[async_trait]
@@ -105,15 +115,18 @@ pub async fn run(
             ..ShotAnswer::default()
         };
         match shooter.shoot(view.id, shot, scale).await {
-            Ok(png) if overview => match decode_png(&png) {
-                Ok(image) => {
+            Ok(png) if overview => match decode_top(&png, OVERVIEW_ROWS) {
+                Ok((image, height)) => {
                     (entry.width, entry.height) = (image.width(), image.height());
+                    note_cut(&mut entry, &png);
+                    entry.truncated |= height > image.height();
                     tiles.push(tile(view, context, image));
                 }
                 Err(error) => entry.error = Some(error.to_string()),
             },
             Ok(png) => {
                 (entry.width, entry.height) = png_size(&png).unwrap_or_default();
+                note_cut(&mut entry, &png);
                 let vars = context.vars(view, mode.as_str());
                 deliver(&mut entry, &png, &vars, context, &mut inline)?;
             }
@@ -161,6 +174,16 @@ pub async fn run(
         .and_then(|path| Path::new(path).parent())
         .map(|folder| folder.display().to_string());
     Ok(answer)
+}
+
+/// Marks `entry` cut when the stitcher recorded `png` as the top of a longer page, and with
+/// images pending when the capture's lazy-loading pre-pass ran out of its deadline (RB-099-28).
+fn note_cut(entry: &mut ShotAnswer, png: &[u8]) {
+    if let Some(cut) = truncation(png) {
+        entry.truncated = true;
+        entry.page_height = Some(cut.page_height);
+    }
+    entry.images_pending = images_pending(png);
 }
 
 /// The tile of `view` in the overview.

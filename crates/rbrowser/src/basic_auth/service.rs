@@ -9,7 +9,7 @@ use std::sync::{Mutex, OnceLock};
 use rb_config::ProjectConfig;
 
 use super::attempts::Attempts;
-use super::decide::{Challenge, Refusal, eligible, environment_origin};
+use super::decide::{Challenge, Eligible, Refusal, eligible, environment_origin, shown_origin};
 use super::origin::{AuthOrigin, OriginError};
 use super::store::{Credential, CredentialStore, StoreError, platform_store, target_name};
 
@@ -54,11 +54,13 @@ impl BasicAuth {
     }
 
     /// The credential that answers `challenge` in the view with browser id `browser` of the
-    /// project with key `project` and config `config`.
+    /// project with key `project` and config `config`. Every decision is logged at INFO - the
+    /// environment, the origin, the realm and the reason, never the user, the password or the
+    /// request's path (RB-099-04).
     ///
     /// # Errors
     ///
-    /// The [`Refusal`]: CEF leaves the challenge to the person.
+    /// The [`Refusal`]: the challenge is not answered.
     pub fn answer(
         &self,
         challenge: &Challenge<'_>,
@@ -66,8 +68,27 @@ impl BasicAuth {
         project: Option<&str>,
         config: &ProjectConfig,
     ) -> Result<Credential, Refusal> {
+        let found = eligible(challenge, config);
+        let environment = found.as_ref().ok().map(|found| found.environment.clone());
+        let outcome = found.and_then(|found| self.stored(challenge, browser, project, &found));
+        log_decision(
+            challenge,
+            browser,
+            environment.as_deref(),
+            outcome.as_ref().err(),
+        );
+        outcome
+    }
+
+    /// The credential stored for `found` in `project`, once per view, origin and realm.
+    fn stored(
+        &self,
+        challenge: &Challenge<'_>,
+        browser: i32,
+        project: Option<&str>,
+        found: &Eligible,
+    ) -> Result<Credential, Refusal> {
         let project = project.ok_or(Refusal::NoProject)?;
-        let found = eligible(challenge, config)?;
         let credential = self
             .store
             .read(&target_name(project, &found.origin))
@@ -102,6 +123,7 @@ impl BasicAuth {
             .write(&target_name(project, &origin), credential)
             .map_err(AuthError::Store)?;
         rb_util::lock(&self.attempts).reset();
+        super::ask::asking().reset();
         Ok(origin)
     }
 
@@ -122,6 +144,7 @@ impl BasicAuth {
             .remove(&target_name(project, &origin))
             .map_err(AuthError::Store)?;
         rb_util::lock(&self.attempts).reset();
+        super::ask::asking().reset();
         Ok(removed)
     }
 
@@ -161,6 +184,42 @@ impl BasicAuth {
             .ok()??;
         rb_diag::register_secret(credential.password());
         Some(credential.user().to_owned())
+    }
+}
+
+/// One INFO line per challenge: answered, or why not. The origin is the challenge's scheme, host
+/// and port (a proxy's host and port), never the request URL CEF passes along, whose path or
+/// query may carry a token; the server's realm is quoted, so it cannot start a line of its own.
+fn log_decision(
+    challenge: &Challenge<'_>,
+    browser: i32,
+    environment: Option<&str>,
+    refusal: Option<&Refusal>,
+) {
+    let origin = shown_origin(challenge);
+    let origin = if challenge.is_proxy {
+        format!("proxy {origin}")
+    } else {
+        origin
+    };
+    let environment = environment.unwrap_or("none");
+    let realm = challenge.realm;
+    match refusal {
+        None => tracing::info!(
+            browser,
+            environment,
+            origin = ?origin,
+            realm = ?realm,
+            "Basic auth: the stored credential answers the challenge"
+        ),
+        Some(refusal) => tracing::info!(
+            browser,
+            environment,
+            origin = ?origin,
+            realm = ?realm,
+            reason = %refusal,
+            "Basic auth: the challenge is not answered"
+        ),
     }
 }
 

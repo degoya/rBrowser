@@ -49,7 +49,7 @@
         },
         "legendUnused": "used in no view",
         "legendUsed": "used",
-        "measuring": "Reloading every view and measuring...",
+        "measuring": "Reloading every view and measuring…",
         "mode": {
           "interaction": "Interaction",
           "load": "Page load"
@@ -119,7 +119,7 @@
         },
         "thirdParty": {
           "description": "Measure files from other origins than the page's (CDNs, analytics).",
-          "help": "Also measures files from other origins than the page's, such as CDNs and analytics. Off reports the site's own files only.",
+          "help": "Also measures files from other origins than the page's, such as CDNs and analytics. When off, it reports the site's own files only.",
           "label": "Third-party files"
         },
         "unusedPercent": {

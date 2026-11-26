@@ -69,7 +69,8 @@ pub struct Devtools {
     host: Weak<Host>,
     core: Weak<Core>,
     runtime: Handle,
-    state_path: Option<PathBuf>,
+    /// Writes the UI state to its file; `None`: nothing is kept.
+    saver: Option<Arc<ui_state::Saver>>,
     inner: Mutex<Inner>,
     /// The dock's size when the splitter's drag began (`super::splitter`).
     drag_start: Mutex<Option<u32>>,
@@ -88,7 +89,7 @@ impl Devtools {
             host: Arc::downgrade(core.host()),
             core: core.arc().as_ref().map(Arc::downgrade).unwrap_or_default(),
             runtime,
-            state_path,
+            saver: state_path.map(ui_state::Saver::new),
             inner: Mutex::new(Inner {
                 ui,
                 ..Inner::default()
@@ -380,11 +381,24 @@ impl Devtools {
         host.update_shell_state(|state| state.devtools = current);
     }
 
+    /// Saves `state` off the calling thread, the newest winning ([`ui_state::Saver`],
+    /// RB-099-19); without a file nothing.
     fn save(&self, state: &UiState) {
-        if let Some(path) = &self.state_path
-            && let Err(error) = ui_state::save(path, state)
-        {
-            tracing::warn!(%error, "the DevTools UI state was not saved");
+        if let Some(saver) = &self.saver {
+            saver.save(&self.runtime, *state);
+        }
+    }
+
+    /// Brings open DevTools in line with the host's views after the follower missed events:
+    /// on a view that is gone they close, docked ones follow the active view.
+    fn reconcile(&self, host: &Host) {
+        let Some(open) = self.current() else {
+            return;
+        };
+        if !host.views().iter().any(|info| info.id == open.view) {
+            self.on_view_closed(open.view);
+        } else if let Some(active) = host.active_view() {
+            self.on_active_changed(active);
         }
     }
 
@@ -394,18 +408,22 @@ impl Devtools {
         let me = self.me.clone();
         self.runtime.spawn(async move {
             loop {
-                let event = match events.recv().await {
-                    Ok(event) => event,
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => return,
-                };
+                let event = events.recv().await;
                 let Some(devtools) = me.upgrade() else {
                     return;
                 };
                 match event {
-                    ViewEvent::ActiveChanged(Some(view)) => devtools.on_active_changed(view),
-                    ViewEvent::Closed(view) => devtools.on_view_closed(view),
-                    _ => {}
+                    Ok(ViewEvent::ActiveChanged(Some(view))) => devtools.on_active_changed(view),
+                    Ok(ViewEvent::Closed(view)) => devtools.on_view_closed(view),
+                    Ok(_) => {}
+                    // Events were dropped, a close or a change of the active view among them,
+                    // maybe: the host's views say what they would have (RB-099-19).
+                    Err(RecvError::Lagged(_)) => {
+                        if let Ok(host) = devtools.host() {
+                            devtools.reconcile(&host);
+                        }
+                    }
+                    Err(RecvError::Closed) => return,
                 }
             }
         });
@@ -420,3 +438,7 @@ mod dock;
 #[cfg(test)]
 #[path = "session_tests.rs"]
 pub(crate) mod tests;
+
+#[cfg(test)]
+#[path = "session_follow_tests.rs"]
+mod follow_tests;

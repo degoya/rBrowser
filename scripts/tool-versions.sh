@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # The development tools' pins, one source each (RB-000-02): Rust in rust-toolchain.toml, Node in
-# .nvmrc, cargo-nextest, cargo-xwin, cargo-deny, cargo-edit, shellcheck, gitleaks and actionlint
+# .nvmrc, cargo-nextest, cargo-xwin, cargo-deny, cargo-edit, shellcheck, gitleaks, actionlint and wix
 # (and the packaged Node runtime's SHA-256s for Windows and macOS, rcedit) in
 # scripts/lib/tool-versions.sh. Scripts read those; a document, a package.json or a workflow
 # cannot, so `--check` holds every copy to its source, as `scripts/set-version.sh --check` does
@@ -48,6 +48,7 @@ declare -A pin=(
     [shellcheck]="$RB_SHELLCHECK_VERSION"
     [gitleaks]="$RB_GITLEAKS_VERSION"
     [actionlint]="$RB_ACTIONLINT_VERSION"
+    [wix]="$RB_WIX_VERSION"
 )
 pin[node-major]="${pin[node]%%.*}"
 # The WebKit pin (RB-040-04) and its copy in the sidecar, which reads it at run time.
@@ -55,7 +56,7 @@ pin[webkit-playwright]="$RB_WEBKIT_PLAYWRIGHT_VERSION"
 pin[webkit-revision]="$RB_WEBKIT_REVISION"
 pin[webkit-sha256]="$RB_WEBKIT_ARCHIVE_SHA256"
 pin[webkit-bytes]="$RB_WEBKIT_ARCHIVE_BYTES"
-order=(rust node cargo-nextest cargo-xwin cargo-deny cargo-edit shellcheck gitleaks actionlint)
+order=(rust node cargo-nextest cargo-xwin cargo-deny cargo-edit shellcheck gitleaks actionlint wix)
 
 # The version of tool $1 installed here, or `-`.
 installed() {
@@ -70,6 +71,7 @@ installed() {
         shellcheck) out="$(shellcheck --version 2> /dev/null | sed -n 's/^version: //p')" ;;
         gitleaks) out="$(gitleaks version 2> /dev/null)" ;;
         actionlint) out="$(actionlint --version 2> /dev/null | head -n 1)" ;;
+        wix) out="$(wix --version 2> /dev/null)" ;;
     esac
     grep -oE '[0-9]+\.[0-9]+\.[0-9]+' <<< "$out" | head -n 1 || echo -
 }
@@ -163,6 +165,12 @@ copies_of rust any "toolchain: $V" "${WORKFLOWS[@]}"
 copies_of cargo-nextest any "tool: (cargo-)?nextest@$V" "${WORKFLOWS[@]}"
 copies_of cargo-xwin any "tool: cargo-xwin@$V" "${WORKFLOWS[@]}"
 copies_of cargo-deny any "tool: cargo-deny@$V" "${WORKFLOWS[@]}"
+# WiX (RB-099-27) is installed by scripts/ci-tools.sh wix from the pin; a workflow, a document or
+# a script that names the tool or its UI extension at a version of its own holds that version.
+WIX_TEXTS=("${WORKFLOWS[@]}" README.md docs/*.md scripts/*.sh scripts/lib/*.sh)
+copies_of wix any "tool (install|update) --global wix --version $V" "${WIX_TEXTS[@]}"
+# (`.` for the `/` before the version: the rule is also a sed expression.)
+copies_of wix any "WixToolset\\.[A-Za-z]+\\.wixext.$V" "${WIX_TEXTS[@]}"
 
 # The WebKit pin's copy in the sidecar (sidecar/src/webkit/pin.ts) and the playwright-core it is for.
 WEBKIT_PIN_TS=sidecar/src/webkit/pin.ts

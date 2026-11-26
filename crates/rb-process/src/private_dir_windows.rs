@@ -103,3 +103,7 @@ impl Drop for Descriptor {
         unsafe { LocalFree(self.0) };
     }
 }
+
+#[cfg(test)]
+#[path = "private_dir_windows_tests.rs"]
+mod tests;

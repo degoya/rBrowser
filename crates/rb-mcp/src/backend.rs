@@ -85,7 +85,7 @@ impl Default for McpOptions {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolFailure {
-    /// The stable code (`view_not_found`, `settings.rejected.protected`, ...).
+    /// The stable code (`view.not_found`, `settings.rejected.protected`, ...).
     pub code: String,
     /// The English message.
     pub message: String,
@@ -115,10 +115,10 @@ impl ToolFailure {
 impl From<CommandError> for ToolFailure {
     fn from(error: CommandError) -> Self {
         let code = match &error {
-            CommandError::NotImplemented => "not_implemented",
-            CommandError::UnknownCommand(_) | CommandError::InvalidId(_) => "unknown_command",
-            CommandError::InvalidArgs(_) => "invalid_arguments",
-            _ => "command_failed",
+            CommandError::NotImplemented => "command.not_implemented",
+            CommandError::UnknownCommand(_) | CommandError::InvalidId(_) => "command.unknown",
+            CommandError::InvalidArgs(_) => "args.invalid",
+            _ => "command.failed",
         };
         Self::new(code, error.to_string())
     }
@@ -219,16 +219,18 @@ pub trait Backend: Send + Sync + 'static {
         Err(no_flows())
     }
 
-    /// Runs the flow `name` in `views` (`None`: the flow's own, else all); `wait` answers the
-    /// result, otherwise the run's id at once. An untrusted workspace is refused
-    /// (`flows.untrusted`); no tool grants trust.
+    /// Runs the flow `name` in `views` - in the views of `scope`'s breakpoints when there are
+    /// none (`"visible"` or breakpoint ids, RB-099-10) - (`None`: the flow's own, else all);
+    /// `wait` answers the result, otherwise the run's id at once. An untrusted workspace is
+    /// refused (`flows.untrusted`); no tool grants trust.
     async fn flow_run(
         &self,
         name: &str,
         views: Option<Vec<ViewId>>,
+        scope: Option<rb_config::ViewScope>,
         wait: bool,
     ) -> Result<Value, ToolFailure> {
-        let _ = (name, views, wait);
+        let _ = (name, views, scope, wait);
         Err(no_flows())
     }
 
@@ -255,7 +257,7 @@ pub trait Backend: Send + Sync + 'static {
 
     /// The PNG of file `index` of [`Backend::latest_screenshots`] - the shots with a `path` in
     /// their order, the overview last - when it has at most `max_bytes`; refused with
-    /// `answer_too_large` over it. Only those files: the index never names a path of its own.
+    /// `answer.too_large` over it. Only those files: the index never names a path of its own.
     fn latest_screenshot_png(
         &self,
         index: usize,
@@ -263,7 +265,7 @@ pub trait Backend: Send + Sync + 'static {
     ) -> Result<Vec<u8>, ToolFailure> {
         let _ = (index, max_bytes);
         Err(ToolFailure::new(
-            "screenshots_none",
+            "screenshots.none",
             "no screenshot was saved yet: take one with screenshot",
         ))
     }
@@ -271,5 +273,5 @@ pub trait Backend: Send + Sync + 'static {
 
 /// The failure of a backend without flows.
 fn no_flows() -> ToolFailure {
-    ToolFailure::new("not_implemented", "this rBrowser runs no flows")
+    ToolFailure::new("command.not_implemented", "this rBrowser runs no flows")
 }

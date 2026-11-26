@@ -41,7 +41,8 @@ pub enum PresetError {
 
 /// What the grid shows: a preset (or the top-level `layout`), its mode and, in focus mode, the
 /// breakpoint shown. A grid preset with `mode: Focus` is focus mode over that preset: leaving
-/// it returns to the preset's grid.
+/// it returns to the preset's grid. The default is the top-level layout in the built-in mode,
+/// the canvas (RB-099-26).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Selection {
     /// The preset; `None` for the top-level `layout`.
@@ -68,7 +69,8 @@ impl Selection {
     }
 
     /// Focus mode on (on `active`, the active view's breakpoint, when given) or off again: off
-    /// returns to the preset when it is a grid preset, else to the top-level `layout`.
+    /// returns to the preset when it is a grid preset, else to the top-level `layout` in the
+    /// built-in mode.
     pub fn toggled_focus(&self, config: &ProjectConfig, active: Option<&str>) -> Self {
         match self.mode {
             LayoutMode::Focus => {
@@ -87,11 +89,7 @@ impl Selection {
                         mode,
                         focus: None,
                     },
-                    None => Self {
-                        preset: None,
-                        mode: LayoutMode::Grid,
-                        focus: None,
-                    },
+                    None => Self::default(),
                 }
             }
             _ => Self {
@@ -145,7 +143,9 @@ pub fn next_preset<'a>(config: &'a ProjectConfig, current: Option<&str>) -> Opti
     presets.get_index(next).map(|(id, _)| id.as_str())
 }
 
-/// The selection at start: `layouts.default` when it names a preset, else the top-level grid.
+/// The selection at start: `layouts.default` when it names a preset, else the top-level layout
+/// in the built-in mode - the canvas, which places the views itself until they are moved
+/// (RB-099-26).
 pub fn start_selection(config: &ProjectConfig) -> Selection {
     config
         .layouts

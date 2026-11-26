@@ -198,7 +198,7 @@ describe('the Coverage panel', () => {
     ($('#run-load') as HTMLButtonElement).click();
     await settle();
     expect(posted.some((m) => m.type === 'call' && m.command === 'run_load')).toBe(true);
-    expect($('#status')?.textContent).toBe('Reloading every view and measuring...');
+    expect($('#status')?.textContent).toBe('Reloading every view and measuring…');
     expect($('#status')?.dataset.tone).toBe('busy');
     ($('#export') as HTMLButtonElement).click();
     const exported = posted.find((m) => m.type === 'call' && m.command === 'export');

@@ -17,7 +17,12 @@ async fn the_list_is_the_hosts_answer() {
         &host("extension_list"),
         Ok(json!({ "enabled": true, "restartNeeded": false, "extensions": [] })),
     );
-    let (error, answer) = answer_json(&server(&fake).extension_list().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .extension_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["enabled"], true);
     assert_eq!(fake.calls(), [(host("extension_list"), json!({}))]);

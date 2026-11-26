@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added (RB-099-10): a run over the views the grid shows or chosen breakpoints - the panel's
+  scope pick list (remembered as the summary's `scope`), the command `run_visible`
+  (`Ctrl+Shift+Space K 4`, manifest `scope = "visible"`) and `lighthouse_run`'s `target`
+  `"visible"` or a list; the host resolves `$scope` into `breakpoints`. `status` names the
+  breakpoints the views show; a chosen breakpoint no view shows is skipped as `not_found`.
 - Fixed (RB-094-10): the page of a run is checked as the app checks a web page - `http(s)`
   with a host, nothing trimmed: `url` with a space in front or `https://` alone is refused.
 - The image audits `image-delivery-insight`, `image-size-responsive` and `lcp-discovery-insight`

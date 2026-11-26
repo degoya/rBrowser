@@ -184,10 +184,10 @@ pub fn answer(store: &Store, rows: &[ViewRow], options: &Options) -> Value {
 ///
 /// The arguments are malformed, or the window has no metrics yet.
 pub fn view_metrics(core: &Core, args: &Value) -> Result<Value, ToolFailure> {
-    let wanted = wanted(args).map_err(|message| ToolFailure::new("invalid_arguments", message))?;
+    let wanted = wanted(args).map_err(|message| ToolFailure::new("args.invalid", message))?;
     let host = core.host();
     let vitals = super::for_host(host)
-        .ok_or_else(|| ToolFailure::new("not_ready", "the window measures nothing yet"))?;
+        .ok_or_else(|| ToolFailure::new("metrics.not_ready", "the window measures nothing yet"))?;
     let rows: Vec<ViewRow> = rb_engine::ViewHost::views(host.as_ref())
         .into_iter()
         .filter(|info| wanted.as_ref().is_none_or(|ids| ids.contains(&info.id)))

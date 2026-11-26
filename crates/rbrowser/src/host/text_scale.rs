@@ -22,7 +22,7 @@ impl Host {
         if self.state().order.is_empty() {
             return;
         }
-        self.regrid();
+        self.regrid("the text size changed".to_owned());
         let views = self.state().order.clone();
         for view in views {
             self.spawn_apply(view, false);

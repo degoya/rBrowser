@@ -36,7 +36,10 @@ fn a_failed_command_is_named_by_its_title() {
             noop(),
         )
         .expect("registers");
-    assert_eq!(command_title(&registry, "sync.toggle"), "Sync on/off");
+    assert_eq!(
+        command_title(&registry, "sync.toggle"),
+        "Switch sync on or off"
+    );
     assert_eq!(
         command_title(&registry, "plugin.title_test.run"),
         "Run the title test"

@@ -2,6 +2,11 @@
 //! cannot make the component allocate more than its memory; the encoders write the pixels and
 //! nothing else - no text chunk, no time, no colour profile - so the edited file carries none of
 //! the original's metadata.
+//!
+//! The editor opens every image the capture writes (RB-099-24): up to [`MAX_SIDE`] a side and
+//! [`MAX_PIXELS`] in all, `rb_visual::raster`'s limits. Such an image is rendered in bands
+//! (`crate::band`, `crate::encode`); the whole-image functions here ([`decode`], [`encode_png`],
+//! [`encode_jpeg`]) take at most [`WHOLE_PIXELS`] and serve the tests and an interlaced PNG.
 
 use std::io::Cursor;
 
@@ -13,12 +18,16 @@ use tiny_skia::{ColorU8, IntSize, Pixmap};
 
 use crate::PLUGIN_ID;
 
-/// The longest side the editor opens.
-pub const MAX_SIDE: u32 = 16_384;
-/// The most pixels the editor opens (100 MB as RGBA; the manifest grants the memory).
-pub const MAX_PIXELS: u64 = 25_000_000;
+/// The longest side the editor opens: the capture's (`rb_visual::raster::MAX_SIDE`).
+pub const MAX_SIDE: u32 = 65_535;
+/// The most pixels the editor opens: the capture's (`rb_visual::raster::MAX_PIXELS`, 256
+/// megapixels, 1 GiB as RGBA - never in memory whole, the bands take a few MiB).
+pub const MAX_PIXELS: u64 = 256 * 1024 * 1024;
+/// The most pixels decoded whole (100 MB as RGBA).
+pub const WHOLE_PIXELS: u64 = 25_000_000;
 
-fn not_png() -> Failure {
+/// `plugin.screenshot-editor.errors.not_png`.
+pub(crate) fn not_png() -> Failure {
     Failure::coded(
         FailureKind::BadData,
         &format!("plugin.{PLUGIN_ID}.errors.not_png"),
@@ -42,7 +51,7 @@ fn limits() -> Limits {
     limits.max_image_width = Some(MAX_SIDE);
     limits.max_image_height = Some(MAX_SIDE);
     // The decoded RGBA image and the decoder's own buffers.
-    limits.max_alloc = Some(MAX_PIXELS * 4 + 16 * 1024 * 1024);
+    limits.max_alloc = Some(WHOLE_PIXELS * 4 + 16 * 1024 * 1024);
     limits
 }
 
@@ -50,9 +59,8 @@ fn reader(bytes: &[u8]) -> ImageReader<Cursor<&[u8]>> {
     ImageReader::with_format(Cursor::new(bytes), ImageFormat::Png)
 }
 
-/// The width and height of the PNG `bytes`, from its header, held to the limits.
-pub fn dimensions(bytes: &[u8]) -> Result<(u32, u32), Failure> {
-    let (width, height) = reader(bytes).into_dimensions().map_err(|_| not_png())?;
+/// `width` x `height` held to the capture's limits: `image_too_large` naming them otherwise.
+pub fn check_size(width: u32, height: u32) -> Result<(), Failure> {
     if width == 0
         || height == 0
         || width > MAX_SIDE
@@ -61,12 +69,25 @@ pub fn dimensions(bytes: &[u8]) -> Result<(u32, u32), Failure> {
     {
         return Err(too_large(width, height));
     }
+    Ok(())
+}
+
+/// The width and height of the PNG `bytes` (its signature and header are enough), held to the
+/// limits.
+pub fn dimensions(bytes: &[u8]) -> Result<(u32, u32), Failure> {
+    let mut decoder = png::Decoder::new(Cursor::new(bytes));
+    let header = decoder.read_header_info().map_err(|_| not_png())?;
+    let (width, height) = (header.width, header.height);
+    check_size(width, height)?;
     Ok((width, height))
 }
 
-/// The PNG `bytes` as a pixmap (premultiplied RGBA).
+/// The PNG `bytes` as a pixmap (premultiplied RGBA), at most [`WHOLE_PIXELS`].
 pub fn decode(bytes: &[u8]) -> Result<Pixmap, Failure> {
     let (width, height) = dimensions(bytes)?;
+    if u64::from(width) * u64::from(height) > WHOLE_PIXELS {
+        return Err(too_large(width, height));
+    }
     let mut reader = reader(bytes);
     reader.limits(limits());
     let image = reader.decode().map_err(|_| not_png())?.into_rgba8();
@@ -103,7 +124,8 @@ fn rgb(rgba: &[u8], background: u8) -> Vec<u8> {
     out
 }
 
-fn encode_failed() -> Failure {
+/// `plugin.screenshot-editor.errors.encode_failed`.
+pub(crate) fn encode_failed() -> Failure {
     Failure::coded(
         FailureKind::Other,
         &format!("plugin.{PLUGIN_ID}.errors.encode_failed"),

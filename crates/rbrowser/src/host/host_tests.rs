@@ -148,7 +148,8 @@ async fn a_resize_sends_new_metrics_and_an_unchanged_size_sends_none() {
     let sent = setup.fake.sent("Emulation.setDeviceMetricsOverride");
     assert!((sent[1]["params"]["scale"].as_f64().expect("scale") - 0.25).abs() < 1e-9);
     setup.host.on_view_bounds(ViewId(1), rect(360, 300));
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    // Every apply asked for ended: one the same size asked for would have sent by now.
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert_eq!(
         setup.fake.sent("Emulation.setDeviceMetricsOverride").len(),
         2
@@ -356,7 +357,8 @@ async fn no_metrics_are_sent_before_the_view_is_laid_out() {
             .is_some_and(|_| !setup.fake.sent("Target.attachToTarget").is_empty())
     })
     .await;
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    // The attach ended, its apply with it.
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert!(
         setup
             .fake

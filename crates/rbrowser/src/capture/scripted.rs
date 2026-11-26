@@ -1,5 +1,5 @@
 //! A browser end for the capture tests: answers each method from a script (a result or a CDP
-//! error), `{}` for the rest, and records every message in order.
+//! error; one for a session first), `{}` for the rest, and records every message in order.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, Weak};
@@ -13,6 +13,8 @@ use crate::cdp::{CdpRouter, CdpTransport, lock};
 pub(crate) struct Scripted {
     router: Mutex<Weak<CdpRouter>>,
     answers: Mutex<HashMap<String, Result<Value, String>>>,
+    /// Answers in one session (method, session), before the method's own.
+    in_session: Mutex<HashMap<(String, String), Result<Value, String>>>,
     sent: Mutex<Vec<Value>>,
 }
 
@@ -30,6 +32,14 @@ impl Scripted {
 
     pub(crate) fn fail(&self, method: &str, message: &str) {
         lock(&self.answers).insert(method.to_owned(), Err(message.to_owned()));
+    }
+
+    /// Fails `method` in `session` only.
+    pub(crate) fn fail_in(&self, method: &str, session: &str, message: &str) {
+        lock(&self.in_session).insert(
+            (method.to_owned(), session.to_owned()),
+            Err(message.to_owned()),
+        );
     }
 
     /// The methods sent, in order.
@@ -69,7 +79,13 @@ impl CdpTransport for Scripted {
             .map_err(|error| EngineError::Invalid(error.to_string()))?;
         lock(&self.sent).push(message.clone());
         let method = message["method"].as_str().unwrap_or_default();
-        let reply = match lock(&self.answers).get(method) {
+        let session = message["sessionId"].as_str().unwrap_or_default();
+        let key = (method.to_owned(), session.to_owned());
+        let scripted = lock(&self.in_session)
+            .get(&key)
+            .cloned()
+            .or_else(|| lock(&self.answers).get(method).cloned());
+        let reply = match scripted.as_ref() {
             Some(Ok(result)) => json!({ "id": message["id"], "result": result }),
             Some(Err(text)) => {
                 json!({ "id": message["id"], "error": { "code": -32000, "message": text } })

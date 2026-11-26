@@ -163,6 +163,17 @@ impl TimeHooks {
         lock(&self.inner).views.remove(&view);
     }
 
+    /// Forgets every view `alive` says is gone - a follower that fell behind the host's events
+    /// missed their `Closed` (RB-099-19); `true` when one was forgotten. `alive` is asked per
+    /// view under the hooks' lock, so a view attached meanwhile is never pruned by a stale list;
+    /// it must not call back into the hooks.
+    pub fn forget_gone(&self, alive: impl Fn(ViewId) -> bool) -> bool {
+        let mut inner = lock(&self.inner);
+        let before = inner.views.len();
+        inner.views.retain(|view, _| alive(*view));
+        inner.views.len() != before
+    }
+
     /// The views' clock; `None` while they have the real time.
     pub fn clock(&self) -> Option<Clock> {
         lock(&self.inner).clock

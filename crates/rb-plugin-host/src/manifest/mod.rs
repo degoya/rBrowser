@@ -107,6 +107,11 @@ pub struct CommandEntry {
     /// Why no tool covers it (`ui-only: ...`); exactly one of `tool` and this.
     #[serde(default)]
     pub mcp_omitted: Option<String>,
+    /// The views the command runs over when its call names none (RB-099-10): `"visible"` or
+    /// breakpoint ids. The host hands the plugin `$scope` and the breakpoints it resolves to as
+    /// `breakpoints`.
+    #[serde(default)]
+    pub scope: Option<rb_config::ViewScope>,
 }
 
 /// `[[tools]]`: an MCP tool, `<mcp_prefix>_<name>`.

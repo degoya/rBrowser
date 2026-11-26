@@ -56,9 +56,8 @@ async fn a_view_shown_again_on_another_url_loads_the_leaders() {
     let host = setup.core.host();
     host.set_active_view(ViewId(1)).expect("a view");
     until(|| sync.hub().with(|hub| hub.active()) == Some(ViewId(1))).await;
+    // The catch-up reads the leader's URL from the host when the view shows again: no wait.
     host.on_address_change(ViewId(1), "http://localhost/products");
-    // Navigation sync's own loads of the followers come first.
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     // View 3 missed it (a failed load while it was out of sight).
     host.on_address_change(ViewId(3), "http://localhost/old");
     host.on_view_bounds(ViewId(3), bounds(0));

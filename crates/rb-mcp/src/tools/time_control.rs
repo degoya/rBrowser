@@ -33,7 +33,7 @@ pub struct ClockParams {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AnimationsParams {
-    /// `"all"`, a view id or a breakpoint id; every view when absent.
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// The animation rate: 0 stops them, 0.1 is 10 %, 1 normal, up to 10.
@@ -47,7 +47,7 @@ pub struct AnimationsParams {
 #[tool_router(router = time_control_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Set the clock the pages read in every Chromium view at once - Date (new Date(), Date.now()) and Intl.DateTimeFormat without a date - to check calendars, countdowns and \"3 days ago\" alike in every breakpoint: time starts it (2026-12-24T10:00 is each page's local time, its emulated time zone included; 2026-12-24T09:00:00Z or an offset is one moment for every view; now), speed 0 holds it fixed, 1 runs it in real time, more runs it faster; speed alone changes the running clock from its current time. reset: true gives every view the real time back. Timers, performance.now() and requestAnimationFrame stay real; the clock holds across navigations and reaches the page already shown, but a page that read the time once shows the new one after a reload. One clock for all views, so it takes no target; Firefox and WebKit views keep the real time and are listed as unsupported. Answers clock ({ start, local, speed } or null), views, failed: [{ view, error }] and unsupported: [{ view, reason }]."
+        description = "Set the clock the pages read (Date, Intl.DateTimeFormat) in every Chromium view at once, to check calendars and countdowns at every breakpoint: time starts it (2026-12-24T10:00 is each page's local time; with Z or an offset one moment for all; now), speed 0 holds it, 1 runs in real time, more runs faster (alone: changes the running clock); reset: true gives the real time back. Timers, performance.now() and requestAnimationFrame stay real; the clock holds across navigations. Firefox and WebKit keep the real time (unsupported). Answers clock ({ start, local, speed } or null), views, failed and unsupported."
     )]
     pub(crate) async fn clock_set(
         &self,
@@ -57,7 +57,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Slow down, stop or step the animations of the targeted Chromium views - CSS animations and transitions and Web Animations on the document timeline (Animation.setPlaybackRate) - for screenshots and visual diffs that do not depend on timing: rate 0 stops them, 0.1 is 10 %, 0.25 is 25 %, 1 normal (up to 10); stepMs moves stopped animations that many ms on, one step at a time. The rate holds across navigations and screenshots until it is set again. target: \"all\", a view id or a breakpoint id; default every view. Firefox and WebKit views are listed as unsupported. Answers rate (or step and moved), views, failed: [{ view, error }] and unsupported: [{ view, reason }]."
+        description = "Slow down, stop or step the animations (CSS animations and transitions, Web Animations) of the targeted Chromium views, for screenshots and diffs that do not depend on timing: rate 0 stops them, 0.25 is 25 %, 1 normal (up to 10); stepMs moves stopped animations that many ms on. The rate holds across navigations until set again. Firefox and WebKit are unsupported. Answers rate (or step and moved), views, failed and unsupported."
     )]
     pub(crate) async fn animations_set(
         &self,
@@ -100,7 +100,7 @@ impl RbMcpServer {
 }
 
 fn invalid(text: &str) -> ToolFailure {
-    ToolFailure::new("invalid_arguments", text)
+    ToolFailure::new("args.invalid", text)
 }
 
 #[cfg(test)]

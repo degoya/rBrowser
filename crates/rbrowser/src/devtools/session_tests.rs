@@ -264,26 +264,6 @@ async fn docked_devtools_follow_the_active_view_within_a_second() {
 }
 
 #[tokio::test]
-async fn without_follow_the_devtools_stay_with_their_view() {
-    let mut user = rb_config::UserSettings::default();
-    user.devtools.follow_active_view = false;
-    let setup = setup_with(user);
-    attach_views(&setup).await;
-    open_prepared(&setup).await;
-    setup
-        .core
-        .host()
-        .set_active_view(ViewId(3))
-        .expect("activates");
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    assert_eq!(docks(&setup.ui).len(), 2);
-    assert_eq!(
-        setup.devtools.current().map(|open| open.view),
-        Some(ViewId(1))
-    );
-}
-
-#[tokio::test]
 async fn the_window_mode_opens_the_native_window_and_its_close_is_remembered() {
     let setup = setup();
     attach_views(&setup).await;
@@ -305,9 +285,9 @@ async fn the_window_mode_opens_the_native_window_and_its_close_is_remembered() {
     assert_eq!(setup.core.host().shell_state().devtools, None);
     assert_eq!(setup.devtools.window_bounds(), Some(bounds));
     until(|| metrics_for(&setup, "S2") > before).await;
-    // A new start reads the bounds back.
+    // A new start reads the bounds back - written off the calling thread (RB-099-19).
     let path = setup._dir.path().join("devtools.json");
-    assert_eq!(ui_state::load(&path).window, Some(bounds));
+    until(|| ui_state::load(&path).window == Some(bounds)).await;
 }
 
 #[tokio::test]

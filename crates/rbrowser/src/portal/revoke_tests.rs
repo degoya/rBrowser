@@ -113,6 +113,17 @@ async fn a_forwarded_upgrade_ends_when_the_portal_stops() {
     );
 }
 
+/// Waits until the listener serves `count` connections (or fails the test after 5 s).
+async fn serving(server: &PortalServer, count: usize) {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while lock(&server.connections).total() != count {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the listener's count reached in time");
+}
+
 #[tokio::test]
 async fn an_address_holds_a_bounded_number_of_connections() {
     let (server, _) = start(Duration::from_secs(300), 5);
@@ -124,8 +135,8 @@ async fn an_address_holds_a_bounded_number_of_connections() {
                 .expect("connects"),
         );
     }
-    // Give the listener the time to take them all.
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // The listener took them all.
+    serving(&server, MAX_PER_ADDRESS).await;
     let mut refused = TcpStream::connect(server.address())
         .await
         .expect("connects");
@@ -134,7 +145,7 @@ async fn an_address_holds_a_bounded_number_of_connections() {
         "one over the cap is closed at once"
     );
     drop(idle);
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    serving(&server, 0).await;
     let answer = get(&server, "/", "").await;
     assert_eq!(status(&answer), 403, "slots come back: {answer}");
 }

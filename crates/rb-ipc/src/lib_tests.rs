@@ -294,30 +294,52 @@ fn the_transport_scripts() {
 fn the_findings_messages_shape() {
     assert_eq!(
         parse_request(r#"{ "type": "runChecks", "target": "all" }"#).expect("parses"),
-        ShellToCore::RunChecks {
+        ShellToCore::RunChecks(crate::RunChecksRequest {
             target: rb_engine::Target::All,
             plugins: None,
             url: None,
-        }
+            scope: None,
+        })
     );
     assert_eq!(
-        to_json(&ShellToCore::RunChecks {
+        to_json(&ShellToCore::RunChecks(crate::RunChecksRequest {
             target: rb_engine::Target::View(ViewId(2)),
             plugins: Some(vec!["seo".into()]),
             url: Some("https://site.test/".into()),
-        }),
+            scope: None,
+        })),
         json!({ "type": "runChecks", "target": 2, "plugins": ["seo"], "url": "https://site.test/" })
+    );
+    // RB-099-10: the views of the breakpoints the grid shows, or of chosen ones.
+    assert_eq!(
+        parse_request(r#"{ "type": "runChecks", "target": "all", "scope": "visible" }"#)
+            .expect("parses"),
+        ShellToCore::RunChecks(crate::RunChecksRequest {
+            target: rb_engine::Target::All,
+            plugins: None,
+            url: None,
+            scope: Some(rb_config::ViewScope::Visible),
+        })
+    );
+    assert_eq!(
+        to_json(&ShellToCore::RunChecks(crate::RunChecksRequest {
+            target: rb_engine::Target::All,
+            plugins: None,
+            url: None,
+            scope: Some(rb_config::ViewScope::Breakpoints(vec!["mobile".into()])),
+        })),
+        json!({ "type": "runChecks", "target": "all", "scope": ["mobile"] })
     );
     assert_eq!(
         parse_request(
             r#"{ "type": "highlightFinding", "findingId": "f1", "selector": "img.hero", "views": [1, 3] }"#
         )
         .expect("parses"),
-        ShellToCore::HighlightFinding {
+        ShellToCore::HighlightFinding(crate::HighlightFindingRequest {
             finding_id: "f1".into(),
             selector: "img.hero".into(),
             views: vec![ViewId(1), ViewId(3)],
-        }
+        })
     );
     let findings = CoreToShell::Findings {
         run: json!({ "version": 1, "runId": "run-0000000000001", "findings": [] }),

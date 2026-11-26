@@ -8,10 +8,10 @@ const STRINGS: Record<string, string> = {
   'plugin.console.panels.console': 'Console',
   'plugin.console.levels.error': 'Errors',
   'plugin.console.levels.warning': 'Warnings',
-  'plugin.console.panel.viewDot': '{label} ({breakpoint}, {engine}): {count} times',
+  'plugin.console.panel.viewDot': '{label} ({breakpoint}, {engine}): {count, plural, one {# time} other {# times}}',
   'plugin.console.panel.noCapture': 'No capture.',
   'plugin.console.panel.truncated': 'Showing the newest {shown} of {total} messages.',
-  'plugin.console.panel.count': '{count} times',
+  'plugin.console.panel.count': '{count, plural, one {# time} other {# times}}',
   'plugin.console.panel.resultError': 'Error: {text}',
   'plugin.console.panel.clear': 'Clear',
   'plugin.console.panel.empty': 'No messages.',
@@ -90,8 +90,8 @@ describe('the console panel', () => {
     const tr = (row: HTMLElement | undefined) => row?.closest('tr') as HTMLElement;
     const errorDots = tr(all[1]).querySelectorAll('[data-dot]');
     expect([...errorDots].map((dot) => dot.getAttribute('aria-label'))).toEqual([
-      'Small (small, chromium): 1 times',
-      'Mobile (mobile, firefox): 1 times',
+      'Small (small, chromium): 1 time',
+      'Mobile (mobile, firefox): 1 time',
     ]);
     expect(tr(all[0]).querySelectorAll('[data-dot]')).toHaveLength(3);
     expect(all[0]?.querySelector('[data-count]')?.textContent).toBe('3 times');

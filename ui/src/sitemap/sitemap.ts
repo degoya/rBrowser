@@ -49,7 +49,8 @@ export function stateKey(status: SitemapStatus | null): string {
   return status === null ? 'shell.sitemap.state.none' : STATE_KEYS[status.state];
 }
 
-/** `sitemap.capture` with the project's defaults (its start URL, every breakpoint). */
+/** `sitemap.capture` without arguments: the core opens the start page, which finds the pages
+ * first and captures those chosen (RB-099-09). */
 export function captureMessage(): ShellToCore {
   return { type: 'runCommand', id: CAPTURE_COMMAND, args: {} };
 }

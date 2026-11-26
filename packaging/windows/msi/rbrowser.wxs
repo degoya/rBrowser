@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  rBrowser's optional Windows installer (RB-099-01), WiX 5; adapted from rDownloader's
+  packaging/msi/rdownloader.wxs. Built by scripts/package-msi.sh from the unpacked package ZIP,
+  which also writes files.wxs (every file of the package, the component group `Program`),
+  license.rtf and install-kind. Its strings are !(loc.…) from en-US.wxl beside this file; WiX's
+  own dialogs come in the same culture from WixToolset.UI.wixext.
+
+  Per user, without UAC: the program goes to %LOCALAPPDATA%\Programs\rBrowser, the shortcut to
+  the user's own Start menu. The user data never lives there - settings in %APPDATA%\rBrowser,
+  logs and profiles in %LOCALAPPDATA%\rBrowser (rb_config::dirs) - so an uninstall, which
+  removes only what this package installed, leaves it. The marker install-kind (`msi`) tells
+  the app it was installed this way: an update is offered as a download, never installed over
+  the MSI's files (rb_update::InstallKind). The package never carries the portable marker. An
+  upgrade is a major upgrade that removes the old version first; the UpgradeCode stays the same
+  for every version.
+
+    msiexec /i rbrowser-<version>-windows-x64.msi [/qn]
+    msiexec /x rbrowser-<version>-windows-x64.msi [/qn]
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="rBrowser"
+           Manufacturer="DEGOYA.digital"
+           Version="$(var.Version)"
+           UpgradeCode="C7E3B089-1250-402D-9DA4-A3AC29101381"
+           Scope="perUser"
+           Language="!(loc.ProductLanguage)"
+           InstallerVersion="500"
+           Compressed="yes">
+    <!-- A pre-release and its release share the three numbers MSI compares (0.9.9-pre.2 and
+         0.9.9 are both 0.9.9), so the same version upgrades too. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="!(loc.DowngradeError)" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="rbrowser.ico" SourceFile="$(var.Icon)" />
+    <Property Id="ARPPRODUCTICON" Value="rbrowser.ico" />
+    <!-- ARPNOMODIFY comes with WixUI_Minimal; defining it here too fails the build (WIX0091). -->
+    <Property Id="ARPNOREPAIR" Value="1" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="rBrowser" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="rBrowser" Level="1">
+      <ComponentGroupRef Id="Program" />
+      <ComponentRef Id="InstallKind" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+
+    <!-- A per-user component needs a key path under HKCU (ICE38); files are never key paths here. -->
+    <Component Id="InstallKind" Directory="INSTALLFOLDER" Guid="FC5D9623-D684-470F-A32C-1038D2C44B94">
+      <RegistryValue Root="HKCU" Key="Software\rBrowser\Installer" Name="InstallKind" Type="string" Value="msi" KeyPath="yes" />
+      <File Id="install_kind" Name="install-kind" Source="$(var.InstallKind)" />
+    </Component>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenu" Guid="AEF4FF95-3F35-4B5E-B534-039415A2159E">
+        <Shortcut Id="StartMenuShortcut" Name="rBrowser" Description="!(loc.ShortcutDescription)"
+                  Target="[INSTALLFOLDER]rbrowser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\rBrowser\Installer" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <UI>
+      <ui:WixUI Id="WixUI_Minimal" />
+    </UI>
+  </Package>
+</Wix>

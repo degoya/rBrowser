@@ -12,5 +12,6 @@ export const basicAuthCoreMessages = [
       { environment: 'local', stored: false },
       { environment: 'staging', stored: true, user: 'ada' },
     ],
+    store: 'windowsCredentialManager',
   },
 ] satisfies CoreToShell[];

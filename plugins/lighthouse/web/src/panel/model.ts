@@ -43,6 +43,8 @@ export interface LighthouseSummary {
   failures?: { breakpoint: string; reason: string }[];
   cancelled?: boolean;
   previous?: { runId: string; breakpoints: { breakpoint: string; scores: Record<string, number | null> }[] } | null;
+  /** The scope the run was started with (`$scope`, RB-099-10): the panel's last choice. */
+  scope?: unknown;
 }
 
 export interface LighthouseStatus {
@@ -54,6 +56,8 @@ export interface LighthouseStatus {
     reason?: string | null;
   };
   latest: LighthouseSummary | null;
+  /** The breakpoints the views show, the panel's choice of breakpoints (RB-099-10). */
+  breakpoints?: { id: string; label?: string; engine?: string }[];
 }
 
 /** Lighthouse's rating of a score 0 to 100: good from 90, average from 50, else poor. */

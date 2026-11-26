@@ -406,11 +406,11 @@ wrap_life_span_handler! {
             // client of its own: it is no grid view, so its address, title and loads are not
             // reported as the opener's, it gets no rBrowser shortcuts and no `cefQuery` route,
             // and it never loads a shell page. Its own popups inherit that client.
-            if self.view.is_none() {
+            let Some(view) = self.view else {
                 return 1;
-            }
+            };
             if let Some(client) = client {
-                *client = Some(super::popup::PopupClient::new());
+                *client = Some(super::popup::PopupClient::new(view));
             }
             0
         }
@@ -425,6 +425,8 @@ wrap_life_span_handler! {
         }
 
         fn on_before_close(&self, browser: Option<&mut Browser>) {
+            // Its requests waiting in rBrowser's sign-in dialog end with it (RB-099-04).
+            super::auth::view_closed(browser.as_deref());
             router().on_before_close(browser.map(|browser| browser.clone()));
         }
     }
@@ -475,7 +477,8 @@ wrap_request_handler! {
             callback: Option<&mut AuthCallback>,
         ) -> c_int {
             let asked = super::auth::Asked { origin_url, is_proxy, host, port, realm, scheme };
-            super::auth::answer(self.view, browser, &asked, callback)
+            let requester = self.view.map(crate::basic_auth::later::Requester::View);
+            super::auth::answer(requester, browser, &asked, callback)
         }
 
         fn on_render_process_terminated(

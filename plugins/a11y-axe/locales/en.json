@@ -130,12 +130,12 @@
         },
         "include": {
           "description": "CSS selectors of the only parts of the page axe checks; empty checks the whole page.",
-          "help": "CSS selectors of the only parts of the page axe checks, for a component under work. Example: main, #checkout. Empty checks the whole page.",
+          "help": "CSS selectors of the only parts of the page axe checks, for a component under work. Example: main, #checkout. If empty, it checks the whole page.",
           "label": "Included selectors"
         },
         "reportIncomplete": {
           "description": "Also report what axe could not decide on its own (\"needs review\") as info findings.",
-          "help": "Also reports what axe could not decide on its own (needs review) as info findings, so you can check them by hand. Off reports violations only.",
+          "help": "Also reports what axe could not decide on its own (needs review) as info findings, so you can check them by hand. When off, it reports violations only.",
           "label": "Report results that need review"
         },
         "rules": {

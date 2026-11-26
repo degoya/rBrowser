@@ -35,16 +35,16 @@ pub const SCREENSHOT_TEMPLATE: &str = "rbrowser://screenshots/latest/{index}";
 pub const CONFIG: &str = "rbrowser://config";
 
 /// The code of a resource read while `mcp.resources` is off.
-pub const DISABLED: &str = "resources_disabled";
+pub const DISABLED: &str = "resources.disabled";
 /// The code of a URI no resource has.
-pub const NOT_FOUND: &str = "resource_not_found";
+pub const NOT_FOUND: &str = "resources.not_found";
 /// The code of `rbrowser://findings/latest` before the first check run.
-pub const NO_FINDINGS: &str = "findings_none";
+pub const NO_FINDINGS: &str = "findings.none";
 /// The code of `rbrowser://screenshots/latest` before the first screenshot saved, and of an
 /// index past its files.
-pub const NO_SCREENSHOTS: &str = "screenshots_none";
+pub const NO_SCREENSHOTS: &str = "screenshots.none";
 /// The code of an answer over `mcp.maxAnswerBytes`.
-pub const TOO_LARGE: &str = "answer_too_large";
+pub const TOO_LARGE: &str = "answer.too_large";
 
 const JSON: &str = "application/json";
 const PNG: &str = "image/png";
@@ -176,7 +176,7 @@ pub fn with_uris(mut listed: Value) -> Value {
 /// `value` as the JSON content of `uri`, at most `limit` bytes.
 fn json_content(uri: &str, value: &Value, limit: usize) -> Result<ReadResourceResult, ToolFailure> {
     let text = serde_json::to_string_pretty(value)
-        .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+        .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
     if text.len() > limit {
         return Err(too_large(text.len(), limit));
     }

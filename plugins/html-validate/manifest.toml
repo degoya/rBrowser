@@ -33,16 +33,19 @@ license = "GPL-3.0-or-later"
 [locales]
 en = "locales/en.json"
 
-# `views` for the views and breakpoints of a run over all of them; `cdp` (`Page` only:
-# `getFrameTree` and `getResourceContent` of the main frame, the host's allowlist) for the served
-# source; `evaluate` to serialize the rendered DOM and run the validation in the view's isolated
-# world; `project-read` for the project's rule file `.rbrowser/htmlvalidate.json` and the trust
+# `views` for the views and breakpoints of a run over all of them; `cdp` (`Page`: `getFrameTree`
+# and `getResourceContent` of the main frame, the host's allowlist) for the served source, and
+# (`Network`: `getResponseBody` of the main document's request, its `loaderId`) the same body from
+# the view's own network log when the browser did not keep the document (RB-099-06) - read from
+# the view's memory, never a second request; `evaluate` to serialize the rendered DOM, to ask the
+# page for its HTTP status and ready state when it has no source, and run the validation in the
+# view's isolated world; `project-read` for the project's rule file `.rbrowser/htmlvalidate.json` and the trust
 # probe on `.rbrowser/plugins/` (no globs: nothing outside `.rbrowser/`); `findings` for the
 # command, which reports into the findings panel. No `http`: the plugin itself sends nothing.
 [capabilities]
 views = true
 evaluate = true
-cdp = { domains = ["Page"] }
+cdp = { domains = ["Page", "Network"] }
 project-read = true
 findings = true
 

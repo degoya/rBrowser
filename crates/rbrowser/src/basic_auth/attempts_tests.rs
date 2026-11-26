@@ -37,3 +37,21 @@ fn a_second_realm_on_one_origin_gets_its_own_answer() {
     assert!(!attempts.take(1, &staging, "Admin area"));
     assert!(!attempts.take(1, &staging, "Staging"));
 }
+
+/// Review w35: an answer the server accepted is no refusal - the same challenge long after it
+/// (a new session's first load, the auth cache cleared) is answered from the store again.
+#[test]
+fn a_challenge_long_after_the_answer_is_answered_again() {
+    use std::time::{Duration, Instant};
+
+    use super::super::prompt::REFUSAL_WINDOW;
+
+    let mut attempts = Attempts::default();
+    let staging = origin("https://staging.example.test/");
+    let start = Instant::now();
+    assert!(attempts.take_at(1, &staging, "Staging", start));
+    assert!(!attempts.take_at(1, &staging, "Staging", start + Duration::from_secs(1)));
+    let later = start + REFUSAL_WINDOW + Duration::from_secs(2);
+    assert!(attempts.take_at(1, &staging, "Staging", later));
+    assert!(!attempts.take_at(1, &staging, "Staging", later));
+}

@@ -138,11 +138,11 @@ pub fn field_for(core: &Core) -> Value {
 ///
 /// # Errors
 ///
-/// `invalid_arguments` when the call carries arguments (it takes none).
+/// `args.invalid` when the call carries arguments (it takes none).
 pub fn host_tool(core: &Core, args: &Value) -> Result<Value, ToolFailure> {
     if args.as_object().is_some_and(|object| !object.is_empty()) {
         return Err(ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             "engines_list takes no arguments",
         ));
     }

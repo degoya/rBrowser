@@ -20,7 +20,7 @@ pub const STATUS_TOOL: &str = "portal_present_status";
 #[tool_router(router = portal_present_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "End the portal's presentation over the internet: every viewer is disconnected at once and the Cloudflare tunnel closes. Answers the state after it. MCP cannot start a presentation: a person starts it in rBrowser (Ctrl+Shift+Space S W) and hands out the one-time link, which never reaches MCP."
+        description = "End the portal's presentation over the internet: every viewer is disconnected and the tunnel closes. Answers the state after it. MCP cannot start a presentation; a person does and hands out the one-time link, which never reaches MCP."
     )]
     pub(crate) async fn portal_present_stop(
         &self,

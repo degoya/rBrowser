@@ -4,7 +4,7 @@
 import ui from '@nuxt/ui/vue-plugin';
 import { mount } from '@vue/test-utils';
 import type { Component } from 'vue';
-import { createShellI18n } from '../../i18n';
+import { createPagesI18n } from '../../i18n/pages';
 import { createTrust, TRUST_KEY } from '../../trust/trust';
 import { createFakeCore, type FakeCore } from './fakeCore';
 
@@ -17,7 +17,7 @@ export async function mountPage(
     props: { client: core.client, ...props },
     attachTo: document.body,
     global: {
-      plugins: [ui, createShellI18n()],
+      plugins: [ui, createPagesI18n()],
       provide: { [TRUST_KEY]: createTrust(core.client) },
     },
   });

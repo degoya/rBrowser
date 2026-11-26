@@ -97,6 +97,8 @@ export const VIDEO_MENU: readonly MenuNode[] = [
 
 export const CHECKS_MENU: readonly MenuNode[] = [
   cmd('checks.run_all'),
+  // RB-099-10: the checks over the views the grid shows.
+  cmd('checks.run_visible'),
   cmd('checks.cancel'),
   cmd('checks.export'),
   sep,

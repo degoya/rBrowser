@@ -33,9 +33,13 @@ fn the_commands_sit_on_leader_f_and_name_their_mcp_tool_or_why_not() {
             CANCEL,
             OPEN_RESULTS,
             PANEL,
-            DELETE
+            DELETE,
+            RUN_ALL_VISIBLE
         ]
     );
+    // RB-099-10: every flow in the views the grid shows, `F G`.
+    assert!(rows[7].1.contains("'F'") && rows[7].1.contains("'G'"));
+    assert_eq!(rows[7].2, "covered(flow_run)");
     assert!(rows[0].1.contains("'F'") && rows[0].1.contains("'R'"));
     assert!(rows[1].1.contains("'A'"));
     assert!(rows[2].1.contains("'L'"));

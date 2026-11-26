@@ -182,13 +182,15 @@ impl CefLogSeverity {
 }
 
 impl From<LogLevel> for CefLogSeverity {
-    /// One step quieter than ours: Chromium's info level is a flood.
+    /// Quieter than ours: Chromium's info level is a flood, and so are its warnings - `ui/aura`
+    /// warns for every stacking move of a browser view's window, a path Chromium takes by
+    /// design (RB-099-07). Up to our `info` CEF writes only its errors; `debug` brings its
+    /// warnings and info back, `trace` everything.
     fn from(level: LogLevel) -> Self {
         match level {
             LogLevel::Trace => CefLogSeverity::Verbose,
             LogLevel::Debug => CefLogSeverity::Info,
-            LogLevel::Info | LogLevel::Warn => CefLogSeverity::Warning,
-            LogLevel::Error => CefLogSeverity::Error,
+            LogLevel::Info | LogLevel::Warn | LogLevel::Error => CefLogSeverity::Error,
         }
     }
 }

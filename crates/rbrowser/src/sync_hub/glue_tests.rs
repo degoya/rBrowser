@@ -276,7 +276,7 @@ async fn the_followers_load_the_leader_s_url_after_a_submit_to_the_same_page() {
     })
     .await;
     // The submit reaches the hub before the leader's load ends.
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    until(|| sync.hub().with(|hub| hub.follow_leader()) == Some(ViewId(1))).await;
     host.on_loading_state(ViewId(1), true);
     host.on_address_change(ViewId(1), "http://localhost/form");
     host.on_loading_state(ViewId(1), false);

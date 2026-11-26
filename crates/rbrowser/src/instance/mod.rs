@@ -116,6 +116,10 @@ fn handle(core: &Arc<Core>, request: Request) -> Result<Option<Value>, String> {
         Request::SitemapCapture { args } => {
             crate::sitemap::app::capture_blocking(core, args).map(Some)
         }
+        // RB-099-09: answered once the pages are found; nothing is captured.
+        Request::SitemapDiscover { args } => {
+            crate::sitemap::discover::discover_blocking(core, args).map(Some)
+        }
         // RB-092-05: answered once the run is through and exported.
         Request::Check { args } => crate::checks::export::check::run(core, &args).map(Some),
     }

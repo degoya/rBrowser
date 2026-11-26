@@ -105,6 +105,11 @@ impl LogHandle {
     pub fn set_rotation(&self, policy: RotationPolicy) {
         self.rotation.set(policy);
     }
+
+    /// The rotation in effect, shared: CEF's log follows it too (`cef_log`, RB-099-07).
+    pub fn rotation(&self) -> SharedRotation {
+        self.rotation.clone()
+    }
 }
 
 /// Keeps the writer thread alive; dropping it flushes the lines still queued. Hold it in `main`

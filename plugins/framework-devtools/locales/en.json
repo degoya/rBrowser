@@ -21,7 +21,7 @@
         "noHook": "rBrowser's {framework} DevTools hook is not in this document yet. Reload the view once; the hook is registered for its next document.",
         "late": "The page loaded {framework} before rBrowser's hook was in place. Reload the view once.",
         "vueProd": "This Vue build exposes no components: a production build talks to DevTools only when it is built with __VUE_PROD_DEVTOOLS__.",
-        "off": "{framework} DevTools are off in Settings > DevTools & Debugging > Framework DevTools.",
+        "off": "{framework} DevTools are off in Settings › DevTools & Debugging › Framework DevTools.",
         "connected": "Connected to {framework} {version} in view {view}.",
         "filter": "Filter components",
         "components": "Components",
@@ -56,7 +56,7 @@
           "timeline": {
             "label": "Vue timeline",
             "description": "The Vue DevTools panel's Timeline tab: mouse, keyboard, component, Pinia and router events, recorded while the tab is open.",
-            "help": "Shows the Timeline tab in the Vue DevTools panel. While the tab is open, the page's Vue DevTools kit records mouse, keyboard, component, Pinia and router events for it; closing the tab stops the recording. Off hides the tab and records nothing."
+            "help": "Shows the Timeline tab in the Vue DevTools panel. While the tab is open, the page's Vue DevTools kit records mouse, keyboard, component, Pinia and router events for it; closing the tab stops the recording. When off, it hides the tab and records nothing."
           }
         }
       }

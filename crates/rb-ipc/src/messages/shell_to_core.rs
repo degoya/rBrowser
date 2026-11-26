@@ -1,8 +1,9 @@
 //! The shell's requests ([`ShellToCore`]); what `setSync` switches is `sync_feature.rs`, the
-//! Videos panel's payloads `video_requests.rs` (both re-exported from `messages`).
+//! Videos panel's payloads `video_requests.rs`, the findings panel's `findings_requests.rs` (all
+//! re-exported from `messages`).
 
 use rb_config::AnalyzerMode;
-use rb_engine::{Target, ViewId};
+use rb_engine::ViewId;
 use rb_settings::Scope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -211,27 +212,11 @@ pub enum ShellToCore {
     },
     /// Run every enabled check plugin over the views of `target`; answered with `ack`, the run
     /// follows as the event `findings` (RB-060-01).
-    RunChecks {
-        /// `"all"` or a view id.
-        target: Target,
-        /// Only these check plugins (ids).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        plugins: Option<Vec<String>>,
-        /// The page to check instead of each view's own (`http(s)`).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        url: Option<String>,
-    },
+    RunChecks(super::findings_requests::RunChecksRequest),
     /// Mark a finding's element in `views` and scroll it into view; answered with `ack`
     /// (RB-060-01). The selector comes from a plugin: the core hands it to `DOM.querySelector`
     /// only.
-    HighlightFinding {
-        /// The finding's id.
-        finding_id: String,
-        /// Its element's CSS selector.
-        selector: String,
-        /// The views to mark it in.
-        views: Vec<ViewId>,
-    },
+    HighlightFinding(super::findings_requests::HighlightFindingRequest),
     /// Mark the element behind a view's Web Vital (the LCP element, the largest shift source,
     /// the interaction's target) and scroll it into view; answered with `ack` (RB-060-10). The
     /// core takes the selector from the view's own report, never from the shell.
@@ -492,4 +477,8 @@ pub enum ShellToCore {
     /// Per environment whether a Basic auth credential is stored, and its user - never the
     /// password (RB-094-29); answered with `basicAuthStatus`.
     GetBasicAuthStatus,
+    /// The sitemap capture's start page (RB-099-09); answered with `sitemapDiscovery` or `ack`.
+    SitemapStart(crate::SitemapStartRequest),
+    /// The person's answer in rBrowser's sign-in dialog (RB-099-04); answered with `ack`.
+    AuthPromptReply(crate::AuthPromptReply),
 }

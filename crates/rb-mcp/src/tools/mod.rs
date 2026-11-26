@@ -47,7 +47,21 @@ pub mod views;
 pub mod views_edit;
 pub mod visual;
 
+use rmcp::{handler::server::wrapper::Parameters, schemars};
+use serde::Deserialize;
 use serde_json::{Map, Value};
+
+/// The arguments of a tool that takes none: an empty object; any field is refused, so no tool
+/// takes an unknown argument silently (RB-099-16).
+#[derive(Clone, Copy, Debug, Default, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NoArgs {}
+
+/// No arguments, as a tool without any is called.
+#[must_use]
+pub fn no_args() -> Parameters<NoArgs> {
+    Parameters(NoArgs {})
+}
 
 /// `fields` as a JSON object without the `None`s.
 pub(crate) fn object(fields: impl IntoIterator<Item = (&'static str, Option<Value>)>) -> Value {

@@ -16,11 +16,11 @@ pub const LIST_TOOL: &str = "bookmarks_list";
 ///
 /// # Errors
 ///
-/// `invalid_arguments` for any argument: the tool takes none.
+/// `args.invalid` for any argument: the tool takes none.
 pub fn bookmarks_list(core: &Core, args: &Value) -> Result<Value, ToolFailure> {
     if !(args.is_null() || args.as_object().is_some_and(Map::is_empty)) {
         return Err(ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             "bookmarks_list takes no arguments".to_owned(),
         ));
     }

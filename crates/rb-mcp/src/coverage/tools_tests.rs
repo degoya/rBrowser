@@ -3,7 +3,10 @@ use std::sync::Arc;
 use rmcp::model::{JsonObject, Tool};
 use serde_json::{Value, json};
 
-use super::{TargetSupport, areas, definition_problems, target_support, tool_problems};
+use super::{
+    TARGET_ACTIVE, TARGET_ALL, TargetSupport, areas, definition_problems, target_support,
+    target_text_problem, tool_problems,
+};
 use crate::RbMcpServer;
 
 fn schema(value: Value) -> Arc<JsonObject> {
@@ -108,4 +111,59 @@ fn a_tool_without_description_or_object_schema_is_refused() {
     assert!(found[1].contains("object schema"), "{found:?}");
     bare.description = Some("short".into());
     assert!(definition_problems(&bare)[0].starts_with("no description"));
+}
+
+#[test]
+fn a_tool_that_takes_unknown_arguments_is_refused() {
+    let open = tool(
+        "settings_get",
+        json!({ "type": "object", "properties": {} }),
+    );
+    let found = definition_problems(&open);
+    assert!(
+        found.iter().any(|why| why.contains("additionalProperties")),
+        "{found:?}"
+    );
+    let closed = tool(
+        "settings_get",
+        json!({ "type": "object", "properties": {}, "additionalProperties": false }),
+    );
+    assert_eq!(definition_problems(&closed), Vec::<String>::new());
+}
+
+#[test]
+fn a_tool_without_arguments_refuses_any() {
+    let schema = rmcp::handler::server::common::schema_for_type::<crate::tools::NoArgs>();
+    assert_eq!(schema.get("type"), Some(&json!("object")));
+    assert_eq!(schema.get("additionalProperties"), Some(&json!(false)));
+    let unknown: Result<crate::tools::NoArgs, _> = serde_json::from_value(json!({ "x": 1 }));
+    assert!(unknown.is_err());
+    let empty: Result<crate::tools::NoArgs, _> = serde_json::from_value(json!({}));
+    assert!(empty.is_ok());
+}
+
+#[test]
+fn the_target_text_follows_the_default_rule() {
+    let navigate = tool("navigate", targeted(TARGET_ALL));
+    assert_eq!(target_text_problem(&navigate), None);
+    let wrapped = tool(
+        "click",
+        targeted("`\"all\"`, a view id or a breakpoint id; the active view\nwhen absent."),
+    );
+    assert_eq!(target_text_problem(&wrapped), None);
+    let click = tool("click", targeted(TARGET_ALL));
+    let found = target_text_problem(&click).expect("click defaults to the active view");
+    assert!(found.contains("ACTIVE_DEFAULT"), "{found}");
+    let reload = tool("reload", targeted(TARGET_ACTIVE));
+    assert!(target_text_problem(&reload).is_some());
+    let devtools = tool(
+        "devtools_open",
+        targeted("One view: a view id or a breakpoint id shown once; the active view when absent."),
+    );
+    assert_eq!(target_text_problem(&devtools), None);
+    let untargeted = tool(
+        "settings_get",
+        json!({ "type": "object", "properties": {} }),
+    );
+    assert_eq!(target_text_problem(&untargeted), None);
 }

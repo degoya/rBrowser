@@ -76,6 +76,39 @@ fn the_zip_holds_logs_versions_config_and_plugins() {
     assert_eq!(perf["counters"][0]["name"], json!("ipc.query"));
 }
 
+/// RB-099-07: CEF's log took 948 MB into a ZIP; it goes in with its last 5 MiB only, from a line
+/// start, under a line that says what was left out. The core's log goes in whole.
+#[test]
+fn the_zip_takes_only_the_end_of_cefs_log() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let paths = DiagPaths::under(dir.path());
+    std::fs::create_dir_all(&paths.logs).expect("logs");
+    let line = |index: usize| format!("cef line {index:08}\n");
+    let count = usize::try_from(crate::cef_log::BUNDLE_TAIL_BYTES).expect("size") / 18 + 1_000;
+    let text: String = (0..count).map(line).collect();
+    std::fs::write(paths.cef_log_file(), &text).expect("cef log");
+    std::fs::write(paths.logs.join("cef.1.log"), &text).expect("cef archive");
+    let core: String = (0..count)
+        .map(|index| format!("core {index:012}\n"))
+        .collect();
+    std::fs::write(paths.log_file(), &core).expect("core log");
+    let out = dir.path().join("d.zip");
+    write_bundle(&input(dir.path(), None), &out).expect("bundle");
+    let zip = entries(&out);
+    for name in ["logs/cef.log", "logs/cef.1.log"] {
+        let taken = String::from_utf8_lossy(&zip[name]).into_owned();
+        let (first, rest) = taken.split_once('\n').expect("a first line");
+        assert!(first.contains("left out"), "{name}: {first}");
+        assert!(
+            u64::try_from(rest.len()).expect("size") <= crate::cef_log::BUNDLE_TAIL_BYTES,
+            "{name}"
+        );
+        assert!(rest.starts_with("cef line "), "{name} starts mid-line");
+        assert!(rest.ends_with(&line(count - 1)), "{name} lost its end");
+    }
+    assert_eq!(zip["logs/rbrowser.log"], core.as_bytes());
+}
+
 #[test]
 fn a_secret_of_config_local_json_is_nowhere_in_the_zip() {
     let dir = tempfile::tempdir().expect("temp dir");

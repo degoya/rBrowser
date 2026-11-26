@@ -23,7 +23,7 @@ pub const TOOLS: [&str; 2] = [STOP_TOOL, STATUS_TOOL];
 ///
 /// # Errors
 ///
-/// `unknown_tool` for any other name.
+/// `tool.unknown` for any other name.
 pub fn host_tool(core: &Arc<Core>, name: &str) -> Result<Value, ToolFailure> {
     match name {
         STOP_TOOL => {
@@ -32,7 +32,7 @@ pub fn host_tool(core: &Arc<Core>, name: &str) -> Result<Value, ToolFailure> {
         STATUS_TOOL => {}
         other => {
             return Err(ToolFailure::new(
-                "unknown_tool",
+                "tool.unknown",
                 format!("the presentation runs no tool `{other}`"),
             ));
         }

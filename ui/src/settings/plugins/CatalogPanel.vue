@@ -359,6 +359,7 @@ onUnmounted(() => stopListening?.());
             v-if="keyChanged(review.key)"
             color="error"
             variant="subtle"
+            role="alert"
             :icon="SETTINGS_ICONS.warning"
             :title="t('settings.plugins.catalog.key_changed_title')"
             :description="t('settings.plugins.catalog.key_changed')"

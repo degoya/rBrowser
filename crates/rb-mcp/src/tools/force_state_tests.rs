@@ -129,7 +129,7 @@ async fn an_element_is_required_and_the_arguments_must_agree() {
     ] {
         let (error, answer) = call(&fake, params).await;
         assert!(error);
-        assert_eq!(answer["code"], json!("invalid_arguments"));
+        assert_eq!(answer["code"], json!("args.invalid"));
     }
     assert!(fake.calls().is_empty(), "nothing ran");
 }

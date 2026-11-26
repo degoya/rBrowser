@@ -353,3 +353,40 @@ fn a_check_request_is_held_to_its_bounds() {
         assert_eq!(check(&check_line(bad), NONCE), Err(Refusal::BadRequest));
     }
 }
+
+#[test]
+fn a_sitemap_discovery_and_a_capture_of_chosen_urls_are_held_to_their_bounds() {
+    let request_line = |kind: &str, args: serde_json::Value| {
+        line(serde_json::json!({
+            "version": PROTOCOL_VERSION,
+            "nonce": NONCE,
+            "request": { "kind": kind, "args": args },
+        }))
+    };
+    let taken = check(
+        &request_line("sitemapDiscover", serde_json::json!({ "depth": 2 })),
+        NONCE,
+    );
+    assert!(
+        matches!(taken, Ok(Request::SitemapDiscover { .. })),
+        "{taken:?}"
+    );
+    let chosen = serde_json::json!({ "urls": ["https://a.test/de"] });
+    let taken = check(&request_line("sitemapCapture", chosen), NONCE);
+    assert!(
+        matches!(taken, Ok(Request::SitemapCapture { .. })),
+        "{taken:?}"
+    );
+    for (kind, bad) in [
+        ("sitemapDiscover", serde_json::json!({ "depth": 0 })),
+        ("sitemapDiscover", serde_json::json!({ "urls": [] })),
+        ("sitemapCapture", serde_json::json!({ "urls": [] })),
+        ("sitemapCapture", serde_json::json!({ "discovery": "1-1" })),
+    ] {
+        assert_eq!(
+            check(&request_line(kind, bad.clone()), NONCE),
+            Err(Refusal::BadRequest),
+            "{kind} {bad}"
+        );
+    }
+}

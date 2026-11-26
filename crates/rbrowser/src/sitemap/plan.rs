@@ -10,7 +10,8 @@
 //! - `env`: the environment's origin is the rewrite's `to`; `from` is the site's (the plugin's
 //!   default) or, for a file, the `startUrl`'s. Bookmarks are resolved in the environment
 //!   directly.
-//! - Breakpoints: every Chromium breakpoint of the config, or those named (an unknown id is
+//! - Breakpoints: every Chromium breakpoint of the config, those the grid shows at the start
+//!   (`views: "visible"`, `rb_config::resolve_scope`), or those named (an unknown id is
 //!   refused); Firefox and WebKit breakpoints are not captured in hidden Chromium views and are
 //!   named as skipped. Each gets its resolved emulation - the project's extra headers only in a
 //!   trusted workspace - and its session, or the call's.
@@ -19,7 +20,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use base64::Engine as _;
-use rb_config::{DevicePreset, EngineKind, ProjectConfig};
+use rb_config::{DevicePreset, EngineKind, ProjectConfig, ScopeError, ViewScope};
 use rb_engine::chromium::hidden::RenderSpec;
 use rb_visual::sitemap::{RunBreakpoint, file_name};
 use serde_json::{Value, json};
@@ -46,6 +47,12 @@ pub enum PlanError {
     UnknownSession(String),
     #[error("sitemap.error.no_breakpoints: no Chromium breakpoint to capture")]
     NoBreakpoints,
+    /// `views: "visible"` and the grid shows no Chromium breakpoint (RB-099-08).
+    #[error(
+        "sitemap.error.no_breakpoints: no visible Chromium breakpoint to capture; show one in the \
+         grid or capture all views"
+    )]
+    NoVisibleBreakpoints,
     #[error("sitemap.error.emulation: {0}")]
     Emulation(String),
 }
@@ -59,7 +66,7 @@ impl PlanError {
             Self::UnknownEnv(_) => "sitemap.error.unknown_env",
             Self::UnknownBreakpoint(_) => "sitemap.error.unknown_breakpoint",
             Self::UnknownSession(_) => "sitemap.error.unknown_session",
-            Self::NoBreakpoints => "sitemap.error.no_breakpoints",
+            Self::NoBreakpoints | Self::NoVisibleBreakpoints => "sitemap.error.no_breakpoints",
             Self::Emulation(_) => "sitemap.error.emulation",
         }
     }
@@ -205,18 +212,23 @@ pub struct Breakpoints {
     pub skipped: Vec<String>,
 }
 
-/// The breakpoints `args` names (all when none) in `config`.
+/// The breakpoints of `args`' scope in `config`: those named, else every one or the visible
+/// ones (`views`, RB-099-08), resolved once at the start.
 pub fn breakpoints(
     args: &CaptureArgs,
     config: &ProjectConfig,
     devices: &[DevicePreset],
     trusted: bool,
 ) -> Result<Breakpoints, PlanError> {
-    for wanted in &args.breakpoints {
-        if !config.breakpoints.iter().any(|bp| bp.id == *wanted) {
-            return Err(PlanError::UnknownBreakpoint(wanted.clone()));
-        }
-    }
+    let scope = args.scope();
+    let none = || match scope {
+        ViewScope::Visible => PlanError::NoVisibleBreakpoints,
+        _ => PlanError::NoBreakpoints,
+    };
+    let chosen = rb_config::resolve_scope(config, &scope).map_err(|error| match error {
+        ScopeError::UnknownBreakpoint(id) => PlanError::UnknownBreakpoint(id),
+        ScopeError::Empty => none(),
+    })?;
     let sessions = crate::sessions::session_infos(config);
     let known = |id: &str| id == DEFAULT_SESSION || sessions.iter().any(|info| info.id == id);
     if let Some(session) = args.session.as_deref()
@@ -226,7 +238,7 @@ pub fn breakpoints(
     }
     let mut plan = Breakpoints::default();
     for breakpoint in &config.breakpoints {
-        if !args.breakpoints.is_empty() && !args.breakpoints.contains(&breakpoint.id) {
+        if !chosen.contains(&breakpoint.id) {
             continue;
         }
         if breakpoint.engine != EngineKind::Chromium {
@@ -267,7 +279,7 @@ pub fn breakpoints(
         );
     }
     if plan.run.is_empty() {
-        return Err(PlanError::NoBreakpoints);
+        return Err(none());
     }
     Ok(plan)
 }

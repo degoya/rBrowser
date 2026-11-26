@@ -76,7 +76,7 @@ async fn a_factor_outside_one_to_three_is_refused_before_any_command() {
                 .expect("answer"),
         );
         assert!(error);
-        assert_eq!(answer["code"], json!("invalid_arguments"));
+        assert_eq!(answer["code"], json!("args.invalid"));
     }
     assert!(fake.calls().is_empty());
 }

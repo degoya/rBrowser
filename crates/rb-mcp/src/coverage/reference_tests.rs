@@ -55,6 +55,12 @@ fn the_document_says_targets_guards_and_reads() {
     assert_eq!(tool("settings_get")["actsOn"], "the settings");
     assert_eq!(tool("evaluate")["guard"]["setting"], "mcp.allowEvaluate");
     assert!(tool("views_list")["withoutCommand"].is_string());
+    assert_eq!(tool("views_list")["annotations"]["readOnlyHint"], true);
+    assert_eq!(
+        tool("session_clear")["annotations"]["destructiveHint"],
+        true
+    );
+    assert_eq!(tool("navigate")["annotations"]["openWorldHint"], true);
     assert!(tool("navigate").get("withoutCommand").is_none());
 }
 

@@ -46,7 +46,7 @@
         "filter": "Filter by tag",
         "filterClear": "Show every todo",
         "keep": "Keep",
-        "loading": "Reading the todo files...",
+        "loading": "Reading the todo files…",
         "openOnly": "Only open",
         "reload": "Read the files again",
         "reopen": "Open \"{text}\" again",

@@ -6,7 +6,7 @@
         "compare_environments": "Compare the security headers across the environments"
       },
       "errors": {
-        "environments": "The comparison needs at least two environments (Settings > Project > Environments).",
+        "environments": "The comparison needs at least two environments (Settings › Project › Environments).",
         "headers_unavailable": "The answer carries none of the headers this check reads, not even Date: they could not be read.",
         "no_page": "No view shows a web page: open one or give a URL.",
         "redirect": "The page redirects too often or to an address that is no web page.",
@@ -59,7 +59,7 @@
         "failed": "Not read",
         "findings": "{count, plural, =0 {No findings} one {# finding} other {# findings}}",
         "header": "Header",
-        "loading": "Reading the page in each environment...",
+        "loading": "Reading the page in each environment…",
         "noAttributes": "No attributes",
         "onlyDifferences": "Only differences",
         "path": "Page {path}",

@@ -56,6 +56,13 @@ RB_KOMAC_SHA256="b03b020eec98acfb0b53e284a6e21815b884be33de6785b97e7a120f0e74896
 RB_NFPM_VERSION="2.47.0"
 # shellcheck disable=SC2034
 RB_NFPM_SHA256="0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783"
+# WiX: builds the MSI (RB-099-01, scripts/package-msi.sh) on the public CI's Windows runner
+# (RB-099-27), a .NET tool from NuGet, which holds a version's package fixed; its UI extension
+# (WixToolset.UI.wixext, the only one rbrowser.wxs uses) at the same version. scripts/ci-tools.sh
+# wix installs both. The newest 5.x (NuGet, 2026-11-26): from 6 on, WiX asks for its
+# maintenance-fee EULA to be accepted.
+# shellcheck disable=SC2034
+RB_WIX_VERSION="5.0.2"
 
 # CEF (RB-010-04, ADR 0001 Decision 1): the distribution the `cef` crate in Cargo.lock downloads
 # into CEF_PATH, and our own SHA-256 of its archive - the crate checks only a SHA-1 from the CDN's

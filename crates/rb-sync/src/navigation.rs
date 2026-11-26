@@ -259,6 +259,16 @@ impl NavigationSync {
         self.pending.as_ref().map(|pending| pending.leader)
     }
 
+    /// The last URL `view` committed.
+    pub fn url(&self, view: ViewId) -> Option<&str> {
+        self.urls.get(&view).map(String::as_str)
+    }
+
+    /// How many checks were armed so far: the generation of the last one.
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
     /// Drops the armed check (sync off, the active view changed).
     pub fn cancel(&mut self) {
         self.pending = None;

@@ -107,7 +107,7 @@ async fn sync_set_answers_the_state_and_a_refusal_as_an_error() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], "invalid_arguments");
+    assert_eq!(answer["code"], "args.invalid");
     assert_eq!(
         fake.calls(),
         vec![(host("sync_set"), json!({ "action": "set" }))]

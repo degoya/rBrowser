@@ -20,11 +20,15 @@ async function flush(): Promise<void> {
 
 const HOSTILE = '<img src=x onerror="window.hacked=1">';
 
-async function setup(waiting: boolean) {
+/** The page over a core with a report `waiting`; `refuse` makes the core refuse that step. */
+async function setup(waiting: boolean, refuse?: 'getPreview' | 'decide') {
   const sent: ShellToCore[] = [];
   const client = new IpcClient({
     send: async (message): Promise<CoreToShell> => {
       sent.push(message);
+      if (message.type === 'bugReport' && message.request.op === refuse) {
+        throw new Error('refused');
+      }
       if (waiting && message.type === 'bugReport' && message.request.op === 'getPreview') {
         return {
           type: 'bugReport',
@@ -86,6 +90,16 @@ describe('the bug report preview page', () => {
     await wrapper.get('[data-testid="bug-report-preview"]').trigger('keydown', { key: 'Escape' });
     await flush();
     expect(sent.at(-1)).toEqual({ type: 'bugReport', request: { op: 'decide', previewId: 9, save: false } });
+  });
+
+  it('says a failure at once, when it loads and when it saves (RB-099-21)', async () => {
+    const failed = await setup(true, 'getPreview');
+    expect(failed.wrapper.get('[data-testid="bug-report-failed"]').attributes('role')).toBe('alert');
+    failed.wrapper.unmount();
+    const { wrapper } = await setup(true, 'decide');
+    await wrapper.get('[data-testid="bug-report-save"]').trigger('click');
+    await flush();
+    expect(wrapper.get('[data-testid="bug-report-refused"]').attributes('role')).toBe('alert');
   });
 
   it('says so when no report waits, with no buttons', async () => {

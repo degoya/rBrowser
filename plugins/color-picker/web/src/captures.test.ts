@@ -4,7 +4,7 @@
 // for 40 pointer moves, and one in every view at the start and at each synced scroll.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type FakePlugin, type Message, fakePlugin, pluginFile, runPageScript, settle } from './support';
+import { advance, type FakePlugin, type Message, fakePlugin, pluginFile, runPageScript, useVirtualTimers } from './support';
 import { calibrateAnswer, tileAnswer } from './tile';
 
 /** The requests the component answers with a screenshot of the view. */
@@ -43,12 +43,11 @@ const moveTo = (clientX: number, clientY: number) =>
   layer().dispatchEvent(new MouseEvent('pointermove', { clientX, clientY, bubbles: true }));
 
 async function idle(ms = 50): Promise<void> {
-  await settle();
-  await new Promise((resolve) => setTimeout(resolve, ms));
-  await settle();
+  await advance(ms);
 }
 
 beforeEach(() => {
+  useVirtualTimers();
   document.body.innerHTML = '<main><p>Some text</p></main>';
   plugin = fakePlugin(answer);
   shadow = runPageScript(plugin);
@@ -56,6 +55,7 @@ beforeEach(() => {
 
 afterEach(() => {
   plugin.stop();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   tileReply = (message) => tileAnswer(message);
   calibrateReply = (message) => calibrateAnswer(message);

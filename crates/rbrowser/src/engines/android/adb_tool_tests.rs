@@ -127,3 +127,81 @@ fn a_wrong_download_installs_nothing_and_says_why() {
         Some(&(FAILED_KEY.to_owned(), NotificationLevel::Error))
     );
 }
+
+/// RB-099-13: `tools.adb.install` without the person's acceptance asks the shell to show
+/// Google's terms - version, size, source host, licence and the terms page - and downloads
+/// nothing; the download follows only `{ "accepted": true }`.
+#[test]
+fn without_acceptance_the_shell_is_asked_for_the_terms_and_nothing_is_downloaded() {
+    let bytes = archive();
+    for args in [serde_json::Value::Null, serde_json::json!({})] {
+        let Ok(Step::AskTerms(request)) = step(&args, Ok(entry(&bytes))) else {
+            panic!("the terms are asked for");
+        };
+        let CoreToShell::UiCommand { id, args } = *request else {
+            panic!("the shell's terms bar");
+        };
+        assert_eq!(id, crate::engines::android::commands::INSTALL);
+        let args = args.expect("what the terms bar shows");
+        assert_eq!(args["terms"], TERMS_URL);
+        assert_eq!(args["version"], "37.0.1");
+        assert_eq!(args["from"], "dl.example.test");
+        assert_eq!(args["license"], ANDROID_SDK_LICENSE);
+        assert!(args["size"].is_string());
+    }
+    assert!(matches!(
+        step(&serde_json::json!({ "accepted": false }), Ok(entry(&bytes))),
+        Ok(Step::AskTerms(_))
+    ));
+}
+
+#[test]
+fn the_acceptance_starts_the_download_of_the_pinned_entry() {
+    let bytes = archive();
+    let Ok(Step::Download(chosen)) =
+        step(&serde_json::json!({ "accepted": true }), Ok(entry(&bytes)))
+    else {
+        panic!("the download follows the acceptance");
+    };
+    assert_eq!(*chosen, entry(&bytes));
+}
+
+#[test]
+fn an_acceptance_that_is_no_boolean_or_an_unknown_argument_is_refused() {
+    let bytes = archive();
+    for args in [
+        serde_json::json!({ "accepted": "yes" }),
+        serde_json::json!({ "accepted": 1 }),
+        serde_json::json!({ "accept": true }),
+    ] {
+        assert!(step(&args, Ok(entry(&bytes))).is_err(), "{args}");
+    }
+}
+
+/// No build pinned for this platform: neither terms nor a download, the failure notice.
+#[test]
+fn without_a_pinned_build_the_failure_is_told_and_nothing_is_asked() {
+    let no_build = || ToolError::NoBuild {
+        tool: crate::tools::ADB.to_owned(),
+        platform: "linux".to_owned(),
+    };
+    for args in [
+        serde_json::Value::Null,
+        serde_json::json!({ "accepted": true }),
+    ] {
+        let Ok(Step::Refused(notice)) = step(&args, Err(no_build())) else {
+            panic!("no terms, no download");
+        };
+        let CoreToShell::Notification(notice) = *notice else {
+            panic!("the failure notice");
+        };
+        assert_eq!(notice.message_key, FAILED_KEY);
+        assert_eq!(notice.level, NotificationLevel::Error);
+    }
+}
+
+/// The terms page is Google's, over https.
+#[test]
+fn the_terms_page_is_googles_platform_tools_page() {
+    assert!(TERMS_URL.starts_with("https://developer.android.com/"));
+}

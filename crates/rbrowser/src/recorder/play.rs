@@ -318,7 +318,7 @@ pub async fn tool(core: &Arc<Core>, raw: Value) -> Result<Value, ToolFailure> {
     let (name, flow) =
         tokio::task::spawn_blocking(move || prepare(&blocking, recording_id, pace, &part))
             .await
-            .map_err(|_| ToolFailure::new("internal", "the recording could not be read"))?
+            .map_err(|_| ToolFailure::new("mcp.internal", "the recording could not be read"))?
             .map_err(ToolFailure::from)?;
     let started = start_inline(core, &name, flow, views).map_err(|error| flow_failure(&error))?;
     if !wait.unwrap_or(true) {
@@ -326,7 +326,7 @@ pub async fn tool(core: &Arc<Core>, raw: Value) -> Result<Value, ToolFailure> {
     }
     match started.done.await {
         Ok(Ok(result)) => serde_json::to_value(result)
-            .map_err(|error| ToolFailure::new("internal", error.to_string())),
+            .map_err(|error| ToolFailure::new("mcp.internal", error.to_string())),
         Ok(Err(error)) => Err(flow_failure(&error)),
         Err(_) => Err(ToolFailure::new(
             "flows.ended",

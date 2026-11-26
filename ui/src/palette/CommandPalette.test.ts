@@ -2,7 +2,7 @@ import ui from '@nuxt/ui/vue-plugin';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
-import { createShellI18n } from '../i18n';
+import { createPagesI18n } from '../i18n/pages';
 import type { CoreToShell } from '../ipc/protocol';
 import { createShell, SHELL_KEY } from '../state/shell';
 import CommandPalette from './CommandPalette.vue';
@@ -43,7 +43,7 @@ async function setup(core: PaletteCore = createPaletteCore()) {
     },
     attachTo: document.body,
     global: {
-      plugins: [ui, createShellI18n()],
+      plugins: [ui, createPagesI18n()],
       provide: { [SHELL_KEY]: shell, [PALETTE_CLIENT_KEY]: core.client },
     },
   });
@@ -143,7 +143,7 @@ describe('the command palette', () => {
   it('asks for the argument in a second step and goes back with Escape', async () => {
     const { wrapper, core, open, type, key } = await setup();
     await open();
-    await type('set view to ...');
+    await type('set view to…');
     await key('Enter');
     expect(wrapper.get('[data-testid="palette-step"]').text()).toContain('Set view to');
     // The step is a Nuxt UI badge (RB-080-88).
@@ -160,7 +160,7 @@ describe('the command palette', () => {
   it('shows each entry\'s shortcut and opens the shortcut editor with Ctrl+Enter', async () => {
     const { wrapper, core, open, type, key } = await setup();
     await open();
-    await type('sync');
+    await type('switch sync on or off');
     const selected = wrapper.get('[role="option"][aria-selected="true"]');
     expect(selected.text()).toContain('Ctrl+Shift+Space');
     await key('Enter', { ctrlKey: true });

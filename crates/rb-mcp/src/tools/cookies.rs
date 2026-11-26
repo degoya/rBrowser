@@ -33,7 +33,8 @@ pub struct CookiesCopyParams {
     /// or WebKit view gets the cookies of its own session.
     #[serde(default)]
     pub source: Option<SourceArg>,
-    /// `"all"` (every Firefox and WebKit view, the default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. Only Firefox and WebKit views take the
+    /// cookies.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// Only the cookies of these sites (host names, a parent domain's cookies included);
@@ -45,7 +46,7 @@ pub struct CookiesCopyParams {
 #[tool_router(router = cookies_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Copy the cookies of a Chromium session into the Firefox and WebKit views of that session, so a login in the grid holds there too (each view loads its page again unless engines.cookies.reload is off). source: a session id or a view id (default: each view's own session); target: \"all\" (default), a view id or a breakpoint id; domains: only these sites (default: engines.cookies.domainFilter). Answers per view the cookies copied, refused and skipped with their reasons - never a cookie value; without a Firefox or WebKit view it says so in `message`."
+        description = "Copy the cookies of a Chromium session into the Firefox and WebKit views of that session, so a login in the grid holds there too (they reload unless engines.cookies.reload is off). source: a session id or a view id (default each view's own session); domains: only these sites (default engines.cookies.domainFilter). Answers per view the cookies copied, refused and skipped with reasons - never a value."
     )]
     pub(crate) async fn cookies_copy(
         &self,

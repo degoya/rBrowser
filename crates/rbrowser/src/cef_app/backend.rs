@@ -40,6 +40,7 @@ fn with_browser(view: ViewId, action: impl FnOnce(&Browser) + Send + 'static) {
 }
 
 impl UiBackend for CefUi {
+    // A loop of these is told by `crate::host::rebuild_watch` (RB-099-07).
     fn apply_grid(&self, grid: UiGrid) {
         on_ui(move || grid::apply(&grid));
     }

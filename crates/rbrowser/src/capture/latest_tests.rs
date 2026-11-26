@@ -14,6 +14,9 @@ fn shot(view: u32, path: Option<&str>) -> ShotAnswer {
         path: path.map(str::to_owned),
         png_base64: path.map(|_| "AAAA".to_owned()),
         error: None,
+        truncated: false,
+        page_height: None,
+        images_pending: false,
     }
 }
 

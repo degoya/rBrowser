@@ -4,9 +4,11 @@
 //! `bookmarks.make_relative`. Both act on the project config, on no view; `navigate` opens a
 //! bookmark and `config_set` adds one.
 
+use rmcp::handler::server::wrapper::Parameters;
 use rmcp::{tool, tool_router};
 use serde_json::json;
 
+use super::NoArgs;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 
@@ -18,9 +20,9 @@ const MAKE_RELATIVE: &str = "bookmarks.make_relative";
 #[tool_router(router = bookmarks_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "List the project's bookmarks: for each id, label, group and shortcut if any, relative (true: it stores a path such as /shop/cart?x=1#top and follows the environment; false: an absolute URL, the same everywhere), its path when relative, and url - where it leads in the environment in effect (absent for a path with no environment or start URL to lie under). Also environment (the one in effect), base (the URL paths are put after) and followEnvironment (the setting bookmarks.followEnvironment: new bookmarks of a page under an environment are stored as paths). A read only; acts on no view. Open one with navigate and its url."
+        description = "List the project's bookmarks: id, label, group, shortcut, relative (true: a path such as /shop/cart that follows the environment; false: an absolute URL), path, and url - where it leads in the environment in effect. Also environment, base and followEnvironment (bookmarks.followEnvironment). Open one with navigate and its url."
     )]
-    pub(crate) async fn bookmarks_list(&self) -> ToolResult {
+    pub(crate) async fn bookmarks_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         let result = async {
             let answer = self
                 .backend
@@ -33,9 +35,9 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Turn every bookmark with an absolute URL that lies under the project's environments into a path, so it follows the environment from then on (https://staging.example.com/shop/cart becomes /shop/cart). Only a URL whose path leads to the same page under every environment that names its host is converted; a foreign host, or environments with different base paths on that host, keep the URL. Edits only bookmarks[] of config.json and config.local.json (both written or neither), reads the config again and tells the person the number in the status bar. Answers converted (how many), ids, and invalid (bookmarks the config check refuses, left as they are) when there are any. Takes no arguments; acts on no view."
+        description = "Turn every bookmark whose absolute URL lies under the project's environments into a path, so it follows the environment (https://staging.example.com/shop/cart becomes /shop/cart). A foreign host, or environments with different base paths on that host, keep the URL. Edits only bookmarks[] of config.json and config.local.json (both or neither). Answers converted, ids and invalid (bookmarks the config check refuses, left as they are)."
     )]
-    pub(crate) async fn bookmarks_make_relative(&self) -> ToolResult {
+    pub(crate) async fn bookmarks_make_relative(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.command(MAKE_RELATIVE, json!({})).await)
     }
 }

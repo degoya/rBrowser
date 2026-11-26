@@ -96,7 +96,7 @@ fn a_secret_fill_from_an_agent_is_refused_with_its_own_code() {
         CommandError::InvalidArgs(_)
     ));
     let other = ToolFailure::from(refused(edit::EditError::NoStep(9)));
-    assert_eq!(other.code, "invalid_arguments");
+    assert_eq!(other.code, "args.invalid");
 }
 
 #[test]

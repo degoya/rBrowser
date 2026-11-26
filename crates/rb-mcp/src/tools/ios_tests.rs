@@ -20,7 +20,12 @@ async fn the_simulators_and_devices_are_the_hosts_answer() {
             "devices": [],
         })),
     );
-    let (error, answer) = answer_json(&server(&fake).ios_devices().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .ios_devices(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["simulators"][0]["name"], "iPhone 16");
     assert_eq!(fake.calls(), [(host("ios_devices"), json!({}))]);

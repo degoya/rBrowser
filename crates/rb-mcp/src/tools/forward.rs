@@ -113,7 +113,7 @@ impl RbMcpServer {
 }
 
 /// The code of an answer over `mcp.maxAnswerBytes` that cannot be cut.
-pub(crate) const ANSWER_TOO_LARGE: &str = "answer_too_large";
+pub(crate) const ANSWER_TOO_LARGE: &str = "answer.too_large";
 
 fn too_large(limit: usize) -> ToolFailure {
     ToolFailure::new(
@@ -149,7 +149,7 @@ pub(crate) fn with_target(args: &Value, target: Option<Target>) -> Result<Value,
     };
     if let Some(target) = target {
         call["target"] = serde_json::to_value(target)
-            .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+            .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
     }
     Ok(call)
 }

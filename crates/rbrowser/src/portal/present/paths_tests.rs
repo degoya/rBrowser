@@ -93,6 +93,96 @@ fn a_denied_path_is_denied_in_every_spelling() {
     }
 }
 
+/// A dot file is as secret in a folder as at the root, and a dev server under a base answers its
+/// editor launch below it: a rule that names a marker matches at every segment, in every spelling.
+#[test]
+fn a_marker_rule_matches_at_every_segment() {
+    let rules = defaults();
+    for path in [
+        "/sub/.git/config",
+        "/sub/%2Egit/config",
+        "/a/b/.git",
+        "/sub/.env",
+        "/sub/.env.local",
+        "/sub/%2eenv",
+        "/a/__open-in-editor",
+        "/a/__open-in-editor?file=x",
+        "/a/__open-stack-frame-in-editor",
+        "/a/__nextjs_launch-editor",
+        "/base/__nextjs_original-stack-frames",
+    ] {
+        assert!(!rules.allows(path), "{path}");
+    }
+    // No match inside a segment: a marker counts only where a segment begins.
+    for path in [
+        "/assets/fsx.js",
+        "/assets/x@fs.js",
+        "/my.github.io/",
+        "/environment/",
+        "/a/b.env",
+        "/a/x.git/config",
+        "/docs/open-in-editor",
+        "/a/_debugger",
+    ] {
+        assert!(rules.allows(path), "{path}");
+    }
+}
+
+/// Only a rule that begins with `.` or `__` is a marker; any other rule is a path from the root,
+/// as before. `/@fs/` among them: under a base Vite serves the app's own modules from
+/// `<base>/@fs/` (Nuxt's `/_nuxt/@fs/<path>/entry.js`), so a presentation of a Nuxt app needs them.
+#[test]
+fn a_path_rule_matches_from_the_root_only() {
+    let shipped = defaults();
+    assert!(!shipped.allows("/@fs/etc/passwd"));
+    assert!(!shipped.allows("/%40fs/etc/passwd"));
+    for path in [
+        "/_nuxt/@fs/home/x/node_modules/nuxt/dist/app/entry.js",
+        "/_nuxt/%40fs/home/x/node_modules/nuxt/dist/app/entry.js",
+        "/app/_nuxt/@fs/C:/x/layer/app.vue",
+    ] {
+        assert!(shipped.allows(path), "{path}");
+    }
+    assert!(!shipped.allows("/admin/users"));
+    assert!(!shipped.allows("/_debug/"));
+    assert!(shipped.allows("/shop/admin"), "/admin is a path, no marker");
+    assert!(
+        shipped.allows("/shop/_debug"),
+        "/_debug is a path, no marker"
+    );
+
+    let own = rules(
+        "/",
+        &[],
+        &[
+            "/.secret",
+            "/@internal",
+            "/__panel",
+            "/.config/app",
+            "/private",
+        ],
+    );
+    for path in [
+        "/x/.secret",
+        "/x/.secrets/key",
+        "/x/y/__panel",
+        "/x/.config/app/key",
+    ] {
+        assert!(!own.allows(path), "{path}");
+    }
+    for path in [
+        "/x/private",
+        "/x/@internal/a",
+        "/x/.config/other",
+        "/x/secret",
+        "/x/internal",
+    ] {
+        assert!(own.allows(path), "{path}");
+    }
+    assert!(!own.allows("/private/x"));
+    assert!(!own.allows("/@internal/a"));
+}
+
 #[test]
 fn a_short_name_segment_is_refused_even_where_it_is_allowed() {
     let rules = rules("/", &[], &[]);

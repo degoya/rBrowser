@@ -9,6 +9,12 @@
 //! below `.rbrowser/out/screenshot-editor/` ([`paths`]). The same tool serves MCP, so an agent
 //! annotates without any UI.
 //!
+//! **Every image the capture writes** (RB-099-24, up to 65535 rows and 256 megapixels): the
+//! original is read in ranges and decoded row by row ([`stream`], [`rows`]), rendered in bands
+//! ([`band`]) and encoded band by band into a file written in parts ([`encode`]), so the
+//! component never holds the image whole; the panel shows a scaled preview of one that exceeds
+//! a canvas ([`preview`]).
+//!
 //! Contributions (`manifest.toml`):
 //!
 //! - the commands `open_last` (`Ctrl+Shift+Space C E`, opens the editor at the newest screenshot)
@@ -23,14 +29,19 @@
 #[cfg(target_arch = "wasm32")]
 mod guest;
 
+pub mod band;
 pub mod cache;
 pub mod codec;
+pub mod encode;
 pub mod files;
 pub mod model;
 pub mod paths;
+pub mod preview;
 pub mod redact;
 pub mod render;
+pub mod rows;
 pub mod settings;
+pub mod stream;
 pub mod text;
 pub mod tools;
 

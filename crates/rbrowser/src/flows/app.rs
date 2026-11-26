@@ -21,8 +21,8 @@ use super::result::{RESULT_FILE, RunResult, run_dir, run_id, valid_run_id};
 use super::run::{Endpoint, FlowDeps, InlineFlow, RunRequest, Setup, execute_recorded};
 use super::sync_pause::SyncPause;
 use super::{
-    CANCEL, DELETE, FlowError, OPEN_RESULTS, PANEL, RERUN_LAST, RUN, RUN_ALL, catalog, endpoints,
-    gate, queue,
+    CANCEL, DELETE, FlowError, OPEN_RESULTS, PANEL, RERUN_LAST, RUN, RUN_ALL, RUN_ALL_VISIBLE,
+    catalog, endpoints, gate, queue, scoped,
 };
 use crate::cdp::lock;
 use crate::control::Core;
@@ -362,12 +362,17 @@ pub fn handler(id: &str, core: Weak<Core>) -> Handler {
                     Some(name) => name.to_owned(),
                     None => only_flow(&core).map_err(failed)?,
                 };
-                let views = resolve_views(&core.host().views(), &args["views"]).map_err(failed)?;
+                let views = scoped::views(&core, &args).map_err(failed)?;
                 let run_id = args.get("runId").and_then(Value::as_str).map(str::to_owned);
                 let started = start(&core, &name, views, run_id).map_err(failed)?;
                 Ok(json!({ "runId": started.run_id }))
             }
-            RUN_ALL => queue::run_all(&core).map_err(failed),
+            RUN_ALL => {
+                queue::run_all(&core, scoped::views(&core, &args).map_err(failed)?).map_err(failed)
+            }
+            RUN_ALL_VISIBLE => {
+                queue::run_all(&core, scoped::visible(&core).map_err(failed)?).map_err(failed)
+            }
             RERUN_LAST => {
                 let last = lock(&STATE)
                     .last

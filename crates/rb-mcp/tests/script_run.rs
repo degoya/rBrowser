@@ -1,7 +1,7 @@
 //! `script_run` end to end over Streamable HTTP (RB-098-01), with the JSON-program sandbox of
 //! `rb_mcp::testing`: off by default; on, a script's calls run through the session's router -
 //! navigate and evaluate of every view in one answer - and through every guard of a direct call
-//! (`evaluate_disabled`, `flows.untrusted`, the protected keys of `config_set` and
+//! (`evaluate.disabled`, `flows.untrusted`, the protected keys of `config_set` and
 //! `settings_set`); `script_run` inside a script, too many calls, an endless run and a script
 //! that does not parse end with their codes; a large answer is cut; the tool list carries the
 //! `rb.*` signatures.
@@ -125,7 +125,7 @@ async fn script_run_over_http_bundles_calls_behind_every_guard() {
 
     let (error, off) = run(&running, json!({ "return": 1 })).await;
     assert!(error);
-    assert_eq!(off["code"], "scripts_disabled");
+    assert_eq!(off["code"], "script.disabled");
     assert_eq!(off["settingsKey"], "mcp.scripts.enabled");
 
     // Navigate every view and read each page's width: one answer for all of them.
@@ -165,7 +165,7 @@ async fn script_run_over_http_bundles_calls_behind_every_guard() {
         json!({ "calls": [["evaluate", { "expression": "1" }]] }),
     )
     .await;
-    assert_eq!(evaluate["code"], "evaluate_disabled");
+    assert_eq!(evaluate["code"], "evaluate.disabled");
     assert_eq!(evaluate["tool"], "evaluate");
     let (_, flow) = run(
         &running,
@@ -180,7 +180,7 @@ async fn script_run_over_http_bundles_calls_behind_every_guard() {
                                            "value": ["attacker.example"], "scope": "local" }]] }),
     )
     .await;
-    assert_eq!(config["code"], "config_key_protected");
+    assert_eq!(config["code"], "config.key_protected");
     assert_eq!(fake.document(ConfigScope::Local), json!({}));
     let (_, setting) = run(
         &running,

@@ -2,8 +2,8 @@
   "plugin": {
     "image-overlay": {
       "commands": {
-        "toggle": "Image Overlay: Show or Hide",
-        "add_design": "Image Overlay: Add Design…"
+        "toggle": "Image overlay: show or hide",
+        "add_design": "Image overlay: add a design…"
       },
       "tools": {
         "set": "Shows or hides each view's design image from .rbrowser/designs/ over the page and sets opacity, blend mode, invert, anchor, offset, split view and the design per breakpoint - one setting for every view, each view showing its own design. Answers the state and each view's design. Without arguments it answers the state unchanged.",
@@ -102,7 +102,7 @@
         "autoScaleDpr": {
           "label": "Scale @2x and @3x exports",
           "description": "Shows an export named name@2x.png or name@3x.png at its CSS size (the image's pixels over the scale), and prefers the export matching a view's pixel ratio. Off: every design shows at one image pixel per CSS px.",
-          "help": "Shows an export named name@2x.png or name@3x.png at its CSS size and prefers the one matching a view's pixel ratio. Off shows every design at one image pixel per CSS px."
+          "help": "Shows an export named name@2x.png or name@3x.png at its CSS size and prefers the one matching a view's pixel ratio. When off, it shows every design at one image pixel per CSS px."
         },
         "option": {
           "blend": {

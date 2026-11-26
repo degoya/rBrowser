@@ -114,7 +114,8 @@ async fn an_untrusted_project_sends_no_header_of_either_file_until_trusted() {
     let root = project_with_local_file("untrusted");
     let setup = setup(config(), Some(root.clone()));
     attach(&setup).await;
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    // The attach's apply ended: a header it sent is in.
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert!(
         header_calls(&setup).is_empty(),
         "a committed config.local.json sends nothing without trust"
@@ -137,7 +138,7 @@ async fn an_untrusted_project_sends_no_header_of_either_file_until_trusted() {
 async fn without_a_local_file_an_untrusted_project_sends_no_header_and_no_network_domain() {
     let setup = setup(config(), None);
     attach(&setup).await;
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert!(header_calls(&setup).is_empty());
     assert!(setup.fake.sent("Network.enable").is_empty());
 }
@@ -160,7 +161,8 @@ async fn a_live_change_sends_only_its_group_and_never_reloads() {
         setup.fake.sent("Emulation.setEmulatedMedia")[1]["params"]["features"][0]["value"],
         "light"
     );
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    // The live change's apply ended: whatever else it sent is in.
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert_eq!(
         setup.fake.sent("Emulation.setTouchEmulationEnabled").len(),
         1
@@ -268,7 +270,8 @@ async fn a_refused_grant_is_not_remembered_and_goes_again() {
     attach(&setup).await;
     setup.host.on_address_change(ViewId(1), "https://a.test/x");
     until(|| !grants(&setup).is_empty()).await;
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    // The apply that sent the refused grant ended.
+    until(|| setup.host.applies_settled(ViewId(1))).await;
     assert_eq!(setup.host.state().views[&ViewId(1)].geo_origin, None);
     setup.fake.fail("Browser.grantPermissions", false);
     setup.host.reapply_emulation(ViewId(1));
@@ -314,4 +317,139 @@ async fn a_session_lost_while_the_window_closes_is_not_attached_again() {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     assert_eq!(setup.fake.sent("Target.attachToTarget").len(), 1);
+}
+
+/// Two breakpoints in the default session, both with a position (RB-099-19).
+fn two_views() -> ProjectConfig {
+    serde_json::from_value(json!({
+        "version": 1,
+        "startUrl": "about:blank",
+        "breakpoints": [
+            { "id": "mobile", "width": 393, "height": 852,
+              "geolocation": { "latitude": 52.52, "longitude": 13.4 } },
+            { "id": "tablet", "width": 768, "height": 1024,
+              "geolocation": { "latitude": 52.52, "longitude": 13.4 } }
+        ]
+    }))
+    .expect("a config")
+}
+
+fn bounds(width: u32, height: u32) -> CellRect {
+    CellRect {
+        x: 0,
+        y: 44,
+        width,
+        height,
+    }
+}
+
+fn session_of(setup: &Setup, view: ViewId) -> Option<String> {
+    setup.host.state().views[&view].session.clone()
+}
+
+fn metrics_on(setup: &Setup, session: &str) -> usize {
+    setup
+        .fake
+        .sent("Emulation.setDeviceMetricsOverride")
+        .iter()
+        .filter(|message| message["sessionId"] == session)
+        .count()
+}
+
+/// Both views attached and their first metrics sent; their sessions.
+async fn attach_both(setup: &Setup) -> (String, String) {
+    setup.fake.add_target("T2", &marker_url(ViewId(2)));
+    for view in [ViewId(1), ViewId(2)] {
+        setup.host.on_view_bounds(view, bounds(400, 800));
+        setup.host.on_load_end(view, &marker_url(view));
+    }
+    until(|| session_of(setup, ViewId(1)).is_some() && session_of(setup, ViewId(2)).is_some())
+        .await;
+    let first = session_of(setup, ViewId(1)).expect("a session");
+    let second = session_of(setup, ViewId(2)).expect("a session");
+    until(|| metrics_on(setup, &first) > 0 && metrics_on(setup, &second) > 0).await;
+    (first, second)
+}
+
+/// RB-099-19: one view's apply waiting for the browser does not hold back another view's - a
+/// resize no longer sends the views' metrics one after the other.
+#[tokio::test]
+async fn one_views_apply_does_not_wait_for_another_views() {
+    let setup = setup(two_views(), None);
+    let (first, second) = attach_both(&setup).await;
+    setup
+        .fake
+        .hold("Emulation.setDeviceMetricsOverride", Some(first.as_str()));
+    let (first_before, second_before) = (metrics_on(&setup, &first), metrics_on(&setup, &second));
+    setup.host.on_view_bounds(ViewId(1), bounds(200, 400));
+    // View 1's metrics went out and wait for their answer: its apply holds its lock.
+    until(|| metrics_on(&setup, &first) > first_before).await;
+    setup.host.on_view_bounds(ViewId(2), bounds(200, 400));
+    until(|| metrics_on(&setup, &second) > second_before).await;
+    setup.fake.release();
+}
+
+/// RB-099-19: the geolocation grants of one browser context still take turns - the second
+/// view's plan reads what the first one granted.
+#[tokio::test]
+async fn the_grants_of_one_browser_context_take_turns() {
+    let setup = setup(two_views(), None);
+    let (first, _second) = attach_both(&setup).await;
+    setup
+        .fake
+        .hold("Browser.grantPermissions", Some(first.as_str()));
+    setup.host.on_address_change(ViewId(1), "https://a.test/x");
+    until(|| grants(&setup).len() == 1).await;
+    setup.host.on_address_change(ViewId(2), "https://b.test/x");
+    // A give-up wait, no bound: the second grant must not go while the first is unanswered.
+    for _ in 0..20 {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(grants(&setup).len(), 1, "two grants of one context at once");
+    setup.fake.release();
+    until(|| grants(&setup).len() == 2).await;
+    let origins: Vec<Value> = grants(&setup)
+        .iter()
+        .map(|grant| grant["params"]["origin"].clone())
+        .collect();
+    assert_eq!(
+        origins,
+        vec![json!("https://a.test"), json!("https://b.test")]
+    );
+}
+
+/// Review w39: a grant planned under the lock of one browser context is dropped when the view
+/// has moved to another context or session since the apply read it.
+#[tokio::test]
+async fn a_grant_under_a_stale_context_or_session_sends_nothing() {
+    let setup = setup(geolocated(), None);
+    attach(&setup).await;
+    setup.host.on_address_change(ViewId(1), "https://a.test/x");
+    until(|| setup.host.state().views[&ViewId(1)].geo_origin.is_some()).await;
+    let before = grants(&setup).len();
+    let session = session_of(&setup, ViewId(1)).expect("a session");
+    let stale_context =
+        apply_position(&setup.host, ViewId(1), &session, "another-session", true).await;
+    let stale_session = apply_position(
+        &setup.host,
+        ViewId(1),
+        "S-gone",
+        rb_config::DEFAULT_SESSION,
+        true,
+    )
+    .await;
+    assert!(matches!(stale_context, Position::Unchanged));
+    assert!(matches!(stale_session, Position::Unchanged));
+    assert_eq!(grants(&setup).len(), before, "no grant went out");
+    // The view's own context and session still grant (forced: again).
+    let current = apply_position(
+        &setup.host,
+        ViewId(1),
+        &session,
+        rb_config::DEFAULT_SESSION,
+        true,
+    )
+    .await;
+    assert!(matches!(current, Position::Sent { current: true }));
+    assert_eq!(grants(&setup).len(), before + 1);
 }

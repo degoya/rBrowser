@@ -8,7 +8,7 @@ import { IpcClient, measureRoundtrip } from './ipc/client';
 import { createMockTransport } from './ipc/mockTransport';
 import { createCefTransport, hasCefQuery, type Transport } from './ipc/transport';
 import { EMULATION_QUERY_KEY } from './emulation/emulation';
-import { AUTH_STATUS_QUERY_KEY } from './basic-auth/basicAuth';
+import { AUTH_STATUS_QUERY_KEY, statusesOf } from './basic-auth/basicAuth';
 import { createShellI18n } from './i18n';
 import { PALETTE_CLIENT_KEY } from './palette/palette';
 import { createShell, SHELL_KEY, type Shell } from './state/shell';
@@ -44,7 +44,8 @@ declare global {
   }
 }
 
-export function mountShell(root: Component, selector = '#app'): Shell {
+/** Mounts `root`; `catalogues` are halves of the catalogue beyond the shared one (`i18n/pages.ts`). */
+export function mountShell(root: Component, selector = '#app', catalogues: readonly unknown[] = []): Shell {
   // No page of the shell zooms (RB-080-50).
   guardZoom(window);
   // Icons are bundled at build time; the shell never fetches one from the Iconify API.
@@ -66,11 +67,12 @@ export function mountShell(root: Component, selector = '#app'): Shell {
     .provide(EMULATION_QUERY_KEY, (view) =>
       client.expect({ type: 'getEmulation', view }, 'emulation').then((a) => a.emulation),
     )
-    // The Basic auth bar's stored credentials, never a password (RB-094-29).
+    // The Basic auth bar's stored credentials, never a password (RB-094-29), and the store
+    // its texts name (RB-099-05).
     .provide(AUTH_STATUS_QUERY_KEY, () =>
-      client.expect({ type: 'getBasicAuthStatus' }, 'basicAuthStatus').then((a) => a.environments),
+      client.expect({ type: 'getBasicAuthStatus' }, 'basicAuthStatus').then(statusesOf),
     )
-    .use(createShellI18n())
+    .use(createShellI18n(catalogues))
     .use(ui)
     .mount(selector);
   void shell.start();

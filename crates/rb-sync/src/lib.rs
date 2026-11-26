@@ -20,6 +20,7 @@ mod hub_types;
 pub mod leader;
 pub mod loading;
 pub mod locale;
+pub mod media;
 pub mod message;
 pub mod nav_url;
 pub mod navigation;
@@ -47,6 +48,7 @@ pub use hub::{Hub, HubError, HubStatus, Navigation, Route, SkipReason};
 pub use leader::{FOLLOW_WINDOW, Follow, LeaderOnly, SubmitPolicy};
 pub use loading::{LOAD_START_GRACE, LoadChange, LoadTable};
 pub use locale::{PageDir, PageLocale, PseudoLocale};
+pub use media::{MediaMessage, MediaPlays, MediaTag};
 pub use message::{
     AgentCommand, AgentConfig, AgentMessage, AgentRecord, AgentRecordPointer, AgentScrollMode,
     CaptureSwitches, CommandResult, DEFAULT_SCROLL_DEBOUNCE_MS, Detected, DetectedTool,

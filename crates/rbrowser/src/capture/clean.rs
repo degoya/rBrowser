@@ -69,8 +69,9 @@ async fn call(
     }
 }
 
-/// The execution context of [`WORLD`] in the main frame of `session`'s page.
-async fn world(cdp: &CdpRouter, session: &str) -> Result<i64, EngineError> {
+/// The execution context of [`WORLD`] in the main frame of `session`'s page (also the
+/// lazy-loading pre-pass's, `super::lazy`).
+pub(super) async fn world(cdp: &CdpRouter, session: &str) -> Result<i64, EngineError> {
     let tree = call(cdp, "Page.getFrameTree", json!({}), session).await?;
     let frame = tree
         .pointer("/frameTree/frame/id")

@@ -26,6 +26,10 @@ const OWN_WINDOW: &[(&str, &str)] = &[
         "the sitemap gallery window (`gallery_window.rs`) is a top-level window of its own",
     ),
     (
+        "struct PopupLifeSpan",
+        "a grid page's popup (`popup.rs`) opens as CEF's own top-level window",
+    ),
+    (
         "struct WindowLifeSpan",
         "the native DevTools window (`devtools.rs`) is a top-level window of its own",
     ),

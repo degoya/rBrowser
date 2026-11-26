@@ -4,9 +4,13 @@
 //! findings panel. Over the views of the last run it is merged into it - that plugin's part
 //! replaced, the other plugins' kept - and the progress details follow ([`merge`], RB-094-14);
 //! the file written is the plugin's run alone. Called from a plugin's host call: it answers at
-//! once, the writing runs on the core's runtime.
+//! once, the writing runs on the core's runtime. How many findings a plugin reported last is
+//! kept, numbered, so a person's check command names the count of its own run ([`mark`],
+//! [`reported_since`], RB-099-25).
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::SystemTime;
 
 use rb_engine::ViewHost as _;
@@ -45,9 +49,72 @@ pub fn shown_run(
     (next.clone(), texts(next), false)
 }
 
+/// Per plugin: how many reports it made, and the findings of its last report (after the
+/// person's rule overrides and ignore patterns).
+static REPORTS: Mutex<BTreeMap<String, (u64, usize)>> = Mutex::new(BTreeMap::new());
+
+/// The reports plugin `plugin` made so far: taken before one of its commands runs, so that
+/// [`reported_since`] names what that command reported.
+pub fn mark(plugin: &str) -> u64 {
+    lock(&REPORTS)
+        .get(plugin)
+        .map_or(0, |(reports, _)| *reports)
+}
+
+/// The findings of plugin `plugin`'s last report after [`mark`] answered `mark`; `None` when
+/// it reported none since. A later report replaces the plugin's part of the run, so the last one
+/// counts.
+pub fn reported_since(plugin: &str, mark: u64) -> Option<usize> {
+    lock(&REPORTS)
+        .get(plugin)
+        .filter(|(reports, _)| *reports > mark)
+        .map(|(_, total)| *total)
+}
+
+/// Keeps `total` as plugin `plugin`'s last report.
+fn remember(plugin: &str, total: usize) {
+    let mut reports = lock(&REPORTS);
+    let made = reports.get(plugin).map_or(0, |(made, _)| *made);
+    reports.insert(plugin.to_owned(), (made + 1, total));
+}
+
+/// Whether a reported run is written under the project.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Keep {
+    /// Written to `.rbrowser/out/checks/` like every check run, the oldest pruned to
+    /// `checks.keepRuns`.
+    Run,
+    /// Only shown in the findings panel: findings that come from browsing, not from a run the
+    /// person or a plugin started (`media`, RB-099-29), never write under the project nor push
+    /// the person's runs out.
+    ShowOnly,
+}
+
+/// Where a reported run is written: the project's root for [`Keep::Run`], nowhere else.
+#[must_use]
+pub fn written_to(root: Option<PathBuf>, keep: Keep) -> Option<PathBuf> {
+    match keep {
+        Keep::Run => root,
+        Keep::ShowOnly => None,
+    }
+}
+
 /// Shows the run of `findings` in the findings panel and writes it under the project.
 pub fn publish(core: &Core, plugin: &str, findings: Vec<Finding>) {
+    publish_with(core, plugin, findings, rb_i18n::plugin_texts, Keep::Run);
+}
+
+/// [`publish`] with the finding texts of a plugin from `texts` - the core's own texts for a rule
+/// group the core reports itself (`media`, RB-099-29) - and written only as `keep` says.
+pub fn publish_with(
+    core: &Core,
+    plugin: &str,
+    findings: Vec<Finding>,
+    texts: impl Fn(&str) -> BTreeMap<String, String>,
+    keep: Keep,
+) {
     let file = run_of(core, plugin, findings);
+    remember(plugin, file.summary.total);
     let host = core.host();
     let (project, user) = (host.config().checks.findings, core.user_settings().checks);
     let merged = {
@@ -63,9 +130,8 @@ pub fn publish(core: &Core, plugin: &str, findings: Vec<Finding>) {
                 .map(|previous| (previous, messages.clone())),
             _ => None,
         };
-        let (shown, messages, merged) = shown_run(previous, &file, plugin, |of| {
-            run::messages(of, rb_i18n::plugin_texts)
-        });
+        let (shown, messages, merged) =
+            shown_run(previous, &file, plugin, |of| run::messages(of, &texts));
         match serde_json::to_value(&shown) {
             Ok(value) => {
                 let message = CoreToShell::Findings {
@@ -82,7 +148,7 @@ pub fn publish(core: &Core, plugin: &str, findings: Vec<Finding>) {
         merged
     };
     progress::follow_reported(core, &file, plugin, merged);
-    if let Some(root) = host.project_root() {
+    if let Some(root) = written_to(host.project_root(), keep) {
         let keep = run::settings(&project, &user).keep_runs();
         core.runtime().spawn(async move {
             if let Err(failure) = write_run(&root, &file, keep).await {

@@ -6,9 +6,11 @@
 //! recording off ([`Registry::set_enabled`]).
 //!
 //! The counters of the app are [`names`]. Recording takes one short lock; nothing is logged.
+//! A [`Gauge`] is a level instead (bytes waiting in a queue, RB-099-19), lock-free and read by
+//! its owner.
 
 use std::collections::{BTreeMap, VecDeque};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -201,6 +203,59 @@ pub fn percentile(sorted: &[Duration], p: f64) -> Duration {
     // At most WINDOW samples: the rank fits any integer type.
     let rank = (p / 100.0 * sorted.len() as f64).ceil() as usize;
     sorted[rank.clamp(1, sorted.len()) - 1]
+}
+
+/// A level that goes up and down - the bytes waiting in a queue - with the highest it reached.
+/// Lock-free for a hot path; not part of a [`Registry`]'s snapshot, its owner reads it.
+#[derive(Debug, Default)]
+pub struct Gauge {
+    now: AtomicU64,
+    peak: AtomicU64,
+}
+
+impl Gauge {
+    /// A gauge at zero.
+    pub const fn new() -> Self {
+        Self {
+            now: AtomicU64::new(0),
+            peak: AtomicU64::new(0),
+        }
+    }
+
+    /// Raises the level by `amount`; the level after it.
+    pub fn add(&self, amount: u64) -> u64 {
+        let now = self
+            .now
+            .fetch_add(amount, Ordering::Relaxed)
+            .saturating_add(amount);
+        self.peak.fetch_max(now, Ordering::Relaxed);
+        now
+    }
+
+    /// Lowers the level by `amount`, never below zero.
+    pub fn sub(&self, amount: u64) {
+        // The closure always answers `Some`: the update cannot fail.
+        let _ = self
+            .now
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |now| {
+                Some(now.saturating_sub(amount))
+            });
+    }
+
+    /// Puts the level back to zero (what it counted is gone); the peak stays.
+    pub fn reset(&self) {
+        self.now.store(0, Ordering::Relaxed);
+    }
+
+    /// The level now.
+    pub fn now(&self) -> u64 {
+        self.now.load(Ordering::Relaxed)
+    }
+
+    /// The highest level so far.
+    pub fn peak(&self) -> u64 {
+        self.peak.load(Ordering::Relaxed)
+    }
 }
 
 /// The registry of this process.

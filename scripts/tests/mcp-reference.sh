@@ -9,7 +9,8 @@
 # left out), the prompts with their arguments and the resources with their URIs (RB-095-01), the
 # coming tools and the commands without a tool; --check then passes, finds the page stale after a
 # tool is added, and passes without a page or a wiki (nothing generated yet); a tools file without
-# prompts and resources has neither section. The repository's own data reads.
+# prompts and resources has neither section; a job id left in a description is refused with its
+# page and line (RB-099-22). The repository's own data reads.
 #
 # Python only, compiles nothing: check.sh --preflight runs it.
 #
@@ -129,8 +130,9 @@ expect_true "an array names its items and its default" \
 expect_true "a target reference resolves to its types" \
     'grep -qxF "| \`target\` | integer or string | no | One view. |" "$page"'
 expect_true "a tool without parameters says so" 'grep -qxF "No parameters." "$page"'
-expect_true "a coming tool names its job and command" \
-    'grep -qxF "| \`click\` | RB-020-03 | \`view.click\` |" "$page"'
+expect_true "a coming tool names its command, not its job" \
+    'grep -qxF "| \`click\` | \`view.click\` |" "$page"'
+expect_true "the page names no job id" '! grep -qE "RB-[0-9]{3}-[0-9]{2}" "$page"'
 expect_true "an omitted command gives the reason" \
     'grep -qxF "| \`view.zoom_in\` (Zoom in) | ui-only: grid zoom |" "$page"'
 expect_true "a plugin tool has an overview row, marked, with the command that runs it" \
@@ -187,6 +189,13 @@ EOF
 run_status env RB_WIKI="$wiki" "$GENERATOR" "$fixture"
 expect_status "a tools file without prompts and resources is written" 0
 expect_true "it has neither section" '! grep -qE "^## (Prompts|Resources)$" "$page"'
+
+sed -i 's/Change a setting as a person would./RB-094-23: change a setting./' "$fixture/schema/mcp-tools.v1.json"
+run_status env RB_WIKI="$wiki" "$GENERATOR" "$fixture"
+expect_status "a job id left in a description is refused" 2
+expect_output "on its own, not as unreadable data" "a job id is left in the page"
+expect_output "with its page and line" "names the job id RB-094-23"
+sed -i 's/RB-094-23: change a setting./Change a setting as a person would./' "$fixture/schema/mcp-tools.v1.json"
 
 sed -i 's/"target": "one"/"target": "some"/' "$fixture/schema/mcp-tools.v1.json"
 run_status env RB_WIKI="$wiki" "$GENERATOR" --check "$fixture"

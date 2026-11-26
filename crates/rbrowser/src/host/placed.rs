@@ -20,6 +20,7 @@ use crate::layout::{Item, ModeSpec, Slot};
 impl Host {
     /// Shows `spec`: the views of its breakpoints (kept views live on, the others close or
     /// open) at the places its mode gives them. Answers the view of each breakpoint, in order.
+    #[track_caller]
     pub fn set_mode(&self, spec: ModeSpec) -> Result<Vec<ViewId>, EngineError> {
         let layout = spec.grid();
         let mut state = self.state();

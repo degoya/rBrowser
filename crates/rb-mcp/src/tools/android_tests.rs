@@ -17,7 +17,12 @@ async fn the_devices_are_the_hosts_answer() {
         &host("android_devices"),
         Ok(json!({ "enabled": true, "devices": [ { "serial": "S1", "ready": true } ] })),
     );
-    let (error, answer) = answer_json(&server(&fake).android_devices().await.expect("answer"));
+    let (error, answer) = answer_json(
+        &server(&fake)
+            .android_devices(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error, "{answer}");
     assert_eq!(answer["devices"][0]["serial"], "S1");
     assert_eq!(fake.calls(), [(host("android_devices"), json!({}))]);

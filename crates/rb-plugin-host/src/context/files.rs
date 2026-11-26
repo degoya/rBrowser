@@ -1,5 +1,5 @@
-//! The disk side of `project.read`, `project.list`, `project-write.write` and `out.write`: every
-//! path walked one segment
+//! The disk side of `project.read`, `project.list`, `project-write.write`, `out.write` and
+//! `project-range.read` (`out-stream` in `large.rs`): every path walked one segment
 //! at a time from the project root, **no link followed** - a link anywhere on the way refuses the
 //! path. A checked-in `.rbrowser/out` that links to `~/.ssh` must not turn a plugin's report into
 //! a write there, even a first-party plugin's in an untrusted project.
@@ -9,26 +9,26 @@ use std::path::{Path, PathBuf};
 
 use rand::Rng as _;
 use rb_plugin_types::{Failure, FailureKind, codes, paths};
-use tokio::io::AsyncWriteExt as _;
+use tokio::io::{AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _};
 
 use crate::failure::too_large;
 
-fn outside(path: &str) -> Failure {
+pub(super) fn outside(path: &str) -> Failure {
     paths::PathRefusal::Parent.failure(path)
 }
 
-fn not_found(path: &str) -> Failure {
+pub(super) fn not_found(path: &str) -> Failure {
     Failure::coded(FailureKind::NotFound, codes::NOT_FOUND)
         .with_param("path", path.chars().take(200).collect::<String>())
 }
 
-fn io(error: &std::io::Error) -> Failure {
+pub(super) fn io(error: &std::io::Error) -> Failure {
     tracing::debug!(%error, "a plugin's file operation failed");
     Failure::new(FailureKind::Io)
 }
 
 /// What is at `path`, without following a link: `Ok(None)` when nothing is.
-async fn kind(path: &Path) -> Result<Option<std::fs::FileType>, std::io::Error> {
+pub(super) async fn kind(path: &Path) -> Result<Option<std::fs::FileType>, std::io::Error> {
     match tokio::fs::symlink_metadata(path).await {
         Ok(metadata) => Ok(Some(metadata.file_type())),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
@@ -38,7 +38,7 @@ async fn kind(path: &Path) -> Result<Option<std::fs::FileType>, std::io::Error> 
 
 /// `root` joined with `folders`, each an existing real folder (created when `create`), none a
 /// link.
-async fn walk(
+pub(super) async fn walk(
     root: &Path,
     folders: &[&str],
     create: bool,
@@ -68,8 +68,12 @@ async fn walk(
     Ok(current)
 }
 
-/// Reads the project file at `segments`.
-pub(super) async fn read(root: &Path, segments: &[&str], shown: &str) -> Result<Vec<u8>, Failure> {
+/// The regular project file at `segments`, walked with no link followed, and its metadata.
+async fn regular(
+    root: &Path,
+    segments: &[&str],
+    shown: &str,
+) -> Result<(PathBuf, std::fs::Metadata), Failure> {
     let (file, folders) = segments.split_last().ok_or_else(|| not_found(shown))?;
     let folder = walk(root, folders, false, shown).await?;
     let path = folder.join(file);
@@ -84,10 +88,53 @@ pub(super) async fn read(root: &Path, segments: &[&str], shown: &str) -> Result<
     if !metadata.is_file() {
         return Err(not_found(shown));
     }
+    Ok((path, metadata))
+}
+
+/// Reads the project file at `segments`.
+pub(super) async fn read(root: &Path, segments: &[&str], shown: &str) -> Result<Vec<u8>, Failure> {
+    let (path, metadata) = regular(root, segments, shown).await?;
     if metadata.len() > rb_plugin_api::MAX_IO_BYTES as u64 {
         return Err(too_large(rb_plugin_api::MAX_IO_BYTES));
     }
     tokio::fs::read(&path).await.map_err(|error| io(&error))
+}
+
+/// At most `length` bytes of the project file at `segments` from `offset` (RB-099-24), and the
+/// length of the file opened: fewer at its end, none from its end on. The caller holds `length`
+/// to one call's limit; the file's own size is not limited.
+pub(super) async fn read_range(
+    root: &Path,
+    segments: &[&str],
+    shown: &str,
+    offset: u64,
+    length: usize,
+) -> Result<(Vec<u8>, u64), Failure> {
+    let (path, _) = regular(root, segments, shown).await?;
+    let mut opened = tokio::fs::File::open(&path)
+        .await
+        .map_err(|error| io(&error))?;
+    let metadata = opened.metadata().await.map_err(|error| io(&error))?;
+    // What was opened must still be a regular file (not a folder swapped in after the look).
+    if !metadata.is_file() {
+        return Err(not_found(shown));
+    }
+    let size = metadata.len();
+    if offset >= size || length == 0 {
+        return Ok((Vec::new(), size));
+    }
+    opened
+        .seek(std::io::SeekFrom::Start(offset))
+        .await
+        .map_err(|error| io(&error))?;
+    let wanted = (size - offset).min(length as u64);
+    let mut bytes = Vec::with_capacity(usize::try_from(wanted).unwrap_or(length));
+    opened
+        .take(wanted)
+        .read_to_end(&mut bytes)
+        .await
+        .map_err(|error| io(&error))?;
+    Ok((bytes, size))
 }
 
 /// The entries of the project folder at `segments`: `(name, is_folder)`, links left out.
@@ -229,7 +276,7 @@ async fn may_write(path: &Path, shown: &str) -> Result<(), Failure> {
 
 /// The temporary file's name beside the file it replaces: hidden, short - not the file's own
 /// name, so a name near the file system's limit still fits - and named by no write glob.
-fn temporary_name(random: &[u8; 8]) -> String {
+pub(super) fn temporary_name(random: &[u8; 8]) -> String {
     format!(".{}.rbrowser-tmp", rb_util::hex(random))
 }
 
@@ -241,15 +288,16 @@ fn read_only(path: &str) -> Failure {
         .with_param("path", path.chars().take(200).collect::<String>())
 }
 
-/// The temporary file of [`replace`], removed when dropped unless it was renamed into place.
-struct Temporary(Option<PathBuf>);
+/// The temporary file of [`replace`] (and of `out-stream`, `large.rs`), removed when dropped
+/// unless it was renamed into place.
+pub(super) struct Temporary(pub(super) Option<PathBuf>);
 
 impl Temporary {
-    fn path(&self) -> &Path {
+    pub(super) fn path(&self) -> &Path {
         self.0.as_deref().expect("set until renamed")
     }
 
-    fn renamed(mut self) {
+    pub(super) fn renamed(mut self) {
         self.0 = None;
     }
 }

@@ -147,7 +147,7 @@
             "string",
             "null"
           ],
-          "description": "The preset at start; the top-level `layout` when absent."
+          "description": "The preset at start; the top-level `layout` in the canvas when absent (RB-099-26)."
         },
         "presets": {
           "type": "object",
@@ -182,8 +182,8 @@
                     "description": "Views placed freely, with snapping and a minimap (RB-080-04)."
                   }
                 ],
-                "description": "Grid, focus, horizontal, split or canvas.",
-                "default": "grid"
+                "description": "Grid, focus, horizontal, split or canvas; when absent the grid for a preset with its own\n`layout`, else the canvas (RB-099-26).",
+                "default": "canvas"
               },
               "layout": {
                 "type": [

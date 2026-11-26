@@ -281,5 +281,17 @@ pub enum CoreToShell {
     BasicAuthStatus {
         /// One per environment, in the config's order.
         environments: Vec<crate::EnvironmentAuthStatus>,
+        /// The store the credentials are kept in, which the texts name (RB-099-05).
+        store: crate::CredentialStoreKind,
     },
+    /// rBrowser's sign-in dialog asks, or names more views waiting (RB-099-04).
+    AuthPrompt(crate::AuthPrompt),
+    /// The sign-in question `id` is withdrawn: its views closed, or it waited too long.
+    AuthPromptClosed {
+        /// The question's id.
+        id: u64,
+    },
+    /// The pages a sitemap capture would take, as a list and a tree (RB-099-09): the answer to
+    /// `sitemapStart` `discover`.
+    SitemapDiscovery(crate::SitemapDiscovery),
 }

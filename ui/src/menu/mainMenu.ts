@@ -267,6 +267,8 @@ export const CAPTURE_SUBMENU: readonly MenuNode[] = [
   sub('shell.menu.video', VIDEO_MENU),
   sub('shell.menu.visual', [
     cmd('visual.compare'),
+    // RB-099-10: the comparison of the views the grid shows only.
+    cmd('visual.compare_visible'),
     cmd('visual.baseline_update'),
     cmd('visual.lfs_setup'),
     // RB-094-03: the active view's page at its breakpoint in Chromium, Firefox and WebKit.
@@ -274,6 +276,8 @@ export const CAPTURE_SUBMENU: readonly MenuNode[] = [
   ]),
   sub('shell.menu.sitemap', [
     cmd('sitemap.capture'),
+    // RB-099-08: only the breakpoints the grid shows.
+    cmd('sitemap.capture_visible'),
     // Only while a capture runs: with none it failed with an empty message.
     cmd('sitemap.cancel', { enabled: (ctx) => ctx.state?.sitemap?.state === 'running' }),
     // A window of its own (RB-090-83) for any run, also while it runs (RB-090-90).
@@ -301,6 +305,7 @@ export const TOOLS_MENU: readonly MenuNode[] = [
 export const FLOWS_MENU: readonly MenuNode[] = [
   cmd('flows.run'),
   cmd('flows.run_all'),
+  cmd('flows.run_all_visible'),
   cmd('flows.rerun_last'),
   cmd('flows.cancel'),
   cmd('flows.open_results'),

@@ -11,10 +11,10 @@
 # `git archive HEAD` of the private wiki - its committed state, never an unsaved edit - converts
 # it to GitHub-wiki form (scripts/lib/public_wiki.py), refuses a private name
 # (scripts/public-names.txt) outside the `wiki/` entries of scripts/public-names-allow.txt and a
-# link into what scripts/public-exclude.txt leaves out, warns about every remaining mention of
-# `docs/`, of a job id and of the internal test, scans it with gitleaks and replaces the tree of
-# a local clone of the public wiki with it, keeping that clone's `.git`. The commit is "Handbook
-# for <version>", a snapshot: the private wiki's history does not come along.
+# link into what scripts/public-exclude.txt leaves out and a job id left after the conversion,
+# warns about every remaining mention of `docs/` and of the internal test, scans it with gitleaks
+# and replaces the tree of a local clone of the public wiki with it, keeping that clone's `.git`.
+# The commit is "Handbook for <version>", a snapshot: the private wiki's history does not come along.
 #
 # The conversion:
 #   * home.md becomes Home.md and _sidebar.md _Sidebar.md (at the root; GitHub's names).
@@ -140,8 +140,8 @@ check rb_public_check_links "$STAGE" "$ROOT/scripts/public-exclude.txt" --wiki
 check rb_public_check_names "$STAGE" --wiki
 check rb_public_scan "$STAGE"
 
-# Named in prose, a path into docs/, a job id or the internal test package is no link, but the
-# public reader can follow none of them.
+# Named in prose, a path into docs/ or the internal test package is no link, but the public
+# reader can follow neither of them: a warning. A job id is refused (job_ids below).
 warn() {
     local what="$1" pattern="$2" warnings
     echo "==> $what that remain (a warning, not a refusal)"
@@ -154,7 +154,16 @@ warn() {
     fi
 }
 warn "docs/" '(^|[^[:alnum:]_/.-])docs/'
-warn "job ids" '\bRB-[0-9]{3}-[0-9]{2}\b'
+
+# A job id is the planning's, not the reader's (owner, 2026-11-25): the conversion drops the
+# parentheses that carry them, and one left in prose refuses the export, named by page and line.
+# Code - a fenced block or an inline span - is kept as written and not checked, as the
+# conversion leaves it (scripts/lib/wiki_text.py).
+job_ids() {
+    echo "==> job ids that remain"
+    python3 -I -B "$ROOT/scripts/lib/wiki_text.py" "$STAGE" && echo "    none"
+}
+check job_ids
 warn "the internal test" '[Ii]nternal (test|testing|GitLab|source|package|ZIP)|team ZIP'
 
 if [[ -n "$OUT" ]]; then

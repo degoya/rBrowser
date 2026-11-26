@@ -129,12 +129,37 @@ impl Capability {
         }
     }
 
+    /// Every WIT interface it grants: [`Self::interface`] first, then the additive ones of the
+    /// same right - `project-range` (a range of a file `project.read` would read) with
+    /// `project-read`, `out-stream` (a file of `out.write` in parts, committed atomically) with
+    /// `out-write` (RB-099-24). Empty for one without an import.
+    #[must_use]
+    pub const fn interfaces(self) -> &'static [&'static str] {
+        match self {
+            Self::ProjectRead => &["project", "project-range"],
+            Self::OutWrite => &["out", "out-stream"],
+            Self::Views => &["views"],
+            Self::Evaluate => &["evaluate"],
+            Self::Cdp => &["cdp"],
+            Self::Http => &["http"],
+            Self::ProjectWrite => &["project-write"],
+            Self::Findings => &["findings"],
+            Self::Sidecar => &["sidecar"],
+            Self::NetworkRules
+            | Self::ConsoleLogs
+            | Self::Status
+            | Self::ConsentProbe
+            | Self::ApiClient
+            | Self::LoadTest => &[],
+        }
+    }
+
     /// The capability granting the WIT interface `interface`, if one does.
     #[must_use]
     pub fn for_interface(interface: &str) -> Option<Self> {
         Self::ALL
             .into_iter()
-            .find(|capability| capability.interface() == Some(interface))
+            .find(|capability| capability.interfaces().contains(&interface))
     }
 
     /// What a plugin gets for a host function its manifest does not grant:

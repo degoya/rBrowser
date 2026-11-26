@@ -66,7 +66,7 @@ pub struct AddSizeParams {
 #[tool_router(router = views_edit_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Open the view of a hidden breakpoint again (breakpoint: its id, or \"all\" for every hidden one): the breakpoint leaves layout.hidden of config.local.json, the config is read again and the view opens in the layout in effect - in canvas mode at x/y (canvas DIP) when given, else after the others. Answers added (the breakpoints opened), hidden (the ones still hidden) and changed."
+        description = "Open the view of a hidden breakpoint again (breakpoint: its id, or \"all\"): it leaves layout.hidden of config.local.json and opens in the layout in effect - in canvas mode at x/y (DIP) when given, else after the others. Answers added, hidden (still hidden) and changed."
     )]
     pub(crate) async fn view_add(&self, Parameters(params): Parameters<AddParams>) -> ToolResult {
         let args = object([
@@ -78,7 +78,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Remove one view (target: a view id or breakpoint id, default the active view) from every layout mode: its breakpoint goes into layout.hidden of config.local.json and the view closes (a window of its own included). The last view stays and the call is refused. Answers removed (the breakpoint), view, hidden and changed (false when it was hidden already). The breakpoint stays in the config; view_add opens it again."
+        description = "Remove one view from every layout mode: its breakpoint goes into layout.hidden of config.local.json and the view closes. The last view stays (refused). Answers removed (the breakpoint), view, hidden and changed. The breakpoint stays in the config; view_add opens it again."
     )]
     pub(crate) async fn view_remove(
         &self,
@@ -91,7 +91,7 @@ impl RbMcpServer {
             Some(TargetArg::Id(id)) => object([("view", Some(Value::from(id)))]),
             Some(TargetArg::Name(name)) if name == "all" => {
                 return respond::<Value>(Err(ToolFailure::new(
-                    "target_not_single",
+                    "target.not_single",
                     "view_remove acts on one view; pass a view id or a breakpoint id".to_owned(),
                 )));
             }
@@ -101,7 +101,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Add a view of a new size or of a device preset: pass width and height (dpr optional), or device (a device preset id: its size, pixel ratio, user agent and touch apply). A breakpoint (name, else size-<width>x<height> or an id made from the device id) is written into config.local.json, the config is read again and the view opens - an explicit layout.cells grid gets a column for it. A breakpoint of that id that exists with the same size or device is opened instead; one with another size or device is refused - choose another name. Answers what is open in the end: breakpoint, width, height, added (false when it existed), changed (false when its view was open already) and hidden; for a device breakpoint also device and dpr."
+        description = "Add a view of a new size (width, height, dpr optional) or of a device preset (device: its size, pixel ratio, user agent and touch). The breakpoint (name, else size-<width>x<height> or from the device id) is written into config.local.json and its view opens. An existing breakpoint of that id with the same size or device is opened instead; with another one it is refused - choose another name. Answers breakpoint, width, height, added, changed and hidden; for a device also device and dpr."
     )]
     pub(crate) async fn view_add_size(
         &self,
@@ -114,7 +114,7 @@ impl RbMcpServer {
         );
         if !valid {
             return respond::<Value>(Err(ToolFailure::new(
-                "invalid_arguments",
+                "args.invalid",
                 "view_add_size takes width and height, or device".to_owned(),
             )));
         }

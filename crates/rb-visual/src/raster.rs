@@ -28,7 +28,7 @@ impl std::fmt::Debug for Rgba {
     }
 }
 
-fn check_size(width: u32, height: u32) -> Result<usize, VisualError> {
+pub(crate) fn check_size(width: u32, height: u32) -> Result<usize, VisualError> {
     let pixels = u64::from(width) * u64::from(height);
     if width > MAX_SIDE || height > MAX_SIDE || pixels > MAX_PIXELS {
         return Err(VisualError::TooLarge {

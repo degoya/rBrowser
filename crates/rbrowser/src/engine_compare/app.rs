@@ -275,19 +275,19 @@ pub async fn host_tool(
 ) -> Result<Value, rb_mcp::ToolFailure> {
     if name != COMPARE_TOOL {
         return Err(rb_mcp::ToolFailure::new(
-            "unknown_tool",
+            "tool.unknown",
             format!("the host runs no tool `{name}`"),
         ));
     }
     let mut args = CompareEnginesArgs::parse(&args)
-        .map_err(|message| rb_mcp::ToolFailure::new("invalid_arguments", message))?;
+        .map_err(|message| rb_mcp::ToolFailure::new("args.invalid", message))?;
     args.open = Some(false);
     let run = core.clone();
     let summary = core
         .runtime()
         .spawn(async move { compare(&run, args, Caller::Agent).await })
         .await
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
         .map_err(|error| {
             rb_mcp::ToolFailure::new(
                 error.code(),
@@ -295,5 +295,5 @@ pub async fn host_tool(
             )
         })?;
     serde_json::to_value(&summary)
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }

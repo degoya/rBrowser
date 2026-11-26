@@ -172,6 +172,26 @@ pub(super) fn reshapes(
     was != now
 }
 
+/// What a footer that changed its height tells the rebuild watch (RB-099-07): the view, its
+/// height before and after, and the room it was fitted to.
+pub(super) fn reshape_note(
+    view: ViewId,
+    before: Option<&CellFooter>,
+    after: Option<&CellFooter>,
+    room: Option<&Room>,
+) -> String {
+    let height = |footer: Option<&CellFooter>| footer.map_or(0, CellFooter::height);
+    let room = room.map_or_else(
+        || "none".to_owned(),
+        |room| format!("{} x {:?}", room.width, room.height),
+    );
+    format!(
+        "footer of view {view}: {} -> {} DIP (room {room})",
+        height(before),
+        height(after)
+    )
+}
+
 impl Host {
     /// The views were laid out again (a new grid area, a pan, a zoom, a scroll, a popped-out
     /// window resized): the footers of the views whose room changed are fitted again, from the
@@ -190,7 +210,7 @@ impl Host {
                 return;
             };
             let mut changed = Vec::new();
-            let mut reshaped = false;
+            let mut reshaped = None;
             for (view, fitted) in fits.iter_mut() {
                 let room = widths.get(view).copied();
                 if room == fitted.room {
@@ -203,20 +223,23 @@ impl Host {
                 let mut next = sent.clone();
                 shape(&mut next, fitted, settings);
                 if next != *sent {
-                    reshaped |= reshapes(*view, Some(sent), Some(&next));
+                    if reshapes(*view, Some(sent), Some(&next)) && reshaped.is_none() {
+                        reshaped =
+                            Some(reshape_note(*view, Some(sent), Some(&next), room.as_ref()));
+                    }
                     *sent = next.clone();
                     changed.push((*view, next));
                 }
             }
-            if reshaped { None } else { Some(changed) }
+            reshaped.map_or(Ok(changed), Err)
         };
         match changed {
-            Some(changed) => {
+            Ok(changed) => {
                 for (view, footer) in changed {
                     self.ui.set_cell_footer(view, footer.shown().cloned());
                 }
             }
-            None => self.footer_reshaped(),
+            Err(cause) => self.footer_reshaped(cause),
         }
     }
 }

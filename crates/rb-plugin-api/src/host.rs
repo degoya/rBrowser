@@ -49,6 +49,20 @@ pub trait PluginHost {
     /// `project.list` (capability `project-read`): the names in a project-relative folder.
     fn project_list(&mut self, dir: &str) -> Result<Vec<String>, Failure>;
 
+    /// `project-range.read` (capability `project-read`, RB-099-24): at most `length` bytes
+    /// ([`crate::MAX_IO_BYTES`] a call) of the file `project_read` would read, from `offset`,
+    /// and the file's whole length. Refused by default, so a host built before the interface
+    /// needs no implementation.
+    fn project_read_range(
+        &mut self,
+        path: &str,
+        offset: u64,
+        length: u32,
+    ) -> Result<(Vec<u8>, u64), Failure> {
+        let _ = (path, offset, length);
+        Err(crate::Capability::ProjectRead.denied())
+    }
+
     /// `project-write.write` (capability `project-write`): replaces the project file `path` with
     /// `bytes` when it still holds `expected` (`None`: when it does not exist yet), atomically;
     /// otherwise `plugins.error.write_conflict` and nothing written. Refused by default, so a
@@ -65,6 +79,26 @@ pub trait PluginHost {
 
     /// `out.write` (capability `out-write`): a path relative to `.rbrowser/out/<plugin-id>/`.
     fn out_write(&mut self, path: &str, bytes: &[u8]) -> Result<(), Failure>;
+
+    /// `out-stream.begin` (capability `out-write`, RB-099-24): starts the file `path` (as
+    /// `out_write` names it) anew; nothing shows at `path` before [`Self::out_commit`]. Refused by
+    /// default, as the other two.
+    fn out_begin(&mut self, path: &str) -> Result<(), Failure> {
+        let _ = path;
+        Err(crate::Capability::OutWrite.denied())
+    }
+
+    /// `out-stream.append`: the next bytes of the file begun, [`crate::MAX_IO_BYTES`] a call, the
+    /// file at most [`crate::MAX_STREAM_BYTES`].
+    fn out_append(&mut self, bytes: &[u8]) -> Result<(), Failure> {
+        let _ = bytes;
+        Err(crate::Capability::OutWrite.denied())
+    }
+
+    /// `out-stream.commit`: the file begun replaces `path` at once.
+    fn out_commit(&mut self) -> Result<(), Failure> {
+        Err(crate::Capability::OutWrite.denied())
+    }
 
     /// `findings.report` (capability `findings`).
     fn report_findings(&mut self, items: &[Finding]) -> Result<(), Failure>;

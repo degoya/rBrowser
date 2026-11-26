@@ -111,7 +111,7 @@ describe('Settings > Plugins > Catalog', () => {
     await settle();
     click('catalog-confirm-install');
     await settle();
-    expect(document.querySelector('[data-testid="catalog-key-changed"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="catalog-key-changed"]')?.getAttribute('role')).toBe('alert');
     click('catalog-cancel');
     await settle();
     expect(installs(requests)).toEqual([]);

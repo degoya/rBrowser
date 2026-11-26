@@ -84,5 +84,5 @@ async fn a_path_with_nothing_to_lie_under_has_no_url_and_arguments_are_refused()
                 "relative": true, "path": "/shop/cart?x=1#top" })
     );
     let refused = bookmarks_list(core, &json!({ "target": "all" })).expect_err("refused");
-    assert_eq!(refused.code, "invalid_arguments");
+    assert_eq!(refused.code, "args.invalid");
 }

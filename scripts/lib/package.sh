@@ -13,7 +13,10 @@
 #   rb_package_hold_signing                   # RB_SIGN_*, RB_UPDATE_SIGNING_KEY leave the environment
 #   rb_package_with_signing <command>...      # ...and come back for this one command only
 #   list="$(rb_package_plugins "$ROOT" "$prebuilt")"   # the bundled .rbplugin files, one per line
-#   rb_package_zip "$OUT" "<stage name>" "$ZIP"
+#   epoch="$(rb_package_epoch "$commit")"      # the build time: the commit's, so two builds match
+#   rb_package_iso_time "$epoch"               # 2026-01-02T03:04:05Z
+#   rb_package_zip "$OUT" "<stage name>" "$ZIP"   # reproducible under SOURCE_DATE_EPOCH
+#   rb_package_sums "$OUT" <file>...           # $OUT/SHA256SUMS of the named files of $OUT
 #   rb_package_unportable "$STAGE"            # rb_package_zip runs it; the tarball calls it
 #   rb_package_unzip "$ZIP" "$DEST"           # unpacks a package's one folder, prints its path
 #
@@ -216,29 +219,91 @@ print(folder)
 PY
 }
 
-# Zips the folder $2 of directory $1 into $3 (an absolute path), the folder at the top: with
-# `zip` where it is installed, else with Python's zipfile, which keeps the files' modes - the
-# Windows runner's Git Bash has no `zip`. A folder that carries the portable mode's
-# marker or data is refused first (rb_package_unportable).
+# The build time of commit $1 (rb_package_commit) in seconds: SOURCE_DATE_EPOCH when the caller
+# set it, else the committer time of HEAD for a clean commit - so two builds of one commit name
+# the same time and pack the same bytes (RB-099-01) - and the clock for a dirty tree or none.
+rb_package_epoch() {
+    local commit="$1" epoch
+    if [[ -n "${SOURCE_DATE_EPOCH:-}" ]]; then
+        if [[ ! "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]; then
+            echo "!! SOURCE_DATE_EPOCH '$SOURCE_DATE_EPOCH' is no number of seconds" >&2
+            return 1
+        fi
+        printf '%s\n' "$SOURCE_DATE_EPOCH"
+        return 0
+    fi
+    if [[ "$commit" != *-dirty && "$commit" != unknown ]] \
+        && epoch="$(git log -1 --format=%ct HEAD 2> /dev/null)" && [[ "$epoch" =~ ^[0-9]+$ ]]; then
+        printf '%s\n' "$epoch"
+        return 0
+    fi
+    date +%s
+}
+
+# The epoch $1 in UTC, in the form VERSION.txt and build.rs name the build time.
+rb_package_iso_time() {
+    python3 -I -c 'import sys, time; print(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(sys.argv[1]))))' "$1"
+}
+
+# Writes $1/SHA256SUMS - `<sha256>  <name>`, as `sha256sum -c` reads it inside $1 - for the files
+# $2... of directory $1; a file that is not there is a failure and leaves no SHA256SUMS.
+rb_package_sums() {
+    local dir="$1"
+    shift
+    if ! (cd "$dir" && sha256sum -- "$@" > SHA256SUMS.part && mv SHA256SUMS.part SHA256SUMS); then
+        rm -f "$dir/SHA256SUMS.part"
+        echo "!! no SHA256SUMS written in $dir" >&2
+        return 1
+    fi
+}
+
+# Zips the folder $2 of directory $1 into $3 (an absolute path), the folder at the top, with
+# Python's zipfile - the same on WSL and on the Windows runner's Git Bash, which has no `zip`.
+# Reproducible (RB-099-01): the members sorted by name, the folders among them; the modes only
+# 0755 (a folder, or a file with any execute bit) or 0644; and under SOURCE_DATE_EPOCH every
+# member dated to it (UTC), so the same stage gives the same bytes whatever order and times its
+# files were written with. Without SOURCE_DATE_EPOCH a member keeps its file's time. A folder
+# that carries the portable mode's marker or data is refused first (rb_package_unportable).
 rb_package_zip() {
     local dir="$1" name="$2" zip="$3" python
     rb_package_unportable "$dir/$name" || return 1
-    if command -v zip > /dev/null 2>&1; then
-        (cd "$dir" && zip -qry "$zip" "$name")
-        return
-    fi
-    python="$(command -v python3 || command -v python)" || { echo "!! neither zip nor python" >&2; return 1; }
-    "$python" -I - "$dir" "$name" "$zip" << 'PY'
+    python="$(command -v python3 || command -v python)" || { echo "!! neither python3 nor python" >&2; return 1; }
+    "$python" -I - "$dir" "$name" "$zip" "${SOURCE_DATE_EPOCH:-}" << 'PY'
 import os
+import shutil
+import stat
 import sys
+import time
 import zipfile
 
-base, name, target = sys.argv[1], sys.argv[2], sys.argv[3]
+base, name, target, epoch = sys.argv[1:5]
+# ZIP dates start in 1980.
+fixed = time.gmtime(max(int(epoch), 315532800))[:6] if epoch else None
+paths = []
+for folder, dirs, files in os.walk(os.path.join(base, name)):
+    # A link would be dropped (a folder) or stored as a copy (a file): refuse it instead.
+    for entry in dirs + files:
+        if os.path.islink(os.path.join(folder, entry)):
+            sys.exit(f"!! {os.path.join(folder, entry)} is a symbolic link; the package takes none")
+    paths.append(folder)
+    paths.extend(os.path.join(folder, entry) for entry in files)
+members = sorted((os.path.relpath(path, base).replace(os.sep, "/"), path) for path in paths)
 with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as package:
-    for folder, dirs, files in os.walk(os.path.join(base, name)):
-        dirs.sort()
-        for entry in sorted(dirs) + sorted(files):
-            path = os.path.join(folder, entry)
-            package.write(path, os.path.relpath(path, base).replace(os.sep, "/"))
+    for member, path in members:
+        info = os.stat(path)
+        folder = stat.S_ISDIR(info.st_mode)
+        entry = zipfile.ZipInfo(member + "/" if folder else member,
+                                fixed or time.localtime(info.st_mtime)[:6])
+        entry.create_system = 3
+        if folder:
+            entry.external_attr = (stat.S_IFDIR | 0o755) << 16 | 0x10
+            package.writestr(entry, b"")
+            continue
+        mode = 0o755 if info.st_mode & 0o111 else 0o644
+        entry.external_attr = (stat.S_IFREG | mode) << 16
+        entry.compress_type = zipfile.ZIP_DEFLATED
+        entry.file_size = info.st_size
+        with open(path, "rb") as source, package.open(entry, "w") as sink:
+            shutil.copyfileobj(source, sink, 1024 * 1024)
 PY
 }

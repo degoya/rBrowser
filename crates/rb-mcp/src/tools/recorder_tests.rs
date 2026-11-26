@@ -52,7 +52,7 @@ async fn recorder_start_records_one_view_not_all() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("target_not_single"));
+    assert_eq!(answer["code"], json!("target.not_single"));
     assert!(fake.calls().is_empty());
 }
 

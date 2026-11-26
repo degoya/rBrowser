@@ -36,8 +36,8 @@ pub struct ScriptRunParams {
     /// Any JSON value; the script gets it as `args` (default `{}`).
     #[serde(default)]
     pub args: Option<Value>,
-    /// `"all"` (default), a view id or a breakpoint id; the script gets it as `target` and
-    /// passes it on to the tools it calls.
+    /// `"all"` (default), a view id or a breakpoint id. The script gets it as `target` and passes
+    /// it on to the tools it calls.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -45,7 +45,7 @@ pub struct ScriptRunParams {
 #[tool_router(router = script_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Run a short JavaScript that calls rBrowser's tools itself and answers only what it returns (MCP code mode): one call instead of a round trip per tool and view, the intermediate results never enter the context. code is the body of an async function with the parameters args (the JSON given as args) and target (as given, default \"all\"). Inside, await rb.<tool>(arguments) runs that MCP tool with exactly the guards of a direct call and gives its JSON answer; a refusal throws an Error named ToolError with code and tool. console.log lines come back as logs. Answer: result (the returned value as JSON), calls, durationMs, cut at mcp.scripts.maxResultBytes. The script runs in a sandbox: no fetch, require, import, timers, file system, network or process; at most mcp.scripts.maxCalls tool calls within mcp.scripts.timeoutMs. Off by default: a person switches it on with the setting mcp.scripts.enabled (code scripts_disabled). Failure codes: script.syntax (with line), script.timeout, script.call_limit, script.recursion (script_run inside a script), script.memory, script.stack, script.error or the tool's own code for an uncaught error (with name, tool, line). Example: await rb.navigate({ target, url: args.url }); const views = await rb.evaluate({ target, expression: 'document.documentElement.scrollWidth > innerWidth' }); return views.filter((v) => v.value).map((v) => v.breakpoint);"
+        description = "Run a short JavaScript that calls rBrowser's tools and answers only what it returns (MCP code mode): one call instead of a round trip per tool and view. code is the body of an async function with args and target; await rb.<tool>(arguments) runs that tool with the guards of a direct call and gives its JSON answer, a refusal throws a ToolError with code and tool; console.log lines come back as logs. Answers result, calls, durationMs (cut at mcp.scripts.maxResultBytes). Sandboxed: no fetch, import, timers, file system or process; at most mcp.scripts.maxCalls calls within mcp.scripts.timeoutMs. Off until a person switches on mcp.scripts.enabled (code script.disabled). Failure codes script.* (syntax, timeout, call_limit, recursion, memory, stack, error) or the tool's own. Example: await rb.navigate({ target, url: args.url }); const v = await rb.evaluate({ target, expression: 'document.documentElement.scrollWidth > innerWidth' }); return v.filter((x) => x.value).map((x) => x.breakpoint);"
     )]
     pub(crate) async fn script_run(
         &self,
@@ -73,7 +73,7 @@ impl RbMcpServer {
         }
         if params.code.len() > MAX_CODE_BYTES {
             return refused(
-                "invalid_arguments",
+                "args.invalid",
                 &format!("code is longer than {MAX_CODE_BYTES} bytes"),
                 None,
             );
@@ -84,7 +84,7 @@ impl RbMcpServer {
             .to_string();
         if args.len() > MAX_ARGS_BYTES {
             return refused(
-                "invalid_arguments",
+                "args.invalid",
                 &format!("args is longer than {MAX_ARGS_BYTES} bytes as JSON"),
                 None,
             );

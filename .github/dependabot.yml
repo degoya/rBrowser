@@ -38,7 +38,8 @@ updates:
 
   # Every npm package of the tree: the shell UI, the sync agent, the sidecar, the plugins'
   # npm workspace (its root /plugins holds the one lock file; the members under it are listed
-  # so that none is missed), the Playwright example and the recorder export's K12 run
+  # so that none is missed), the Playwright example, the end-to-end harness and the recorder
+  # export's K12 run
   # (scripts/tests/github-workflows.sh fails when a package.json is not covered), and the SDK's
   # feature template panel, whose pins scripts/check-sdk-templates.sh holds to panel-ui's (an update
   # moves both).
@@ -50,6 +51,7 @@ updates:
       - "/plugins"
       - "/plugins/*"
       - "/examples/playwright"
+      - "/tests/e2e"
       - "/tests/e2e/recorder"
       - "/sdk/templates/feature/web"
     schedule:

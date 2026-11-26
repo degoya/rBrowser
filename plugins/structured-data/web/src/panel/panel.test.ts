@@ -59,7 +59,7 @@ afterEach(() => {
 
 describe('the structured data panel', () => {
   it('reads the active view at once, within its message limit, and says so', () => {
-    expect($('#status')?.textContent).toBe('Reading the page...');
+    expect($('#status')?.textContent).toBe('Reading the page…');
     expect(posted.find((m) => m.tool === 'inspect')?.args).toEqual({ budget: 1024 * 1024 - 5536 });
   });
 

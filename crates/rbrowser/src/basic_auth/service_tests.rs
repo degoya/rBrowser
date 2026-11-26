@@ -193,6 +193,7 @@ fn the_status_names_the_stored_user_and_never_the_password() {
     );
     let answer = rb_ipc::CoreToShell::BasicAuthStatus {
         environments: statuses,
+        store: rb_ipc::CredentialStoreKind::SecretService,
     };
     let json = serde_json::to_string(&answer).expect("json");
     let debug = format!("{answer:?}");
@@ -224,4 +225,115 @@ fn the_status_follows_a_removal_and_another_project() {
         auth.statuses(Some("p"), &config)[0],
         rb_ipc::EnvironmentAuthStatus::none("staging")
     );
+}
+
+/// Every line written while `run` runs, at INFO (RB-099-04).
+fn info_log(run: impl FnOnce()) -> String {
+    #[derive(Clone, Default)]
+    struct Log(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+    impl std::io::Write for Log {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            rb_util::lock(&self.0).extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let log = Log::default();
+    let writer = log.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    tracing::subscriber::with_default(subscriber, run);
+    String::from_utf8_lossy(&rb_util::lock(&log.0)).into_owned()
+}
+
+/// RB-099-04: a diagnostics ZIP at INFO says why each challenge was answered or not - the
+/// environment, the origin, the realm and the reason - and never the user or the password.
+#[test]
+fn every_decision_is_logged_at_info_without_the_credential() {
+    let auth = service();
+    let config = config(&["staging"]);
+    let user = "log-test-user-q7";
+    let secret = "log-test-password-q7";
+    let log = info_log(|| {
+        // No credential yet: refused, by its reason.
+        assert_eq!(
+            auth.answer(&staging(), 1, Some("p"), &config),
+            Err(Refusal::NoCredential)
+        );
+        auth.set(
+            "p",
+            &config,
+            "staging",
+            &Credential::new(user, secret).expect("valid"),
+        )
+        .expect("stored");
+        // The request URL CEF passes carries a path and a query; only the origin is logged.
+        let page = Challenge {
+            origin_url: "https://staging.example.test/account?token=query-not-in-log",
+            ..staging()
+        };
+        assert!(auth.answer(&page, 1, Some("p"), &config).is_ok());
+        assert_eq!(
+            auth.answer(&page, 1, Some("p"), &config),
+            Err(Refusal::Refused)
+        );
+        // The refusals that used to say nothing at all.
+        let elsewhere = Challenge {
+            origin_url: "https://other.example.test/",
+            host: "other.example.test",
+            ..staging()
+        };
+        assert_eq!(
+            auth.answer(&elsewhere, 1, Some("p"), &config),
+            Err(Refusal::NotAnEnvironment)
+        );
+        let digest = Challenge {
+            scheme: "digest",
+            ..staging()
+        };
+        assert_eq!(
+            auth.answer(&digest, 1, Some("p"), &config),
+            Err(Refusal::Scheme)
+        );
+        let proxy = Challenge {
+            is_proxy: true,
+            host: "proxy.example.test",
+            port: 3128,
+            ..staging()
+        };
+        assert_eq!(
+            auth.answer(&proxy, 1, Some("p"), &config),
+            Err(Refusal::Proxy)
+        );
+    });
+    let lines: Vec<&str> = log.lines().collect();
+    assert_eq!(lines.len(), 6, "one INFO line per decision:\n{log}");
+    assert!(lines.iter().all(|line| line.contains(" INFO ")), "{log}");
+    assert!(
+        lines[0].contains("staging") && lines[0].contains("no credential is stored"),
+        "{log}"
+    );
+    assert!(lines[1].contains("answers"), "{log}");
+    for line in &lines[..3] {
+        assert!(line.contains("https://staging.example.test:443"), "{log}");
+        assert!(line.contains("Staging"), "the realm: {log}");
+    }
+    assert!(lines[2].contains("refused once"), "{log}");
+    assert!(
+        lines[3].contains("other.example.test") && lines[3].contains("no environment"),
+        "{log}"
+    );
+    assert!(lines[4].contains("not a Basic challenge"), "{log}");
+    assert!(
+        lines[5].contains("proxy.example.test:3128") && lines[5].contains("proxy"),
+        "{log}"
+    );
+    for value in [user, secret, "query-not-in-log", "/account"] {
+        assert!(!log.contains(value), "{value} reached the log:\n{log}");
+    }
 }

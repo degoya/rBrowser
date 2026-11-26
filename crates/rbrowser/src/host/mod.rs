@@ -7,8 +7,10 @@
 //! Every method returns quickly: window work is posted to the CEF UI thread by the backend,
 //! CDP work runs as tasks on the tokio runtime.
 
+mod apply_locks;
 mod apply_queue;
 mod attach;
+mod cell_text;
 pub mod focus_cycle;
 mod focused;
 pub mod footer;
@@ -17,6 +19,7 @@ pub mod path_pick;
 mod placed;
 mod pop_out;
 mod rebuild;
+pub(crate) mod rebuild_watch;
 mod sessions;
 pub mod shell_state;
 pub mod state;
@@ -37,6 +40,8 @@ pub use focused::{FocusRequest, keeps_focus};
 pub use pop_out::PopOutOptions;
 pub use text_scale::label_height;
 
+use cell_text::cell_label;
+
 use crate::cdp::{CdpRouter, lock};
 use crate::fit::zoom_step;
 use state::{HostState, ViewState, layout_for};
@@ -55,9 +60,8 @@ pub struct Host {
     runtime: Handle,
     state: Mutex<HostState>,
     events: broadcast::Sender<ViewEvent>,
-    /// Serialises sending metrics, so a later size never loses against an earlier one; the
-    /// views share it for the permission grants of their browser context.
-    apply: tokio::sync::Mutex<()>,
+    /// One apply per view at a time, one grant plan per browser context ([`apply_locks`]).
+    apply: apply_locks::ApplyLocks,
     /// One latest-wins metrics worker per view ([`apply_queue`]).
     applying: apply_queue::ApplyQueue,
     root: Mutex<Option<PathBuf>>,
@@ -88,10 +92,10 @@ impl Host {
             runtime,
             state: Mutex::new(HostState::default()),
             events,
-            apply: tokio::sync::Mutex::new(()),
+            apply: apply_locks::ApplyLocks::default(),
             applying: apply_queue::ApplyQueue::default(),
             root: Mutex::new(None),
-            shell: Mutex::new(shell_state::ShellState::default()),
+            shell: Mutex::new(shell_state::ShellState::at_open()),
             agents,
             page,
             frameworks,
@@ -353,6 +357,7 @@ impl Host {
     }
 
     /// Rebuilds the grid for `layout` and returns the view of each cell.
+    #[track_caller]
     fn rebuild(&self, layout: &Layout) -> Result<Vec<ViewId>, EngineError> {
         let mut state = self.state();
         let mut next = state.clone();
@@ -365,6 +370,7 @@ impl Host {
     }
 
     /// The effects of a committed rebuild: the grid, metrics and events.
+    #[track_caller]
     fn finish_rebuild(&self, layout: &Layout, rebuilt: rebuild::Rebuilt) -> Vec<ViewId> {
         let rebuild::Rebuilt {
             order,
@@ -380,6 +386,7 @@ impl Host {
         // In a layout mode the views are placed, not laid out by the plan (RB-080-04).
         let footer_height = self.with_footers(&mut cells);
         let (area, placed) = self.placed_views().unzip();
+        rebuild_watch::note(format!("rebuild from {}", std::panic::Location::caller()));
         self.ui.apply_grid(UiGrid {
             plan,
             gap: layout.gap,
@@ -462,33 +469,6 @@ fn set_loading(entry: &mut ViewState, loading: bool) -> bool {
     }
     entry.loading = loading;
     true
-}
-
-/// The text of a cell's label strip: the breakpoint, its size and - when it is set and not 1 -
-/// its pixel ratio, as in `Mobile  393 x 852 @3x` with a multiplication sign (RB-010-07).
-fn cell_label(entry: &ViewState) -> String {
-    let name = entry
-        .breakpoint
-        .as_ref()
-        .map(|breakpoint| {
-            breakpoint
-                .label
-                .clone()
-                .unwrap_or_else(|| breakpoint.id.clone())
-        })
-        .unwrap_or_default();
-    let emulation = &entry.emulation;
-    // 0 leaves the pixel ratio to the device: no suffix, as for 1.
-    let ratio = if emulation.dpr > 0.0 && (emulation.dpr - 1.0).abs() > f64::EPSILON {
-        format!(" @{}x", emulation.dpr)
-    } else {
-        String::new()
-    };
-    // U+00D7, the multiplication sign.
-    format!(
-        "{name}  {} \u{d7} {}{ratio}",
-        emulation.width, emulation.height
-    )
 }
 
 #[cfg(test)]

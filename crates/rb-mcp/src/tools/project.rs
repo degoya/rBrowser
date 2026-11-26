@@ -8,6 +8,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use super::object;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
@@ -68,14 +69,14 @@ pub struct OpenParams {
 }
 
 /// The code of a key that is not there.
-pub const KEY_NOT_FOUND: &str = "key_not_found";
+pub const KEY_NOT_FOUND: &str = "settings.key_not_found";
 
 #[tool_router(router = project_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
         description = "The open project: root, config file and whether the workspace is trusted (read only; trust is decided by a person in rBrowser, never over MCP)."
     )]
-    pub(crate) async fn project_info(&self) -> ToolResult {
+    pub(crate) async fn project_info(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.read(|backend| backend.project_info()).await)
     }
 
@@ -102,7 +103,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Read the settings in the settings window's structure: categories, sections and keys in its order, each key with type, value, origin (default, user, project, local), default, label, description, scopes, whether MCP may write it and its deep link rbrowser://settings/<key>; secrets masked. key picks one; category, section and query (every word in the label, key or description) narrow the structure."
+        description = "Read the settings in the settings window's structure: categories, sections and keys in order, each key with type, value, origin, default, label, description, scopes, whether MCP may write it and its deep link rbrowser://settings/<key>; secrets masked. key picks one; category, section and query (every word in label, key or description) narrow it."
     )]
     pub(crate) async fn settings_get(
         &self,
@@ -123,7 +124,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Change a setting as a person would in Settings: key, value (null resets) and scope user (default), project or local; answers the new value, its origin and the deep link. Shortcuts: key shortcuts.bindings.<commandId> with a list of bindings (null restores the default), refused when reserved or taken. Protected keys (MCP, trust, plugins, the sandbox, paths of programs, the network keys, request headers, breakpoints - use the breakpoint tools -, extensions, the screenshot folder, recent projects, the log level) and whatever config_set refuses are refused with code settings.rejected.protected. Every change is logged and shown in rBrowser."
+        description = "Change a setting as a person would in Settings: key, value (null resets), scope user (default), project or local; answers the new value, its origin and the deep link. Shortcuts: key shortcuts.bindings.<commandId> with a list of bindings (null restores the default), refused when reserved or taken. Protected keys (MCP, trust, plugins, the sandbox, program paths, network, headers, breakpoints - use the breakpoint tools -, extensions and others) are refused with code settings.rejected.protected. Every change is logged and shown in rBrowser."
     )]
     pub(crate) async fn settings_set(
         &self,

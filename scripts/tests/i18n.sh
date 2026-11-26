@@ -6,7 +6,8 @@
 # that is a text and a prefix at once write nothing, --prune removes the parts. The lint: a clean
 # tree passes; an unknown key in Rust or Vue, an unused key, raw text in a template, a malformed
 # plural and a non-canonical en.json fail; a key only a part holds and a family looked up by a
-# computed key pass. Last, the Python message parser agrees with the shared format vectors
+# computed key pass; three dots, a > path and a pseudo-plural (s) fail, and so does a command
+# title with Toggle, on/off or in Title Case (RB-099-22). Last, the Python message parser agrees with the shared format vectors
 # (locales/tests/format-cases.json) that rb-i18n's tests hold the Rust side to.
 #
 # Pure python3 and bash: it runs in a second. check.sh --preflight runs it.
@@ -204,7 +205,7 @@ fresh
 mkdir -p "$TREE/plugins/demo/locales"
 printf 'id = "demo"\n[locales]\nen = "locales/en.json"\n[[commands]]\nid = "run"\ntitle = "plugin.demo.commands.run"\n' \
     > "$TREE/plugins/demo/manifest.toml"
-printf '{"plugin": {"demo": {"commands": {"run": "Demo: Run"}}}}' > "$TREE/plugins/demo/locales/en.json"
+printf '{"plugin": {"demo": {"commands": {"run": "Demo: run"}}}}' > "$TREE/plugins/demo/locales/en.json"
 lint
 expect_true "a plugin command with its title passes" '[[ $status -eq 0 ]]'
 printf '{"plugin": {"demo": {"commands": {}}}}' > "$TREE/plugins/demo/locales/en.json"
@@ -217,6 +218,41 @@ expect_true "a title below another plugin fails" '[[ $status -eq 1 ]] && has "no
 printf 'id = "demo"\n[[commands]]\nid = "run"\n' > "$TREE/plugins/demo/manifest.toml"
 lint
 expect_true "a plugin command without a title key fails" '[[ $status -eq 1 ]] && has "has no title key"'
+
+# --- typography and command titles (RB-099-22) ---------------------------------------------
+fresh
+printf '{\n  "settings": {\n    "chevron": "Open Settings › Capture › Video.",\n    "code": "A CSS path, [data-testid=\\"...\\"], forEach(...) or https://...",\n    "dots": "Loading...",\n    "ellipsis": "Loading…",\n    "palette": "Type > commands, @ views.",\n    "path": "Open Settings > Capture > Video.",\n    "plural": "{count} screenshot(s) saved.",\n    "unit": "Duration (s)"\n  }\n}\n' \
+    > "$TREE/locales/en.json"
+lint
+expect_true "three dots fail" '[[ $status -eq 1 ]] && has "\`settings.dots\` writes ..."'
+expect_true "the ellipsis passes" '! has "\`settings.ellipsis\`"'
+expect_true "a > path fails" 'has "\`settings.path\` separates a path with >"'
+expect_true "the › path and the palette prefix pass" '! has "\`settings.chevron\`" && ! has "\`settings.palette\`"'
+expect_true "a pseudo-plural fails" 'has "\`settings.plural\` writes (s)"'
+expect_true "and so does a unit in (s)" 'has "\`settings.unit\` writes (s)"'
+expect_true "three dots in code pass" '! has "\`settings.code\`"'
+
+fresh
+mkdir -p "$TREE/schema" "$TREE/plugins/demo/locales"
+printf '{"groups": [{"id": "view", "titleKey": "commands.group.view"}], "commands": [%s, %s, %s, %s, %s, %s, %s]}\n' \
+    '{"id": "a", "titleKey": "commands.a"}' '{"id": "b", "titleKey": "commands.b"}' \
+    '{"id": "c", "titleKey": "commands.c"}' '{"id": "d", "titleKey": "commands.d"}' \
+    '{"id": "e", "titleKey": "commands.e"}' '{"id": "f", "titleKey": "commands.f"}' \
+    '{"id": "g", "titleKey": "commands.g"}' > "$TREE/schema/commands.v1.json"
+printf '{\n  "commands": {\n    "a": "Toggle the minimap",\n    "b": "Sync on/off",\n    "c": "Show or hide DevTools for the active view",\n    "d": "Switch the MCP server on or off",\n    "e": "Rulers: Show or Hide the Baseline Grid",\n    "f": "Measure the Web Vitals in the Chrome Web Store",\n    "g": "Open the Web Store with Basic Tools",\n    "group": {\n      "view": "View & Window"\n    }\n  }\n}\n' \
+    > "$TREE/locales/en.json"
+printf 'id = "demo"\n[locales]\nen = "locales/en.json"\n[[commands]]\nid = "run"\ntitle = "plugin.demo.commands.run"\n' \
+    > "$TREE/plugins/demo/manifest.toml"
+printf '{"plugin": {"demo": {"commands": {"run": "Image Overlay: Add Design"}}}}' > "$TREE/plugins/demo/locales/en.json"
+lint
+expect_true "a Toggle title fails" '[[ $status -eq 1 ]] && has "\`commands.a\`: \"Toggle the minimap\" says toggle"'
+expect_true "an on/off title fails" 'has "\`commands.b\`: \"Sync on/off\" says on/off"'
+expect_true "Show or hide and Switch ... on or off pass, names kept" '! has "\`commands.c\`" && ! has "\`commands.d\`"'
+expect_true "a title in Title Case fails" 'has "\`commands.e\`: \"Rulers: Show or Hide the Baseline Grid\" is not in sentence case (Show, Hide, Baseline, Grid)"'
+expect_true "a name of several words passes" '! has "\`commands.f\`"'
+expect_true "its words alone are no names" 'has "\`commands.g\`: \"Open the Web Store with Basic Tools\" is not in sentence case (Web, Store, Basic, Tools)"'
+expect_true "a plugin title too" 'has "\`plugin.demo.commands.run\`: \"Image Overlay: Add Design\" is not in sentence case (Overlay, Add, Design)"'
+expect_true "a group title is a name and passes" '! has "commands.group.view"'
 
 # --- the shared format vectors -------------------------------------------------------------
 if python3 - "$ROOT/locales/tests/format-cases.json" "$ROOT/scripts/lib" > "$SCRATCH/out" 2>&1 <<'EOF'

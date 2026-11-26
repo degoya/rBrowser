@@ -16,6 +16,7 @@
 //! shell side.
 
 mod activity;
+mod auth_prompt;
 mod basic_auth;
 mod bug_report;
 mod checks;
@@ -34,6 +35,7 @@ mod portal;
 mod recordings;
 mod setup;
 mod sitemap;
+mod sitemap_discovery;
 mod sitemap_gallery;
 mod status;
 mod time_control;
@@ -42,7 +44,8 @@ mod videos;
 use serde::Serialize;
 
 pub use activity::{Activity, ActivityBarState, VideoActivity};
-pub use basic_auth::EnvironmentAuthStatus;
+pub use auth_prompt::{AuthPrompt, AuthPromptReply, AuthPromptSignIn};
+pub use basic_auth::{CredentialStoreKind, EnvironmentAuthStatus};
 pub use bug_report::{BugReportAnswer, BugReportRequest, ReportPreview};
 pub use checks::{CheckJob, CheckJobState, ChecksProgress};
 pub use devices_menu::{AndroidDeviceRow, AndroidDeviceState, DevicesMenu};
@@ -58,8 +61,9 @@ pub use mcp_setup::{
     McpSetupRequest, McpShell, McpWrittenFile,
 };
 pub use messages::{
-    ConvertVideoRequest, CoreToShell, LayoutState, ProjectInfo, SettingValue, ShellToCore,
-    StateSnapshot, SyncFeature, SyncState, VideoFileRef,
+    ConvertVideoRequest, CoreToShell, HighlightFindingRequest, LayoutState, ProjectInfo,
+    RunChecksRequest, SettingValue, ShellToCore, StateSnapshot, SyncFeature, SyncState,
+    VideoFileRef,
 };
 pub use metrics::{Rating, ResourceReading, Unavailable, ViewMetrics, ViewThrottle, VitalReading};
 pub use native_menu::NativeMenuRow;
@@ -90,6 +94,9 @@ pub use setup::{
     SetupSource, SetupStep, SetupTemplate,
 };
 pub use sitemap::{SitemapRunState, SitemapStatus};
+pub use sitemap_discovery::{
+    SitemapDiscovery, SitemapStartOp, SitemapStartRequest, SitemapTreeNode, SitemapViewCounts,
+};
 pub use sitemap_gallery::{
     GalleryBreakpoint, GalleryCompare, GalleryPage, GalleryShot, SitemapGalleryPage,
     SitemapGalleryRequest,
@@ -98,8 +105,6 @@ pub use status::{StatusAction, StatusCopy, StatusMessage};
 pub use time_control::{ClockActivity, TimeControlActivity, ViewRate};
 pub use videos::{VideoConversion, VideoFile, VideoList, VideoRecording, VideoTarget};
 
-/// The protocol version; raised by the coordinator on an incompatible change.
-pub const PROTOCOL_VERSION: u32 = 1;
 /// The message router's query function in the shell's `window`.
 pub const QUERY_FUNCTION: &str = "cefQuery";
 /// The message router's cancel function in the shell's `window`.

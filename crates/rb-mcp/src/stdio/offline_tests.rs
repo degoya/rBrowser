@@ -52,6 +52,10 @@ fn every_other_request_is_an_error_that_says_what_to_do() {
         assert_eq!(answer["error"]["code"], NO_INSTANCE_CODE, "{method}");
         assert_eq!(answer["error"]["message"], WHY, "{method}");
         assert_eq!(answer["error"]["data"]["code"], NO_INSTANCE, "{method}");
+        assert_eq!(
+            answer["error"]["data"]["legacyCode"], "no_instance",
+            "{method}"
+        );
     }
 }
 

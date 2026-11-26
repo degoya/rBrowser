@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="flex h-screen flex-col gap-4 overflow-y-auto bg-default px-4 py-4 text-default" data-testid="sitemap-gallery">
-    <UAlert v-if="failure" color="error" variant="subtle" :title="failure" data-testid="gallery-failure" />
+    <UAlert v-if="failure" color="error" variant="subtle" role="alert" :title="failure" data-testid="gallery-failure" />
     <p v-else-if="run === null" class="text-sm text-muted" data-testid="gallery-loading">{{ t('sitemap.galleryPage.loading') }}</p>
     <template v-else>
       <header class="flex flex-col gap-1">

@@ -3,22 +3,22 @@
     "overlays": {
       "name": "Overlays",
       "commands": {
-        "outlines": "Toggle layout outlines",
-        "overflow": "Toggle the overflow detector",
-        "highlight": "Toggle the element highlight",
-        "stacking": "Toggle the stacking context overlay",
-        "scrollbars": "Toggle the unneeded scrollbar overlay",
-        "text_spacing": "Toggle WCAG text spacing",
-        "target_size": "Toggle the target size overlay",
-        "small_text": "Toggle the small text overlay",
-        "focus_tracking": "Toggle focus tracking",
-        "force_state": "Toggle forced hover/focus state",
-        "content_chaos": "Toggle content chaos",
-        "placeholdifier": "Toggle the placeholdifier",
-        "css_off": "Toggle CSS off",
-        "js_off": "Toggle JavaScript off",
-        "images_off": "Toggle images off",
-        "tab_order": "Toggle the tab order overlay",
+        "outlines": "Show or hide layout outlines",
+        "overflow": "Show or hide the overflow detector",
+        "highlight": "Show or hide the element highlight",
+        "stacking": "Show or hide the stacking context overlay",
+        "scrollbars": "Show or hide the unneeded scrollbar overlay",
+        "text_spacing": "Switch WCAG text spacing on or off",
+        "target_size": "Show or hide the target size overlay",
+        "small_text": "Show or hide the small text overlay",
+        "focus_tracking": "Switch focus tracking on or off",
+        "force_state": "Switch forced hover and focus state on or off",
+        "content_chaos": "Switch content chaos on or off",
+        "placeholdifier": "Switch the placeholdifier on or off",
+        "css_off": "Switch CSS on or off",
+        "js_off": "Switch JavaScript on or off",
+        "images_off": "Switch images on or off",
+        "tab_order": "Show or hide the tab order overlay",
         "off": "Switch every overlay off"
       },
       "tools": {
@@ -93,7 +93,7 @@
         "restoreOnStart": {
           "label": "Restore overlays on start",
           "description": "Shows the overlays that were on when the project was last open.",
-          "help": "Switches the overlays on that were on when the project was last open, so a review continues where it stopped. Off starts with every overlay off."
+          "help": "Switches the overlays on that were on when the project was last open, so a review continues where it stopped. When off, it starts with every overlay off."
         },
         "overflow": {
           "mutationThrottleMs": {
@@ -162,13 +162,13 @@
           "includeInline": {
             "label": "CSS off includes inline styles",
             "description": "CSS off also reverts style attributes, not only the style sheets.",
-            "help": "CSS off also reverts style attributes, not only the style sheets, so the page shows as bare HTML. Off keeps inline styles."
+            "help": "CSS off also reverts style attributes, not only the style sheets, so the page shows as bare HTML. When off, it keeps inline styles."
           }
         },
         "reportFindings": {
           "label": "Report overlay findings",
           "description": "Switching on target size, small text, text spacing, the scrollbar overlay or the tab order reports its hits to the findings panel.",
-          "help": "Switching on target size, small text, text spacing, the scrollbar overlay or the tab order reports its hits to the findings panel, so they join the checks. Off shows them in the views only."
+          "help": "Switching on target size, small text, text spacing, the scrollbar overlay or the tab order reports its hits to the findings panel, so they join the checks. When off, it shows them in the views only."
         },
         "tabOrder": {
           "showLines": {

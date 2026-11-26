@@ -62,7 +62,7 @@ fn bad_arguments_are_refused() {
         json!({ "other": true }),
     ] {
         let failure = answer(&log(), &args).expect_err("refused");
-        assert_eq!(failure.code, "invalid_arguments", "{args}");
+        assert_eq!(failure.code, "args.invalid", "{args}");
     }
 }
 

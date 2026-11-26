@@ -70,13 +70,18 @@ async fn a_saved_stylesheet_is_swapped_and_a_script_reloads() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_paused_or_off_watch_does_nothing() {
     let dir = tempfile::tempdir().expect("a temp dir");
+    std::fs::create_dir_all(dir.path().join(".rbrowser")).expect("a folder");
     let host = Arc::new(FakeHost::new(&[page()]));
     let service = start(&host, dir.path(), options());
     status_where(&service, |s| matches!(s, WatcherStatus::Native { .. })).await;
     assert!(service.toggle_pause());
     assert_eq!(service.info().label_key, "reload.status.paused");
+    let before = service.inner.state().generation;
     std::fs::write(dir.path().join("main.js"), "x").expect("written");
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    // The barrier: new ignore rules, written after the script, restart the watch even while it
+    // is paused - by then the script's batch has been handled.
+    std::fs::write(dir.path().join(".rbrowser/ignore"), "generated/\n").expect("written");
+    until(|| service.inner.state().generation > before).await;
     assert!(host.reloaded().is_empty());
     assert!(!service.toggle_pause());
 
@@ -85,8 +90,7 @@ async fn a_paused_or_off_watch_does_nothing() {
         ..options()
     };
     let service = start(&host, dir.path(), off);
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    assert_eq!(service.info().status, WatcherStatus::Off);
+    status_where(&service, |s| matches!(s, WatcherStatus::Off)).await;
     assert_eq!(service.info().mode, "off");
 }
 
@@ -164,11 +168,19 @@ async fn a_new_ignore_file_applies_at_once() {
     status_where(&service, |s| matches!(s, WatcherStatus::Native { .. })).await;
     let before = service.inner.state().generation;
     std::fs::write(dir.path().join(".rbrowser/ignore"), "generated/\n").expect("written");
-    until(|| service.inner.state().generation > before).await;
+    // The new generation counts from the restart's start; its watch is in place only once its
+    // source is installed - a file saved before that would reach no watch.
+    until(|| {
+        let state = service.inner.state();
+        state.generation > before && !matches!(state.source, Source::None)
+    })
+    .await;
     status_where(&service, |s| matches!(s, WatcherStatus::Native { .. })).await;
     assert!(host.reloaded().is_empty(), "the rules are no page change");
     std::fs::write(dir.path().join("generated/out.js"), "x").expect("written");
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    // The barrier: a stylesheet saved after it is swapped - the ignored script came first.
+    std::fs::write(dir.path().join("app.css"), "a{}").expect("written");
+    until(|| host.swaps_sent() == 1).await;
     assert!(host.reloaded().is_empty());
 }
 
@@ -281,6 +293,8 @@ async fn unchanged_settings_keep_the_watch_running() {
         options(),
         WslSettings::default(),
     );
+    // Kept (RB-099-18): `apply` decides at once, a restart would bump the generation on the
+    // blocking pool - no marker orders after it; the wait can only let a fault pass unseen.
     tokio::time::sleep(Duration::from_millis(300)).await;
     assert_eq!(service.inner.state().generation, before);
     let slower = ReloadOptions {
@@ -352,6 +366,7 @@ async fn restart_helper_starts_the_helper_of_a_wsl_project_again() {
     status_where(&local, |s| matches!(s, WatcherStatus::Native { .. })).await;
     let before = local.inner.state().generation;
     assert!(!local.restart_helper());
+    // Kept (RB-099-18): as above, the decision is made at once and only a fault would act later.
     tokio::time::sleep(Duration::from_millis(200)).await;
     assert_eq!(local.inner.state().generation, before);
 }

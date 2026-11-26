@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // The About tab: logo (light and dark, switched by the `dark` class the theme sets), the build,
 // the engines, the API versions, the folders, "Copy version info", the links, the author, the
-// update status. An absent Firefox links to Settings > Engines. A link opens in the grid's
-// views (`navigate`) or goes to the clipboard; only http(s) addresses do either. The update
-// status is the core's (`updates`): not in this build, off, by hand or at every start.
+// update status, and the copyright and no-warranty notice of the GPL (RB-099-12). An absent
+// Firefox links to Settings > Engines. A link opens in the grid's views (`navigate`) or goes to
+// the clipboard; only http(s) addresses do either. The update status is the core's (`updates`):
+// not in this build, off, by hand or at every start.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UButton from '@nuxt/ui/components/Button.vue';
@@ -12,7 +13,17 @@ import logoDark from '@assets/rBrowser-logo-dark.svg';
 import type { IpcClient } from '../ipc/client';
 import type { AboutInfo, AboutUpdates } from '../ipc/protocol';
 import { SETTINGS_ICONS } from '../settings/icons';
-import { apiRows, AUTHOR, engineRows, engineText, isWebLink, LICENSE, LINKS, versionInfo } from './facts';
+import {
+  apiRows,
+  AUTHOR,
+  COPYRIGHT_YEAR,
+  engineRows,
+  engineText,
+  isWebLink,
+  LICENSE,
+  LINKS,
+  versionInfo,
+} from './facts';
 
 const props = defineProps<{ client: IpcClient; info: AboutInfo }>();
 const { t } = useI18n();
@@ -180,6 +191,9 @@ function openEngines(): void {
         <span class="text-muted">{{ t('settings.about.updates') }}:</span> {{ t(UPDATES_KEYS[info.updates]) }}
       </p>
       <p class="pt-2 text-muted">{{ t('settings.about.thanks') }}</p>
+      <p class="text-muted" data-testid="about-legal">
+        {{ t('settings.about.legal', { year: COPYRIGHT_YEAR, author: AUTHOR }) }}
+      </p>
     </section>
   </div>
 </template>

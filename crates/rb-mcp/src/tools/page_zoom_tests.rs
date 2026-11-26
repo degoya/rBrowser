@@ -84,7 +84,7 @@ async fn a_level_chromium_does_not_zoom_to_is_refused_before_any_command() {
                 .expect("answer"),
         );
         assert!(error);
-        assert_eq!(answer["code"], json!("invalid_arguments"));
+        assert_eq!(answer["code"], json!("args.invalid"));
     }
     assert!(fake.calls().is_empty());
 }
@@ -99,6 +99,6 @@ async fn an_unknown_target_names_the_views_there_are() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("view_not_found"));
+    assert_eq!(answer["code"], json!("view.not_found"));
     assert!(fake.calls().is_empty());
 }

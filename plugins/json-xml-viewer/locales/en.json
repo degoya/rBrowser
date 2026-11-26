@@ -9,7 +9,7 @@
         "enabled": {
           "label": "Show JSON and XML as a tree",
           "description": "A JSON or XML document opened in a view is shown as a collapsible, searchable tree instead of plain text.",
-          "help": "A JSON or XML document opened in a view shows as a collapsible, searchable tree instead of plain text, for API responses and feeds. Off shows the raw text."
+          "help": "A JSON or XML document opened in a view shows as a collapsible, searchable tree instead of plain text, for API responses and feeds. When off, it shows the raw text."
         },
         "maxBytes": {
           "label": "Largest document (bytes)",

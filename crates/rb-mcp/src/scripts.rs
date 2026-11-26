@@ -33,7 +33,7 @@ pub const MAX_RESULT_KEY: &str = "mcp.scripts.maxResultBytes";
 /// The codes of `script_run`.
 pub mod codes {
     /// Code mode is off (`mcp.scripts.enabled`).
-    pub const DISABLED: &str = "scripts_disabled";
+    pub const DISABLED: &str = "script.disabled";
     /// The script does not parse.
     pub const SYNTAX: &str = "script.syntax";
     /// The run took longer than `mcp.scripts.timeoutMs`.

@@ -42,6 +42,7 @@
     "plugin.fonts.panel.preview.too_large": "fonts.previewMaxKb",
     "plugin.form-autofill.errors.profile_unknown": "form-autofill.profiles",
     "plugin.framework-devtools.panel.off": "frameworkDevtools",
+    "plugin.html-validate.errors.not_kept": "mcp.collectNetwork",
     "plugin.lighthouse.errors.browser_missing": "engines.lighthouseBrowserPath",
     "plugin.lighthouse.errors.no_browser": "engines.lighthouseBrowserPath",
     "plugin.lighthouse.errors.no_sidecar": "engines.nodePath",

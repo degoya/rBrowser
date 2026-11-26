@@ -150,3 +150,34 @@ fn a_capture_names_its_start_once() {
     assert!(capturing_notice(&request(CaptureMode::Viewport, 3000)).is_none());
     assert!(capturing_notice(&request(CaptureMode::Element, 0)).is_none());
 }
+
+#[test]
+fn a_cut_page_is_a_warning_with_its_label_and_height() {
+    // RB-099-11: the context menu's capture names the cut, not only the MCP answer.
+    let answer = ScreenshotAnswer {
+        shots: vec![
+            ShotAnswer {
+                label: "MOBILE".to_owned(),
+                height: 65_535,
+                truncated: true,
+                page_height: Some(90_000),
+                ..ShotAnswer::default()
+            },
+            ShotAnswer {
+                label: "DESKTOP".to_owned(),
+                height: 4000,
+                ..ShotAnswer::default()
+            },
+        ],
+        ..ScreenshotAnswer::default()
+    };
+    let notices = truncated_notices(&answer);
+    assert_eq!(notices.len(), 1);
+    let CoreToShell::Notification(cut) = &notices[0] else {
+        panic!("a notification");
+    };
+    assert_eq!(cut.message_key, TRUNCATED_KEY);
+    assert_eq!(cut.level, NotificationLevel::Warning);
+    assert_eq!(cut.args.get("label").map(String::as_str), Some("MOBILE"));
+    assert_eq!(cut.args.get("height").map(String::as_str), Some("65535"));
+}

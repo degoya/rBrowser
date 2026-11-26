@@ -1,15 +1,19 @@
 rBrowser
-Copyright (c) DEGOYA.digital
+Copyright (c) 2026 Alexander Herling / DEGOYA.digital
 
 rBrowser is free software, licensed under the GNU General Public License,
-version 3 or (at your option) any later version. See LICENSE.
+version 3 or (at your option) any later version. See LICENSE. It comes with
+ABSOLUTELY NO WARRANTY, to the extent permitted by applicable law.
 
 This package bundles the following third-party software, each under its own
-licence. VERSION.txt names the exact versions.
-
+licence. VERSION.txt names the exact versions. The Rust crates and npm
+packages rBrowser is built from are listed with their licences under
+Settings > About > Licences; their full licence texts, with the copyright
+lines, are in THIRD-PARTY-LICENSES.txt beside this file.
 
 Chromium Embedded Framework (CEF)
   https://github.com/chromiumembedded/cef
+  Version: CEF 156.0.31, commit e603d97, with Chromium 156.0.8078.100
   Licence: BSD 3-Clause - the full text is below.
   Files: libcef.dll, chrome_elf.dll, rbrowser.exe (CEF's sandbox bootstrap,
   with rBrowser's icon and version information), *.pak, *.bin, icudtl.dat,
@@ -20,46 +24,67 @@ Chromium
   Licence: BSD 3-Clause (The Chromium Authors) - the full text is below - and
   the licences of the third-party components Chromium contains (among them
   ANGLE, SwiftShader, ICU, V8 and the Vulkan loader), listed in full in
-  licenses\chromium-credits.html.
+  licenses/chromium-credits.html.
   Files: part of the CEF runtime above, and d3dcompiler_47.dll,
   dxcompiler.dll, vk_swiftshader.dll, vulkan-1.dll
+
+The source code of the CEF runtime - LGPL components and the written offer
+  The CEF runtime above (libcef.dll) contains components under the GNU Lesser
+  General Public License (LGPL), among them Blink (WebKit) and FFmpeg;
+  licenses/chromium-credits.html names each with its licence. rBrowser uses
+  the runtime unchanged, as a shared library: you may replace it with one you
+  build from the source code below. That source code is the CEF and Chromium
+  revisions this package was built from:
+    CEF 156.0.31, commit e603d97:
+      https://github.com/chromiumembedded/cef/tree/e603d97
+    Chromium 156.0.8078.100:
+      https://chromium.googlesource.com/chromium/src/+/refs/tags/156.0.8078.100
+  Written offer: for at least three years after DEGOYA.digital last
+  distributes this version of rBrowser - every package, test packages
+  included - Alexander Herling / DEGOYA.digital will give anyone who has
+  received it, on request, a complete machine-readable copy of the
+  corresponding source code of the LGPL components above, on a medium
+  customarily used for software interchange or as a download, for a charge
+  no more than the cost of making and sending the copy. Write to the address
+  in the imprint, https://degoya.digital/impressum, and name the rBrowser
+  version (VERSION.txt).
 
 Node.js
   https://nodejs.org
   Licence: MIT - the full text, together with the licences of the components
-  Node.js bundles, is node\LICENSE.
+  Node.js bundles, is node/LICENSE.
   Files: node\node.exe
 
 Playwright (playwright-core)
   https://playwright.dev
   Licence: Apache License 2.0 - the full text is
-  sidecar\node_modules\playwright-core\LICENSE; its NOTICE file and the
+  sidecar/node_modules/playwright-core/LICENSE; its NOTICE file and the
   notices of the components it contains are NOTICE and ThirdPartyNotices.txt
   in the same folder.
-  Files: sidecar\node_modules\playwright-core\
+  Files: sidecar/node_modules/playwright-core/
 
 Playwright (playwright, @playwright/test) - the flow worker's expect
   https://playwright.dev
   Licence: Apache License 2.0 - the full texts are
-  sidecar\node_modules\playwright\LICENSE and
-  sidecar\node_modules\@playwright\test\LICENSE, each with its NOTICE.
-  Files: sidecar\node_modules\playwright\,
-  sidecar\node_modules\@playwright\test\
+  sidecar/node_modules/playwright/LICENSE and
+  sidecar/node_modules/@playwright/test/LICENSE, each with its NOTICE.
+  Files: sidecar/node_modules/playwright/,
+  sidecar/node_modules/@playwright/test/
 
 Lighthouse 13.6.0 and Puppeteer (puppeteer-core 25.18.1) - the sidecar's
 Lighthouse module
   https://github.com/GoogleChrome/lighthouse, https://pptr.dev
   Licence: Apache License 2.0 - the full texts are
-  sidecar\node_modules\lighthouse\LICENSE and
-  sidecar\node_modules\puppeteer-core\LICENSE.
+  sidecar/node_modules/lighthouse/LICENSE and
+  sidecar/node_modules/puppeteer-core/LICENSE.
   Lighthouse comes with the packages it needs, each in its own folder of
-  sidecar\node_modules\ with its licence (named in its package.json, the
+  sidecar/node_modules/ with its licence (named in its package.json, the
   text in its LICENSE file where the package has one): MIT, Apache-2.0,
   BSD-3-Clause, BSD-2-Clause, ISC, 0BSD, MIT OR CC0-1.0, and MPL-2.0 for
   axe-core 4.14.1 (unchanged; its Source Code Form is the npm package
   axe-core@4.14.1). Lighthouse's error reporting (@sentry/node and the
   packages only it needs) is not included and never switched on.
-  Files: sidecar\node_modules\ (beside the Playwright packages above)
+  Files: sidecar/node_modules/ (beside the Playwright packages above)
 
 axe-core 4.14.1 - in the a11y-axe plugin
   https://github.com/dequelabs/axe-core
@@ -69,7 +94,7 @@ axe-core 4.14.1 - in the a11y-axe plugin
   axe-core@4.14.1 and the repository above at tag v4.14.1. axe-core contains
   components under their own licences (MIT, BSD, Apache-2.0, W3C and others),
   listed with their texts in the plugin source, plugins/a11y-axe/runner/dist/.
-  Files: plugins\a11y-axe-*.rbplugin (embedded in its component)
+  Files: plugins/a11y-axe-*.rbplugin (embedded in its component)
 
 React DevTools (react-devtools-inline 8.0.0, with react 19.3.1, react-dom
 19.3.1 and react-is 19.3.1) - the React DevTools backend in rbrowser.exe and
@@ -78,18 +103,19 @@ the frontend in the framework-devtools plugin
   Copyright (c) Meta Platforms, Inc. and affiliates.
   Licence: MIT (the text is below).
   Files: rbrowser.dll (the backend, embedded as agent/dist/rb-react-devtools.js),
-  plugins\framework-devtools-*.rbplugin (panel/dist/react.js)
+  plugins/framework-devtools-*.rbplugin (panel/dist/react.js)
 
-Vue DevTools (@vue/devtools-kit 8.2.1, @vue/devtools-shared 8.2.1, with birpc
-2.9.0, hookable 5.5.3 and perfect-debounce 2.1.0) - the Vue DevTools backend in
-rbrowser.exe and the Vue panel of the framework-devtools plugin
+Vue DevTools (@vue/devtools-kit 8.2.1 and @vue/devtools-shared 8.2.1, with
+birpc 2.9.0, hookable 5.5.3 and perfect-debounce 2.1.0; the plugin's panel
+with birpc 4.2.0 too) - the Vue DevTools backend in rbrowser and the Vue
+panel of the framework-devtools plugin
   https://github.com/vuejs/devtools, https://github.com/antfu/birpc,
   https://github.com/unjs/hookable, https://github.com/unjs/perfect-debounce
   Copyright (c) 2023-present webfansplz; Copyright (c) 2021 Anthony Fu;
   Copyright (c) Pooya Parsa <pooya@pi0.io>
   Licence: MIT (the text is below).
   Files: rbrowser.dll (the backend, embedded as agent/dist/rb-vue-devtools.js),
-  plugins\framework-devtools-*.rbplugin (panel/dist/vue.js)
+  plugins/framework-devtools-*.rbplugin (panel/dist/vue.js)
 
 Noto Sans Mono Bold 2.006 (a subset) - the annotation font of the
 screenshot-editor plugin
@@ -97,7 +123,7 @@ screenshot-editor plugin
   Copyright 2015 Google LLC (https://fonts.google.com/noto)
   Licence: SIL Open Font License 1.1 (OFL-1.1), with no Reserved Font Name;
   its text is plugins/screenshot-editor/panel/annotation-font.OFL.txt.
-  Files: plugins\screenshot-editor-*.rbplugin (in its panel and embedded in
+  Files: plugins/screenshot-editor-*.rbplugin (in its panel and embedded in
   its component)
 
 Lucide icons (a selection, from @iconify-json/lucide 1.2.156) - the icons of
@@ -107,7 +133,7 @@ the first-party plugin panels
   Feather Copyright (c) 2013-present Cole Bemis
   Licence: ISC License, and the MIT License for the icons derived from Feather
   - both texts are below.
-  Files: the plugin panels (plugins\*.rbplugin, panel/dist/panel.js), bundled
+  Files: the plugin panels (plugins/*.rbplugin, panel/dist/panel.js), bundled
   with Nuxt UI; each panel's THIRD-PARTY-LICENSES.txt lists them
 
 musl libc 1.2.5 - linked statically into the WSL helper
@@ -143,6 +169,21 @@ portal's presentation over the internet
   %LOCALAPPDATA%\rBrowser\tools\cloudflared\<version>\. Its source code is
   at https://github.com/cloudflare/cloudflared (tag 2026.11.1).
   Files: none in the package; cloudflared.exe in the folder above
+
+Android SDK Platform-Tools 37.0.1 (adb, Google's release build) - the
+connection of the Android views to a device
+  https://developer.android.com/tools/releases/platform-tools
+  Licence: Google's Android Software Development Kit License Agreement, the
+  terms on the page above; the notices of the components it contains are its
+  NOTICE.txt, installed beside it. adb's own source code is under the Apache
+  License 2.0, https://android.googlesource.com/platform/packages/modules/adb/.
+  rBrowser does not ship it: it is downloaded only when you run "Tools:
+  download adb" and accept Google's terms, which rBrowser shows before the
+  download, pinned by version and SHA-256, into
+  %LOCALAPPDATA%\rBrowser\tools\adb\<version>\. An adb installed on this
+  computer is used instead when rBrowser finds one.
+  Files: none in the package; adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll,
+  libwinpthread-1.dll and NOTICE.txt in the folder above
 
 
 -------------------------------------------------------------------------------
@@ -212,10 +253,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 -------------------------------------------------------------------------------
-musl libc - MIT
+MIT License - musl libc, React DevTools, Vue DevTools (their copyright lines
+are above)
 -------------------------------------------------------------------------------
-Copyright (c) 2005-2020 Rich Felker, et al.
-
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
 "Software"), to deal in the Software without restriction, including

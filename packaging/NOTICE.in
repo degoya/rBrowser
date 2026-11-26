@@ -1,0 +1,344 @@
+# The one source of packaging/windows/NOTICE, packaging/linux/NOTICE and packaging/macos/NOTICE
+# (RB-099-12). scripts/licenses.sh renders it (scripts/lib/licenses_notice.py): a line without a
+# tag goes into every file, a line tagged `[windows] ` or `[linux,macos] ` only into those, and a
+# `#` line into none. Edit this file, never the three NOTICE files; scripts/tests/licenses-notice.sh
+# holds them to it. Paths shared by every platform are written with `/`. @CEF_VERSION@,
+# @CEF_COMMIT@ and @CHROMIUM_VERSION@ come from the CEF pin in scripts/lib/tool-versions.sh
+# (RB-099-13): render the files again after a CEF update.
+rBrowser
+Copyright (c) 2026 Alexander Herling / DEGOYA.digital
+
+rBrowser is free software, licensed under the GNU General Public License,
+version 3 or (at your option) any later version. See LICENSE. It comes with
+ABSOLUTELY NO WARRANTY, to the extent permitted by applicable law.
+
+This package bundles the following third-party software, each under its own
+licence. VERSION.txt names the exact versions. The Rust crates and npm
+packages rBrowser is built from are listed with their licences under
+Settings > About > Licences; their full licence texts, with the copyright
+lines, are in THIRD-PARTY-LICENSES.txt beside this file.
+[macos]
+[macos] The paths below are relative to rBrowser.app/Contents/Resources/; a path
+[macos] that starts with Contents/ is relative to rBrowser.app.
+
+Chromium Embedded Framework (CEF)
+  https://github.com/chromiumembedded/cef
+  Version: CEF @CEF_VERSION@, commit @CEF_COMMIT@, with Chromium @CHROMIUM_VERSION@
+  Licence: BSD 3-Clause - the full text is below.
+[windows]   Files: libcef.dll, chrome_elf.dll, rbrowser.exe (CEF's sandbox bootstrap,
+[windows]   with rBrowser's icon and version information), *.pak, *.bin, icudtl.dat,
+[windows]   locales\
+[linux]   Files: libcef.so, chrome-sandbox (Chromium's setuid sandbox helper), *.pak,
+[linux]   *.bin, icudtl.dat, locales/
+[macos]   Files: Contents/Frameworks/Chromium Embedded Framework.framework (its
+[macos]   licence also as licenses/cef-license.txt)
+
+Chromium
+  https://www.chromium.org
+  Licence: BSD 3-Clause (The Chromium Authors) - the full text is below - and
+  the licences of the third-party components Chromium contains (among them
+  ANGLE, SwiftShader, ICU, V8 and the Vulkan loader), listed in full in
+  licenses/chromium-credits.html.
+[windows]   Files: part of the CEF runtime above, and d3dcompiler_47.dll,
+[windows]   dxcompiler.dll, vk_swiftshader.dll, vulkan-1.dll
+[linux]   Files: part of the CEF runtime above, and libvk_swiftshader.so,
+[linux]   vk_swiftshader_icd.json, libvulkan.so.1
+[macos]   Files: part of the framework above
+
+The source code of the CEF runtime - LGPL components and the written offer
+[windows]   The CEF runtime above (libcef.dll) contains components under the GNU Lesser
+[linux]   The CEF runtime above (libcef.so) contains components under the GNU Lesser
+[macos]   The CEF runtime above (the framework) contains components under the GNU Lesser
+  General Public License (LGPL), among them Blink (WebKit) and FFmpeg;
+  licenses/chromium-credits.html names each with its licence. rBrowser uses
+  the runtime unchanged, as a shared library: you may replace it with one you
+  build from the source code below. That source code is the CEF and Chromium
+  revisions this package was built from:
+    CEF @CEF_VERSION@, commit @CEF_COMMIT@:
+      https://github.com/chromiumembedded/cef/tree/@CEF_COMMIT@
+    Chromium @CHROMIUM_VERSION@:
+      https://chromium.googlesource.com/chromium/src/+/refs/tags/@CHROMIUM_VERSION@
+  Written offer: for at least three years after DEGOYA.digital last
+  distributes this version of rBrowser - every package, test packages
+  included - Alexander Herling / DEGOYA.digital will give anyone who has
+  received it, on request, a complete machine-readable copy of the
+  corresponding source code of the LGPL components above, on a medium
+  customarily used for software interchange or as a download, for a charge
+  no more than the cost of making and sending the copy. Write to the address
+  in the imprint, https://degoya.digital/impressum, and name the rBrowser
+  version (VERSION.txt).
+
+Node.js
+  https://nodejs.org
+  Licence: MIT - the full text, together with the licences of the components
+  Node.js bundles, is node/LICENSE.
+[windows]   Files: node\node.exe
+[linux,macos]   Files: node/bin/node
+
+Playwright (playwright-core)
+  https://playwright.dev
+  Licence: Apache License 2.0 - the full text is
+  sidecar/node_modules/playwright-core/LICENSE; its NOTICE file and the
+  notices of the components it contains are NOTICE and ThirdPartyNotices.txt
+  in the same folder.
+  Files: sidecar/node_modules/playwright-core/
+
+Playwright (playwright, @playwright/test) - the flow worker's expect
+  https://playwright.dev
+  Licence: Apache License 2.0 - the full texts are
+  sidecar/node_modules/playwright/LICENSE and
+  sidecar/node_modules/@playwright/test/LICENSE, each with its NOTICE.
+  Files: sidecar/node_modules/playwright/,
+  sidecar/node_modules/@playwright/test/
+
+Lighthouse 13.6.0 and Puppeteer (puppeteer-core 25.18.1) - the sidecar's
+Lighthouse module
+  https://github.com/GoogleChrome/lighthouse, https://pptr.dev
+  Licence: Apache License 2.0 - the full texts are
+  sidecar/node_modules/lighthouse/LICENSE and
+  sidecar/node_modules/puppeteer-core/LICENSE.
+  Lighthouse comes with the packages it needs, each in its own folder of
+  sidecar/node_modules/ with its licence (named in its package.json, the
+  text in its LICENSE file where the package has one): MIT, Apache-2.0,
+  BSD-3-Clause, BSD-2-Clause, ISC, 0BSD, MIT OR CC0-1.0, and MPL-2.0 for
+  axe-core 4.14.1 (unchanged; its Source Code Form is the npm package
+  axe-core@4.14.1). Lighthouse's error reporting (@sentry/node and the
+  packages only it needs) is not included and never switched on.
+  Files: sidecar/node_modules/ (beside the Playwright packages above)
+
+axe-core 4.14.1 - in the a11y-axe plugin
+  https://github.com/dequelabs/axe-core
+  Copyright (c) 2015 - 2026 Deque Systems, Inc.
+  Licence: Mozilla Public License 2.0 (MPL-2.0), https://mozilla.org/MPL/2.0/.
+  The file is unchanged; its Source Code Form is the npm package
+  axe-core@4.14.1 and the repository above at tag v4.14.1. axe-core contains
+  components under their own licences (MIT, BSD, Apache-2.0, W3C and others),
+  listed with their texts in the plugin source, plugins/a11y-axe/runner/dist/.
+  Files: plugins/a11y-axe-*.rbplugin (embedded in its component)
+
+React DevTools (react-devtools-inline 8.0.0, with react 19.3.1, react-dom
+[windows] 19.3.1 and react-is 19.3.1) - the React DevTools backend in rbrowser.exe and
+[linux,macos] 19.3.1 and react-is 19.3.1) - the React DevTools backend in rbrowser and
+the frontend in the framework-devtools plugin
+  https://github.com/facebook/react
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+  Licence: MIT (the text is below).
+[windows]   Files: rbrowser.dll (the backend, embedded as agent/dist/rb-react-devtools.js),
+[linux]   Files: rbrowser (the backend, embedded as agent/dist/rb-react-devtools.js),
+[macos]   Files: Contents/MacOS/rbrowser (the backend, embedded as
+[macos]   agent/dist/rb-react-devtools.js),
+  plugins/framework-devtools-*.rbplugin (panel/dist/react.js)
+
+Vue DevTools (@vue/devtools-kit 8.2.1 and @vue/devtools-shared 8.2.1, with
+birpc 2.9.0, hookable 5.5.3 and perfect-debounce 2.1.0; the plugin's panel
+with birpc 4.2.0 too) - the Vue DevTools backend in rbrowser and the Vue
+panel of the framework-devtools plugin
+  https://github.com/vuejs/devtools, https://github.com/antfu/birpc,
+  https://github.com/unjs/hookable, https://github.com/unjs/perfect-debounce
+  Copyright (c) 2023-present webfansplz; Copyright (c) 2021 Anthony Fu;
+  Copyright (c) Pooya Parsa <pooya@pi0.io>
+  Licence: MIT (the text is below).
+[windows]   Files: rbrowser.dll (the backend, embedded as agent/dist/rb-vue-devtools.js),
+[linux]   Files: rbrowser (the backend, embedded as agent/dist/rb-vue-devtools.js),
+[macos]   Files: Contents/MacOS/rbrowser (the backend, embedded as
+[macos]   agent/dist/rb-vue-devtools.js),
+  plugins/framework-devtools-*.rbplugin (panel/dist/vue.js)
+
+Noto Sans Mono Bold 2.006 (a subset) - the annotation font of the
+screenshot-editor plugin
+  https://github.com/notofonts/latin-greek-cyrillic
+  Copyright 2015 Google LLC (https://fonts.google.com/noto)
+  Licence: SIL Open Font License 1.1 (OFL-1.1), with no Reserved Font Name;
+  its text is plugins/screenshot-editor/panel/annotation-font.OFL.txt.
+  Files: plugins/screenshot-editor-*.rbplugin (in its panel and embedded in
+  its component)
+
+Lucide icons (a selection, from @iconify-json/lucide 1.2.156) - the icons of
+the first-party plugin panels
+  https://lucide.dev, https://github.com/lucide-icons/lucide
+  Copyright (c) 2026 Lucide Icons and Contributors; the icons derived from
+  Feather Copyright (c) 2013-present Cole Bemis
+  Licence: ISC License, and the MIT License for the icons derived from Feather
+  - both texts are below.
+  Files: the plugin panels (plugins/*.rbplugin, panel/dist/panel.js), bundled
+  with Nuxt UI; each panel's THIRD-PARTY-LICENSES.txt lists them
+[windows]
+[windows] musl libc 1.2.5 - linked statically into the WSL helper
+[windows]   https://musl.libc.org
+[windows]   Copyright (c) 2005-2020 Rich Felker, et al.
+[windows]   Licence: MIT - the full text is below. It is the copy that Rust's
+[windows]   x86_64-unknown-linux-musl target ships; LLVM's libunwind (Apache License
+[windows]   2.0 with LLVM exception) is linked into the same file.
+[windows]   Files: rbrowser-wsl
+[windows]
+[windows] Not in this package - downloaded on request:
+[windows]
+[windows] FFmpeg n9.0.2-39-g7adfbe40dc (the LGPL build of BtbN/FFmpeg-Builds) - the
+[windows] video encoder
+[windows]   https://ffmpeg.org
+[windows]   Licence: GNU Lesser General Public License 3.0 or later (LGPL-3.0-or-later),
+[windows]   built without --enable-gpl and --enable-nonfree; its LICENSE.txt is
+[windows]   installed beside it. rBrowser does not ship it: it is downloaded only when
+[windows]   you run "Video: download ffmpeg", pinned by version and SHA-256, into
+[windows]   %LOCALAPPDATA%\rBrowser\tools\ffmpeg\<version>\, and removed with "Video:
+[windows]   remove the downloaded ffmpeg". Its source code is offered at the address
+[windows]   the download notice names (the source_url of the built-in tool manifest),
+[windows]   upstream https://github.com/FFmpeg/FFmpeg at commit c179411bbb.
+[windows]   Files: none in the package; ffmpeg.exe and LICENSE.txt in the folder above
+[windows]
+[windows] cloudflared 2026.11.1 (Cloudflare's release build) - the tunnel of the
+[windows] portal's presentation over the internet
+[windows]   https://github.com/cloudflare/cloudflared
+[windows]   Copyright (c) Cloudflare, Inc.
+[windows]   Licence: Apache License 2.0 (Apache-2.0). rBrowser does not ship it: it is
+[windows]   downloaded only when you agree in the Portal panel to start a presentation
+[windows]   ("Portal: present over the internet"), pinned by version and SHA-256, into
+[windows]   %LOCALAPPDATA%\rBrowser\tools\cloudflared\<version>\. Its source code is
+[windows]   at https://github.com/cloudflare/cloudflared (tag 2026.11.1).
+[windows]   Files: none in the package; cloudflared.exe in the folder above
+[windows]
+[windows] Android SDK Platform-Tools 37.0.1 (adb, Google's release build) - the
+[windows] connection of the Android views to a device
+[windows]   https://developer.android.com/tools/releases/platform-tools
+[windows]   Licence: Google's Android Software Development Kit License Agreement, the
+[windows]   terms on the page above; the notices of the components it contains are its
+[windows]   NOTICE.txt, installed beside it. adb's own source code is under the Apache
+[windows]   License 2.0, https://android.googlesource.com/platform/packages/modules/adb/.
+[windows]   rBrowser does not ship it: it is downloaded only when you run "Tools:
+[windows]   download adb" and accept Google's terms, which rBrowser shows before the
+[windows]   download, pinned by version and SHA-256, into
+[windows]   %LOCALAPPDATA%\rBrowser\tools\adb\<version>\. An adb installed on this
+[windows]   computer is used instead when rBrowser finds one.
+[windows]   Files: none in the package; adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll,
+[windows]   libwinpthread-1.dll and NOTICE.txt in the folder above
+
+
+-------------------------------------------------------------------------------
+Chromium Embedded Framework - BSD 3-Clause
+-------------------------------------------------------------------------------
+Copyright (c) 2008-2020 Marshall A. Greenblatt. Portions Copyright (c)
+2006-2009 Google Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google Inc. nor the name Chromium Embedded
+Framework nor the names of its contributors may be used to endorse
+or promote products derived from this software without specific prior
+written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+-------------------------------------------------------------------------------
+Chromium - BSD 3-Clause
+-------------------------------------------------------------------------------
+Copyright 2015 The Chromium Authors
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+-------------------------------------------------------------------------------
+[windows] MIT License - musl libc, React DevTools, Vue DevTools (their copyright lines
+[windows] are above)
+[linux,macos] MIT License - React DevTools, Vue DevTools (their copyright lines are above)
+-------------------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+-------------------------------------------------------------------------------
+Lucide - ISC License
+-------------------------------------------------------------------------------
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+The Lucide icons derived from Feather - The MIT License (MIT):
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -9,6 +9,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use super::object;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, error_result, json_result, respond};
@@ -23,7 +24,7 @@ pub struct NavigateParams {
     /// The address, http(s) or a file inside the open project (no other scheme, no link);
     /// `example.test` becomes `https://example.test/`.
     pub url: String,
-    /// `"all"` (default), a view id, or a breakpoint id (every view showing it).
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -42,7 +43,7 @@ pub enum ReloadMode {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReloadParams {
-    /// `"all"` (default), a view id, or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
     /// Bypass the cache (a full reload).
@@ -58,7 +59,7 @@ pub struct ReloadParams {
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TargetParams {
-    /// `"all"` (default), a view id, or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id.
     #[serde(default)]
     pub target: Option<TargetArg>,
 }
@@ -110,14 +111,14 @@ pub struct SetEngineParams {
 #[tool_router(router = views_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "List the views of the grid in grid order: id (the `target` of every view tool), label, breakpoint (null after a free size), cellBreakpoint, engine, width, height, dpr, scale, url, title, loading, session and cell; desync (null while the view is in sync, else the reason, the event and the selector that failed), syncNavigation (whether the view follows the active view's navigation), detached (the view is in a window of its own, view_pop_out), range (the widths the view stands for among the breakpoints of the config, as its breakpoint bar shows them: from - 0 for the smallest breakpoint - and to, null for the largest), external (a Firefox or WebKit view in a window of its own) with its status, externalWindow (open while that window runs or is starting, closed when the person closed it, it crashed or could not start; engine_restart opens it again) and embedded (true while that window sits in its grid cell, setting engines.external.embed; false while it is a window of its own); frameworks (what the page runs of Vue and React while their Framework DevTools are not off: per framework version, hook - rBrowser's DevTools hook is in the document - and devtools - the framework talks to it; {} when none)."
+        description = "List the views of the grid in grid order: id (the target of every view tool), label, breakpoint (null after a free size), cellBreakpoint, engine, width, height, dpr, scale, url, title, loading, session, cell; desync (null while in sync, else reason, event, selector), syncNavigation, detached (in a window of its own), range (from/to: the widths the view stands for), external, externalWindow and embedded for a Firefox or WebKit view, frameworks (Vue and React versions with hook and devtools; {} when none)."
     )]
-    pub(crate) async fn views_list(&self) -> ToolResult {
+    pub(crate) async fn views_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         respond(self.read(|backend| backend.views_list()).await)
     }
 
     #[tool(
-        description = "Load a URL (http or https, or a file: URL of a file inside the open project; other schemes are refused) in the targeted views and wait for the loads to finish (setting mcp.navigationTimeoutMs). Answers settled, per view reached its final URL after redirects, skipped (views of \"all\" whose navigation is decoupled) and failed. target: \"all\" (default), a view id or a breakpoint id."
+        description = "Load a URL (http or https, or a file: URL inside the open project; other schemes are refused) in the targeted views and wait for the loads (mcp.navigationTimeoutMs). Answers settled, per view its final URL after redirects, skipped (views of \"all\" whose navigation is decoupled) and failed."
     )]
     pub(crate) async fn navigate(
         &self,
@@ -129,7 +130,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Reload the targeted views. mode \"full\" (default) reloads the pages (ignoreCache bypasses the cache) and answers their final URLs once loaded; target \"all\" reaches every view. mode \"css\" swaps every stylesheet in place without a reload, so JS state, scroll position and form values stay, and answers what happened per view. target: \"all\" (default), a view id or a breakpoint id."
+        description = "Reload the targeted views. mode full (default) reloads the pages (ignoreCache bypasses the cache) and answers their final URLs once loaded; mode css swaps every stylesheet in place without a reload (JS state, scroll and form values stay) and answers per view."
     )]
     pub(crate) async fn reload(&self, Parameters(params): Parameters<ReloadParams>) -> ToolResult {
         if params.mode == Some(ReloadMode::Css) {
@@ -144,7 +145,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Go back in the history of the targeted views and answer their final URLs. A view without history stays where it is. target: \"all\" (default), a view id or a breakpoint id."
+        description = "Go back in the history of the targeted views and answer their final URLs; a view without history stays."
     )]
     pub(crate) async fn back(&self, Parameters(params): Parameters<TargetParams>) -> ToolResult {
         self.navigation("view.back", params.target.as_ref(), Value::Null)
@@ -152,7 +153,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Go forward in the history of the targeted views and answer their final URLs. target: \"all\" (default), a view id or a breakpoint id."
+        description = "Go forward in the history of the targeted views and answer their final URLs."
     )]
     pub(crate) async fn forward(&self, Parameters(params): Parameters<TargetParams>) -> ToolResult {
         self.navigation("view.forward", params.target.as_ref(), Value::Null)
@@ -160,7 +161,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Pop one view (target: a view id or breakpoint id, default the active view) out of the grid into a window of its own at its real size: zoom 1, the breakpoint's width in CSS px, still synced, same view id, session and emulation. A window larger than the screen follows the setting popOut.fitToScreen. A view out already comes to the front. Answers view, detached and changed."
+        description = "Pop one view out of the grid into a window of its own at its real size (zoom 1, the breakpoint's width in CSS px), still synced, same view id, session and emulation; popOut.fitToScreen decides for a window larger than the screen. A view out already comes to the front. Answers view, detached and changed."
     )]
     pub(crate) async fn view_pop_out(
         &self,
@@ -171,7 +172,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Take one view (target: a view id or breakpoint id, default the active view) out of its own window back into its grid cell at the cell's zoom; the window closes. Answers view, detached and changed (false when it was in the grid)."
+        description = "Put one view from its own window back into its grid cell; the window closes. Answers view, detached and changed (false when it was in the grid)."
     )]
     pub(crate) async fn view_pop_in(
         &self,
@@ -182,7 +183,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "Set the engine of the targeted views (target: \"all\", a view id or a breakpoint id; default the active view) to chromium, firefox, webkit, safari (the real Safari, macOS only; a Safari view follows the active view and never leads) or ios (Mobile Safari on the iOS Simulator or a connected iPhone or iPad, macOS only; iosDevice names a model such as \"iPhone 16\" or a udid from ios_devices; it follows and never leads, its size is the device's). The engine is written as breakpoints[].engine of each view's breakpoint into file local (config.local.json, the default) or project (config.json, shared with the team), the config is read again and the view follows - Firefox and WebKit in external windows. An engine that cannot run (Firefox not found, WebKit not installed, Safari outside macOS or with remote automation off, iOS without Xcode and without a device) is refused with the reason. Answers per view { view, breakpoint, engine, file, changed, iosDevice? } - changed is false when a config.local.json entry of the breakpoint shadows a project write - or { view, failed } for a view without a breakpoint of the config; target all is one write and one reload."
+        description = "Set the engine of the targeted views: chromium, firefox, webkit, safari (macOS only; follows, never leads) or ios (Mobile Safari on the Simulator or a connected iPhone or iPad, macOS only; iosDevice: a model such as \"iPhone 16\" or a udid from ios_devices). Written as breakpoints[].engine of each view's breakpoint into file local (config.local.json, default) or project (config.json); the view follows. An engine that cannot run here is refused with the reason. Answers per view { view, breakpoint, engine, file, changed, iosDevice? } - changed false when config.local.json shadows a project write - or { view, failed } for a view without a breakpoint of the config."
     )]
     pub(crate) async fn views_set_engine(
         &self,
@@ -201,7 +202,7 @@ impl RbMcpServer {
                 }
             };
             let engine = serde_json::to_value(params.engine)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             // Several views go in one command: one config write, one reload, an answer per
             // view (`failed` for a view without a breakpoint of the config).
             let args = match targets.as_slice() {
@@ -270,7 +271,7 @@ impl RbMcpServer {
                 _ => object([]),
             };
             args["target"] = serde_json::to_value(target)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             reached.add(&self.command(id, args).await?);
         }
         // Only the views the command reached load: a skipped one would count as settled.

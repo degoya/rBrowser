@@ -19,12 +19,15 @@
 //! | Each step of a run going on pushed to the shell (`flowStep`, RB-090-84) | [`step_progress`] |
 //! | The step each view is at, "step n/m" in the activity bar (RB-090-68) | [`run_steps`] |
 //! | The layout a run shows when the one shown hides views (`hiddenViews: layout`) | [`run_layout`] |
+//! | The views of a run's `views` or `scope` (all, visible, chosen breakpoints; RB-099-10) | [`scoped`] |
 //! | A played recording's view brought into sight when every one is hidden (RB-090-89) | [`reveal`] |
 //! | The run in Node: a worker process per run under Node's permission model | `sidecar/src/modules/flows/` |
 //!
 //! The commands: `flows.run` (`Leader F R`), `flows.run_all` (`Leader F A`), `flows.rerun_last`
 //! (`Leader F L`) - all `covered(flow_run)` -, `flows.cancel` (`Leader F X`) and
-//! `flows.open_results` (`Leader F O`) and `flows.delete` (`Leader F D`), which are a person's.
+//! `flows.open_results` (`Leader F O`) and `flows.delete` (`Leader F D`), which are a person's;
+//! `flows.run_all_visible` (`Leader F G`, `covered(flow_run)`) runs every flow in the views the
+//! grid shows (RB-099-10).
 //! Results land in `.rbrowser/out/flows/<runId>/` (`result.json`, screenshots of failed views).
 
 pub mod app;
@@ -46,6 +49,7 @@ pub mod run;
 pub mod run_layout;
 pub mod run_steps;
 pub mod scope;
+pub mod scoped;
 pub mod step_progress;
 pub mod sync_pause;
 
@@ -62,6 +66,8 @@ pub use error::{FlowError, TRUST_HINT};
 pub const RUN: &str = "flows.run";
 /// `flows.run_all`: every flow of the project, one after the other.
 pub const RUN_ALL: &str = "flows.run_all";
+/// `flows.run_all_visible`: every flow in the views the grid shows (RB-099-10).
+pub const RUN_ALL_VISIBLE: &str = "flows.run_all_visible";
 /// `flows.rerun_last`: the last run again, with its views.
 pub const RERUN_LAST: &str = "flows.rerun_last";
 /// `flows.cancel`: ends the running flow.
@@ -99,6 +105,12 @@ pub fn definitions() -> Result<Vec<CommandDef>, CommandError> {
         ),
         (PANEL, 'F', McpCoverage::Covered(MCP_LIST.to_owned())),
         (DELETE, 'D', McpCoverage::Omitted(DELETE_OMITTED.to_owned())),
+        // `G` for "the grid shows": every other letter after `F` is taken.
+        (
+            RUN_ALL_VISIBLE,
+            'G',
+            McpCoverage::Covered(MCP_RUN.to_owned()),
+        ),
     ]
     .into_iter()
     .map(|(id, key, mcp)| {

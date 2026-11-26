@@ -6,11 +6,20 @@ use std::collections::BTreeSet;
 use rmcp::model::Tool;
 use serde_json::Value;
 
-use super::tables::{self, SINGLE_VIEW};
+use super::tables::{self, ACTIVE_DEFAULT, OWN_DEFAULT, SINGLE_VIEW};
 use crate::RbMcpServer;
 
 /// The shortest description a tool may have.
 const MIN_DESCRIPTION: usize = 20;
+/// The `target` text of a view tool that takes `"all"` when it is absent.
+pub const TARGET_ALL: &str = "`\"all\"` (default), a view id or a breakpoint id.";
+/// The `target` text of a tool in [`ACTIVE_DEFAULT`].
+pub const TARGET_ACTIVE: &str =
+    "`\"all\"`, a view id or a breakpoint id; the active view when absent.";
+/// How the `target` text of a tool in [`OWN_DEFAULT`] starts; its default follows.
+pub const TARGET_OWN: &str = "`\"all\"`, a view id or a breakpoint id; when absent ";
+/// How the `target` text of a tool in [`SINGLE_VIEW`] starts.
+pub const TARGET_ONE: &str = "One view: a view id or a breakpoint id shown once; ";
 /// How deep a `$ref` chain is followed.
 const MAX_DEPTH: usize = 16;
 
@@ -137,7 +146,8 @@ pub fn tool_problems() -> Vec<String> {
     problems
 }
 
-/// What is wrong with one tool's definition: its description, its schema, its `target`.
+/// What is wrong with one tool's definition: its description, its schema (an object that
+/// refuses unknown arguments), its `target`.
 #[must_use]
 pub fn definition_problems(tool: &Tool) -> Vec<String> {
     let mut problems = Vec::new();
@@ -152,11 +162,46 @@ pub fn definition_problems(tool: &Tool) -> Vec<String> {
     }
     if tool.input_schema.get("type") != Some(&Value::from("object")) {
         problems.push("the arguments' schema is not a JSON object schema".to_owned());
+    } else if tool.input_schema.get("additionalProperties") != Some(&Value::Bool(false)) {
+        problems.push(
+            "the arguments' schema takes unknown arguments: additionalProperties is not false \
+             (serde deny_unknown_fields; tools::NoArgs for a tool without arguments)"
+                .to_owned(),
+        );
     }
     if let Err(why) = target_support(tool) {
         problems.push(why);
     }
+    problems.extend(target_text_problem(tool));
     problems
+}
+
+/// What is wrong with the text of `tool`'s `target`, if it has one: it starts as the rule says
+/// (RB-099-16) - [`TARGET_ONE`] for one view, [`TARGET_ACTIVE`] for a tool that acts in a page
+/// ([`ACTIVE_DEFAULT`]), [`TARGET_OWN`] for a default of its own ([`OWN_DEFAULT`]), else
+/// [`TARGET_ALL`]; a sentence of its own may follow.
+#[must_use]
+pub fn target_text_problem(tool: &Tool) -> Option<String> {
+    let name = tool.name.as_ref();
+    let target = tool.input_schema.get("properties")?.get("target")?;
+    let text = target
+        .get("description")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let (start, rule) = if SINGLE_VIEW.contains(&name) {
+        (TARGET_ONE, "SINGLE_VIEW")
+    } else if ACTIVE_DEFAULT.contains(&name) {
+        (TARGET_ACTIVE, "ACTIVE_DEFAULT")
+    } else if OWN_DEFAULT.contains(&name) {
+        (TARGET_OWN, "OWN_DEFAULT")
+    } else {
+        (TARGET_ALL, "the default \"all\"")
+    };
+    (!text.starts_with(start))
+        .then(|| format!("its target says {text:?}; by {rule} it starts with {start:?}"))
 }
 
 /// What `tool`'s `target` takes, held to the tables: a tool without `target` is listed in

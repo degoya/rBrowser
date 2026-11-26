@@ -84,3 +84,18 @@ async fn the_last_state_wins_with_few_applies() {
     assert_eq!(applied.len(), 2, "{applied:?}");
     assert_eq!(applied.last(), Some(&100), "the last size wins");
 }
+
+/// RB-099-18: the queue is idle for a view only once its worker took the last round and found
+/// nothing more - what the tests wait for before they say no more metrics come.
+#[test]
+fn a_view_is_idle_only_after_its_worker_stopped() {
+    let queue = ApplyQueue::default();
+    assert!(queue.idle(VIEW), "no worker yet");
+    assert!(queue.request(VIEW, false));
+    assert!(!queue.idle(VIEW), "requested");
+    assert_eq!(queue.next(VIEW), Some(false));
+    assert!(!queue.idle(VIEW), "the round runs");
+    assert_eq!(queue.next(VIEW), None);
+    assert!(queue.idle(VIEW), "the worker stopped");
+    assert!(queue.idle(ViewId(2)), "another view has none");
+}

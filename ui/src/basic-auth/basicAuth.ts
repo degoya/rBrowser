@@ -1,10 +1,11 @@
 // Basic auth per environment in the shell (RB-094-08): what the bar sends. The password goes to
 // the core once, inside `environment.auth`, which keeps it in the platform's credential store;
 // the shell never stores it and never shows one back. What it shows instead is whether a
-// credential is stored and for which user (`getBasicAuthStatus`, RB-094-29).
+// credential is stored and for which user (`getBasicAuthStatus`, RB-094-29), and the texts name
+// the store the core said it uses (`store`, RB-099-05).
 
-import type { InjectionKey } from 'vue';
-import type { CoreToShell, EnvironmentAuthStatus, ShellToCore } from '../ipc/protocol';
+import { ref, type InjectionKey } from 'vue';
+import type { CoreToShell, CredentialStoreKind, EnvironmentAuthStatus, ShellToCore } from '../ipc/protocol';
 
 export const AUTH_COMMAND = 'environment.auth';
 /** The setting that lists the environments behind Basic auth (Project > Environments). */
@@ -75,9 +76,40 @@ export function storedUsers(statuses: EnvironmentAuthStatus[]): StoredUsers {
   );
 }
 
-/** The users of a pushed `basicAuthStatus`; `null` for any other message. */
+/** The users of a pushed `basicAuthStatus`, noting its store; `null` for any other message. */
 export function usersOf(message: CoreToShell): StoredUsers | null {
-  return message.type === 'basicAuthStatus' ? storedUsers(message.environments) : null;
+  return message.type === 'basicAuthStatus' ? storedUsers(statusesOf(message)) : null;
+}
+
+/** The store the core named last on this page; `undefined` until it did. */
+const credentialStore = ref<CredentialStoreKind | undefined>(undefined);
+
+/** The statuses of a `basicAuthStatus` answer, noting its store (an older core names none). */
+export function statusesOf(message: Extract<CoreToShell, { type: 'basicAuthStatus' }>): EnvironmentAuthStatus[] {
+  if (message.store !== undefined) {
+    credentialStore.value = message.store;
+  }
+  return message.environments;
+}
+
+/** The i18n key of the name of the store `kind`; the system's store when none or unknown. */
+export function storeNameKey(kind: CredentialStoreKind | undefined): string {
+  switch (kind) {
+    case 'windowsCredentialManager':
+      return 'auth.store.windowsCredentialManager';
+    case 'macosKeychain':
+      return 'auth.store.macosKeychain';
+    case 'secretService':
+      return 'auth.store.secretService';
+    default:
+      return 'auth.store.system';
+  }
+}
+
+/** The `{store}` parameter of the texts that say where the credentials are kept, translated by
+ * `t`; reactive, so a text follows when the core names its store. */
+export function storeParams(t: (key: string) => string): { store: string } {
+  return { store: t(storeNameKey(credentialStore.value)) };
 }
 
 /** What a row says about `environment`'s credential, as an i18n key and its parameters; `null`

@@ -90,7 +90,8 @@ impl Feature for Lighthouse {
         args: &str,
     ) -> Result<String, Failure> {
         match command {
-            "run" => tool::run(host, args, true),
+            // RB-099-10: `run_visible`'s manifest scope is `visible`: the host feeds the breakpoints.
+            "run" | "run_visible" => tool::run(host, args, true),
             "open_report" => reports::open_command(host, args),
             "delete_run" => reports::delete_command(host, args),
             other => Err(unknown(other)),

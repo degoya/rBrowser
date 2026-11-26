@@ -149,14 +149,15 @@ async fn one_size_change_sends_the_metrics_once() {
     let mobile = order[0];
     setup.host.on_load_end(mobile, &marker_url(mobile));
     until(|| metrics(&setup) > 0).await;
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // The attach and the applies the layout asked for ended (RB-099-18).
+    until(|| setup.host.applies_settled(mobile)).await;
     let before = metrics(&setup);
     setup
         .host
         .set_size(mobile, 500, 1000, None)
         .expect("a size");
     until(|| metrics(&setup) > before).await;
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    until(|| setup.host.applies_settled(mobile)).await;
     assert_eq!(metrics(&setup), before + 1);
 }
 

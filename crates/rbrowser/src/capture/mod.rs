@@ -16,7 +16,10 @@ pub mod cdp;
 pub mod chromium;
 pub mod clean;
 pub mod clean_defs;
+pub mod full_page;
 pub mod latest;
+pub mod lazy;
+pub mod lazy_script;
 pub mod pick;
 pub mod run;
 #[cfg(test)]
@@ -66,6 +69,9 @@ pub const PICK_KEY: &str = "capture.notice.pick";
 pub const DELAY_KEY: &str = "capture.notice.delay";
 /// The notice that a capture without a delay started (RB-090-85).
 pub const CAPTURING_KEY: &str = "capture.notice.capturing";
+/// The notice that a full page was cut at the image's limits (RB-099-11); placeholders
+/// `{label}`, `{height}` (the image's rows).
+pub const TRUNCATED_KEY: &str = "capture.notice.truncated";
 /// The settings section the notices link to.
 const SETTINGS_KEY: &str = "capture";
 
@@ -219,6 +225,9 @@ fn start(core: &Core, args: &Value, preset: &ScreenshotArgs) -> Result<Value, Co
                     SAVED_KEY,
                     &[("count", count), ("folder", folder)],
                 ));
+                for cut in truncated_notices(&answer) {
+                    core.notify(cut);
+                }
             }
             Err(error) => {
                 tracing::warn!(%error, "the screenshot failed");
@@ -231,6 +240,25 @@ fn start(core: &Core, args: &Value, preset: &ScreenshotArgs) -> Result<Value, Co
         }
     });
     Ok(json!({ "started": true, "delayMs": delay_ms }))
+}
+
+/// A warning for each image that ends before its page does (RB-099-11).
+fn truncated_notices(answer: &ScreenshotAnswer) -> Vec<CoreToShell> {
+    answer
+        .shots
+        .iter()
+        .filter(|shot| shot.truncated)
+        .map(|shot| {
+            notice(
+                NotificationLevel::Warning,
+                TRUNCATED_KEY,
+                &[
+                    ("label", shot.label.clone()),
+                    ("height", shot.height.to_string()),
+                ],
+            )
+        })
+        .collect()
 }
 
 /// The notice that a command's capture started, so a full page of every view does not run

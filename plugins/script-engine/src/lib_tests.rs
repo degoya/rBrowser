@@ -114,6 +114,33 @@ fn a_refused_call_throws_a_tool_error_the_script_can_catch() {
     );
 }
 
+/// RB-099-16: a refusal with a renamed code carries the flat one as `legacyCode` until 1.0; a
+/// refusal that is no JSON is `tool.failed`, formerly `tool_failed`.
+#[test]
+fn a_tool_error_carries_the_flat_code_of_a_renamed_one() {
+    let refusal = json!({ "code": "evaluate.disabled", "legacyCode": "evaluate_disabled",
+                          "message": "off" });
+    let host = FakeHost::default().answer("evaluate", Err(refusal));
+    let answer = ok(
+        "try { await rb.evaluate({ expression: '1' }); }\n\
+         catch (error) { return [error.code, error.legacyCode]; }",
+        &host,
+    );
+    assert_eq!(
+        answer["value"],
+        json!(["evaluate.disabled", "evaluate_disabled"])
+    );
+
+    let kept = json!({ "code": "flows.untrusted", "message": "untrusted" });
+    let host = FakeHost::default().answer("flow_run", Err(kept));
+    let answer = ok(
+        "try { await rb.flow_run({ name: 'a' }); }\n\
+         catch (error) { return [error.code, error.legacyCode ?? null]; }",
+        &host,
+    );
+    assert_eq!(answer["value"], json!(["flows.untrusted", null]));
+}
+
 #[test]
 fn an_uncaught_error_comes_back_with_its_name_code_tool_and_line() {
     let refusal = json!({ "code": "flows.untrusted", "message": "untrusted" });

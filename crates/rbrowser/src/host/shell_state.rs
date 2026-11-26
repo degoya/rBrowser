@@ -72,6 +72,19 @@ pub struct ShellState {
     pub devices: Option<rb_ipc::DevicesMenu>,
 }
 
+impl ShellState {
+    /// The state of a new window: the grid the host builds from the config, until the start
+    /// selection is applied (`presets::on_start` - the canvas when the project names no start
+    /// preset, RB-099-26). The built-in mode is no state the views are in yet.
+    #[must_use]
+    pub fn at_open() -> Self {
+        Self {
+            mode: LayoutMode::Grid,
+            ..Self::default()
+        }
+    }
+}
+
 impl Host {
     /// The shell's state beside the views.
     pub fn shell_state(&self) -> ShellState {

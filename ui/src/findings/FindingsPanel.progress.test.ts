@@ -170,6 +170,28 @@ describe('FindingsPanel while checks run', () => {
     expect(failure).toContain('View 1 has no served source: the page is a data: URL');
     wrapper.unmount();
   });
+
+  // RB-099-06: the reason ends its sentence before "Its findings are missing.", with or without
+  // a period of its own.
+  it("ends the plugin's reason with a period before the closing sentence", async () => {
+    const { core, wrapper } = mountPanel();
+    const run = sampleRun();
+    run.failures = [
+      { plugin: 'seo', view: 1, code: 'plugin.seo.errors.no_source', params: { view: '1', reason: 'Resource was not cached' } },
+      { plugin: 'seo', view: 2, code: 'plugin.seo.errors.no_source', params: { view: '2', reason: 'Agent is not enabled.' } },
+    ];
+    const messages = {
+      ...sampleMessages,
+      'plugin.seo.errors.no_source': 'View {view} has no served source: {reason}',
+    };
+    core.emit({ type: 'findings', run, messages });
+    await settle();
+    const texts = wrapper.findAll('[data-testid="failure"]').map((node) => node.text());
+    expect(texts.some((text) => text.includes('Resource was not cached. Its findings are missing.'))).toBe(true);
+    expect(texts.some((text) => text.includes('Agent is not enabled. Its findings are missing.'))).toBe(true);
+    expect(texts.every((text) => !text.includes('..'))).toBe(true);
+    wrapper.unmount();
+  });
 });
 
 describe('FindingsPanel help links', () => {

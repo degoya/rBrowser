@@ -18,11 +18,11 @@
         "library_full": "The saved snippets are full ({limit}); delete one first.",
         "no_active_view": "No view is active; run the snippet in all views instead.",
         "no_last": "No snippet has run yet.",
-        "no_project": "No project is open, so nothing can be saved; keep the snippet in Settings > DevTools & Debugging > Snippets instead.",
+        "no_project": "No project is open, so nothing can be saved; keep the snippet in Settings › DevTools & Debugging › Snippets instead.",
         "not_found": "There is no snippet \"{name}\".",
         "project_untrusted": "There is no snippet \"{name}\" you can run: the project's snippets load only once you trust this workspace.",
         "save_failed": "The snippet could not be saved.",
-        "save_untrusted": "Snippets are saved in the project folder, which needs workspace trust; trust the workspace, or keep the snippet in Settings > DevTools & Debugging > Snippets.",
+        "save_untrusted": "Snippets are saved in the project folder, which needs workspace trust; trust the workspace, or keep the snippet in Settings › DevTools & Debugging › Snippets.",
         "unknown_view": "There is no such view any more."
       },
       "name": "Snippets",
@@ -33,7 +33,7 @@
         "codeHint": "JavaScript, the body of an async function: return a value to see it, await works. A header such as // @world main sets the world, target and timeout. Ctrl+Enter runs it.",
         "confirmDelete": "Delete the saved snippet \"{name}\"? Your own and the project's snippets stay.",
         "delete": "Delete",
-        "empty": "No snippets yet. Write one below and save it, or add one in Settings > DevTools & Debugging > Snippets.",
+        "empty": "No snippets yet. Write one below and save it, or add one in Settings › DevTools & Debugging › Snippets.",
         "failed": "Failed",
         "filter": "Find a snippet",
         "invalid": "Cannot run: {reason}",
@@ -50,7 +50,7 @@
         "projectUntrusted": "The project's snippets (.rbrowser/snippets) are not loaded until you trust this workspace.",
         "results": "Recent runs",
         "run": "Run",
-        "running": "Running in {count, plural, one {# view} other {# views}}...",
+        "running": "Running in {count, plural, one {# view} other {# views}}…",
         "save": "Save",
         "saved": "Saved \"{name}\".",
         "source": {
@@ -89,7 +89,7 @@
         },
         "projectEnabled": {
           "description": "Lists and runs the project's snippets from .rbrowser/snippets - only in a workspace you trust.",
-          "help": "Lists and runs the project's snippets from .rbrowser/snippets, only in a workspace you trust. Off shows your own library only.",
+          "help": "Lists and runs the project's snippets from .rbrowser/snippets, only in a workspace you trust. When off, it shows your own library only.",
           "label": "Project snippets"
         },
         "option": {

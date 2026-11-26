@@ -1,0 +1,9 @@
+{
+  "about": "The bytes each page of the build loads at once - its entry, its preloaded chunks, its stylesheets - checked by scripts/bundle-budget.sh after the build (RB-099-20). Set to the size of the build plus about 10 %; raise a limit only with the reason in the commit.",
+  "pages": {
+    "canvas-board.html": { "js": 607000, "css": 249000 },
+    "index.html": { "js": 930000, "css": 249000 },
+    "settings.html": { "js": 779000, "css": 249000 },
+    "status-bar.html": { "js": 726000, "css": 249000 }
+  }
+}

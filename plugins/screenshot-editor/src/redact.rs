@@ -3,6 +3,11 @@
 //! the result holds one colour per block and nothing finer; the smoothed mode is computed from
 //! the mosaic alone (never from the original), so it hides exactly as much. The panel's preview
 //! (`web/src/panel/draw.ts`) does the same arithmetic.
+//!
+//! A pixmap may hold a band of the image (RB-099-24): its row 0 is the image's row `top`, and a
+//! region is in the image's coordinates. The mosaic's blocks still start at the region's top in
+//! the image, so a band computes the very blocks the whole image does - exactly so for every
+//! block it holds whole; `crate::band` gives each band the rows that takes.
 
 use tiny_skia::Pixmap;
 
@@ -38,35 +43,89 @@ fn index(pixmap: &Pixmap, x: u32, y: u32) -> usize {
     ((y * pixmap.width() + x) * 4) as usize
 }
 
-/// Every block of `block` pixels in `region` becomes the rounded average of its pixels.
-pub fn pixelate(pixmap: &mut Pixmap, region: Region, block: u32) {
+/// The part of the image's `region` a pixmap whose row 0 is the image's row `top` holds, in the
+/// pixmap's coordinates; none when it holds nothing of it.
+#[must_use]
+pub fn local(pixmap: &Pixmap, region: Region, top: u32) -> Option<Region> {
+    let first = region.top.max(top);
+    let last = region.bottom.min(top.saturating_add(pixmap.height()));
+    let right = region.right.min(pixmap.width());
+    // `then`, not `then_some`: the subtractions underflow for a band past the region.
+    (first < last && region.left < right).then(|| Region {
+        left: region.left,
+        top: first - top,
+        right,
+        bottom: last - top,
+    })
+}
+
+/// How many rows above and below a band a redaction reads to compute the band's rows as the
+/// whole image does: a block less one for the mosaic, the smoothing's radius more for the blur.
+#[must_use]
+pub fn margin(mode: crate::model::RedactMode, block: u32) -> u32 {
     let block = block.max(1);
-    let mut top = region.top;
-    while top < region.bottom {
-        let bottom = (top + block).min(region.bottom);
-        let mut left = region.left;
-        while left < region.right {
-            let right = (left + block).min(region.right);
-            let mut sum = [0u64; 4];
-            for y in top..bottom {
-                for x in left..right {
-                    let i = index(pixmap, x, y);
-                    for (channel, total) in sum.iter_mut().enumerate() {
-                        *total += u64::from(pixmap.data()[i + channel]);
-                    }
+    match mode {
+        crate::model::RedactMode::Black => 0,
+        crate::model::RedactMode::Pixelate => block - 1,
+        crate::model::RedactMode::Blur => block - 1 + radius(block),
+    }
+}
+
+fn radius(block: u32) -> u32 {
+    (block / 2).max(1)
+}
+
+/// Every block of `block` pixels in `region` (of the image; the pixmap's row 0 is its row `top`)
+/// becomes the rounded average of its pixels.
+pub fn pixelate(pixmap: &mut Pixmap, region: Region, block: u32, top: u32) {
+    let Some(shown) = local(pixmap, region, top) else {
+        return;
+    };
+    let block = block.max(1);
+    // The first block the pixmap holds a part of: blocks start at the region's top in the image.
+    let skipped = (shown.top + top - region.top) / block * block;
+    let start = i64::from(region.top) + i64::from(skipped) - i64::from(top);
+    let mut first = start;
+    while first < i64::from(shown.bottom) {
+        let next = first + i64::from(block);
+        let row_top = u32::try_from(first.max(i64::from(shown.top))).unwrap_or(shown.top);
+        let row_bottom = u32::try_from(next.min(i64::from(shown.bottom))).unwrap_or(shown.bottom);
+        first = next;
+        let row = Region {
+            left: shown.left,
+            top: row_top,
+            right: shown.right,
+            bottom: row_bottom,
+        };
+        pixelate_rows(pixmap, row, block);
+    }
+}
+
+/// The blocks of one row of blocks: `region` (in the pixmap's coordinates) is that row, each
+/// block `block` pixels wide from its left.
+fn pixelate_rows(pixmap: &mut Pixmap, region: Region, block: u32) {
+    let (top, bottom) = (region.top, region.bottom);
+    let mut left = region.left;
+    while left < region.right {
+        let right = (left + block).min(region.right);
+        let mut sum = [0u64; 4];
+        for y in top..bottom {
+            for x in left..right {
+                let i = index(pixmap, x, y);
+                for (channel, total) in sum.iter_mut().enumerate() {
+                    *total += u64::from(pixmap.data()[i + channel]);
                 }
             }
-            let count = u64::from((right - left) * (bottom - top));
-            let average = sum.map(|total| u8::try_from((total + count / 2) / count).unwrap_or(0));
-            for y in top..bottom {
-                for x in left..right {
-                    let i = index(pixmap, x, y);
-                    pixmap.data_mut()[i..i + 4].copy_from_slice(&average);
-                }
-            }
-            left = right;
         }
-        top = bottom;
+        let count = u64::from((right - left) * (bottom - top));
+        let average = sum.map(|total| u8::try_from((total + count / 2) / count).unwrap_or(0));
+        for y in top..bottom {
+            for x in left..right {
+                let i = index(pixmap, x, y);
+                pixmap.data_mut()[i..i + 4].copy_from_slice(&average);
+            }
+        }
+        left = right;
     }
 }
 
@@ -115,16 +174,23 @@ fn box_pass(pixmap: &mut Pixmap, region: Region, radius: u32, horizontal: bool) 
     }
 }
 
-/// The mosaic of `block`, then smoothed with a box of half a block, rows then columns.
-pub fn blur(pixmap: &mut Pixmap, region: Region, block: u32) {
-    pixelate(pixmap, region, block);
-    let radius = (block / 2).max(1);
-    box_pass(pixmap, region, radius, true);
-    box_pass(pixmap, region, radius, false);
+/// The mosaic of `block`, then smoothed with a box of half a block, rows then columns - each
+/// line clamped at the region's edges, which a band holding the rows the margin names sees too.
+pub fn blur(pixmap: &mut Pixmap, region: Region, block: u32, top: u32) {
+    pixelate(pixmap, region, block, top);
+    let Some(shown) = local(pixmap, region, top) else {
+        return;
+    };
+    let radius = radius(block.max(1));
+    box_pass(pixmap, shown, radius, true);
+    box_pass(pixmap, shown, radius, false);
 }
 
 /// Opaque black.
-pub fn black(pixmap: &mut Pixmap, region: Region) {
+pub fn black(pixmap: &mut Pixmap, region: Region, top: u32) {
+    let Some(region) = local(pixmap, region, top) else {
+        return;
+    };
     for y in region.top..region.bottom {
         for x in region.left..region.right {
             let i = index(pixmap, x, y);

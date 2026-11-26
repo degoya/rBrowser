@@ -42,7 +42,7 @@ pub struct StatusMessagesParams {
 #[tool_router(router = status_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Read the status bar's last messages - what rBrowser told the person: errors, warnings, info and success notices of the app, its commands, plugins and checks - newest first. Each with id, at (ms since the Unix epoch), level (info, warning, error, success), messageKey, the English text and the settingsKey it is about, if any; kept says how many the history holds (ui.statusBar.historySize). Optional: limit (1 to 1000, default 50), level. A read only; acts on no view."
+        description = "Read the status bar's last messages - what rBrowser told the person (errors, warnings, info, success), newest first: id, at (ms since the epoch), level, messageKey, the English text and its settingsKey, if any; kept (ui.statusBar.historySize). limit 1 to 1000 (default 50)."
     )]
     pub(crate) async fn status_messages(
         &self,
@@ -50,7 +50,7 @@ impl RbMcpServer {
     ) -> ToolResult {
         let result = async {
             let args = serde_json::to_value(&params)
-                .map_err(|error| ToolFailure::new("internal", error.to_string()))?;
+                .map_err(|error| ToolFailure::new("mcp.internal", error.to_string()))?;
             let answer = self.backend.host_tool(STATUS_MESSAGES_TOOL, args).await?;
             Ok(self.backend.mask(&answer))
         }

@@ -131,7 +131,7 @@ async fn a_step_is_tried_in_one_view_and_the_answer_is_masked() {
             .expect("answer"),
     );
     assert!(error);
-    assert_eq!(answer["code"], json!("target_not_single"));
+    assert_eq!(answer["code"], json!("target.not_single"));
 }
 
 #[test]

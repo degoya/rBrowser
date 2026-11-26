@@ -104,7 +104,7 @@
           "enabled": {
             "label": "Offline test",
             "description": "With an active service worker, ask its caches whether they hold the start URL, so the app opens offline.",
-            "help": "With an active service worker, asks its caches whether they hold the start URL, so the app opens offline. Off skips the offline test."
+            "help": "With an active service worker, asks its caches whether they hold the start URL, so the app opens offline. When off, it skips the offline test."
           }
         },
         "timeoutMs": {
@@ -117,7 +117,7 @@
         "refresh": "Check again",
         "report": "Send to the findings panel",
         "reported": "{count, plural, one {# finding} other {# findings}} sent to the findings panel.",
-        "loading": "Checking...",
+        "loading": "Checking…",
         "empty": "No Chromium view shows a web page.",
         "page": "Page",
         "views": "Views: {views}",

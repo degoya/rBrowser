@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "startUrl": "http://127.0.0.1:18766/sync.html",
+  "breakpoints": [
+    { "id": "desktop", "label": "Desktop", "width": 1440, "height": 900 },
+    { "id": "tablet", "label": "Tablet", "width": 768, "height": 1024, "touch": true },
+    { "id": "mobile", "label": "Mobile", "width": 393, "height": 852, "dpr": 3, "mobile": true, "touch": true }
+  ],
+  "reload": { "watch": ["www/**"], "mode": "auto" }
+}

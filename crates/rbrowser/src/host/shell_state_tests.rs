@@ -16,7 +16,7 @@ fn host() -> Arc<Host> {
 async fn a_change_reaches_the_subscribers_once_and_no_change_not_at_all() {
     let host = host();
     let mut events = rb_engine::ViewHost::subscribe(host.as_ref());
-    assert_eq!(host.shell_state(), ShellState::default());
+    assert_eq!(host.shell_state(), ShellState::at_open());
     host.update_shell_state(|state| {
         state.trusted = true;
         state.detected.push(DetectedBreakpoint {
@@ -36,4 +36,15 @@ async fn a_change_reaches_the_subscribers_once_and_no_change_not_at_all() {
         events.try_recv().is_err(),
         "an unchanged state sends nothing"
     );
+}
+
+/// RB-099-26: the built-in mode is the canvas, but a new window shows the grid the host builds
+/// from the config until the start selection is applied - the state says what the views are in.
+#[tokio::test]
+async fn a_new_window_is_in_the_grid_until_the_start_selection() {
+    assert_eq!(LayoutMode::default(), LayoutMode::Canvas);
+    let host = host();
+    let shell = host.shell_state();
+    assert_eq!(shell.mode, LayoutMode::Grid);
+    assert_eq!(shell, ShellState::at_open());
 }

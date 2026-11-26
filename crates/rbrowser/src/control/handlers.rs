@@ -153,7 +153,7 @@ fn builtin_handler(id: &str, core: Weak<Core>) -> Handler {
             }
             // The findings panel (RB-060-01) in the panels page, floating or docked (RB-080-69).
             "panels.findings" => {
-                // A person's (RB-090-71); a check's findings keep the fold (`plugins::commands`).
+                // A person's (RB-090-71), as a person's check is (RB-099-25): a folded dock opens.
                 crate::panel_dock::core_panels::open_unfolded(
                     &core,
                     crate::panel_dock::core_panels::FINDINGS,

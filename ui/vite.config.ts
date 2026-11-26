@@ -4,6 +4,7 @@ import ui from '@nuxt/ui/vite';
 import { defineConfig } from 'vitest/config';
 import { BUNDLED_ICONS } from './src/icons.ts';
 import { SETTINGS_BUNDLED_ICONS } from './src/settings/icons.ts';
+import { cataloguePlugin } from './src/i18n/cataloguePlugin.ts';
 
 // The shell is loaded from the custom scheme `rbrowser://ui/...` (RB-010-04), so every asset
 // path is relative (`base: './'`). Four pages: the toolbar (`index.html`), the pages window
@@ -14,6 +15,9 @@ import { SETTINGS_BUNDLED_ICONS } from './src/settings/icons.ts';
 export default defineConfig({
   base: './',
   plugins: [
+    // The catalogue in two halves: the shared one every page parses, the settings keys' texts
+    // only the pages window does (RB-099-20, src/i18n/split.ts).
+    cataloguePlugin(fileURLToPath(new URL('../locales/en.json', import.meta.url))),
     vue(),
     ui({
       router: false,

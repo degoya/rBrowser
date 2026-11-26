@@ -1,5 +1,6 @@
 //! Which WIT interfaces a component may import: `host` and `types` always, `settings` when the
-//! manifest declares a settings schema, and one interface per granted capability - each under
+//! manifest declares a settings schema, and the interfaces of each granted capability (one each,
+//! `project-read` and `out-write` with their large-file interfaces too, RB-099-24) - each under
 //! the contract version the host runs. Everything else - WASI, another package, another version
 //! - is refused when the component is compiled.
 //!
@@ -25,7 +26,7 @@ pub(crate) fn allowed_imports(manifest: &PluginManifest) -> Vec<String> {
             .grants
             .granted
             .iter()
-            .filter_map(|capability| capability.interface()),
+            .flat_map(|capability| capability.interfaces().iter().copied()),
     );
     allowed.into_iter().map(versioned).collect()
 }

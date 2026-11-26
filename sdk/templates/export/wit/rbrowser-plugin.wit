@@ -14,8 +14,9 @@
 // What moves the version: a new world, interface or function is additive and raises the minor
 // version; a new record field or variant case breaks a component built before it. No
 // compatibility promise before the plugin contract 1.0. Before 1.0 an additive interface keeps
-// the version (`project-write`, RB-110-13): a component that does not import it links as before,
-// and a host without it refuses one that does by the import's name.
+// the version (`project-write`, RB-110-13; `project-range` and `out-stream`, RB-099-24): a
+// component that does not import it links as before, and a host without it refuses one that does
+// by the import's name.
 
 package rbrowser:plugin@0.1.0;
 
@@ -83,6 +84,14 @@ interface project {    // capability `project-read`: `.rbrowser/` and the manife
   %list: func(dir: string) -> result<list<string>, failure>;
 }
 
+interface project-range {  // capability `project-read`: a file larger than one `project.read`
+  use types.{failure};
+  // At most `length` bytes (no more than 8 MiB a call) of the file `path` - named and checked as
+  // `project.read` names and checks it - from `offset`, and the file's whole length in bytes.
+  // Fewer bytes at the file's end, none from its end on.
+  read: func(path: string, offset: u64, length: u32) -> result<tuple<list<u8>, u64>, failure>;
+}
+
 interface project-write {  // capability `project-write`: the manifest's write globs, trusted only
   use types.{failure};
   // Replaces the project file `path` (as `project.read` names it, matching a write glob, never
@@ -96,6 +105,18 @@ interface out {        // capability `out-write`: only `.rbrowser/out/<plugin-id
   use types.{failure};
   // `path` relative to the plugin's out folder; never `..`, never absolute.
   write: func(path: string, bytes: list<u8>) -> result<_, failure>;
+}
+
+interface out-stream {  // capability `out-write`: a file larger than one `out.write`
+  use types.{failure};
+  // `begin` starts the file `path` (as `out.write` names it) in a hidden file beside it, `append`
+  // adds at most 8 MiB a call (the file at most 2 GiB), `commit` renames it to `path` at once:
+  // `path` holds the old file or the whole new one, never a part. One file at a time per plugin
+  // call; `begin` drops one not committed, so do a failed `append` or `commit` and the end of the
+  // call (returned, failed or stopped) - nothing of it stays on disk.
+  begin: func(path: string) -> result<_, failure>;
+  append: func(bytes: list<u8>) -> result<_, failure>;
+  commit: func() -> result<_, failure>;
 }
 
 interface findings {   // capability `findings`
@@ -153,24 +174,28 @@ interface exporter {
 
 world feature-plugin {
   import host; import settings; import views; import evaluate; import cdp; import http;
-  import project; import project-write; import out; import findings; import sidecar;
+  import project; import project-range; import project-write; import out; import out-stream;
+  import findings; import sidecar;
   export feature;
 }
 
 world check-plugin {
   import host; import settings; import views; import evaluate; import cdp; import http;
-  import project; import project-write; import out; import findings; import sidecar;
+  import project; import project-range; import project-write; import out; import out-stream;
+  import findings; import sidecar;
   export check;
 }
 
 world analyzer-plugin {
   import host; import settings; import views; import evaluate; import cdp; import http;
-  import project; import project-write; import out; import findings; import sidecar;
+  import project; import project-range; import project-write; import out; import out-stream;
+  import findings; import sidecar;
   export analyzer;
 }
 
 world export-plugin {
   import host; import settings; import views; import evaluate; import cdp; import http;
-  import project; import project-write; import out; import findings; import sidecar;
+  import project; import project-range; import project-write; import out; import out-stream;
+  import findings; import sidecar;
   export exporter;
 }

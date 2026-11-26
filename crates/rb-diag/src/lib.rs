@@ -8,11 +8,15 @@
 //!   [`page_text`]: the same for what a web page writes, credential URL parameters included.
 //! - [`bundle`]: the diagnostics ZIP; [`command`]: `diagnostics.create`, the CLI arguments.
 //! - [`cef`]: the CEF age notice, `crash_reporter.cfg` (local Crashpad, no upload) and CEF's log
-//!   severity - data the CEF app (RB-010-04) applies.
+//!   severity - data the CEF app (RB-010-04) applies; [`cef_log`]: `cef.log` held to the core
+//!   log's size, trimmed at the start and while the app runs (RB-099-07).
+//! - [`burst`]: a watch on the pace of an event that should be rare.
 //! - [`settings`]: the `logs` settings struct and the keys it reads.
 
 pub mod bundle;
+pub mod burst;
 pub mod cef;
+pub mod cef_log;
 pub mod command;
 mod error;
 pub mod logging;
@@ -25,6 +29,7 @@ pub mod rotate;
 pub mod settings;
 
 pub use bundle::{BundleInput, BundleReport, OsInfo, Versions, write_bundle};
+pub use burst::BurstWatch;
 pub use cef::{CefAgeNotice, CefBuild, CefLogSeverity, cef_age_notice, crash_reporter_cfg};
 pub use command::{DiagnosticsArgs, command_def};
 pub use error::DiagError;

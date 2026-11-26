@@ -2,7 +2,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use rb_engine::test_support::conformance::{check_engine, sample_spec};
-use rb_engine::{Engine, EngineError, EngineHealth, EngineKind, HandleEvent, ViewHandle, ViewId};
+use rb_engine::{
+    Engine, EngineError, EngineHealth, EngineKind, HandleEvent, HandleEvents, ViewHandle, ViewId,
+};
 use rb_sync::AgentMessage;
 use serde_json::json;
 
@@ -13,8 +15,8 @@ use crate::testing::FakeFirefox;
 
 const WAIT: Duration = Duration::from_secs(2);
 
-async fn exited(view: &Arc<dyn ViewHandle>) -> Option<bool> {
-    let mut events = view.events();
+/// Whether the view behind `events` - subscribed before what ends it - exited by a crash.
+async fn exited(mut events: HandleEvents) -> Option<bool> {
     let wait = async {
         loop {
             match events.recv().await {
@@ -253,11 +255,8 @@ async fn a_crash_ends_every_view_and_the_next_view_starts_firefox_again() {
         .create_view(&sample_spec(EngineKind::Firefox, 1))
         .await
         .expect("view");
-    let ended = tokio::spawn({
-        let view = view.clone();
-        async move { exited(&view).await }
-    });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    // Subscribed here, before the end: the task hears it whenever it runs.
+    let ended = tokio::spawn(exited(view.events()));
     fake.crash();
     assert_eq!(ended.await.expect("join"), Some(true), "crashed");
     eventually(|| engine.health() == EngineHealth::Stopped).await;
@@ -283,11 +282,8 @@ async fn closing_the_window_by_hand_ends_the_view() {
         .await
         .expect("view");
     let context = engine.view_state(ViewId(2)).expect("state").context.clone();
-    let ended = tokio::spawn({
-        let view = view.clone();
-        async move { exited(&view).await }
-    });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    // Subscribed here, before the end: the task hears it whenever it runs.
+    let ended = tokio::spawn(exited(view.events()));
     fake.emit(
         "browsingContext.contextDestroyed",
         json!({ "context": context, "parent": null }),
@@ -379,11 +375,12 @@ async fn the_first_load_keeps_the_url_firefox_ended_at() {
     let mut spec = sample_spec(EngineKind::Firefox, 7);
     spec.url = "http://localhost/old".to_owned();
     engine.create_view(&spec).await.expect("view");
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    assert_eq!(
-        engine.view_state(ViewId(7)).expect("state").url(),
-        "http://localhost/new"
-    );
+    eventually(|| {
+        engine
+            .view_state(ViewId(7))
+            .is_some_and(|state| state.url() == "http://localhost/new")
+    })
+    .await;
 }
 
 /// An engine that replaces another on the same profile starts Firefox only after the old one

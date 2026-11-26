@@ -176,10 +176,19 @@ async fn a_zoom_key_in_the_firefox_window_runs_the_page_zoom_for_its_view() {
         &key("0", "Digit0", rb_sync::MOD_CTRL),
     );
     until(|| zooms(&ui).contains(&(ViewId(3), 100))).await;
-    // A key without Ctrl is typing, not a zoom.
+    // A key without Ctrl is typing, not a zoom. The barrier: a zoom key the agent reports
+    // after it.
     fake.agent_says("rb-agent-3", &context, &key("0", "Digit0", 0));
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    assert_eq!(zooms(&ui), vec![(ViewId(3), 110), (ViewId(3), 100)]);
+    fake.agent_says(
+        "rb-agent-3",
+        &context,
+        &key("+", "Equal", rb_sync::MOD_CTRL),
+    );
+    until(|| zooms(&ui).len() == 3).await;
+    assert_eq!(
+        zooms(&ui),
+        vec![(ViewId(3), 110), (ViewId(3), 100), (ViewId(3), 110)]
+    );
 }
 
 /// RB-090-69 review: a zoom key needs no sync - as in a Chromium page, it zooms with sync off

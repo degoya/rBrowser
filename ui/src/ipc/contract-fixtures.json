@@ -137,7 +137,9 @@
       "type": "mcpSetup",
       "request": { "op": "write", "requestId": 4, "client": "cursor", "root": "C:/work/shop", "project": true, "user": false }
     },
-    { "type": "getBasicAuthStatus" }
+    { "type": "getBasicAuthStatus" },
+    { "type": "sitemapStart", "op": "discover" },
+    { "type": "authPromptReply", "id": 3, "signIn": { "user": "ada", "password": "contract-pw-1", "save": true } }
   ],
   "coreToShell": [
     { "type": "ack" },
@@ -779,7 +781,41 @@
       "environments": [
         { "environment": "local", "stored": false },
         { "environment": "staging", "stored": true, "user": "ada" }
-      ]
-    }
+      ],
+      "store": "windowsCredentialManager"
+    },
+    {
+      "type": "sitemapDiscovery",
+      "discoveryId": "1795000000-1",
+      "source": "http://localhost:3000/",
+      "site": "http://localhost:3000",
+      "pages": ["http://localhost:3000/", "http://localhost:3000/de"],
+      "tree": [
+        {
+          "name": "http://localhost:3000",
+          "first": 0,
+          "count": 2,
+          "children": [
+            { "name": "/", "first": 0, "count": 1 },
+            { "name": "de", "first": 1, "count": 1 }
+          ]
+        }
+      ],
+      "truncated": false,
+      "maxPages": 100000,
+      "views": { "all": 4, "visible": 2 }
+    },
+    {
+      "type": "authPrompt",
+      "id": 3,
+      "origin": "https://dev.example.test:443",
+      "realm": "Staging",
+      "proxy": false,
+      "views": [1, 2],
+      "environment": "development",
+      "refused": false,
+      "insecure": false
+    },
+    { "type": "authPromptClosed", "id": 3 }
   ]
 }

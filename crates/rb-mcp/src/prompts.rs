@@ -16,11 +16,11 @@ use crate::backend::ToolFailure;
 /// The setting that offers the prompts.
 pub const SETTING: &str = "mcp.prompts";
 /// The code of a prompt asked for while `mcp.prompts` is off.
-pub const DISABLED: &str = "prompts_disabled";
+pub const DISABLED: &str = "prompts.disabled";
 /// The code of a name no prompt has.
-pub const NOT_FOUND: &str = "prompt_not_found";
+pub const NOT_FOUND: &str = "prompts.not_found";
 /// The code of an argument the prompts do not take, or a value they refuse.
-pub const INVALID: &str = "invalid_arguments";
+pub const INVALID: &str = "args.invalid";
 /// The most characters `url` may have.
 pub const MAX_URL_CHARS: usize = 2048;
 /// The most breakpoint ids `breakpoints` may name.

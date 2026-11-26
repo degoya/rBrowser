@@ -141,6 +141,7 @@ fn arrange(area: &Area) {
         return;
     };
     outer.remove_all_child_views();
+    crate::host::rebuild_watch::note("the plugin panels' dock was laid out anew".to_owned());
     let side = area.shown.as_ref().map(|shown| shown.side);
     let folded = area.shown.as_ref().is_some_and(|shown| shown.collapsed);
     let horizontal = side.is_some_and(PanelSide::horizontal);

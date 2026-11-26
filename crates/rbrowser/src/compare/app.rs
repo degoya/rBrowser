@@ -335,12 +335,12 @@ pub fn run(core: &Core, id: &str, args: &Value) -> Result<Value, CommandError> {
 pub const TOOLS: [&str; 4] = [COMPARE_TOOL, RESULT_TOOL, LIVE_TOOL, CANCEL_TOOL];
 
 fn invalid(message: String) -> rb_mcp::ToolFailure {
-    rb_mcp::ToolFailure::new("invalid_arguments", message)
+    rb_mcp::ToolFailure::new("args.invalid", message)
 }
 
 fn tool_answer(answer: &impl serde::Serialize) -> Result<Value, rb_mcp::ToolFailure> {
     serde_json::to_value(answer)
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 /// A run error as an MCP failure: its stable code, the message masked.
@@ -369,7 +369,7 @@ pub async fn host_tool(
                 .runtime()
                 .spawn(async move { start(&run, args).await })
                 .await
-                .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+                .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
                 .map_err(|error| tool_failure(&error))?;
             tool_answer(&started)
         }
@@ -390,7 +390,7 @@ pub async fn host_tool(
             tool_answer(&live(core, &args).map_err(|error| tool_failure(&error))?)
         }
         other => Err(rb_mcp::ToolFailure::new(
-            "unknown_tool",
+            "tool.unknown",
             format!("the host runs no tool `{other}`"),
         )),
     }

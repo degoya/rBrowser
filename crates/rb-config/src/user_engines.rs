@@ -23,7 +23,8 @@ pub struct ExternalWindowSettings {
     pub placement: String,
     /// An external window whose engine crashed starts again by itself with its last page, at
     /// most three times in a row with a growing wait; a window you closed stays closed until
-    /// you open it again (RB-080-38; `autoRestart` before 0.8).
+    /// you open it again (RB-080-38).
+    // The key was `autoRestart` before 0.8; the alias still reads it.
     #[serde(alias = "autoRestart")]
     pub restart_on_crash: bool,
     /// The grid shows each external view's status with the buttons "Show window" and "Restart".

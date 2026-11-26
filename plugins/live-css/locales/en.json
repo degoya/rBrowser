@@ -31,7 +31,7 @@
         "enabled": "Apply",
         "file": "Kept in {file}, the whole draft as one stylesheet.",
         "keep": "Keep",
-        "loading": "Reading the draft...",
+        "loading": "Reading the draft…",
         "missing": "{id} (not in the grid)",
         "noProject": "No project is open: Live CSS keeps its draft in the project's .rbrowser/out/live-css/.",
         "notApplied": "Not applied: {reason}",

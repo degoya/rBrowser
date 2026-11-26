@@ -239,7 +239,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
                 .runtime()
                 .spawn(async move { app::start(&run, &request).await })
                 .await
-                .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+                .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
                 .map_err(failure)?;
             answer(&started)
         }
@@ -249,7 +249,7 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
                 .runtime()
                 .spawn(app::stop())
                 .await
-                .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))?
+                .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))?
                 .map_err(failure)?;
             answer(finished.as_ref())
         }
@@ -263,12 +263,12 @@ pub async fn host_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::T
 }
 
 fn invalid(message: String) -> rb_mcp::ToolFailure {
-    rb_mcp::ToolFailure::new("invalid_arguments", message)
+    rb_mcp::ToolFailure::new("args.invalid", message)
 }
 
 fn answer(value: &impl serde::Serialize) -> Result<Value, rb_mcp::ToolFailure> {
     serde_json::to_value(value)
-        .map_err(|error| rb_mcp::ToolFailure::new("internal", error.to_string()))
+        .map_err(|error| rb_mcp::ToolFailure::new("mcp.internal", error.to_string()))
 }
 
 #[cfg(test)]

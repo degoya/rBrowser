@@ -7,12 +7,13 @@
 //! | The origin a credential belongs to: https, http on this machine only, no user info | [`origin`] |
 //! | Whether a challenge is answered: a server's Basic challenge of a listed environment's origin | [`decide`] |
 //! | One answer per view and origin until the credential changes | [`attempts`] |
-//! | The credential and its store: the Credential Manager per project and origin | [`store`], `store_windows` |
+//! | The credential and its store per project and origin: Credential Manager, Keychain, Secret Service | [`store`], `store_windows`, `store_{macos,linux,codec}` |
 //! | The process's service: answer, set, remove; the password registered with `rb_diag` | [`service`] |
 //! | `environment.auth` (`Leader E A`, `omitted(secrets)`) | [`defs`], [`command`] |
 //! | Whether a credential is stored, and its user - never the password (`getBasicAuthStatus`) | [`status`] |
 //! | The answer to CEF's `GetAuthCredentials` (IO thread) | `cef_app/auth.rs` |
 //! | The shell's bar: environment, user, password; save or remove | `ui/src/basic-auth/` |
+//! | rBrowser's sign-in dialog for every challenge the store does not answer (RB-099-04) | [`prompt`] (the questions), [`ask`] (core and shell), [`later`] (off CEF's IO thread), `AuthPromptBar.vue` |
 //!
 //! The rules, each held by a test: the credential lives in the platform's store, never in a
 //! config file (`basicAuth` refuses any other field); it is bound to the project and to the
@@ -22,11 +23,14 @@
 //! credential is not sent in a loop; MCP can neither read nor set one (`refuse_mcp`, the
 //! `config_set` refusal of `basicAuth`); no error repeats what was sent.
 
+pub mod ask;
 pub mod attempts;
 pub mod command;
 pub mod decide;
 pub mod defs;
+pub mod later;
 pub mod origin;
+pub mod prompt;
 pub mod service;
 pub mod status;
 pub mod store;
@@ -38,25 +42,5 @@ pub use defs::{AUTH, SECRETS_OMITTED, definitions, refuse_mcp, register};
 pub use service::{AuthError, BasicAuth, service};
 pub use store::Credential;
 
-use crate::control::Core;
-
 /// The settings key the notices link to.
 pub const SETTINGS_KEY: &str = "basicAuth.environments";
-
-/// The credential that answers `challenge` in the view with browser id `browser` of `core`'s
-/// project.
-///
-/// # Errors
-///
-/// The [`Refusal`]: the challenge is left to the person.
-pub fn credential_for(
-    core: &Core,
-    challenge: &Challenge<'_>,
-    browser: i32,
-) -> Result<Credential, Refusal> {
-    let host = core.host();
-    let project = host
-        .project_root()
-        .map(|root| crate::instance::file::key(&root));
-    service().answer(challenge, browser, project.as_deref(), &host.config())
-}

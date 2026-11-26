@@ -20,9 +20,15 @@
 #   - once plugins/ exists, plugins\ - the bundled plugins, built, signed and checked by
 #     scripts/build-plugins.sh;
 #   - README.txt (start, SmartScreen, portable mode, diagnostics), NOTICE (CEF, Chromium, Node,
-#     playwright-core and their licences), licenses\chromium-credits.html, LICENSE, CHANGELOG.md
+#     playwright-core and their licences; packaging/NOTICE.in), THIRD-PARTY-LICENSES.txt (the
+#     licence texts of every crate and npm package, scripts/licenses.sh),
+#     licenses\chromium-credits.html, LICENSE, CHANGELOG.md
 #     and VERSION.txt (version, commit, the bundled CEF and Node);
-# and prints a size report. Downloads land in the build cache (~/.cache/rbrowser/package).
+# and prints a size report. Only the CEF locales en-US, de, es and fr are shipped
+# (rb_trim_locales), and the folder is held to packaging/windows/package-content.txt
+# (rb_check_stage) before it is zipped. The ZIP is reproducible: its members sorted, their times
+# the commit's (SOURCE_DATE_EPOCH, rb_package_epoch; the build time build.rs and VERSION.txt name
+# too), so two runs on one commit write the same bytes; artifacts/windows/SHA256SUMS lists it. Downloads land in the build cache (~/.cache/rbrowser/package).
 # The front ends ui/, agent/ (embedded by build.rs) and sidecar/ are built here from their lock
 # files, without the packages' install scripts, by the node .nvmrc pins (fnm or nvm switch to it
 # when another one is first on PATH). rbrowser-wsl, the static helper inside WSL (RB-030-04),
@@ -38,6 +44,8 @@
 #   scripts/package-windows.sh --sign                   # Authenticode-signs the staged binaries
 #                                                       # (scripts/sign-windows.sh, RB-090-03);
 #                                                       # RB_SIGN=1 in the environment asks the same
+#   scripts/package-windows.sh --msi                    # also the MSI beside the ZIP
+#                                                       # (scripts/package-msi.sh, WiX 5: Windows)
 #
 # The version is held by scripts/set-version.sh --check first; a dirty tree, or a package of the
 # same version from another commit or a dirty tree, stops the run before anything is built
@@ -70,7 +78,8 @@ profile=release
 prebuilt=""
 allow_dirty=0
 sign=0
-usage="usage: scripts/package-windows.sh [--profile release|release-test] [--plugins <dir>] [--allow-dirty] [--sign]"
+msi=0
+usage="usage: scripts/package-windows.sh [--profile release|release-test] [--plugins <dir>] [--allow-dirty] [--sign] [--msi]"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --profile)
@@ -85,6 +94,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --allow-dirty) allow_dirty=1; shift ;;
         --sign) sign=1; shift ;;
+        --msi) msi=1; shift ;;
         *) echo "$usage" >&2; exit 2 ;;
     esac
 done
@@ -94,6 +104,7 @@ version="$(rb_package_version "$ROOT")"
 OUT="$ROOT/artifacts/windows"
 STAGE="$OUT/rbrowser-$version-windows-x64"
 ZIP="$OUT/rbrowser-$version-windows-x64.zip"
+MSI="$OUT/rbrowser-$version-windows-x64.msi"
 echo "==> packaging rBrowser $version for $TARGET (profile: $profile, jobs: $JOBS) into $ZIP"
 # Signing is off unless asked for; then its key, tool and timestamp server are held before the
 # long build, and without them the run ends here (RB-090-03).
@@ -102,15 +113,24 @@ echo "==> packaging rBrowser $version for $TARGET (profile: $profile, jobs: $JOB
 # From here on no child inherits a signing secret: npm, build scripts and compilers run without
 # them; only scripts/sign-windows.sh gets them back, after the build.
 rb_package_hold_signing
+# --msi needs WiX, which runs on Windows; without it the run ends here, before the long build.
+if [[ "$msi" == 1 ]] && ! command -v wix > /dev/null; then
+    echo "!! --msi: wix is not installed. WiX 5 runs on Windows (scripts/package-msi.sh); in WSL" >&2
+    echo "   scripts/package-msi.sh --sources-only writes its sources from the unpacked ZIP. Nothing was built." >&2
+    exit 1
+fi
 
 # The commit and the time, exported so the binary and VERSION.txt name the same ones (build.rs
 # takes them verbatim). An existing package of this version from another build stops the run.
+# The time is the commit's (rb_package_epoch): two builds of one commit name the same one, and
+# SOURCE_DATE_EPOCH dates the ZIP's members to it.
 commit="$(rb_package_commit)"
 rb_package_clean "$commit" "$allow_dirty"
 rb_package_guard "$ZIP" "$(basename "$STAGE")/VERSION.txt" "$commit"
+SOURCE_DATE_EPOCH="$(rb_package_epoch "$commit")"
 RB_BUILD_COMMIT="$commit"
-RB_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-export RB_BUILD_COMMIT RB_BUILD_TIME
+RB_BUILD_TIME="$(rb_package_iso_time "$SOURCE_DATE_EPOCH")"
+export SOURCE_DATE_EPOCH RB_BUILD_COMMIT RB_BUILD_TIME
 
 # The bundled plugins, once there are any (RB-010-03).
 plugins=()
@@ -154,10 +174,12 @@ echo "==> building rbrowser-wsl ($RB_WSL_TARGET, static)"
 wsl_helper="$(rb_wsl_helper_build "$profile" "$JOBS")"
 
 echo "==> assembling $STAGE"
-rm -rf "$STAGE" "$ZIP"
+rm -rf "$STAGE" "$ZIP" "$MSI"
 # The sandboxed layout (ADR 0001): bootstrap.exe as rbrowser.exe, rbrowser.dll, the CEF runtime,
 # ui/dist as ui\ (scripts/lib/cef.sh).
 rb_stage_app "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "$STAGE" "$ROOT/ui/dist"
+# English and the three languages of phase 2; Chromium falls back to en-US for any other.
+rb_trim_locales "$STAGE/locales"
 # The console twin rbrowser.com, so a terminal waits for a command and shows its output.
 rb_stage_console "${CARGO_TARGET_DIR:-$ROOT/target}/$TARGET/$profile" "$STAGE"
 # The updater beside rbrowser.exe: the app starts a copy of it to install an update (RB-090-14).
@@ -182,7 +204,8 @@ mkdir -p "$STAGE/licenses"
 credits="$CEF_PATH/$RB_CEF_VERSION/cef_windows_x86_64/CREDITS.html"
 [[ -f "$credits" ]] || { echo "!! no $credits: the Chromium licences cannot be shipped" >&2; exit 1; }
 install -m 644 "$credits" "$STAGE/licenses/chromium-credits.html"
-install -m 644 packaging/windows/README.txt packaging/windows/NOTICE LICENSE CHANGELOG.md "$STAGE/"
+install -m 644 packaging/windows/README.txt packaging/windows/NOTICE packaging/THIRD-PARTY-LICENSES.txt \
+    LICENSE CHANGELOG.md "$STAGE/"
 if ((${#plugins[@]})); then
     mkdir -p "$STAGE/plugins"
     install -m 644 "${plugins[@]}" "$STAGE/plugins/"
@@ -193,6 +216,12 @@ printf '%s\n' "rBrowser $version" "commit $RB_BUILD_COMMIT" "built $RB_BUILD_TIM
     "node $(rb_node_version "$ROOT") (node.exe SHA-256 $(sha256sum "$STAGE/node/node.exe" | cut -d ' ' -f 1))" \
     > "$STAGE/VERSION.txt"
 
+# The folder holds what packaging/windows/package-content.txt lists, and the bundled plugins.
+plugin_entries=()
+for package in "${plugins[@]}"; do plugin_entries+=("plugins/$(basename "$package")"); done
+echo "==> the content (packaging/windows/package-content.txt)"
+rb_check_stage "$STAGE" packaging/windows/package-content.txt "${plugin_entries[@]}"
+
 # --sign: the staged binaries - ours and CEF's, not node\ - are signed and verified before the
 # ZIP is written; a failure ends the run without a package (RB-090-03). release.yml instead signs
 # the finished ZIP in a step of its own, so no certificate is on the runner while anything builds.
@@ -202,6 +231,13 @@ fi
 echo "==> writing $ZIP"
 rb_package_zip "$OUT" "$(basename "$STAGE")" "$ZIP"
 rb_package_sizes "$STAGE" "$ZIP"
+packed=("$(basename "$ZIP")")
+if [[ "$msi" == 1 ]]; then
+    echo "==> writing $MSI"
+    scripts/package-msi.sh "$STAGE" "$MSI"
+    packed+=("$(basename "$MSI")")
+fi
+rb_package_sums "$OUT" "${packed[@]}"
 rm -rf "$STAGE"
 echo "==> done"
-ls -la "$ZIP"
+(cd "$OUT" && ls -la "${packed[@]}" SHA256SUMS)

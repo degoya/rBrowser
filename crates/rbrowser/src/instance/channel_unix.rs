@@ -1,6 +1,5 @@
-//! The channel on Unix: a socket in the instance folder (0700), mode 0600, and every peer's
-//! uid checked against the socket's owner. Phase 1 ships on Windows only; this side keeps the
-//! hand-over tested on Linux and is the base for phase 2.
+//! The channel on Unix, that of the Linux and macOS builds: a socket in the instance folder
+//! (0700), mode 0600, and every peer's uid checked against the socket's owner.
 
 use std::io;
 use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};

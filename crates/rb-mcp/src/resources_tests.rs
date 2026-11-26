@@ -53,7 +53,12 @@ fn four_resources_and_the_screenshot_template_are_listed() {
 #[tokio::test]
 async fn views_answers_what_views_list_answers() {
     let fake = Arc::new(FakeBackend::default());
-    let (error, tool) = answer_json(&server(&fake).views_list().await.expect("answer"));
+    let (error, tool) = answer_json(
+        &server(&fake)
+            .views_list(crate::tools::no_args())
+            .await
+            .expect("answer"),
+    );
     assert!(!error);
     assert_eq!(read_json(&fake, VIEWS).await, tool);
     assert_eq!(tool.as_array().map(Vec::len), Some(2));

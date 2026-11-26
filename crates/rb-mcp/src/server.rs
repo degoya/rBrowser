@@ -47,9 +47,9 @@ impl RbMcpServer {
         }
     }
 
-    /// Every tool this server offers.
+    /// Every core tool this server offers, annotated ([`crate::annotations`]).
     pub(crate) fn router() -> ToolRouter<Self> {
-        Self::views_router()
+        let mut router = Self::views_router()
             + Self::views_edit_router()
             + Self::project_router()
             + Self::layout_router()
@@ -90,7 +90,10 @@ impl RbMcpServer {
             + Self::restore_last_router()
             + Self::android_router()
             + Self::ios_router()
-            + Self::script_router()
+            + Self::script_router();
+        // RB-099-16: every core tool says what it does to its world.
+        crate::annotations::annotate(&mut router);
+        router
     }
 
     /// The names of every tool, sorted: what the coverage test holds the commands against.
@@ -111,7 +114,7 @@ impl RbMcpServer {
         let id = id.to_owned();
         tokio::task::spawn_blocking(move || backend.run_command(&id, args))
             .await
-            .map_err(|_| ToolFailure::new("internal", "the command did not finish"))?
+            .map_err(|_| ToolFailure::new("mcp.internal", "the command did not finish"))?
             .map_err(ToolFailure::from)
     }
 
@@ -123,7 +126,7 @@ impl RbMcpServer {
         let backend = Arc::clone(&self.backend);
         tokio::task::spawn_blocking(move || read(backend.as_ref()))
             .await
-            .map_err(|_| ToolFailure::new("internal", "the read did not finish"))
+            .map_err(|_| ToolFailure::new("mcp.internal", "the read did not finish"))
     }
 }
 

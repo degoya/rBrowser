@@ -241,7 +241,8 @@ pub fn show(core: &Core, url: String) {
 }
 
 /// The panels page at `url` because a person asked for a panel - a command from a menu, the
-/// palette or a shortcut that no MCP tool runs (RB-090-71): unlike [`show`], a docked dock folded
+/// palette or a shortcut that no MCP tool runs (RB-090-71), or a check they ran (RB-099-25,
+/// [`crate::mcp::origin`] tells a tool's run apart): unlike [`show`], a docked dock folded
 /// to its rail or hidden opens at its size, and `panels.dockState` says so. The floating window
 /// opens as [`show`] opens it.
 pub fn show_unfolded(core: &Core, url: String) {

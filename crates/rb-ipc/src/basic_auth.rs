@@ -2,7 +2,8 @@
 //! for which user - never the password, which stays in the platform's credential store
 //! (`rbrowser::basic_auth`). The answer to `getBasicAuthStatus` and pushed after
 //! `environment.auth` stored or removed one, so Settings > Project > Environments and the shell's
-//! bar show it at once. Mirror: `ui/src/ipc/basicAuth.ts`.
+//! bar show it at once; with it, which store this platform uses, so the texts name it (RB-099-05).
+//! Mirror: `ui/src/ipc/basicAuth.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +41,20 @@ impl EnvironmentAuthStatus {
             user: None,
         }
     }
+}
+
+/// Where this platform keeps Basic auth credentials (RB-099-05), for the shell to name it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CredentialStoreKind {
+    /// Windows: the Credential Manager.
+    WindowsCredentialManager,
+    /// macOS: the login keychain.
+    MacosKeychain,
+    /// Linux: the Secret Service (GNOME Keyring, KWallet).
+    SecretService,
+    /// A platform without a store rBrowser uses: nothing is kept.
+    None,
 }
 
 #[cfg(test)]

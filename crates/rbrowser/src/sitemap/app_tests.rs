@@ -46,3 +46,22 @@ fn the_notices_link_the_sitemap_settings() {
     assert_eq!(notification.args["done"], "76");
     assert_eq!(notification.settings_key.as_deref(), Some("sitemap"));
 }
+
+#[test]
+fn the_visible_command_captures_only_the_visible_views() {
+    use super::super::tool::CaptureViews;
+    let plain = command_args(CAPTURE, &serde_json::json!(null)).expect("plain");
+    assert_eq!(plain.views, None);
+    let visible = command_args(CAPTURE_VISIBLE, &serde_json::json!(null)).expect("visible");
+    assert_eq!(visible.views, Some(CaptureViews::Visible));
+    let over = command_args(CAPTURE_VISIBLE, &serde_json::json!({ "views": "all" }))
+        .expect("the command's word wins");
+    assert_eq!(over.views, Some(CaptureViews::Visible));
+    assert!(
+        command_args(
+            CAPTURE_VISIBLE,
+            &serde_json::json!({ "breakpoints": ["mobile"] })
+        )
+        .is_err()
+    );
+}

@@ -3,9 +3,13 @@ page at its own size and emulation. You control the views the person sees.
 
 Views and targets:
 - `views_list` lists the views: their `id`, breakpoint, size, URL and loading state.
-- Every view tool takes `target`: `"all"` (the default for navigation), a view id from
-  `views_list`, or a breakpoint id such as `"mobile"` (every view showing it). An unknown
-  target answers with the known views.
+- Every view tool takes `target`: `"all"`, a view id from `views_list`, or a breakpoint id
+  such as `"mobile"` (every view showing it). When absent: `"all"` for tools that read,
+  navigate or run over the views; the active view for tools that act in a page as a person
+  would (input, emulation, engine, zoom, session, forced states, pseudo-locale) and for
+  `screenshot`. Each tool's `target` says which. An unknown target answers with the known views.
+- A failure answers `{error, code, settingsKey?}`; `code` is dotted (`area.reason`), and until
+  1.0 a code that replaced a flat one also comes as `legacyCode`.
 - `navigate`, `reload`, `back` and `forward` wait for the loads and answer each view's final
   URL; `settled: false` means a view was still loading at the timeout.
 
@@ -97,7 +101,7 @@ start-up; `reset` measures afresh).
 Playwright and other CDP clients: `cdp_endpoint` answers the URL for
 `connectOverCDP(url, { headers })` with its token (and the URL from WSL); a person switches the
 proxy on, and `evaluate` too (`mcp.allowEvaluate`): the token is full control of the page, so
-without it the answer is the error evaluate_disabled. Only the grid's views are targets. Never
+without it the answer is the error evaluate.disabled. Only the grid's views are targets. Never
 call `setViewportSize` on rBrowser's pages:
 the size of each view is its breakpoint and the call has no effect. Use `view_set_breakpoint`
 instead.

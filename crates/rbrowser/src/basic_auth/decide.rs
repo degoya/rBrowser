@@ -26,7 +26,7 @@ pub struct Challenge<'a> {
     pub scheme: &'a str,
 }
 
-/// Why a challenge is left to the person.
+/// Why a challenge is not answered: CEF cancels it and the server's 401 page shows (RB-099-04).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum Refusal {
     /// A proxy asks.
@@ -68,7 +68,7 @@ pub struct Eligible {
 ///
 /// # Errors
 ///
-/// The [`Refusal`]: the challenge is left to the person.
+/// The [`Refusal`]: the challenge is not answered.
 pub fn eligible(challenge: &Challenge<'_>, config: &ProjectConfig) -> Result<Eligible, Refusal> {
     if challenge.is_proxy {
         return Err(Refusal::Proxy);
@@ -91,6 +91,58 @@ pub fn eligible(challenge: &Challenge<'_>, config: &ProjectConfig) -> Result<Eli
             origin: origin.clone(),
         })
         .ok_or(Refusal::NotAnEnvironment)
+}
+
+/// What rBrowser's sign-in dialog and the log name for `challenge` (RB-099-04): the server's
+/// `scheme://host:port` - the scheme of the request, the host and port CEF names - and a proxy's
+/// `host:port`; never the rest of the request URL, whose path, query or user info may carry a
+/// secret. An origin that may carry a stored credential is written as its [`AuthOrigin`].
+#[must_use]
+pub fn shown_origin(challenge: &Challenge<'_>) -> String {
+    let host = if challenge.host.contains(':') && !challenge.host.starts_with('[') {
+        format!("[{}]", challenge.host)
+    } else {
+        challenge.host.to_ascii_lowercase()
+    };
+    if challenge.is_proxy {
+        return format!("{host}:{}", challenge.port);
+    }
+    if let Ok(origin) = AuthOrigin::parse(challenge.origin_url)
+        && u16::try_from(challenge.port)
+            .is_ok_and(|port| origin.matches_host_port(challenge.host, port))
+    {
+        return origin.to_string();
+    }
+    let scheme = url::Url::parse(challenge.origin_url.trim())
+        .map_or_else(|_| "unknown".to_owned(), |url| url.scheme().to_owned());
+    format!("{scheme}://{host}:{}", challenge.port)
+}
+
+/// Whether an answer to `challenge` would cross the network unencrypted: a server's challenge
+/// over plain `http` to another machine (review w35; the bar says so).
+#[must_use]
+pub fn unencrypted(challenge: &Challenge<'_>) -> bool {
+    !challenge.is_proxy && AuthOrigin::parse(challenge.origin_url) == Err(OriginError::PlainHttp)
+}
+
+/// The environment of `config` a person's answer to `challenge` may be stored for: a server's
+/// `Basic` challenge of an environment's own address that may carry a credential, listed under
+/// `basicAuth.environments` or not (RB-099-04).
+#[must_use]
+pub fn saveable(challenge: &Challenge<'_>, config: &ProjectConfig) -> Option<String> {
+    if challenge.is_proxy || !challenge.scheme.eq_ignore_ascii_case("basic") {
+        return None;
+    }
+    let origin = AuthOrigin::parse(challenge.origin_url).ok()?;
+    let port = u16::try_from(challenge.port).ok()?;
+    if !origin.matches_host_port(challenge.host, port) {
+        return None;
+    }
+    config
+        .environments
+        .iter()
+        .find(|environment| AuthOrigin::parse(&environment.url).as_ref() == Ok(&origin))
+        .map(|environment| environment.id.clone())
 }
 
 /// The origin of the environment `id` of `config`, the one its credential is set for: `None`

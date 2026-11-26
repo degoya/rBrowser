@@ -132,15 +132,16 @@ impl Host {
     /// The effects of a view leaving or entering the grid: the grid again (every other view kept,
     /// only re-parented), new metrics, throttling and events.
     fn moved_out_or_in(&self, view: ViewId) {
-        self.regrid();
+        self.regrid(format!("view {view} left or entered the grid"));
         self.spawn_apply(view, false);
         self.rethrottle();
         self.emit(ViewEvent::Updated(view));
         self.emit(ViewEvent::LayoutChanged);
     }
 
-    /// Sends the grid of the state in effect again, without a rebuild.
-    pub(super) fn regrid(&self) {
+    /// Sends the grid of the state in effect again, without a rebuild; `cause` says why
+    /// (`rebuild_watch`, RB-099-07).
+    pub(super) fn regrid(&self, cause: String) {
         let (plan, gap, mut cells) = {
             let state = self.state();
             let plan = match crate::layout_plan::plan_hiding(&state.layout, &state.hidden) {
@@ -160,6 +161,7 @@ impl Host {
         };
         let footer_height = self.with_footers(&mut cells);
         let (area, placed) = self.placed_views().unzip();
+        super::rebuild_watch::note(cause);
         self.ui.apply_grid(UiGrid {
             plan,
             gap,

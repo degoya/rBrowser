@@ -59,6 +59,9 @@ async fn answer(core: &Arc<Core>, request: Value) -> Result<Value, Failure> {
             let call = checked_call(command, tool, &args, limit)
                 .map_err(|reason| (IpcErrorCode::BadRequest, reason))?;
             let args = if args.is_null() { json!({}) } else { args };
+            // RB-099-10: a panel's `$scope` becomes the breakpoints it takes.
+            let args = crate::run_scope::plugin_args(&core.host().config(), &args)
+                .map_err(|error| (IpcErrorCode::BadRequest, error.to_string()))?;
             let (name, value) = match call {
                 Call::Command(command) => (
                     command.clone(),

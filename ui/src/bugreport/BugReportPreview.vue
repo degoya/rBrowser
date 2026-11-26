@@ -50,6 +50,7 @@ onMounted(() => void preview.load());
       v-else-if="state.phase === 'failed'"
       color="error"
       variant="subtle"
+      role="alert"
       :title="t('report.preview.failed')"
       data-testid="bug-report-failed"
     />
@@ -75,6 +76,7 @@ onMounted(() => void preview.load());
         v-if="refused"
         color="error"
         variant="subtle"
+        role="alert"
         :title="t('report.preview.refused')"
         data-testid="bug-report-refused"
       />

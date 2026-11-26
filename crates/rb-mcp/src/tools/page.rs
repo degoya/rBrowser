@@ -17,7 +17,7 @@ use crate::target::{TargetArg, resolve};
 /// The setting that allows `evaluate`.
 pub const ALLOW_EVALUATE: &str = "mcp.allowEvaluate";
 /// The code of `evaluate` while it is off.
-pub const EVALUATE_DISABLED: &str = "evaluate_disabled";
+pub const EVALUATE_DISABLED: &str = "evaluate.disabled";
 /// The default and the most of `evaluate`'s `timeoutMs`.
 const EVALUATE_TIMEOUT: (u32, u32) = (10_000, 60_000);
 /// The default `maxNodes` of `snapshot`.
@@ -55,7 +55,7 @@ pub struct SnapshotParams {
 #[tool_router(router = page_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Run a JavaScript expression in the page of the targeted views (main world) and answer each view's value (by value; promises awaited). Off by default: a person switches it on with the setting mcp.allowEvaluate; while off the answer is an error with code evaluate_disabled and settingsKey. Answers are masked and cut at mcp.maxAnswerBytes. target: \"all\" (default), a view id or a breakpoint id."
+        description = "Run a JavaScript expression in the page of the targeted views (main world) and answer each view's value (by value; promises awaited), masked and cut at mcp.maxAnswerBytes. Off until a person switches on mcp.allowEvaluate (code evaluate.disabled)."
     )]
     pub(crate) async fn evaluate(
         &self,
@@ -97,7 +97,7 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "The accessibility tree of the targeted views (CDP Accessibility.getFullAXTree), trimmed to the nodes that matter: id, parent, role, name, value. maxNodes caps each view (default 1000); answers are cut at mcp.maxAnswerBytes. target: \"all\" (default), a view id or a breakpoint id."
+        description = "The accessibility tree of the targeted views (CDP Accessibility.getFullAXTree), trimmed to the nodes that matter: id, parent, role, name, value. maxNodes caps each view (default 1000); cut at mcp.maxAnswerBytes."
     )]
     pub(crate) async fn snapshot(
         &self,

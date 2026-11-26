@@ -223,6 +223,42 @@ async fn the_version_names_the_browser_socket_and_a_path_token_keeps_its_prefix(
     assert!(connect(&url, None).await.is_ok());
 }
 
+/// A call naming a target is checked in a task of its own: a call after it reaches the pipe
+/// while the check still waits - the order the module head of `connection` names (RB-099-18).
+#[tokio::test]
+async fn a_call_after_a_target_call_is_not_held_up_by_its_check() {
+    let setup = setup();
+    let mut ws = connect(&browser_url(&setup), Some(TOKEN))
+        .await
+        .expect("connects");
+    setup.fake.hold("Target.getTargetInfo", None);
+    let attach = json!({"id": 1, "method": "Target.attachToTarget", "params": {"targetId": "V1", "flatten": true}});
+    ws.send(Message::text(attach.to_string()))
+        .await
+        .expect("sends");
+    until(|| !setup.fake.sent("Target.getTargetInfo").is_empty()).await;
+    let version = ask(&mut ws, json!({"id": 2, "method": "Browser.getVersion"})).await;
+    assert!(version.get("result").is_some(), "{version}");
+    assert!(
+        setup.fake.sent("Target.attachToTarget").is_empty(),
+        "the target call waits for its check"
+    );
+    setup.fake.release();
+    loop {
+        let frame = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .expect("an answer in time")
+            .expect("open")
+            .expect("no error");
+        let answer: Value = serde_json::from_str(frame.to_text().expect("text")).expect("json");
+        if answer["id"] == 1 {
+            assert!(answer["result"]["sessionId"].is_string(), "{answer}");
+            break;
+        }
+    }
+    assert_eq!(setup.fake.sent("Target.attachToTarget").len(), 1);
+}
+
 #[tokio::test]
 async fn device_metrics_stay_rbrowsers_and_input_is_scaled_to_the_view() {
     let setup = setup();
@@ -331,7 +367,9 @@ async fn what_the_proxy_keeps_lives_until_its_last_connection_ends() {
     let answer = ask(&mut ws, json!({ "id": 1, "method": "Target.getTargets" })).await;
     assert!(answer.get("result").is_some(), "{answer}");
     drop(server);
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    // The barrier: the connection still answers, after the drop.
+    let answer = ask(&mut ws, json!({ "id": 2, "method": "Target.getTargets" })).await;
+    assert!(answer.get("result").is_some(), "{answer}");
     assert!(!freed.load(Ordering::SeqCst), "a connection still runs");
     ws.close(None).await.expect("closes");
     until(|| freed.load(Ordering::SeqCst)).await;
@@ -422,9 +460,9 @@ async fn the_token_is_in_no_log_line() {
     drop(ws);
     let fresh = "9".repeat(64);
     setup.server.rotate(ProxyToken::from_text(fresh.clone()));
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    let log = String::from_utf8_lossy(&lock(&captured.0)).into_owned();
-    assert!(log.contains("refused"), "the refusals are logged: {log}");
+    let logged = || String::from_utf8_lossy(&lock(&captured.0)).into_owned();
+    until(|| logged().contains("refused")).await;
+    let log = logged();
     assert!(!log.contains(TOKEN), "{log}");
     assert!(!log.contains(&fresh), "{log}");
 }

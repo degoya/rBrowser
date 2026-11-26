@@ -41,6 +41,7 @@ mod framework_devtools;
 mod jsonio;
 mod layout_mode_settings;
 mod layout_modes;
+mod layout_preset;
 mod load;
 mod local_only;
 mod merge;
@@ -90,6 +91,7 @@ mod user_vitals;
 mod validate;
 mod video_settings;
 mod view_footer_settings;
+mod view_scope;
 mod viewport;
 mod visual;
 mod watch;
@@ -218,6 +220,7 @@ pub use validate::{
 };
 pub use video_settings::{ToolsSettings, VideoConfig};
 pub use view_footer_settings::{FooterAlign, FooterField, FooterWrap, ViewFooterSettings};
+pub use view_scope::{ScopeError, ViewScope, resolve_scope};
 pub use viewport::check_viewports;
 pub use watch::{is_config_file, reload_on_change, watched_files};
 

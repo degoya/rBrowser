@@ -169,3 +169,144 @@ fn a_proxy_another_scheme_or_a_host_that_does_not_match_is_refused() {
         Err(Refusal::HostPort)
     );
 }
+
+/// RB-099-04: the challenge as CEF 156 really delivers it once Chromium's own prompt is off
+/// (`net_service::LoginDelegate`): `origin_url` is the challenged request's whole URL - path and
+/// query included -, `host` and `port` are the challenger's, `scheme` is Chromium's lower-case
+/// `basic`. An environment behind https on its default port, the address written without a
+/// trailing slash, is answered for any page of it, and a redirect onto `www.` is not.
+#[test]
+fn the_challenge_cef_delivers_for_a_page_of_the_environment_is_answered() {
+    let config: ProjectConfig = serde_json::from_value(json!({
+        "version": 1,
+        "environments": [{ "id": "development", "url": "https://dev.example.test" }],
+        "basicAuth": { "environments": ["development"] }
+    }))
+    .expect("config");
+    for url in [
+        "https://dev.example.test/",
+        "https://dev.example.test/de/shop/?utm_source=x#top",
+        "https://DEV.example.test:443/favicon.ico",
+    ] {
+        let found = eligible(&challenge(url, "dev.example.test", 443), &config)
+            .unwrap_or_else(|refusal| panic!("{url}: {refusal}"));
+        assert_eq!(found.environment, "development");
+        assert_eq!(found.origin.to_string(), "https://dev.example.test:443");
+    }
+    assert_eq!(
+        eligible(
+            &challenge("https://www.dev.example.test/", "www.dev.example.test", 443),
+            &config
+        ),
+        Err(Refusal::NotAnEnvironment)
+    );
+}
+
+/// RB-099-04: environments with one address share one sign-in - the first listed of them
+/// answers, its credential named by the origin all of them have.
+#[test]
+fn environments_with_one_address_share_the_answer() {
+    let config: ProjectConfig = serde_json::from_value(json!({
+        "version": 1,
+        "environments": [
+            { "id": "local", "url": "http://localhost:3000" },
+            { "id": "staging", "url": "http://localhost:3000/" },
+            { "id": "production", "url": "http://127.0.0.1:3000/" }
+        ],
+        "basicAuth": { "environments": ["staging", "local"] }
+    }))
+    .expect("config");
+    let found = eligible(
+        &challenge("http://localhost:3000/app", "localhost", 3000),
+        &config,
+    )
+    .expect("answered");
+    assert_eq!(found.environment, "local");
+    assert_eq!(found.origin.to_string(), "http://localhost:3000");
+}
+
+/// RB-099-04: what rBrowser's sign-in dialog names - the server's origin, a proxy's host and
+/// port - and never the request's path, query or user info.
+#[test]
+fn the_dialog_names_the_origin_only() {
+    let page = challenge(
+        "https://Staging.example.test/shop/?token=x",
+        "staging.example.test",
+        443,
+    );
+    assert_eq!(shown_origin(&page), "https://staging.example.test:443");
+    let proxy = Challenge {
+        is_proxy: true,
+        ..challenge("https://staging.example.test/", "proxy.example.test", 3128)
+    };
+    assert_eq!(shown_origin(&proxy), "proxy.example.test:3128");
+    // The scheme stays when the URL may carry no credential (review w35); the user info never shows.
+    let user_info = challenge(
+        "https://ada:pw@staging.example.test/",
+        "staging.example.test",
+        443,
+    );
+    assert_eq!(shown_origin(&user_info), "https://staging.example.test:443");
+    let plain = challenge("http://plain.example.test/x?y=1", "plain.example.test", 80);
+    assert_eq!(shown_origin(&plain), "http://plain.example.test:80");
+    assert!(unencrypted(&plain));
+    assert!(!unencrypted(&challenge(
+        "http://localhost:8080/",
+        "localhost",
+        8080
+    )));
+    assert!(!unencrypted(&page));
+    let plain_proxy = Challenge {
+        is_proxy: true,
+        ..plain
+    };
+    assert!(
+        !unencrypted(&plain_proxy),
+        "a proxy's own scheme is not the request's"
+    );
+}
+
+/// RB-099-04: "Save for environment ..." only for an environment's own address that may carry
+/// a credential (https, http on this machine), a server's Basic challenge - listed under
+/// `basicAuth.environments` or not.
+#[test]
+fn an_answer_may_be_saved_only_for_an_environments_own_address() {
+    let config = config();
+    let saveable_for = |url, host, port| saveable(&challenge(url, host, port), &config);
+    assert_eq!(
+        saveable_for(
+            "https://preview.example.test/x",
+            "preview.example.test",
+            443
+        )
+        .as_deref(),
+        Some("preview")
+    );
+    assert_eq!(
+        saveable_for("http://localhost:8080/", "localhost", 8080).as_deref(),
+        Some("local")
+    );
+    assert_eq!(
+        saveable_for("https://evil.example.test/", "evil.example.test", 443),
+        None
+    );
+    assert_eq!(
+        saveable_for("http://plain.example.test/", "plain.example.test", 80),
+        None
+    );
+    assert_eq!(
+        saveable_for("https://staging.example.test/", "evil.example.test", 443),
+        None,
+        "the host CEF names is not the origin's"
+    );
+    let proxy = Challenge {
+        is_proxy: true,
+        ..challenge("https://staging.example.test/", "staging.example.test", 443)
+    };
+    assert_eq!(saveable(&proxy, &config), None);
+    let digest = Challenge {
+        scheme: "digest",
+        ..challenge("https://staging.example.test/", "staging.example.test", 443)
+    };
+    assert_eq!(saveable(&digest, &config), None);
+}

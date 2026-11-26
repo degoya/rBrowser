@@ -25,7 +25,7 @@ pub struct ViewMetricsParams {
 #[tool_router(router = metrics_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Read the Web Vitals and resources of the targeted views (target: \"all\" (default), a view id or a breakpoint id). Per view: vitals lcp, cls, inp, fcp and ttfb, each with value (ms; CLS unitless), rating (\"good\", \"needs-improvement\" or \"poor\" by web.dev's thresholds, overridable in vitals.thresholds) and the element behind it (lcp element, cls sources, inp target as CSS paths); resources cpuPercent (the page's main-thread share), memoryMb (its JS heap), cpuWarn and ramWarn (resources.cpuWarnPercent, resources.ramWarnMb); throttle (visible, hidden or cpuLimited); segment and soft (a soft navigation measures only CLS and INP). A missing value is {na, reason}: pending (not measured yet, e.g. INP before an interaction), unsupported or engine (the engine cannot give it; Firefox and WebKit views have no resources), soft, or off with the settingsKey that switched it off."
+        description = "Read the Web Vitals and resources of the targeted views. Per view: vitals lcp, cls, inp, fcp, ttfb, each with value (ms; CLS unitless), rating (good, needs-improvement, poor; vitals.thresholds) and the element behind it; resources cpuPercent, memoryMb, cpuWarn, ramWarn; throttle; segment and soft (a soft navigation measures only CLS and INP). A missing value is {na, reason}: pending, unsupported, engine (Firefox and WebKit have no resources), soft, or off with its settingsKey."
     )]
     pub(crate) async fn view_metrics(
         &self,

@@ -231,3 +231,124 @@ async fn no_views_is_an_error() {
     .expect_err("nothing to capture");
     assert!(matches!(error, CaptureError::NoViews));
 }
+
+/// Answers the same PNG for every view.
+struct Fixed(Vec<u8>);
+
+#[async_trait]
+impl Shooter for Fixed {
+    async fn shoot(&self, _: ViewId, _: &Shot, _: f64) -> Result<Vec<u8>, EngineError> {
+        Ok(self.0.clone())
+    }
+}
+
+/// A stitched full page of `rows` rows, cut from a page of 90000 CSS px (RB-099-11).
+fn cut_png(rows: u32) -> Vec<u8> {
+    let image = rb_visual::Rgba::new(1, rows, [1, 2, 3, 255]).expect("small");
+    let png = encode_png(&image).expect("encoded");
+    let section = rb_visual::stitch::Section { png: &png, rows };
+    let cut = rb_visual::Truncated {
+        page_height: 90_000,
+        captured_height: 43_690,
+    };
+    rb_visual::stitch(&[section], Some(cut)).expect("stitched")
+}
+
+#[tokio::test]
+async fn a_cut_page_is_named_in_the_answer() {
+    let answer = run(
+        &Fixed(cut_png(3)),
+        &views()[..1],
+        &Shot::FullPage,
+        CaptureMode::FullPage,
+        false,
+        &context(None),
+    )
+    .await
+    .expect("ran");
+    let shot = &answer.shots[0];
+    assert!(shot.truncated);
+    assert_eq!(shot.page_height, Some(90_000));
+    assert_eq!(shot.height, 3);
+    let json = serde_json::to_value(shot).expect("json");
+    assert_eq!(json["truncated"], true);
+    assert_eq!(json["pageHeight"], 90_000);
+    // A whole page says nothing of it.
+    let whole = run(
+        &shooter(None),
+        &views(),
+        &Shot::FullPage,
+        CaptureMode::FullPage,
+        false,
+        &context(None),
+    )
+    .await
+    .expect("ran");
+    assert!(
+        whole
+            .shots
+            .iter()
+            .all(|shot| !shot.truncated && shot.page_height.is_none())
+    );
+    let json = serde_json::to_value(&whole.shots[0]).expect("json");
+    assert!(json.get("truncated").is_none(), "{json}");
+}
+
+#[tokio::test]
+async fn the_overview_keeps_the_top_of_a_long_page() {
+    let image = rb_visual::Rgba::new(1, OVERVIEW_ROWS + 100, [1, 2, 3, 255]).expect("small");
+    let png = encode_png(&image).expect("encoded");
+    let answer = run(
+        &Fixed(png),
+        &views()[..1],
+        &Shot::FullPage,
+        CaptureMode::FullPage,
+        true,
+        &context(None),
+    )
+    .await
+    .expect("ran");
+    let shot = &answer.shots[0];
+    assert_eq!(shot.height, OVERVIEW_ROWS);
+    assert!(shot.truncated);
+    assert_eq!(shot.page_height, None, "no page height recorded");
+    assert!(answer.overview.is_some());
+}
+
+#[tokio::test]
+async fn a_full_page_with_images_still_loading_says_so_in_the_answer() {
+    // RB-099-28: the lazy-loading pre-pass ran out of its deadline; the capture went on.
+    let image = rb_visual::Rgba::new(1, 2, [1, 2, 3, 255]).expect("small");
+    let png = encode_png(&image).expect("encoded");
+    let noted = rb_visual::note::with_note(&png, rb_visual::note::IMAGES_PENDING_KEY, "4000")
+        .expect("a PNG");
+    for overview in [false, true] {
+        let answer = run(
+            &Fixed(noted.clone()),
+            &views()[..1],
+            &Shot::FullPage,
+            CaptureMode::FullPage,
+            overview,
+            &context(None),
+        )
+        .await
+        .expect("ran");
+        let shot = &answer.shots[0];
+        assert!(shot.images_pending, "overview {overview}");
+        assert!(shot.error.is_none());
+        let json = serde_json::to_value(shot).expect("json");
+        assert_eq!(json["imagesPending"], true);
+    }
+    let whole = run(
+        &Fixed(png),
+        &views()[..1],
+        &Shot::FullPage,
+        CaptureMode::FullPage,
+        false,
+        &context(None),
+    )
+    .await
+    .expect("ran");
+    let json = serde_json::to_value(&whole.shots[0]).expect("json");
+    assert!(json.get("imagesPending").is_none(), "{json}");
+}

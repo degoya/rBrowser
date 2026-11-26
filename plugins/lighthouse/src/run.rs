@@ -33,6 +33,8 @@ pub struct Request {
     pub view: Option<u32>,
     /// Report the findings into the findings panel (the command).
     pub report: bool,
+    /// The scope the call named (`$scope`, RB-099-10), kept in the summary.
+    pub scope: Option<Value>,
 }
 
 /// `YYYYMMDD-HHMMSS` of a Unix time, in UTC.
@@ -200,7 +202,8 @@ pub fn run(host: &mut dyn PluginHost, request: &Request) -> Result<Value, Failur
     let summary = json!({
         "version": SUMMARY_VERSION, "runId": id, "startedAt": started_at,
         "lighthouseVersion": version, "categories": categories, "throttling": throttling,
-        "url": request.url, "breakpoints": breakpoints, "skipped": skipped_json(&skipped),
+        "url": request.url, "scope": request.scope, "breakpoints": breakpoints,
+        "skipped": skipped_json(&skipped),
         "failures": failures, "cancelled": cancelled, "previous": previous,
         "findings": findings.len(),
     });

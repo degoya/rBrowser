@@ -33,7 +33,7 @@ struct Args {
 ///
 /// # Errors
 ///
-/// `invalid_arguments` for a limit outside 1..=[`MAX_LIMIT`] or an unknown level.
+/// `args.invalid` for a limit outside 1..=[`MAX_LIMIT`] or an unknown level.
 pub fn status_messages(core: &Core, args: &Value) -> Result<Value, ToolFailure> {
     answer(core.status_log(), args)
 }
@@ -43,12 +43,12 @@ fn answer(log: &StatusLog, args: &Value) -> Result<Value, ToolFailure> {
         Args::default()
     } else {
         serde_json::from_value(args.clone())
-            .map_err(|error| ToolFailure::new("invalid_arguments", error.to_string()))?
+            .map_err(|error| ToolFailure::new("args.invalid", error.to_string()))?
     };
     let limit = args.limit.unwrap_or(DEFAULT_LIMIT);
     if limit == 0 || limit > MAX_LIMIT {
         return Err(ToolFailure::new(
-            "invalid_arguments",
+            "args.invalid",
             format!("`limit` must be 1 to {MAX_LIMIT}"),
         ));
     }

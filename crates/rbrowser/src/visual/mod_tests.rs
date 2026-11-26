@@ -39,6 +39,7 @@ fn the_commands_are_this_modules_only() {
         COMMANDS,
         [
             "visual.compare",
+            "visual.compare_visible",
             "visual.baseline_update",
             "visual.lfs_setup"
         ]
@@ -67,4 +68,39 @@ fn a_started_run_names_itself_with_its_views() {
         assert_eq!(notification.args["count"], "3");
         assert_eq!(notification.settings_key.as_deref(), Some(SETTINGS_KEY));
     }
+}
+
+fn host() -> Arc<Host> {
+    let (_fake, router) = crate::cdp::fake::FakeBrowser::connect();
+    let ui = Arc::new(crate::host::ui::recording::RecordingUi::default());
+    let host = Host::new(ui, router, tokio::runtime::Handle::current());
+    host.open_config(crate::host::state::default_config(), None)
+        .expect("opens");
+    host
+}
+
+/// RB-099-10: a scope takes the views of its breakpoints only; the others are not captured, so
+/// their baselines stay as they are.
+#[tokio::test]
+async fn a_scope_takes_only_the_views_of_its_breakpoints() {
+    let host = host();
+    let chosen = ViewScope::Breakpoints(vec!["tablet".to_owned()]);
+    let (views, not_shown) = targets(&host, Target::All, Some(&chosen)).expect("one view");
+    let names: Vec<&str> = views.iter().map(|view| view.name.as_str()).collect();
+    assert_eq!(names, ["tablet"]);
+    assert!(not_shown.is_empty());
+    let (every, _) = targets(&host, Target::All, None).expect("every view");
+    assert_eq!(every.len(), host.views().len());
+    let (visible, _) = targets(&host, Target::All, Some(&ViewScope::Visible)).expect("visible");
+    assert_eq!(visible.len(), every.len());
+    let refused = targets(
+        &host,
+        Target::All,
+        Some(&ViewScope::Breakpoints(Vec::new())),
+    );
+    assert!(
+        matches!(refused, Err(VisualRunError::Scope(_))),
+        "{:?}",
+        refused.map(|(views, _)| views.len())
+    );
 }

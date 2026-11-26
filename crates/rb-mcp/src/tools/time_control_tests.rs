@@ -72,7 +72,7 @@ async fn a_clock_call_without_time_speed_or_reset_is_refused() {
     let fake = two_views();
     let (error, answer) = clock(&fake, ClockParams::default()).await;
     assert!(error);
-    assert_eq!(answer["code"], json!("invalid_arguments"));
+    assert_eq!(answer["code"], json!("args.invalid"));
     assert!(fake.calls().is_empty(), "nothing ran");
 }
 
@@ -134,7 +134,7 @@ async fn a_rate_and_a_step_together_or_neither_are_refused() {
     ] {
         let (error, answer) = animations(&fake, params).await;
         assert!(error);
-        assert_eq!(answer["code"], json!("invalid_arguments"));
+        assert_eq!(answer["code"], json!("args.invalid"));
     }
     assert!(fake.calls().is_empty(), "nothing ran");
 }

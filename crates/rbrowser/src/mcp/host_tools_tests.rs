@@ -10,7 +10,7 @@ async fn an_unknown_host_tool_is_refused() {
     let failure = call(&core, "format_disk", json!({}))
         .await
         .expect_err("refused");
-    assert_eq!(failure.code, "unknown_tool");
+    assert_eq!(failure.code, "tool.unknown");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -19,7 +19,7 @@ async fn bad_arguments_are_refused_before_anything_runs() {
     let failure = call(&core, "bus_send", json!({ "payload": 1 }))
         .await
         .expect_err("refused");
-    assert_eq!(failure.code, "invalid_arguments");
+    assert_eq!(failure.code, "args.invalid");
     let failure = call(
         &core,
         "screenshot",
@@ -27,7 +27,7 @@ async fn bad_arguments_are_refused_before_anything_runs() {
     )
     .await
     .expect_err("refused");
-    assert_eq!(failure.code, "invalid_arguments");
+    assert_eq!(failure.code, "args.invalid");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -36,7 +36,7 @@ async fn sync_set_before_the_hub_started_is_a_failure_not_a_panic() {
     let failure = call(&core, "sync_set", json!({ "enabled": false }))
         .await
         .expect_err("no hub");
-    assert_eq!(failure.code, "command_failed");
+    assert_eq!(failure.code, "command.failed");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -45,7 +45,7 @@ async fn the_visual_tools_reach_the_runs_and_say_why_they_give_nothing() {
     let failure = call(&core, "visual_compare", json!({ "threshold": 2.0 }))
         .await
         .expect_err("refused");
-    assert_eq!(failure.code, "invalid_arguments");
+    assert_eq!(failure.code, "args.invalid");
     for tool in ["visual_compare", "visual_baseline_update"] {
         let failure = call(&core, tool, json!({ "target": "all" }))
             .await
@@ -60,11 +60,11 @@ async fn recorder_export_reaches_the_export_and_refuses_a_view() {
     let failure = call(&core, "recorder_export", json!({ "target": 1 }))
         .await
         .expect_err("a view");
-    assert_eq!(failure.code, "invalid_arguments");
+    assert_eq!(failure.code, "args.invalid");
     let failure = call(&core, "recorder_export", json!({ "format": "spec" }))
         .await
         .expect_err("no project");
-    assert_eq!(failure.code, "command_failed");
+    assert_eq!(failure.code, "command.failed");
     assert!(
         failure.message.contains("no project"),
         "{}",
@@ -78,7 +78,7 @@ async fn recorder_play_reaches_the_recordings_and_checks_its_arguments() {
     let failure = call(&core, "recorder_play", json!({ "target": 1 }))
         .await
         .expect_err("not an argument of the host tool");
-    assert_eq!(failure.code, "invalid_arguments");
+    assert_eq!(failure.code, "args.invalid");
     let failure = call(&core, "recorder_play", json!({ "views": ["watch"] }))
         .await
         .expect_err("no such view");
@@ -86,7 +86,7 @@ async fn recorder_play_reaches_the_recordings_and_checks_its_arguments() {
     let failure = call(&core, "recorder_play", json!({ "recordingId": "login" }))
         .await
         .expect_err("no project");
-    assert_eq!(failure.code, "command_failed");
+    assert_eq!(failure.code, "command.failed");
     assert!(
         failure.message.contains("no project"),
         "{}",

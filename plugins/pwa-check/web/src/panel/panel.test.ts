@@ -98,7 +98,7 @@ describe('the PWA panel', () => {
   });
 
   it('says it is checking, then shows the tabs with the findings first, the severity as a badge', async () => {
-    expect($('#status')?.textContent).toBe('Checking...');
+    expect($('#status')?.textContent).toBe('Checking…');
     expect(posted.find((m) => m.tool === 'check')?.args).toEqual({ budget: 1024 * 1024 - 5536 });
     await answerCalls('check', ANSWER);
     const tabs = [...document.querySelectorAll<HTMLElement>('#tabs [role="tab"]')];

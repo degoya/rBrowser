@@ -60,15 +60,21 @@
     logs.push(end === line.length ? line : line.slice(0, end));
   }
 
-  // A tool error as the script sees it: an Error named ToolError with the tool and the code.
+  // A tool error as the script sees it: an Error named ToolError with the tool, the code and,
+  // until 1.0, the flat code a dotted one replaced (legacyCode, RB-099-16).
   function toolError(tool, refusal) {
-    let failure = { code: 'tool_failed', message: refusal };
+    let failure = { code: 'tool.failed', legacyCode: 'tool_failed', message: refusal };
     try {
       failure = parse(refusal);
     } catch {}
     const error = new Error(toText(failure.message ?? failure.error ?? ''));
     error.name = 'ToolError';
-    error.code = toText(failure.code ?? 'tool_failed');
+    error.code = toText(failure.code ?? 'tool.failed');
+    if (typeof failure.legacyCode === 'string') {
+      error.legacyCode = failure.legacyCode;
+    } else if (failure.code === undefined) {
+      error.legacyCode = 'tool_failed';
+    }
     error.tool = tool;
     return error;
   }

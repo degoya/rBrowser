@@ -203,3 +203,7 @@ pub fn resume(child: &Child) -> io::Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "job_windows_tests.rs"]
+mod tests;

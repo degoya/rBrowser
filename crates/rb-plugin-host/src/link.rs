@@ -1,6 +1,7 @@
-//! The linker: `host` always, `settings` when declared, and one interface per granted
-//! capability - nothing else, so a component importing more fails to instantiate even if it got
-//! past the import check.
+//! The linker: `host` always, `settings` when declared, and the interfaces of each granted
+//! capability (`project-range` with `project-read`, `out-stream` with `out-write`, RB-099-24) -
+//! nothing else, so a component importing more fails to instantiate even if it got past the
+//! import check.
 //!
 //! Copied and adapted from rCommander's `crates/rc-plugin-host/src/link.rs`: linked by hand under
 //! the versioned names rather than through the generated `add_to_linker`, which would link every
@@ -42,8 +43,14 @@ pub(crate) fn link(
             Capability::Evaluate => link_evaluate(linker)?,
             Capability::Cdp => link_cdp(linker)?,
             Capability::Http => link_http(linker)?,
-            Capability::ProjectRead => link_project(linker)?,
-            Capability::OutWrite => link_out(linker)?,
+            Capability::ProjectRead => {
+                link_project(linker)?;
+                link_project_range(linker)?;
+            }
+            Capability::OutWrite => {
+                link_out(linker)?;
+                link_out_stream(linker)?;
+            }
             Capability::ProjectWrite => link_project_write(linker)?,
             Capability::Findings => link_findings(linker)?,
             Capability::Sidecar => link_sidecar(linker)?,
@@ -300,6 +307,70 @@ fn link_out(linker: &mut Linker<PluginStoreState>) -> wasmtime::Result<()> {
             })
         },
     )?;
+    Ok(())
+}
+
+fn link_project_range(linker: &mut Linker<PluginStoreState>) -> wasmtime::Result<()> {
+    let mut instance = linker.instance(&versioned("project-range"))?;
+    instance.func_wrap_async::<(String, u64, u32), (WitResult<(Vec<u8>, u64)>,), _>(
+        "read",
+        |mut store, (path, offset, length)| {
+            Box::new(async move {
+                let answer = timed(&mut store, |context| async move {
+                    context.project_read_range(&path, offset, length).await
+                })
+                .await;
+                Ok((answer,))
+            })
+        },
+    )?;
+    Ok(())
+}
+
+/// `out-stream`: the file begun lives in the call's store, so it ends with the call.
+fn link_out_stream(linker: &mut Linker<PluginStoreState>) -> wasmtime::Result<()> {
+    let mut instance = linker.instance(&versioned("out-stream"))?;
+    instance.func_wrap_async::<(String,), (WitResult<()>,), _>("begin", |mut store, (path,)| {
+        Box::new(async move {
+            // One not committed goes first: its drop removes it.
+            store.data_mut().out_stream = None;
+            let answer = timed(&mut store, |context| async move {
+                context.out_stream_begin(&path).await
+            })
+            .await;
+            Ok((answer.map(|staged| store.data_mut().out_stream = Some(staged)),))
+        })
+    })?;
+    instance.func_wrap_async::<(Vec<u8>,), (WitResult<()>,), _>(
+        "append",
+        |mut store, (bytes,)| {
+            Box::new(async move {
+                let Some(staged) = store.data_mut().out_stream.take() else {
+                    return Ok((Err(to_wit_failure(crate::context::large::not_begun())),));
+                };
+                // A failed append drops the file.
+                let answer = timed(&mut store, |context| async move {
+                    let mut staged = staged;
+                    let appended = context.out_stream_append(&mut staged, &bytes).await;
+                    appended.map(|()| staged)
+                })
+                .await;
+                Ok((answer.map(|staged| store.data_mut().out_stream = Some(staged)),))
+            })
+        },
+    )?;
+    instance.func_wrap_async::<(), (WitResult<()>,), _>("commit", |mut store, ()| {
+        Box::new(async move {
+            let Some(staged) = store.data_mut().out_stream.take() else {
+                return Ok((Err(to_wit_failure(crate::context::large::not_begun())),));
+            };
+            let answer = timed(&mut store, |context| async move {
+                context.out_stream_commit(staged).await
+            })
+            .await;
+            Ok((answer,))
+        })
+    })?;
     Ok(())
 }
 

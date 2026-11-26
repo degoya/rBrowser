@@ -180,3 +180,72 @@ fn an_empty_folder_lists_the_root() {
         vec!["TODO.todo".to_owned(), "docs".to_owned()]
     );
 }
+
+#[test]
+fn a_range_reads_past_the_whole_file_limit_with_the_read_rule() {
+    // RB-099-24: a file over `MAX_IO_BYTES` reads in ranges; the grant rule is `project.read`'s.
+    let big = vec![7u8; crate::MAX_IO_BYTES + 10];
+    let mut host = MemoryHost::new()
+        .grant(Capability::ProjectRead)
+        .with_file(".rbrowser/out/a.png", &big)
+        .with_file(".rbrowser/config.local.json", b"{}");
+    assert_eq!(
+        host.project_read(".rbrowser/out/a.png")
+            .expect_err("too large whole")
+            .code(),
+        Some(codes::TOO_LARGE)
+    );
+    let (bytes, size) = host
+        .project_read_range(".rbrowser/out/a.png", crate::MAX_IO_BYTES as u64, 64)
+        .expect("ranged");
+    assert_eq!((bytes.len(), size), (10, big.len() as u64));
+    let (none, _) = host
+        .project_read_range(".rbrowser/out/a.png", u64::MAX, 1)
+        .expect("past the end");
+    assert!(none.is_empty());
+    let over = u32::try_from(crate::MAX_IO_BYTES + 1).expect("fits");
+    assert_eq!(
+        host.project_read_range(".rbrowser/out/a.png", 0, over)
+            .expect_err("one call's limit")
+            .code(),
+        Some(codes::TOO_LARGE)
+    );
+    for refused in ["../a.png", "/etc/passwd", ".rbrowser/config.local.json"] {
+        assert!(host.project_read_range(refused, 0, 1).is_err(), "{refused}");
+    }
+    let mut bare = MemoryHost::new().with_file(".rbrowser/out/a.png", b"x");
+    assert_eq!(
+        bare.project_read_range(".rbrowser/out/a.png", 0, 1)
+            .expect_err("not granted")
+            .code(),
+        Some(codes::CAPABILITY_DENIED)
+    );
+}
+
+#[test]
+fn a_streamed_file_shows_only_once_committed() {
+    let mut host = MemoryHost::new().grant(Capability::OutWrite);
+    host.out_begin("edits/a.png").expect("begun");
+    host.out_append(b"abc").expect("appended");
+    host.out_append(b"def").expect("appended");
+    assert!(host.out.is_empty(), "nothing before the commit");
+    host.out_commit().expect("committed");
+    assert_eq!(
+        host.out.get("edits/a.png").map(Vec::as_slice),
+        Some(&b"abcdef"[..])
+    );
+
+    host.out_begin("edits/b.png").expect("begun");
+    host.out_append(b"half").expect("appended");
+    host.end_call();
+    assert!(host.out_commit().is_err(), "the call's end dropped it");
+    assert!(!host.out.contains_key("edits/b.png"));
+
+    assert!(host.out_begin("../escape.png").is_err());
+    assert!(host.out_append(b"x").is_err(), "nothing begun");
+    let mut bare = MemoryHost::new();
+    assert_eq!(
+        bare.out_begin("a.png").expect_err("not granted").code(),
+        Some(codes::CAPABILITY_DENIED)
+    );
+}

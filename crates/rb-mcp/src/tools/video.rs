@@ -18,6 +18,7 @@ use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use super::NoArgs;
 use crate::RbMcpServer;
 use crate::answer::{ToolResult, respond};
 use crate::backend::ToolFailure;
@@ -53,7 +54,7 @@ pub enum VideoAction {
 pub struct RecordVideoParams {
     /// `start`, `stop`, `pause`, `resume` or `status`.
     pub action: VideoAction,
-    /// For `start`: `"all"` (default), a view id or a breakpoint id.
+    /// `"all"` (default), a view id or a breakpoint id. For `start` only.
     #[serde(default, skip_serializing)]
     pub target: Option<TargetArg>,
 }
@@ -61,7 +62,7 @@ pub struct RecordVideoParams {
 #[tool_router(router = video_router, vis = "pub(crate)")]
 impl RbMcpServer {
     #[tool(
-        description = "Record views as video files (Chromium views; Firefox and WebKit are not recorded). action start: target \"all\" (default), a view id or a breakpoint id - all start and stop together, one WebM file per view in .rbrowser/out/video/<date-time>/<breakpoint>.webm (VP9, VP8 where the ffmpeg has no VP9) at the viewport times the DPR (bounded), capture.video.fps frames per second, the encoders below the views' priority; answers the views, the folder, the codec and maxDurationSec, after which the recording stops by itself. action stop: stops and answers each file's path, frames, seconds and dropped (frames the encoder did not take in time, left out - the page never waits), or its error. action pause: holds the recording - every file leaves the pause out (no gap, no frozen stretch) and maxDurationSec counts recorded time only; action resume goes on; both answer paused and changed (false when it was so already), video.not_recording without a recording. action status: whether a recording runs (and paused while it is), the ffmpeg in use and the last result. rBrowser needs ffmpeg: without it start answers video.ffmpeg_missing - the LGPL download is the person's decision in rBrowser, never MCP's."
+        description = "Record views as WebM video (Chromium views only). action start: every targeted view starts and stops together, one file per view in .rbrowser/out/video/<date-time>/<breakpoint>.webm at capture.video.fps; answers the views, the folder, the codec and maxDurationSec, after which it stops by itself. stop: each file's path, frames, seconds and dropped frames, or its error. pause/resume: the pause is left out of every file; answers paused and changed (video.not_recording without a recording). status: whether a recording runs, the ffmpeg in use and the last result. Needs ffmpeg (video.ffmpeg_missing); its download is the person's decision, never MCP's."
     )]
     pub(crate) async fn record_video(
         &self,
@@ -78,7 +79,7 @@ impl RbMcpServer {
                     if params.target.is_some() =>
                 {
                     return Err(ToolFailure::new(
-                        "invalid_arguments",
+                        "args.invalid",
                         "stop, pause and resume act on the whole recording and take no target",
                     ));
                 }
@@ -95,9 +96,9 @@ impl RbMcpServer {
     }
 
     #[tool(
-        description = "The video recordings of the open project (record_video, the Videos panel), newest first: project (false without an open project), folder (.rbrowser/out/video), running (the recording being written, if any), autoplay (capture.video.autoplay) and per recording its id (the folder name <date-time>), path and files - each with name, breakpoint, bytes and path (a WebM per view; an MP4 beside it is the person's export to share, or an old recording) - mp4Export (whether this platform can export MP4) and conversions (the person's MP4 exports and WebM conversions waiting or running, with percent). A read: no tool deletes a recording; the person does in the Videos panel, and capture.video.keepRecordings and capture.video.keepDays delete old ones after each recording."
+        description = "The video recordings of the open project, newest first: project (false without one), folder (.rbrowser/out/video), running, autoplay (capture.video.autoplay) and per recording its id (<date-time>), path and files (name, breakpoint, bytes, path; a WebM per view, an MP4 beside it is the person's export), mp4Export and the conversions running. No tool deletes a recording: the person does, and capture.video.keepRecordings and keepDays prune old ones."
     )]
-    pub(crate) async fn video_list(&self) -> ToolResult {
+    pub(crate) async fn video_list(&self, _args: Parameters<NoArgs>) -> ToolResult {
         let result = async {
             let answer: Value = self.backend.host_tool(LIST_TOOL, json!({})).await?;
             Ok(self.backend.mask(&answer))

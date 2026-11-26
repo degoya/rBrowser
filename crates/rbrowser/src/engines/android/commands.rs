@@ -3,7 +3,7 @@
 //! | Command | Default | MCP |
 //! | --- | --- | --- |
 //! | `view.add_android { serial? }`: the device as a view at its own size | `Leader V ;` (the job's `V J` is the JSON viewer's `toggle_raw`) | `view_add_android` |
-//! | `tools.adb.install`: download the Android Platform Tools | `Leader X S` | omitted: the person's consent |
+//! | `tools.adb.install { accepted? }`: download the Android Platform Tools, after the person accepted Google's terms in the shell | `Leader X S` | omitted: the person's consent |
 //!
 //! `android_devices` lists the devices adb sees; it runs no command. The command answers at
 //! once and ends in a notice (adb may take seconds; nothing waits on the UI thread); the tool
@@ -156,13 +156,28 @@ fn run(core: &Arc<Core>, id: &str, args: &Value) -> Result<Value, CommandError> 
             });
             Ok(json!({ "started": true }))
         }
-        INSTALL => {
-            let notifier = core.clone();
-            core.runtime().spawn_blocking(move || {
-                let _ = adb_tool::install_default(&|message| notifier.notify(message));
-            });
-            Ok(json!({ "started": true }))
-        }
+        INSTALL => match adb_tool::step(args, crate::tools::adb_entry())
+            .map_err(CommandError::InvalidArgs)?
+        {
+            adb_tool::Step::AskTerms(request) => {
+                // Google's terms first (RB-099-13): the bar sits in the toolbar strip, so the
+                // shell takes the keyboard; nothing is downloaded until it sends the acceptance.
+                core.ui().focus_shell();
+                core.send(&request);
+                Ok(json!({ "started": false, "needs": "terms" }))
+            }
+            adb_tool::Step::Refused(notice) => {
+                core.notify(*notice);
+                Ok(json!({ "started": false }))
+            }
+            adb_tool::Step::Download(entry) => {
+                let notifier = core.clone();
+                core.runtime().spawn_blocking(move || {
+                    let _ = adb_tool::install_default(&entry, &|message| notifier.notify(message));
+                });
+                Ok(json!({ "started": true }))
+            }
+        },
         other => Err(CommandError::UnknownCommand(other.to_owned())),
     }
 }
@@ -181,7 +196,7 @@ pub fn pick<'a>(serial: Option<&str>, devices: &'a [Device]) -> Result<&'a Devic
     if let Some(serial) = serial {
         if !valid_serial(serial) {
             return Err(refused(
-                "invalid_arguments",
+                "args.invalid",
                 format!("{serial:?} is no serial of a USB device"),
             ));
         }
@@ -212,7 +227,7 @@ pub fn pick<'a>(serial: Option<&str>, devices: &'a [Device]) -> Result<&'a Devic
                 .map(|device| device.serial.as_str())
                 .collect();
             Err(refused(
-                "invalid_arguments",
+                "args.invalid",
                 rb_i18n::t_with(
                     "engines.android.several",
                     &[("serials", &serials.join(", "))],
@@ -289,12 +304,12 @@ pub async fn add(core: &Arc<Core>, serial: Option<String>) -> Result<Value, Refu
     })
     .await
     .map_err(|_| Refusal {
-        code: "internal",
+        code: "mcp.internal",
         message: "the view was not added".to_owned(),
         setting: None,
     })?
     .map_err(|error| Refusal {
-        code: "command_failed",
+        code: "command.failed",
         message: error.to_string(),
         setting: None,
     })?;
@@ -346,7 +361,7 @@ pub async fn add_tool(core: &Arc<Core>, args: Value) -> Result<Value, rb_mcp::To
         AddArgs::default()
     } else {
         serde_json::from_value(args)
-            .map_err(|error| rb_mcp::ToolFailure::new("invalid_arguments", error.to_string()))?
+            .map_err(|error| rb_mcp::ToolFailure::new("args.invalid", error.to_string()))?
     };
     add(core, args.serial).await.map_err(Into::into)
 }

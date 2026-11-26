@@ -18,9 +18,9 @@ use serde_json::{Map, Value};
 use crate::backend::{ConfigScope, ToolFailure};
 
 /// The code of a key MCP may not write.
-pub const PROTECTED: &str = "config_key_protected";
+pub const PROTECTED: &str = "config.key_protected";
 /// The code of a breakpoint id that is not there (or there already).
-pub const BREAKPOINT: &str = "breakpoint_not_found";
+pub const BREAKPOINT: &str = "config.breakpoint_not_found";
 
 /// First segments of keys that workspace trust guards or that run code: refused over MCP.
 const REFUSED_ROOTS: &[&str] = &[
@@ -257,7 +257,7 @@ fn held_at<'a>(document: &'a Value, key: &str) -> Option<&'a Value> {
 }
 
 fn invalid(message: String) -> ToolFailure {
-    ToolFailure::new("invalid_arguments", message)
+    ToolFailure::new("args.invalid", message)
 }
 
 fn breakpoints(document: &mut Value) -> Result<&mut Vec<Value>, ToolFailure> {

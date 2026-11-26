@@ -11,7 +11,7 @@ pub const PROTOCOL_VERSION: &str = "2025-06-18";
 /// The JSON-RPC error code of "no instance" (the implementation-defined server range).
 pub const NO_INSTANCE_CODE: i64 = -32000;
 /// The stable code in the error's `data`.
-pub const NO_INSTANCE: &str = "no_instance";
+pub const NO_INSTANCE: &str = "mcp.no_instance";
 
 /// The answer to `message` (one JSON-RPC line) while no instance is reachable for `why`;
 /// `None` for a notification.
@@ -36,7 +36,10 @@ pub fn answer(message: &str, why: &str) -> Option<Value> {
                 "error": {
                     "code": NO_INSTANCE_CODE,
                     "message": why,
-                    "data": { "code": NO_INSTANCE },
+                    "data": {
+                        "code": NO_INSTANCE,
+                        (crate::codes::LEGACY_FIELD): crate::codes::legacy(NO_INSTANCE),
+                    },
                 },
             }));
         }

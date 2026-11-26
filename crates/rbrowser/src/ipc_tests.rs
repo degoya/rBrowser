@@ -86,7 +86,9 @@ async fn the_state_event_is_an_rb_ipc_custom_event() {
     assert!(script.starts_with("window.dispatchEvent(new CustomEvent(\"rb-ipc\""));
 }
 
-#[tokio::test]
+/// On the virtual clock (RB-099-18): it moves only while every task waits, so the forwarder has
+/// taken the burst and pushed before the wait of two coalescing windows ends.
+#[tokio::test(start_paused = true)]
 async fn view_events_push_one_state_per_burst() {
     let (_ui, host) = host();
     let sent = Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -209,6 +211,7 @@ async fn dismissing_the_palette_hides_its_popup() {
 
 /// RB-090-36: the queries that read files - the settings (with and without the schema), the
 /// palette's flows - are answered off the calling thread, which is CEF's UI thread in the app.
+/// RB-099-19: so are the shortcut editor's changes, which write the user settings file.
 #[tokio::test]
 async fn file_reads_are_answered_off_the_calling_thread() {
     let (_ui, core) = host();
@@ -217,6 +220,10 @@ async fn file_reads_are_answered_off_the_calling_thread() {
         r#"{"type":"getSettings"}"#,
         r#"{"type":"getSettings","includeSchema":true}"#,
         r#"{"type":"listFlows"}"#,
+        r#"{"type":"setBindings","id":"view.back","bindings":[]}"#,
+        r#"{"type":"resetBinding","id":"view.back"}"#,
+        r#"{"type":"resetBinding"}"#,
+        r#"{"type":"importBindings","json":"{\"version\":1,\"bindings\":{}}"}"#,
     ] {
         let (tx, rx) = std::sync::mpsc::channel();
         dispatch_to(&core, request, move |answer: Result<String, Failure>| {
@@ -235,6 +242,72 @@ async fn file_reads_are_answered_off_the_calling_thread() {
         let _ = tx.send(std::thread::current().id());
     });
     assert_eq!(rx.try_recv().ok(), Some(caller));
+}
+
+/// RB-099-19: a refused binding change answers its refusal from the lane, with its code.
+#[tokio::test]
+async fn a_refused_binding_change_answers_its_code_from_the_lane() {
+    let (_ui, core) = host();
+    let (tx, rx) = std::sync::mpsc::channel();
+    dispatch_to(
+        &core,
+        r#"{"type":"setBindings","id":"view.back","bindings":["Ctrl+T"]}"#,
+        move |answer: Result<String, Failure>| {
+            let _ = tx.send(answer);
+        },
+    );
+    let answer = rx.recv_timeout(Duration::from_secs(5)).expect("answered");
+    assert_eq!(answer.expect_err("reserved").0, IpcErrorCode::Refused);
+}
+
+/// RB-099-19: a binding change and a setting change sent one after the other both reach the
+/// user settings file, and both hold in effect.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_binding_and_a_setting_both_survive_on_the_lane() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("settings.json");
+    let (_fake, router) = FakeBrowser::connect();
+    let ui = Arc::new(RecordingUi::default());
+    let host = Host::new(ui.clone(), router, Handle::current());
+    host.open_config(default_config(), None).expect("opens");
+    let core = Core::new(
+        host,
+        ui,
+        Handle::current(),
+        CoreSetup {
+            user_path: Some(path.clone()),
+            ..CoreSetup::default()
+        },
+    );
+    let chord = crate::control::test_support::free_chord(&core, "view.back");
+    let (tx, rx) = std::sync::mpsc::channel();
+    let set_binding = serde_json::json!({
+        "type": "setBindings", "id": "view.back", "bindings": [chord.clone()]
+    })
+    .to_string();
+    for request in [
+        set_binding.as_str(),
+        r#"{"type":"setSetting","key":"ui.theme","value":"dark","scope":"user"}"#,
+    ] {
+        let tx = tx.clone();
+        dispatch_to(&core, request, move |answer: Result<String, Failure>| {
+            let _ = tx.send(answer);
+        });
+    }
+    for _ in 0..2 {
+        let answer = rx.recv_timeout(Duration::from_secs(5)).expect("answered");
+        assert!(answer.is_ok(), "{answer:?}");
+    }
+    let saved: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("written")).expect("json");
+    assert_eq!(saved["ui"]["theme"], "dark", "{saved}");
+    assert_eq!(
+        saved["shortcuts"]["bindings"]["view.back"],
+        serde_json::json!([chord]),
+        "{saved}"
+    );
+    let user = core.user_settings();
+    assert_eq!(user.shortcuts.bindings.get("view.back"), Some(&vec![chord]));
 }
 
 /// RB-090-32: every query is counted from its arrival to its answer (`ipc.query`), also one

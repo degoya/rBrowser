@@ -25,7 +25,7 @@ impl Dispatch for Fake {
         rb_util::lock(&self.calls).push((tool.to_owned(), Value::Object(arguments)));
         match tool {
             "evaluate" => Ok(crate::answer::error_result(
-                &crate::ToolFailure::new("evaluate_disabled", "evaluate is switched off")
+                &crate::ToolFailure::new("evaluate.disabled", "evaluate is switched off")
                     .with_setting("mcp.allowEvaluate"),
             )
             .into()),
@@ -82,7 +82,9 @@ async fn a_guarded_tool_refuses_inside_a_script_as_it_does_outside() {
         .await
         .expect_err("refused");
     let refusal = parsed(&refusal);
-    assert_eq!(refusal["code"], "evaluate_disabled");
+    assert_eq!(refusal["code"], "evaluate.disabled");
+    // RB-099-16: a script written against the flat codes still finds them until 1.0.
+    assert_eq!(refusal["legacyCode"], "evaluate_disabled");
     assert_eq!(refusal["message"], "evaluate is switched off");
 }
 
@@ -115,7 +117,7 @@ async fn the_call_after_the_limit_is_refused_and_marks_the_run() {
 async fn an_unknown_tool_and_bad_arguments_are_refused_with_a_code() {
     let bridge = Bridge::new(Fake::default(), 10);
     let missing = bridge.call("missing", "{}").await.expect_err("unknown");
-    assert_eq!(parsed(&missing)["code"], "tool_not_found");
+    assert_eq!(parsed(&missing)["code"], "tool.not_found");
     assert!(
         rb_util::lock(&bridge.dispatch.calls).is_empty(),
         "an unknown tool never reaches the router"
@@ -124,7 +126,7 @@ async fn an_unknown_tool_and_bad_arguments_are_refused_with_a_code() {
         .call("navigate", "[1, 2]")
         .await
         .expect_err("no object");
-    assert_eq!(parsed(&bad)["code"], "invalid_arguments");
+    assert_eq!(parsed(&bad)["code"], "args.invalid");
 }
 
 #[tokio::test]
@@ -157,12 +159,22 @@ async fn a_router_error_is_named_by_its_json_rpc_code_not_its_words() {
         .call("typed", "{}")
         .await
         .expect_err("invalid params");
-    assert_eq!(parsed(&typed)["code"], "invalid_arguments");
+    assert_eq!(parsed(&typed)["code"], "args.invalid");
+    assert_eq!(parsed(&typed)["legacyCode"], "invalid_arguments");
     let absent = bridge
         .call("absent", "{}")
         .await
         .expect_err("method not found");
-    assert_eq!(parsed(&absent)["code"], "tool_not_found");
+    assert_eq!(parsed(&absent)["code"], "tool.not_found");
     let broken = bridge.call("broken", "{}").await.expect_err("internal");
-    assert_eq!(parsed(&broken)["code"], "tool_failed");
+    assert_eq!(parsed(&broken)["code"], "tool.failed");
+    assert_eq!(parsed(&broken)["legacyCode"], "tool_failed");
+}
+
+#[test]
+fn a_refusal_names_the_flat_code_only_where_one_was_renamed() {
+    let renamed = parsed(&super::refusal("tool.not_found", "no such tool"));
+    assert_eq!(renamed["legacyCode"], "tool_not_found");
+    let kept = parsed(&super::refusal("script.recursion", "no"));
+    assert!(kept.get("legacyCode").is_none(), "{kept}");
 }

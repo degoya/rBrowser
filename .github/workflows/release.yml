@@ -53,7 +53,8 @@ jobs:
 
   # The Windows package, built natively with MSVC from the signed plugins above (downloaded into
   # the ignored artifacts/plugins/, so the tree stays clean and VERSION.txt names the tag's
-  # commit). The MSI joins with `--msi` once RB-090-01 delivers it.
+  # commit), and the MSI built from that ZIP (RB-099-01, RB-099-27): a release asset beside it, in
+  # SHA256SUMS like every file `publish` gathers.
   windows:
     needs: plugins
     runs-on: windows-2025
@@ -75,6 +76,10 @@ jobs:
         with:
           name: plugins
           path: artifacts/plugins
+      # WiX 5 at its pin (scripts/ci-tools.sh wix, a .NET tool; .NET is on the image), before any
+      # step reads a secret.
+      - name: Install WiX (pinned)
+        run: scripts/ci-tools.sh wix
       # Builds the front ends it ships (ui/, agent/, sidecar/, `npm ci --ignore-scripts`) and the
       # app, and packs the ZIP. No certificate is on the runner yet: a build runs the build scripts
       # of every dependency (scripts/lib/check_workflows.py holds that order).
@@ -105,6 +110,16 @@ jobs:
           RB_SIGN_PFX="${pfx}" RB_SIGN_PFX_PASSWORD_FILE="${pass}" \
             RB_SIGN_TIMESTAMP_URL="${RB_SIGN_TIMESTAMP_URL}" \
             scripts/sign-windows.sh artifacts/windows/rbrowser-*-windows-x64.zip
+      # The MSI from the finished ZIP, after the signing step, so it carries exactly the ZIP's
+      # files - signed once RB_CODESIGN is on - which `package-windows.sh --msi` would take from
+      # its stage before that step. The MSI file itself is not signed (RB-090-03, RB-110-06).
+      # A failing WiX build fails the release.
+      - name: scripts/package-msi.sh
+        run: |
+          set -euo pipefail
+          zips=(artifacts/windows/rbrowser-*-windows-x64.zip)
+          [[ ${#zips[@]} -eq 1 && -f "${zips[0]}" ]] || { echo "::error::not one package ZIP: ${zips[*]}"; exit 1; }
+          scripts/package-msi.sh "${zips[0]}" "${zips[0]%.zip}.msi"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-windows-x64

@@ -100,7 +100,10 @@ async fn checks_run_runs_checks_run_all_on_every_view_by_default() {
 #[tokio::test]
 async fn checks_cancel_runs_the_cancel_command_without_a_target() {
     let fake = Arc::new(FakeBackend::default());
-    server(&fake).checks_cancel().await.expect("answer");
+    server(&fake)
+        .checks_cancel(crate::tools::no_args())
+        .await
+        .expect("answer");
     assert_eq!(
         fake.calls(),
         vec![("checks.cancel".to_owned(), serde_json::Value::Null)]
@@ -175,7 +178,7 @@ async fn inline_pngs_of_the_whole_fan_out_are_bound_to_max_answer_bytes() {
             .expect("answer"),
     );
     assert!(error, "two views of 600 bytes each pass 1000: {answer}");
-    assert_eq!(answer["code"], "answer_too_large");
+    assert_eq!(answer["code"], "answer.too_large");
     assert_eq!(answer["settingsKey"], "mcp.maxAnswerBytes");
     let message = answer["error"].as_str().unwrap_or_default();
     assert!(message.contains("save: true"), "{message}");
@@ -219,4 +222,46 @@ async fn saved_screenshots_answer_paths_and_are_not_bound() {
             .expect("answer"),
     );
     assert!(!error);
+}
+
+/// RB-099-10: `"visible"` and a list run `checks.run_all` once with the scope.
+#[tokio::test]
+async fn checks_run_takes_visible_and_a_list_as_one_scoped_run() {
+    use crate::run_target::{RunTarget, TargetItem};
+    let fake = Arc::new(FakeBackend::default());
+    let server = server(&fake);
+    for target in [
+        RunTarget::Name("visible".to_owned()),
+        RunTarget::List(vec![
+            TargetItem::Name("desktop".to_owned()),
+            TargetItem::Id(1),
+        ]),
+    ] {
+        let params = ChecksRunParams {
+            target: Some(target),
+            ..ChecksRunParams::default()
+        };
+        server.checks_run(Parameters(params)).await.expect("answer");
+    }
+    assert_eq!(
+        fake.calls(),
+        vec![
+            ("checks.run_all".to_owned(), json!({ "scope": "visible" })),
+            (
+                "checks.run_all".to_owned(),
+                json!({ "scope": ["desktop", "mobile"] })
+            ),
+        ]
+    );
+    let (error, answer) = answer_json(
+        &server
+            .checks_run(Parameters(ChecksRunParams {
+                target: Some(RunTarget::List(vec![TargetItem::Id(9)])),
+                ..ChecksRunParams::default()
+            }))
+            .await
+            .expect("answer"),
+    );
+    assert!(error);
+    assert_eq!(answer["code"], json!("view.not_found"));
 }

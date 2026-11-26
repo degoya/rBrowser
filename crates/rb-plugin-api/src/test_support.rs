@@ -5,13 +5,15 @@
 //! test against it finds what the real host would refuse: every capability checked against the
 //! grants ([`MemoryHost::grant`]), the path rule of `project-read`, `project-write` and
 //! `out-write` ([`crate::paths`]), workspace trust and the write conflict of `project-write`, the
-//! CDP domain list, the URL rule of `http`, the size limits.
+//! CDP domain list, the URL rule of `http`, the size limits - and `project-range` and
+//! `out-stream` (RB-099-24): a file begun shows in [`MemoryHost::out`] only once committed, and
+//! [`MemoryHost::end_call`] drops one that was not, as the end of a call does.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    Capability, Failure, FailureKind, Finding, HttpRequest, HttpResponse, MAX_IO_BYTES, PluginHost,
-    ViewId, ViewInfo, codes, paths, rules,
+    Capability, Failure, FailureKind, Finding, HttpRequest, HttpResponse, MAX_IO_BYTES,
+    MAX_STREAM_BYTES, PluginHost, ViewId, ViewInfo, codes, paths, rules,
 };
 
 /// Views, files, answers and everything a plugin did, in memory.
@@ -31,6 +33,10 @@ pub struct MemoryHost {
     pub trusted: bool,
     /// What `out.write` wrote, by path relative to the plugin's out folder.
     pub out: BTreeMap<String, Vec<u8>>,
+    /// The `out-stream` file begun and not committed: its path and the bytes so far.
+    pub staged: Option<(String, Vec<u8>)>,
+    /// Every `project-range.read`, as `(path, offset, length)`.
+    pub ranges: Vec<(String, u64, u32)>,
     pub views: Vec<ViewInfo>,
     pub active: Option<ViewId>,
     /// What `evaluate` answers.
@@ -82,6 +88,28 @@ impl MemoryHost {
     pub fn with_file(mut self, path: &str, bytes: &[u8]) -> Self {
         self.project.insert(path.to_owned(), bytes.to_vec());
         self
+    }
+
+    /// The end of a plugin call: an `out-stream` file not committed is dropped, as the host
+    /// removes it.
+    pub fn end_call(&mut self) {
+        self.staged = None;
+    }
+
+    /// The project file `path` names, held to `project.read`'s grant rule; its size unchecked.
+    fn readable_file(&self, path: &str) -> Result<&Vec<u8>, Failure> {
+        self.require(Capability::ProjectRead)?;
+        let segments = paths::relative_segments(path).map_err(|refusal| refusal.failure(path))?;
+        let key = segments.join("/");
+        let granted = (paths::in_config_dir(&segments) && !paths::is_local_config(&segments))
+            || self.readable.contains(&key);
+        if !granted {
+            return Err(
+                Failure::coded(FailureKind::AccessDenied, codes::PATH_NOT_GRANTED)
+                    .with_param("path", path),
+            );
+        }
+        self.project.get(&key).ok_or_else(|| not_found(path))
     }
 
     fn require(&self, capability: Capability) -> Result<(), Failure> {
@@ -157,22 +185,29 @@ impl PluginHost for MemoryHost {
     }
 
     fn project_read(&mut self, path: &str) -> Result<Vec<u8>, Failure> {
-        self.require(Capability::ProjectRead)?;
-        let segments = paths::relative_segments(path).map_err(|refusal| refusal.failure(path))?;
-        let key = segments.join("/");
-        let granted = (paths::in_config_dir(&segments) && !paths::is_local_config(&segments))
-            || self.readable.contains(&key);
-        if !granted {
-            return Err(
-                Failure::coded(FailureKind::AccessDenied, codes::PATH_NOT_GRANTED)
-                    .with_param("path", path),
-            );
-        }
-        let bytes = self.project.get(&key).ok_or_else(|| not_found(path))?;
+        let bytes = self.readable_file(path)?;
         if bytes.len() > MAX_IO_BYTES {
             return Err(too_large(MAX_IO_BYTES));
         }
         Ok(bytes.clone())
+    }
+
+    fn project_read_range(
+        &mut self,
+        path: &str,
+        offset: u64,
+        length: u32,
+    ) -> Result<(Vec<u8>, u64), Failure> {
+        let bytes = self.readable_file(path)?;
+        if length as usize > MAX_IO_BYTES {
+            return Err(too_large(MAX_IO_BYTES));
+        }
+        let size = bytes.len() as u64;
+        let start = usize::try_from(offset.min(size)).unwrap_or(bytes.len());
+        let end = start.saturating_add(length as usize).min(bytes.len());
+        let part = bytes[start..end].to_vec();
+        self.ranges.push((path.to_owned(), offset, length));
+        Ok((part, size))
     }
 
     fn project_list(&mut self, dir: &str) -> Result<Vec<String>, Failure> {
@@ -257,6 +292,43 @@ impl PluginHost for MemoryHost {
             return Err(too_large(MAX_IO_BYTES));
         }
         self.out.insert(segments.join("/"), bytes.to_vec());
+        Ok(())
+    }
+
+    fn out_begin(&mut self, path: &str) -> Result<(), Failure> {
+        self.require(Capability::OutWrite)?;
+        let segments = paths::relative_segments(path).map_err(|refusal| refusal.failure(path))?;
+        self.staged = Some((segments.join("/"), Vec::new()));
+        Ok(())
+    }
+
+    fn out_append(&mut self, bytes: &[u8]) -> Result<(), Failure> {
+        self.require(Capability::OutWrite)?;
+        if bytes.len() > MAX_IO_BYTES {
+            self.staged = None;
+            return Err(too_large(MAX_IO_BYTES));
+        }
+        let Some((_, staged)) = self.staged.as_mut() else {
+            return Err(Failure::coded(FailureKind::BadData, codes::INVALID)
+                .with_param("reason", "no file begun"));
+        };
+        if staged.len() as u64 + bytes.len() as u64 > MAX_STREAM_BYTES {
+            self.staged = None;
+            return Err(too_large(
+                usize::try_from(MAX_STREAM_BYTES).unwrap_or(usize::MAX),
+            ));
+        }
+        staged.extend_from_slice(bytes);
+        Ok(())
+    }
+
+    fn out_commit(&mut self) -> Result<(), Failure> {
+        self.require(Capability::OutWrite)?;
+        let (path, bytes) = self.staged.take().ok_or_else(|| {
+            Failure::coded(FailureKind::BadData, codes::INVALID)
+                .with_param("reason", "no file begun")
+        })?;
+        self.out.insert(path, bytes);
         Ok(())
     }
 
