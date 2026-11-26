@@ -78,7 +78,7 @@ rb-update = { path = "../rb-update", optional = true }
 # hex, the poison-tolerant lock, origins and hosts, JSON pointers (RB-080-28).
 rb-util = { path = "../rb-util" }
 # The portal's pairing QR code (RB-080-05): the matrix only, no image or SVG renderer.
-qrcode = { version = "0.14.1", default-features = false }
+qrcode = { version = "0.15.0", default-features = false }
 # The regex rules of the network interception (RB-070-02).
 regex.workspace = true
 # The CRX3 proofs of a Web Store extension: RSA-SHA256 and ECDSA P-256 (RB-080-23).

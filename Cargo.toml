@@ -31,7 +31,7 @@ embed-resource = "3.0.12"
 indexmap = { version = "2.14.2", features = ["serde"] }
 # The project watcher (Reload & Files): ReadDirectoryChangesW on Windows, inotify inside WSL,
 # FSEvents on macOS (RB-090-15; without the feature notify 8 does not build there).
-notify = { version = "8.2.2", default-features = false, features = ["macos_fsevent"] }
+notify = { version = "9.0.0", default-features = false, features = ["macos_fsevent"] }
 # The MCP server (rb-mcp): HTTP on 127.0.0.1 plus stdio forwarding from WSL.
 rmcp = { version = "3.11.0", default-features = false, features = ["macros", "server", "transport-io", "transport-streamable-http-server"] }
 # The JSON Schema of the project config and the settings (rb-config).
@@ -57,7 +57,7 @@ zip = { version = "9.6.1", default-features = false, features = ["deflate-flate2
 # The plugin system (rb-plugin-host, RB-010-03; docs/plugins.md). The runtime: rCommander's
 # version and features, the newest release; `cache` keeps compiled plugins on disk between starts,
 # no WASI.
-wasmtime = { version = "50.0.2", default-features = false, features = ["anyhow", "async", "cache", "component-model", "component-model-async", "cranelift", "parallel-compilation", "runtime", "std"] }
+wasmtime = { version = "51.0.0", default-features = false, features = ["anyhow", "async", "cache", "component-model", "component-model-async", "cranelift", "parallel-compilation", "runtime", "std"] }
 # Package signatures (Ed25519 over the package digest) and the PKCS#8 PEM of a signing key.
 ed25519-dalek = { version = "3.0.0", features = ["pem", "pkcs8"] }
 base64 = "0.23.1"
